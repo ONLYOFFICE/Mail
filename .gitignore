@@ -1,0 +1,9 @@
+**/obj/
+**/bin/
+*.suo
+*.user
+/build/deploy
+*.log
+Data/
+Logs/
+**/.DS_Store

@@ -1,0 +1,66 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29806.167
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail", "Server\ASC.Mail.csproj", "{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CEF28478-491F-40DB-84BC-B738858C47B2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Tests", "Tests\ASC.Mail.Tests.csproj", "{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Core", "Core\ASC.Mail.Core.csproj", "{C2DD5352-AC40-4962-978C-0031860C8CA4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Aggregator.CollectionService", "Services\ASC.Mail.Aggregator.CollectionService\ASC.Mail.Aggregator.CollectionService.csproj", "{3FB12384-EFDF-4069-B625-61D13552A630}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.ImapSync", "Services\ASC.Mail.ImapSync\ASC.Mail.ImapSync.csproj", "{5D982C73-D484-43B6-91C3-C763AF7FBC03}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.StorageCleaner.Service", "Services\ASC.Mail.StorageCleaner.Service\ASC.Mail.StorageCleaner.Service.csproj", "{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Watchdog.Service", "Services\ASC.Mail.Watchdog.Service\ASC.Mail.Watchdog.Service.csproj", "{5F332535-6B77-46C9-A4E0-0F7E91166558}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Release|Any CPU.Build.0 = Release|Any CPU
+		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3FB12384-EFDF-4069-B625-61D13552A630}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3FB12384-EFDF-4069-B625-61D13552A630}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3FB12384-EFDF-4069-B625-61D13552A630}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3FB12384-EFDF-4069-B625-61D13552A630}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D982C73-D484-43B6-91C3-C763AF7FBC03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D982C73-D484-43B6-91C3-C763AF7FBC03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D982C73-D484-43B6-91C3-C763AF7FBC03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D982C73-D484-43B6-91C3-C763AF7FBC03}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB} = {CEF28478-491F-40DB-84BC-B738858C47B2}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DD110BE7-5062-4A9B-9E7F-8E676562FD44}
+	EndGlobalSection
+EndGlobal
