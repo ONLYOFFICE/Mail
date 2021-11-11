@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-
-using ASC.Api.Core;
+﻿using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Caching;
 using ASC.Common.DependencyInjection;
@@ -17,6 +11,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Watchdog.Service
 {
@@ -73,7 +73,6 @@ namespace ASC.Mail.Watchdog.Service
                         .AddJsonFile($"kafka.{env}.json", true)
                         .AddJsonFile("mail.json")
                         .AddJsonFile($"mail.{env}.json")
-
                         .AddEnvironmentVariables()
                         .AddCommandLine(args)
                         .AddInMemoryCollection(new Dictionary<string, string>
@@ -87,7 +86,6 @@ namespace ASC.Mail.Watchdog.Service
                     services.AddHttpContextAccessor();
                     services.AddMemoryCache();
                     var diHelper = new DIHelper(services);
-
                     diHelper.TryAdd<WatchdogLauncher>();
                     services.AddHostedService<WatchdogLauncher>();
                     diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));

@@ -19,6 +19,11 @@
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="MySql.Data" Version="8.0.26" />
     <PackageReference Include="Ubiety.Dns.Core" Version="4.2.1" />
+	<PackageReference Include="Confluent.Kafka" Version="1.5.2.0" />
+	<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="5.0.1.0" />
+	<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="5.0.1.0" />
+	<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="5.0.2.0" />
+	<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="5.0.1.0" />
   </ItemGroup>
 
   <ItemGroup>
