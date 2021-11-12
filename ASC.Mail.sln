@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29806.167
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail", "Server\ASC.Mail.csproj", "{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}"
 EndProject
@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Tests", "Tests\ASC
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Core", "Core\ASC.Mail.Core.csproj", "{C2DD5352-AC40-4962-978C-0031860C8CA4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Aggregator.CollectionService", "Services\ASC.Mail.Aggregator.CollectionService\ASC.Mail.Aggregator.CollectionService.csproj", "{3FB12384-EFDF-4069-B625-61D13552A630}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Aggregator.Service", "Services\ASC.Mail.Aggregator.CollectionService\ASC.Mail.Aggregator.Service.csproj", "{3FB12384-EFDF-4069-B625-61D13552A630}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.ImapSync", "Services\ASC.Mail.ImapSync\ASC.Mail.ImapSync.csproj", "{5D982C73-D484-43B6-91C3-C763AF7FBC03}"
 EndProject
