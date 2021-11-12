@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -38,6 +34,10 @@ using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Enums;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -74,7 +74,7 @@ namespace ASC.Mail.Core.Dao
                     Contact = c,
                     Info = ci
                 })
-                .Where(o => o.Contact.TenantId == Tenant && o.Info.Type == (int)ContactInfoType.Email && o.Info.Data == email)
+                .Where(o => o.Contact.TenantId == Tenant && o.Info.TenantId == Tenant && o.Info.Type == (int)ContactInfoType.Email && o.Info.Data == email)
                 .Select(o => new
                 {
                     o.Contact.Id,
