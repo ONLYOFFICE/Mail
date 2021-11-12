@@ -14,9 +14,9 @@ using ASC.Common.Logging;
 using ASC.Common.Utils;
 using ASC.Core;
 using ASC.Data.Storage;
-using ASC.Mail.Aggregator.CollectionService.Console;
-using ASC.Mail.Aggregator.CollectionService.Queue;
-using ASC.Mail.Aggregator.CollectionService.Queue.Data;
+using ASC.Mail.Aggregator.Service.Console;
+using ASC.Mail.Aggregator.Service.Queue;
+using ASC.Mail.Aggregator.Service.Queue.Data;
 using ASC.Mail.Clients;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core;
@@ -39,7 +39,7 @@ using MimeKit;
 
 using NLog;
 
-namespace ASC.Mail.Aggregator.CollectionService.Service
+namespace ASC.Mail.Aggregator.Service.Service
 {
     [Singletone]
     public class AggregatorService

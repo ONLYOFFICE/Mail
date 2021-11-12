@@ -16,7 +16,7 @@ using ASC.Mail.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace ASC.Mail.Aggregator.CollectionService.Queue
+namespace ASC.Mail.Aggregator.Service.Queue
 {
     [Singletone]
     public class SignalrWorker : IDisposable

@@ -4,7 +4,7 @@ using ASC.Common;
 
 using CommandLine;
 
-namespace ASC.Mail.Aggregator.CollectionService.Console
+namespace ASC.Mail.Aggregator.Service.Console
 {
     [Singletone]
     public class ConsoleParser

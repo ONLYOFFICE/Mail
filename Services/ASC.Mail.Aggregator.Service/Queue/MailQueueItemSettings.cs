@@ -7,7 +7,7 @@ using ASC.Common;
 using ASC.Mail.Core;
 using ASC.Mail.Models;
 
-namespace ASC.Mail.Aggregator.CollectionService.Queue
+namespace ASC.Mail.Aggregator.Service.Queue
 {
     [Scope]
     public class MailQueueItemSettings

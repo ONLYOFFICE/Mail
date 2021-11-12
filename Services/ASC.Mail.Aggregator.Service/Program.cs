@@ -11,8 +11,8 @@ using ASC.Common.Caching;
 using ASC.Common.DependencyInjection;
 using ASC.Common.Mapping;
 using ASC.Common.Utils;
-using ASC.Mail.Aggregator.CollectionService.Console;
-using ASC.Mail.Aggregator.CollectionService.Service;
+using ASC.Mail.Aggregator.Service.Console;
+using ASC.Mail.Aggregator.Service.Service;
 using ASC.Mail.Core.Search;
 
 using Autofac;
@@ -23,7 +23,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace ASC.Mail.Aggregator.CollectionService
+namespace ASC.Mail.Aggregator.Service
 {
     class Program
     {

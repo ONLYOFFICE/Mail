@@ -1,7 +1,7 @@
 ﻿using ASC.Mail.Models;
 using System.Net.Mail;
 
-namespace ASC.Mail.Aggregator.CollectionService.Queue.Data
+namespace ASC.Mail.Aggregator.Service.Queue.Data
 {
     public static class Extensions
     {

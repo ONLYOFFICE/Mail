@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace ASC.Mail.Aggregator.CollectionService.Queue.Data
+namespace ASC.Mail.Aggregator.Service.Queue.Data
 {
     [DataContract]
     public class MailboxData

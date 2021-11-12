@@ -1,16 +1,16 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
-using ASC.Mail.Aggregator.CollectionService.Console;
-using ASC.Mail.Aggregator.CollectionService.Service;
+using ASC.Mail.Aggregator.Service.Console;
+using ASC.Mail.Aggregator.Service.Service;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
-namespace ASC.Mail.Aggregator.CollectionService
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace ASC.Mail.Aggregator.Service
 {
     [Singletone]
     class AggregatorServiceLauncher : IHostedService
