@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Net.Mail;
-using System.Runtime.Serialization;
-
 using ASC.FederatedLogin;
 using ASC.FederatedLogin.Helpers;
 using ASC.Mail.Authorization;
@@ -38,6 +32,12 @@ using ASC.Mail.Enums;
 using ASC.Mail.Utils;
 
 using Newtonsoft.Json;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Mail;
+using System.Runtime.Serialization;
 
 namespace ASC.Mail.Models
 {
@@ -79,6 +79,9 @@ namespace ASC.Mail.Models
                 }
             }
         }
+
+        [IgnoreDataMember]
+        public bool NotOnlyOne { get; set; }
 
         [DataMember(Name = "name")]
         public string Name { get; set; }
