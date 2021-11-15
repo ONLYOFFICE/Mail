@@ -24,14 +24,13 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-
 using ASC.Common;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Entities;
+using ASC.Mail.Models;
 
-using static ASC.Mail.Core.Engine.MailboxEngine;
+using System;
+using System.Collections.Generic;
 
 namespace ASC.Mail.Core.Dao.Interfaces
 {
@@ -64,9 +63,9 @@ namespace ASC.Mail.Core.Dao.Interfaces
 
         bool SetMailboxesActivity(int tenant, string user, bool userOnline = true);
 
-        bool SetMailboxInProcess(int id);
+        int SetMailboxesInProcess(string address);
 
-        bool ReleaseMailbox(Mailbox mailbox, MailboxReleasedOptions releasedOptions);
+        bool ReleaseMailboxes(List<Mailbox> mailboxes, MailBoxData mainMailBox, bool disable);
 
         bool SetMailboxAuthError(int id, DateTime? authErroDate);
 

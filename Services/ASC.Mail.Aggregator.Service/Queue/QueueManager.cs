@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Aggregator.Service.Queue.Data;
@@ -21,6 +13,14 @@ using LiteDB;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
 
 namespace ASC.Mail.Aggregator.Service.Queue
 {
@@ -115,6 +115,11 @@ namespace ASC.Mail.Aggregator.Service.Queue
                 return null;
             }
 
+            if (_lockedMailBoxList.Any(m => m.EMail.Address == mailBoxData.EMail.Address))
+            {
+                return null;
+            }
+
             _lockedMailBoxList.Add(mailBoxData);
 
             CancelHandler.Reset();
@@ -137,9 +142,25 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
-            foreach (var mailbox in cloneCollection)
+            if (firstTime)
             {
-                ReleaseMailbox(mailbox);
+                foreach (var mailbox in cloneCollection)
+                {
+                    var sameMboxes = mailboxEngine.GetMailboxDataList(new ConcreteMailboxesExp(mailbox.EMail.Address));
+                    if (sameMboxes.Count > 0)
+                    {
+                        mailbox.NotOnlyOne = true;
+                    }
+
+                    ReleaseMailbox(mailbox);
+                }
+            }
+            else
+            {
+                foreach (var mailbox in cloneCollection)
+                {
+                    ReleaseMailbox(mailbox);
+                }
             }
         }
 
@@ -640,7 +661,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
                 Log.DebugFormat("TryLockMailbox {2} (MailboxId: {0} is {1})", mailbox.MailBoxId, mailbox.Active ? "active" : "inactive", mailbox.EMail.Address);
 
-                return mailboxEngine.LockMaibox(mailbox.MailBoxId);
+                return mailboxEngine.LockMaibox(mailbox);
 
             }
             catch (Exception ex)

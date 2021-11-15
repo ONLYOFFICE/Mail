@@ -1,15 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Utils;
 using ASC.Core;
@@ -38,6 +27,17 @@ using Microsoft.Extensions.Options;
 using MimeKit;
 
 using NLog;
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Aggregator.Service.Service
 {
@@ -693,7 +693,28 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 log.InfoFormat($"Found message (UIDL: '{uidl}', MailboxId = {mailbox.MailBoxId}, Address = {mailbox.EMail})");
 
-                if (!SaveAndOptional(mailbox, boxInfo, uidl, log)) return;
+                using var scope = ServiceProvider.CreateScope();
+
+                var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+                tenantManager.SetCurrentTenant(mailbox.TenantId);
+
+                var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
+
+                if (mailbox.NotOnlyOne)
+                {
+                    var sameMboxes = factory.MailboxEngine.GetMailboxDataList(new ConcreteMailboxesExp(mailbox.EMail.Address));
+
+                    log.InfoFormat($"Boxes with the same name ({mailbox.EMail.Address}) detected. The message will be sent to them.");
+
+                    foreach (var box in sameMboxes)
+                    {
+                        if (!SaveAndOptional(box, boxInfo, uidl, log)) return;
+                    }
+                }
+                else
+                {
+                    if (!SaveAndOptional(mailbox, boxInfo, uidl, log)) return;
+                }
             }
             catch (Exception ex)
             {

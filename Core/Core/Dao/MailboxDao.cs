@@ -33,6 +33,7 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+using ASC.Mail.Models;
 using ASC.Security.Cryptography;
 
 using Microsoft.EntityFrameworkCore;
@@ -41,8 +42,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using static ASC.Mail.Core.Engine.MailboxEngine;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -66,6 +65,7 @@ namespace ASC.Mail.Core.Dao
         private const string imapIntervals_Column = "imap_intervals";
         private const string isRemoved_Column = "is_removed";
         private const string id_Column = "id";
+        private const string address_Column = "address";
 
         public MailboxDao(
              TenantManager tenantManager,
@@ -125,6 +125,10 @@ namespace ASC.Mail.Core.Dao
         public List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp)
         {
             var query = MailDbContext.MailMailbox
+                .FromSqlRaw(
+                "SELECT m.* FROM mail_mailbox m " +
+                "INNER JOIN(SELECT address, MAX(id) AS max_id FROM mail_mailbox GROUP BY address) m1 " +
+                "ON m.address = m1.address AND m.id = m1.max_id")
                 .Where(exp.GetExpression())
                 .Select(ToMailbox)
                 .ToList();
@@ -360,40 +364,206 @@ namespace ASC.Mail.Core.Dao
 
         string mySqlUtcNow = "UTC_TIMESTAMP()";
 
-        public bool SetMailboxInProcess(int id)
+        public int SetMailboxesInProcess(string address)
         {
             return MailDbContext.Database.ExecuteSqlRaw(
                 string.Format(
                     "UPDATE {0} SET {1} = 1, {2} = {3} WHERE {4} = {5} AND {6} = 0 AND {7} = 0",
                     mailboxTableName, isProcessed_Column, dateChecked_Column, mySqlUtcNow,
-                    id_Column, id, isProcessed_Column, isRemoved_Column)
-                ) > 0;
+                    address_Column, address, isProcessed_Column, isRemoved_Column));
         }
 
-        public bool ReleaseMailbox(Mailbox mailbox, MailboxReleasedOptions rOptions)
+        public class MailboxReleasedOptions
         {
-            if (rOptions.ServerLoginDelay < MailSettings.Defines.DefaultServerLoginDelay)
-                rOptions.ServerLoginDelay = MailSettings.Defines.DefaultServerLoginDelay;
+            public bool? Enabled = null;
+            public bool? QuotaError = null;
+            public string OAuthToken = null;
+            public bool? ResetImapIntervals = null;
+            public string ImapIntervalsJson = null;
+            public int? MessageCount = null;
+            public long? Size = null;
+
+            public bool DisableBox;
+            public int ServerLoginDelay;
+
+            public MailboxReleasedOptions(bool disable, int loginDelay)
+            {
+                DisableBox = disable;
+                ServerLoginDelay = loginDelay;
+            }
+
+            public void CleanOptions()
+            {
+                Enabled = null;
+                QuotaError = null;
+                OAuthToken = null;
+                ResetImapIntervals = null;
+                ImapIntervalsJson = null;
+                MessageCount = null;
+                Size = null;
+            }
+        }
+
+        public bool ReleaseMailboxes(List<Mailbox> mailboxes, MailBoxData account, bool disable)
+        {
+            MailboxReleasedOptions rOptions = new MailboxReleasedOptions(disable, account.ServerLoginDelay);
+
+            var boxStr = " WHERE id IN (";
+            mailboxes.ForEach(b => boxStr += $"{b.Id}, ");
+            boxStr = boxStr.Substring(0, boxStr.Length - 2);
+            boxStr += ");";
 
             var delay = rOptions.ServerLoginDelay > MailSettings.Defines.DefaultServerLoginDelay
                 ? DateTime.UtcNow.AddSeconds(rOptions.ServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 : DateTime.UtcNow.AddSeconds(MailSettings.Defines.DefaultServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            //TODO: create a mechanizm for queries
+            var query = $"UPDATE mail_mailbox SET is_processed = 0, date_checked = '{DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}', " +
+                $"date_login_delay_expires = '{delay}' ";
 
-            var query = string.Format(
-                "UPDATE {0} SET {1} = 0, {2} = {3}, {4} = '{5}', {6} = {7}, {8} = {9}, " +
-                "{10} = {11}, {12} = {13}, {14} = {15}, {16} = {17} WHERE {18} = {19}",
-                mailboxTableName, isProcessed_Column,
-                dateChecked_Column, mySqlUtcNow,
-                dateLoginDelayExpires_Column, delay,
-                enabled_Column, rOptions.Enabled.HasValue ? rOptions.Enabled.Value : enabled_Column,
-                msgCountLast_Column, rOptions.MessageCount.HasValue ? rOptions.MessageCount.Value : msgCountLast_Column,
-                sizeLast_Column, rOptions.Size.HasValue ? rOptions.Size.Value : sizeLast_Column,
-                quotaError_Column, rOptions.QuotaError.HasValue ? rOptions.QuotaError.Value : quotaError_Column,
-                token_Column, !string.IsNullOrEmpty(rOptions.OAuthToken) ? InstanceCrypto.Encrypt(rOptions.OAuthToken) : token_Column,
-                imapIntervals_Column, rOptions.ResetImapIntervals.HasValue ? "NULL" : !string.IsNullOrEmpty(rOptions.ImapIntervalsJson) ? rOptions.GetImapIntervalForQuery() : imapIntervals_Column,
-                id_Column, mailbox.Id);
+            if (rOptions.ServerLoginDelay < MailSettings.Defines.DefaultServerLoginDelay)
+                rOptions.ServerLoginDelay = MailSettings.Defines.DefaultServerLoginDelay;
 
-            return MailDbContext.Database.ExecuteSqlRaw(query) > 0;
+            (string, string) enableCase = (", enabled = CASE id", " ELSE enabled END");
+            (string, string) msgCountLastCase = (", msg_count_last = CASE id", " ELSE msg_count_last END");
+            (string, string) sizeLastCase = (", size_last = CASE id", " ELSE size_last END");
+            (string, string) quotaErrorCase = (", quota_error = CASE id", " ELSE quota_error END");
+            (string, string) tokenCase = (", token = CASE id ", " ELSE token END");
+            (string, string) imapIntervalsCase = (", imap_intervals = CASE id", " ELSE imap_intervals END");
+
+            foreach (var box in mailboxes)
+            {
+                if (box.Id == account.MailBoxId)
+                {
+
+                    if (box.MsgCountLast != account.MessagesCount) rOptions.MessageCount = account.MessagesCount;
+
+                    if (box.SizeLast != account.Size) rOptions.Size = account.Size;
+
+                    if (account.AccessTokenRefreshed)
+                        rOptions.OAuthToken = account.OAuthToken;
+                }
+
+                if (account.Imap && account.ImapFolderChanged)
+                {
+                    if (account.BeginDateChanged) { rOptions.ResetImapIntervals = true; }
+                    else { rOptions.ImapIntervalsJson = account.ImapIntervalsJson; }
+                }
+                if (account.AuthErrorDate.HasValue)
+                    if (rOptions.DisableBox)
+                        rOptions.Enabled = false;
+
+                if (account.QuotaErrorChanged) rOptions.QuotaError = account.QuotaError;
+
+                if (mailboxes.Count == 1)
+                {
+                    if (rOptions.Enabled.HasValue)
+                    {
+                        query += $", enabled = {rOptions.Enabled.Value}";
+                    }
+
+                    if (rOptions.MessageCount.HasValue)
+                    {
+                        query += $", msg_count_last = {rOptions.MessageCount.Value}";
+                    }
+
+                    if (rOptions.Size.HasValue)
+                    {
+                        query += $", size_last = {rOptions.Size.Value}";
+                    }
+
+                    if (rOptions.QuotaError.HasValue)
+                    {
+                        query += $", quota_error = {rOptions.QuotaError.Value}";
+                    }
+
+                    if (!string.IsNullOrEmpty(rOptions.OAuthToken))
+                    {
+                        query += $", token = '{InstanceCrypto.Encrypt(rOptions.OAuthToken)}'";
+                    }
+
+                    if (rOptions.ResetImapIntervals.HasValue)
+                    {
+                        query += $", imap_intervals = NULL";
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(rOptions.ImapIntervalsJson))
+                        {
+                            var newInterval = "";
+                            foreach (var ch in rOptions.ImapIntervalsJson)
+                            {
+                                if (ch == '{') newInterval += "{{";
+                                else if (ch == '}') newInterval += "}}";
+                                else newInterval += ch;
+                            }
+
+                            query += $", imap_intervals = '{newInterval}'";
+                        }
+                    }
+
+                    query += $" WHERE id = {box.Id};";
+
+                    break;
+                }
+
+                if (rOptions.Enabled.HasValue)
+                    enableCase.Item1 += $" WHEN {box.Id} THEN {Convert.ToInt32(rOptions.Enabled.Value)}";
+
+                if (rOptions.QuotaError.HasValue)
+                    quotaErrorCase.Item1 += $" WHEN {box.Id} THEN {Convert.ToInt32(rOptions.QuotaError.Value)}";
+
+                if (rOptions.ResetImapIntervals.HasValue)
+                {
+                    imapIntervalsCase.Item1 += $" WHEN {box.Id} THEN NULL";
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(rOptions.ImapIntervalsJson))
+                    {
+                        var newInterval = "";
+                        foreach (var ch in rOptions.ImapIntervalsJson)
+                        {
+                            if (ch == '{') newInterval += "{{";
+                            else if (ch == '}') newInterval += "}}";
+                            else newInterval += ch;
+                        }
+
+                        imapIntervalsCase.Item1 += $" WHEN {box.Id} THEN '{newInterval}'";
+                    }
+                }
+
+                if (rOptions.MessageCount.HasValue)
+                    msgCountLastCase.Item1 += $" WHEN {box.Id} THEN {rOptions.MessageCount.Value}";
+
+                if (rOptions.Size.HasValue)
+                    sizeLastCase.Item1 += $" WHEN {box.Id} THEN {rOptions.Size.Value}";
+
+                if (!string.IsNullOrEmpty(rOptions.OAuthToken))
+                    tokenCase.Item1 += $" WHEN {box.Id} THEN '{InstanceCrypto.Encrypt(rOptions.OAuthToken)}'";
+
+                rOptions.CleanOptions();
+            }
+
+            if (mailboxes.Count == 1)
+            {
+                return MailDbContext.Database.ExecuteSqlRaw(query) > 0;
+            }
+            else
+            {
+                var cases = new List<(string, string)> { enableCase, msgCountLastCase, sizeLastCase, quotaErrorCase, tokenCase, imapIntervalsCase };
+
+                foreach (var c in cases)
+                {
+                    if (c.Item1.Contains("WHEN"))
+                    {
+                        query += c.Item1; query += c.Item2;
+                    }
+                }
+
+                query += boxStr;
+
+                return MailDbContext.Database.ExecuteSqlRaw(query) > 0;
+            }
         }
 
         public bool SetMailboxAuthError(int id, DateTime? authErrorDate)
