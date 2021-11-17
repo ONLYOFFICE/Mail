@@ -24,11 +24,11 @@
 */
 
 
-using System.Collections.Generic;
-
 using ASC.Common;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using System.Collections.Generic;
 
 namespace ASC.Mail.Core.Dao.Interfaces
 {
@@ -39,6 +39,11 @@ namespace ASC.Mail.Core.Dao.Interfaces
         ///     Get folder by id.
         /// </summary>
         Folder GetFolder(FolderType folder);
+
+        /// <summary>
+        ///     Get a list of folders.
+        /// </summary>
+        List<Folder> GetFolders(string userId);
 
         /// <summary>
         ///     Get a list of folders.

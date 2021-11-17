@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Core.Notify.Signalr;
@@ -15,6 +9,12 @@ using ASC.Mail.Models;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Aggregator.Service.Queue
 {
@@ -168,8 +168,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
                 Log.Debug($"SignalrWorker -> SendUnreadUser(). Now current tennant = {tenantManager.GetCurrentTenant().TenantId}");
 
-                var mailFolderInfos = folderEngine.GetFolders();
-
+                var mailFolderInfos = folderEngine.GetFolders(userId);
                 var count = (from mailFolderInfo in mailFolderInfos
                              where mailFolderInfo.id == FolderType.Inbox
                              select mailFolderInfo.unreadMessages)

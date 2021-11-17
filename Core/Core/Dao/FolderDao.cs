@@ -24,8 +24,6 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -33,6 +31,9 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -55,6 +56,16 @@ namespace ASC.Mail.Core.Dao
                 .SingleOrDefault();
 
             return folder;
+        }
+
+        public List<Folder> GetFolders(string userId)
+        {
+            var folders = MailDbContext.MailFolderCounters
+                .Where(f => f.Tenant == Tenant && f.IdUser == userId)
+                .Select(ToFolder)
+                .ToList();
+
+            return folders;
         }
 
         public List<Folder> GetFolders()
@@ -164,7 +175,7 @@ namespace ASC.Mail.Core.Dao
             {
                 Tenant = r.Tenant,
                 UserId = r.IdUser,
-                FolderType = (FolderType) r.Folder,
+                FolderType = (FolderType)r.Folder,
                 TimeModified = r.TimeModified,
                 UnreadCount = (int)r.UnreadMessagesCount,
                 TotalCount = (int)r.TotalMessagesCount,
