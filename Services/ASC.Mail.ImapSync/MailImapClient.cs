@@ -15,14 +15,6 @@
 */
 
 
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Core.Common.Caching;
@@ -48,6 +40,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 using MimeKit;
+
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading;
 
 namespace ASC.Mail.ImapSync
 {
@@ -121,7 +121,7 @@ namespace ASC.Mail.ImapSync
 
                     var messages = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
 
-                    foreach(var simpleClient in simpleImapClients.Values)
+                    foreach (var simpleClient in simpleImapClients.Values)
                     {
                         if (simpleClient == null) continue;
 
@@ -576,7 +576,7 @@ namespace ASC.Mail.ImapSync
         {
             try
             {
-                var mailFolderInfos = _folderEngine.GetFolders();
+                var mailFolderInfos = _folderEngine.GetFolders(UserName);
 
                 var count = (from mailFolderInfo in mailFolderInfos
                              where mailFolderInfo.id == FolderType.Inbox
