@@ -52,55 +52,55 @@
 
 	<ItemGroup>
 		<Reference Include="ASC.Api.Core">
-			<HintPath>..\..\redistributable\ASC.Api.Core.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Api.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Common">
-			<HintPath>..\..\redistributable\ASC.Common.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Core.Common">
-			<HintPath>..\..\redistributable\ASC.Core.Common.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Core.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.CRM">
-			<HintPath>..\..\redistributable\ASC.CRM.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.CRM.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Data.Encryption">
-			<HintPath>..\..\redistributable\ASC.Data.Encryption.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Data.Encryption.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Data.Storage">
-			<HintPath>..\..\redistributable\ASC.Data.Storage.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Data.Storage.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.ElasticSearch">
-			<HintPath>..\..\redistributable\ASC.ElasticSearch.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.ElasticSearch.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.FederatedLogin">
-			<HintPath>..\..\redistributable\ASC.FederatedLogin.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.FederatedLogin.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Files">
-			<HintPath>..\..\redistributable\ASC.Files.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Files.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Files.Core">
-			<HintPath>..\..\redistributable\ASC.Files.Core.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Files.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.IPSecurity">
-			<HintPath>..\..\redistributable\ASC.IPSecurity.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.IPSecurity.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.MessagingSystem">
-			<HintPath>..\..\redistributable\ASC.MessagingSystem.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.MessagingSystem.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Notify.Textile">
-			<HintPath>..\..\redistributable\ASC.Notify.Textile.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Notify.Textile.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Textile">
-			<HintPath>..\..\redistributable\ASC.Textile.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Textile.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.VoipService">
-			<HintPath>..\..\redistributable\ASC.VoipService.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.VoipService.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Web.Core">
-			<HintPath>..\..\redistributable\ASC.Web.Core.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Web.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
+			<HintPath>..\..\redistributable_NET6\ASC.Webhooks.Core.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
