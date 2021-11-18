@@ -1,107 +1,107 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="Startup.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Startup.cs" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Remove="appsettings.json" />
-    <None Remove="search.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<None Remove="appsettings.json" />
+		<None Remove="search.json" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Include="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="search.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Include="search.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.8.0" />
-    <PackageReference Include="LiteDB" Version="5.0.10" />
-    <PackageReference Include="MailKit" Version="2.14.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
-    <PackageReference Include="Microsoft.Graph.Core" Version="1.5.0.2" />
-    <PackageReference Include="SelectelSharp" Version="0.8.0" />
-    <PackageReference Include="System.ServiceModel.Primitives" Version="4.8.1" />
-   </ItemGroup>
-	
-   <ItemGroup>
-    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.1" />
-    <PackageReference Include="Confluent.Kafka" Version="1.5.2.0" />
-	<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="5.0.1.0" />
-	<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="5.0.1.0" />
-	<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="5.0.2.0" />
-	<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="5.0.1.0" />
-	<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.1.0.457" />
-	<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="5.0.1.0" />
-	<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="CommandLineParser" Version="2.8.0" />
+		<PackageReference Include="LiteDB" Version="5.0.10" />
+		<PackageReference Include="MailKit" Version="2.14.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Graph.Core" Version="1.5.0.2" />
+		<PackageReference Include="SelectelSharp" Version="0.8.0" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="4.9.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\Core\ASC.Mail.Core.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.1" />
+		<PackageReference Include="Confluent.Kafka" Version="1.5.2.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="5.0.1.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="5.0.1.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="5.0.2.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="5.0.1.0" />
+		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.1.0.457" />
+		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="5.0.1.0" />
+		<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Reference Include="ASC.Api.Core">
-      <HintPath>..\..\redistributable\ASC.Api.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Common">
-      <HintPath>..\..\redistributable\ASC.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Core.Common">
-      <HintPath>..\..\redistributable\ASC.Core.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.CRM">
-      <HintPath>..\..\redistributable\ASC.CRM.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Data.Encryption">
-      <HintPath>..\..\redistributable\ASC.Data.Encryption.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Data.Storage">
-      <HintPath>..\..\redistributable\ASC.Data.Storage.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.ElasticSearch">
-      <HintPath>..\..\redistributable\ASC.ElasticSearch.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.FederatedLogin">
-      <HintPath>..\..\redistributable\ASC.FederatedLogin.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Files">
-      <HintPath>..\..\redistributable\ASC.Files.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Files.Core">
-      <HintPath>..\..\redistributable\ASC.Files.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.IPSecurity">
-      <HintPath>..\..\redistributable\ASC.IPSecurity.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.MessagingSystem">
-      <HintPath>..\..\redistributable\ASC.MessagingSystem.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Notify.Textile">
-      <HintPath>..\..\redistributable\ASC.Notify.Textile.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Textile">
-      <HintPath>..\..\redistributable\ASC.Textile.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.VoipService">
-      <HintPath>..\..\redistributable\ASC.VoipService.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Web.Core">
-      <HintPath>..\..\redistributable\ASC.Web.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="ASC.Webhooks.Core">
-      <HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
-    </Reference>
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\Core\ASC.Mail.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="ASC.Api.Core">
+			<HintPath>..\..\redistributable\ASC.Api.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Common">
+			<HintPath>..\..\redistributable\ASC.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Core.Common">
+			<HintPath>..\..\redistributable\ASC.Core.Common.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.CRM">
+			<HintPath>..\..\redistributable\ASC.CRM.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Data.Encryption">
+			<HintPath>..\..\redistributable\ASC.Data.Encryption.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Data.Storage">
+			<HintPath>..\..\redistributable\ASC.Data.Storage.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.ElasticSearch">
+			<HintPath>..\..\redistributable\ASC.ElasticSearch.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.FederatedLogin">
+			<HintPath>..\..\redistributable\ASC.FederatedLogin.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Files">
+			<HintPath>..\..\redistributable\ASC.Files.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Files.Core">
+			<HintPath>..\..\redistributable\ASC.Files.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.IPSecurity">
+			<HintPath>..\..\redistributable\ASC.IPSecurity.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.MessagingSystem">
+			<HintPath>..\..\redistributable\ASC.MessagingSystem.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Notify.Textile">
+			<HintPath>..\..\redistributable\ASC.Notify.Textile.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Textile">
+			<HintPath>..\..\redistributable\ASC.Textile.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.VoipService">
+			<HintPath>..\..\redistributable\ASC.VoipService.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Web.Core">
+			<HintPath>..\..\redistributable\ASC.Web.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
+		</Reference>
+	</ItemGroup>
 
 </Project>
