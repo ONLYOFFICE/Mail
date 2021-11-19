@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -40,6 +35,11 @@ using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -79,13 +79,13 @@ namespace ASC.Mail.Core.Engine
             Log = option.Get("ASC.Mail.FolderEngine");
         }
 
-        public List<MailFolderInfo> GetFolders()
+        public List<MailFolderInfo> GetFolders(string userId)
         {
             List<MailFolderInfo> folders;
 
             var needRecalculation = false;
 
-            var folderList = MailDaoFactory.GetFolderDao().GetFolders();
+            var folderList = MailDaoFactory.GetFolderDao().GetFolders(userId);
 
             foreach (var folder in DefaultFolders)
             {

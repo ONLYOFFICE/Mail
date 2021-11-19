@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -41,6 +37,10 @@ using ASC.Security.Cryptography;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using static ASC.Mail.Core.Engine.MailboxEngine;
 
@@ -431,10 +431,11 @@ namespace ASC.Mail.Core.Dao
             if (!mailboxes.Any())
                 return new List<int>();
 
-            MailDbContext.Database.ExecuteSqlRaw(
-                "UPDATE {0} SET {1} = 0 " +
-                "WHERE {1} = 1 AND {2} IS NOT NULL AND {3} - {2} > {4}",
+            var query = string.Format("UPDATE {0} SET {1} = 0 " +
+                "WHERE {1} = 1 AND {2} IS NOT NULL AND TIMESTAMPDIFF(minute, {2}, NOW()) > {4}",
                 mailboxTableName, isProcessed_Column, dateChecked_Column, DateTime.UtcNow, timeoutInMinutes);
+
+            MailDbContext.Database.ExecuteSqlRaw(query);
 
             return mbList.Select(mb => (int)mb.Id).ToList();
         }

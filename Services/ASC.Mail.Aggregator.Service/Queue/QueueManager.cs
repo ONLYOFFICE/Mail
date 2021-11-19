@@ -9,7 +9,7 @@ using System.Threading;
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
-using ASC.Mail.Aggregator.CollectionService.Queue.Data;
+using ASC.Mail.Aggregator.Service.Queue.Data;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Engine;
@@ -22,7 +22,7 @@ using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace ASC.Mail.Aggregator.CollectionService.Queue
+namespace ASC.Mail.Aggregator.Service.Queue
 {
     [Singletone]
     public class QueueManager : IDisposable

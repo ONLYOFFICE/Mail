@@ -1,14 +1,14 @@
 ﻿using ASC.Common;
 using ASC.Core;
 using ASC.Data.Storage;
-using ASC.Mail.Aggregator.CollectionService.Queue;
+using ASC.Mail.Aggregator.Service.Queue;
 using ASC.Mail.Core;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 
-namespace ASC.Mail.Aggregator.CollectionService.Service
+namespace ASC.Mail.Aggregator.Service.Service
 {
     [Scope]
     public class AggregatorServiceScope

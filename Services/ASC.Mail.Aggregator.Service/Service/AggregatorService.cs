@@ -1,22 +1,11 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Utils;
 using ASC.Core;
 using ASC.Data.Storage;
-using ASC.Mail.Aggregator.CollectionService.Console;
-using ASC.Mail.Aggregator.CollectionService.Queue;
-using ASC.Mail.Aggregator.CollectionService.Queue.Data;
+using ASC.Mail.Aggregator.Service.Console;
+using ASC.Mail.Aggregator.Service.Queue;
+using ASC.Mail.Aggregator.Service.Queue.Data;
 using ASC.Mail.Clients;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core;
@@ -39,7 +28,18 @@ using MimeKit;
 
 using NLog;
 
-namespace ASC.Mail.Aggregator.CollectionService.Service
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace ASC.Mail.Aggregator.Service.Service
 {
     [Singletone]
     public class AggregatorService

@@ -2,7 +2,7 @@
 using ASC.Common;
 using ASC.Common.Logging;
 
-namespace ASC.Mail.Aggregator.CollectionService.Service
+namespace ASC.Mail.Aggregator.Service.Service
 {
     [Singletone]
     public class AggregatorLogger
