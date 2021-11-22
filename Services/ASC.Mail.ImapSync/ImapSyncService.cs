@@ -15,21 +15,18 @@
 */
 
 
+using ASC.Common;
+using ASC.Common.Logging;
+using ASC.Core.Common.Caching;
+using ASC.Mail.Configuration;
+using MailKit.Security;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core.Common.Caching;
-using ASC.Mail.Configuration;
-
-using MailKit.Security;
-
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 namespace ASC.Mail.ImapSync
 {
@@ -105,54 +102,65 @@ namespace ASC.Mail.ImapSync
         {
             if (clients.ContainsKey(cashedTenantUserMailBox.UserName))
             {
-                clients[cashedTenantUserMailBox.UserName]?.CheckRedis(cashedTenantUserMailBox.Folder, cashedTenantUserMailBox.tags);
-
-                _log.Info($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. ");
-
+                if (clients[cashedTenantUserMailBox.UserName] == null)
+                {
+                    _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Wait for client start...");
+                }
+                else
+                {
+                    clients[cashedTenantUserMailBox.UserName]?.CheckRedis(cashedTenantUserMailBox.Folder, cashedTenantUserMailBox.tags);
+                }
                 return;
             }
             else
             {
-                if (clients.TryAdd(cashedTenantUserMailBox.UserName, null))
+                if (!clients.TryAdd(cashedTenantUserMailBox.UserName, null))
                 {
-                    MailImapClient client;
+                    _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Wait for client start...");
 
-                    try
-                    {
-                        client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _cancelTokenSource.Token, _mailSettings, _serviceProvider);
+                    return;
+                }
 
-                        if (client == null)
-                        {
-                            _log.Info($"Can`t create Mail client for user {cashedTenantUserMailBox.UserName}.");
-                        }
-                        else
-                        {
-                            clients.TryUpdate(cashedTenantUserMailBox.UserName, client, null);
+                MailImapClient client;
 
-                            client.OnCriticalError += Client_DeleteClient;
-                        }
-                    }
-                    catch (TimeoutException exTimeout)
-                    {
-                        _log.Warn($"[TIMEOUT] Create mail client for user {cashedTenantUserMailBox.UserName}. {exTimeout}");
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        _log.Info("[CANCEL] Create mail client for user {userName}.");
-                    }
-                    catch (AuthenticationException authEx)
-                    {
-                        _log.Error($"[AuthenticationException] Create mail client for user {cashedTenantUserMailBox.UserName}. {authEx}");
-                    }
-                    catch (WebException webEx)
-                    {
-                        _log.Error($"[WebException] Create mail client for user {cashedTenantUserMailBox.UserName}. {webEx}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.Error($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
-                    }
+                try
+                {
+                    client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _cancelTokenSource.Token, _mailSettings, _serviceProvider);
 
+                    if (client == null)
+                    {
+                        clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
+
+                        _log.Info($"Can`t create Mail client for user {cashedTenantUserMailBox.UserName}.");
+                    }
+                    else
+                    {
+                        clients.TryUpdate(cashedTenantUserMailBox.UserName, client, null);
+
+                        client.OnCriticalError += Client_DeleteClient;
+                    }
+                }
+                catch (TimeoutException exTimeout)
+                {
+                    _log.Warn($"[TIMEOUT] Create mail client for user {cashedTenantUserMailBox.UserName}. {exTimeout}");
+                }
+                catch (OperationCanceledException)
+                {
+                    _log.Info("[CANCEL] Create mail client for user {userName}.");
+                }
+                catch (AuthenticationException authEx)
+                {
+                    _log.Error($"[AuthenticationException] Create mail client for user {cashedTenantUserMailBox.UserName}. {authEx}");
+                }
+                catch (WebException webEx)
+                {
+                    _log.Error($"[WebException] Create mail client for user {cashedTenantUserMailBox.UserName}. {webEx}");
+                }
+                catch (Exception ex)
+                {
+                    clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
+
+                    _log.Error($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
                 }
             }
         }

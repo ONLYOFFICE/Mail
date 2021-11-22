@@ -1,26 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-
-using ASC.Api.Core;
+﻿using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Caching;
 using ASC.Common.DependencyInjection;
 using ASC.Common.Mapping;
 using ASC.Common.Utils;
-using ASC.ElasticSearch;
 using ASC.Mail.Core.Search;
-
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
-
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.ImapSync
 {
@@ -96,12 +92,9 @@ namespace ASC.Mail.ImapSync
                 services.AddHttpContextAccessor();
                 services.AddMemoryCache();
                 var diHelper = new DIHelper(services);
-                services.AddHostedService<ServiceLauncher>();
-                diHelper.TryAdd<ServiceLauncher>();
                 diHelper.TryAdd<FactoryIndexerMailMail>();
                 diHelper.TryAdd<FactoryIndexerMailContact>();
                 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
-                //services.AddSingleton(new ConsoleParser(args));
                 diHelper.TryAdd<MailClientScope>();
                 diHelper.TryAdd<ImapSyncService>();
                 services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
