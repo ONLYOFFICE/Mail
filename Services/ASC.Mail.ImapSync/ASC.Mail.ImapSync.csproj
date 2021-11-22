@@ -34,22 +34,22 @@
 
 	<ItemGroup>
 		<Reference Include="ASC.Api.Core">
-			<HintPath>..\..\redistributable_NET6\ASC.Api.Core.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.Api.Core.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Common">
-			<HintPath>..\..\redistributable_NET6\ASC.Common.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Core.Common">
-			<HintPath>..\..\redistributable_NET6\ASC.Core.Common.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.Core.Common.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Data.Encryption">
-			<HintPath>..\..\redistributable_NET6\ASC.Data.Encryption.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.Data.Encryption.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Data.Storage">
-			<HintPath>..\..\redistributable_NET6\ASC.Data.Storage.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.Data.Storage.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.ElasticSearch">
-			<HintPath>..\..\redistributable_NET6\ASC.ElasticSearch.dll</HintPath>
+			<HintPath>..\..\redistributable\ASC.ElasticSearch.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
