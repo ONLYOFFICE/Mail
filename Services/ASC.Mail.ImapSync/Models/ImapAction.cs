@@ -1,7 +1,4 @@
-﻿
-using ASC.Core.Common.Caching;
-
-namespace ASC.Mail.ImapSync
+﻿namespace ASC.Mail.ImapSync
 {
     public class ImapAction
     {
