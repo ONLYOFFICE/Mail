@@ -69,7 +69,7 @@ namespace ASC.Mail.Core.Dao
                 return new Dictionary<Provider, Func<BaseDbContext>>()
                 {
                     { Provider.MySql, () => new MySqlMailDbContext() } ,
-                    { Provider.PostgreSql, () => new PostgreSqlMailDbContext() } ,
+                    { Provider.Postgre, () => new PostgreSqlMailDbContext() } ,
                 };
             }
         }

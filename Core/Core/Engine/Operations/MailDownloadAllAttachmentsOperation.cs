@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Security.Authentication;
@@ -42,12 +36,17 @@ using ASC.Mail.Core.Resources;
 using ASC.Mail.Extensions;
 using ASC.Mail.Storage;
 using ASC.Web.Core.Files;
-using ASC.Web.Core.PublicResources;
 
 using Ionic.Zip;
 using Ionic.Zlib;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading;
 //using Resources;
 
 namespace ASC.Mail.Core.Engine.Operations
@@ -97,7 +96,7 @@ namespace ASC.Mail.Core.Engine.Operations
                 }
                 catch
                 {
-                    Error = Resource.SsoSettingsNotValidToken;
+                    Error = "Error";//Resource.SsoSettingsNotValidToken;
                     Logger.Error(Error);
                 }
 

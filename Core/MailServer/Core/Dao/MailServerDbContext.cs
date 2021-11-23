@@ -27,7 +27,7 @@ namespace ASC.Mail.Server.Core.Dao
                 return new Dictionary<Provider, Func<BaseDbContext>>()
                 {
                     { Provider.MySql, () => new MySqlMailServerDbContext() } ,
-                    { Provider.PostgreSql, () => new PostgreMailServerDbContext() } ,
+                    { Provider.Postgre, () => new PostgreMailServerDbContext() } ,
                 };
             }
         }

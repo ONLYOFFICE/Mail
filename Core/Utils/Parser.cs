@@ -24,17 +24,19 @@
 */
 
 
+using ASC.Core.Common.Settings;
+using ASC.Mail.Models;
+using ASC.Web.Core.PublicResources;
+using ASC.Web.Core.Users;
+using ASC.Web.Core.Utility;
+
+using MimeKit;
+
 using System;
 using System.Collections.Generic;
 using System.Net.Mail;
 using System.Text;
 using System.Text.RegularExpressions;
-using ASC.Mail.Models;
-using ASC.Web.Core.Utility;
-using MimeKit;
-using ASC.Core.Common.Settings;
-using ASC.Web.Core.Users;
-using ASC.Web.Core.PublicResources;
 
 namespace ASC.Mail.Utils
 {
@@ -184,8 +186,8 @@ namespace ASC.Mail.Utils
             error.AppendFormat("{0} ", Resource.ErrorPasswordMessage);
             error.AppendFormat(Resource.ErrorPasswordLength, passwordSettings.MinLength, PasswordSettings.MaxLength);
 
-            error.AppendFormat(", {0}", Resource.ErrorPasswordOnlyLatinLetters);
-            error.AppendFormat(", {0}", Resource.ErrorPasswordNoSpaces);
+            error.AppendFormat(", {0}", "ErrorPasswordOnlyLatinLetters");//Resource.ErrorPasswordOnlyLatinLetters);
+            error.AppendFormat(", {0}", "ErrorPasswordNoSpaces");// Resource.ErrorPasswordNoSpaces);
 
             if (passwordSettings.UpperCase)
                 error.AppendFormat(", {0}", Resource.ErrorPasswordNoUpperCase);
