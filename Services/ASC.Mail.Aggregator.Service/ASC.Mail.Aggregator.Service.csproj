@@ -29,21 +29,19 @@
 		<PackageReference Include="MailKit" Version="2.15.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
-		<PackageReference Include="Microsoft.Graph.Core" Version="1.5.0.2" />
+		<PackageReference Include="Microsoft.Graph.Core" Version="1.6.0.0" />
 		<PackageReference Include="SelectelSharp" Version="0.8.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.9.0" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.1" />
 		<PackageReference Include="Confluent.Kafka" Version="1.5.2.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="5.0.1.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="5.0.1.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="5.0.2.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="5.0.1.0" />
-		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.1.0.457" />
+		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="5.0.1.0" />
 		<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
+		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="1.0.0-beta0008" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -79,13 +79,15 @@ namespace ASC.Mail.Core.Engine
             Log = option.Get("ASC.Mail.FolderEngine");
         }
 
-        public List<MailFolderInfo> GetFolders(string userId)
+        public List<MailFolderInfo> GetFolders(string userId = null)
         {
             List<MailFolderInfo> folders;
 
             var needRecalculation = false;
 
-            var folderList = MailDaoFactory.GetFolderDao().GetFolders(userId);
+            var folderList = userId == null 
+                ? MailDaoFactory.GetFolderDao().GetFolders() 
+                : MailDaoFactory.GetFolderDao().GetFolders(userId);
 
             foreach (var folder in DefaultFolders)
             {

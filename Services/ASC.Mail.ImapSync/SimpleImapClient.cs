@@ -1,23 +1,19 @@
-﻿using System;
+﻿using ASC.Common.Logging;
+using ASC.Mail.Configuration;
+using ASC.Mail.Core.Entities;
+using ASC.Mail.Enums;
+using ASC.Mail.Models;
+using MailKit;
+using MailKit.Net.Imap;
+using MailKit.Security;
+using MimeKit;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Authentication;
 using System.Threading;
 using System.Threading.Tasks;
-
-using ASC.Common.Logging;
-using ASC.Core.Common.Caching;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
-
-using MailKit;
-using MailKit.Net.Imap;
-using MailKit.Security;
-
-using MimeKit;
 
 namespace ASC.Mail.ImapSync
 {

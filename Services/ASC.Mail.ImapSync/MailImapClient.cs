@@ -17,7 +17,6 @@
 
 using ASC.Common.Logging;
 using ASC.Core;
-using ASC.Core.Common.Caching;
 using ASC.Core.Notify.Signalr;
 using ASC.Core.Users;
 using ASC.Data.Storage;
