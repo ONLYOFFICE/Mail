@@ -16,6 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.1" />
 		<PackageReference Include="CommandLineParser" Version="2.8.0" />
 		<PackageReference Include="MySql.Data" Version="8.0.26" />
 		<PackageReference Include="SelectelSharp" Version="0.8.0" />
@@ -24,8 +25,8 @@
 		<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="5.0.1.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="5.0.2.0" />
 		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="5.0.1.0" />
-		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.1.0.457" />
 		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="5.0.1.0" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="1.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
