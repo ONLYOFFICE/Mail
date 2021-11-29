@@ -8,3 +8,4 @@ Data/
 Logs/
 **/.DS_Store
 /.vs
+config/storage.Development.json
