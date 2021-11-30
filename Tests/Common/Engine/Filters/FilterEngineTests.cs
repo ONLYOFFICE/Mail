@@ -24,129 +24,40 @@
 */
 
 
+using ASC.Core;
+using ASC.ElasticSearch;
+using ASC.Mail.Aggregator.Tests.Common.Utils;
+using ASC.Mail.Core.Dao.Entities;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums.Filter;
+using ASC.Mail.Models;
+using ASC.Mail.Tests;
+using ASC.Mail.Utils;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using ASC.Core;
-using ASC.Core.Users;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
-using NUnit.Framework;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Api.Core.Auth;
-using ASC.Api.Core.Middleware;
-using ASC.Mail.Core.Engine;
-using Autofac;
-using ASC.ElasticSearch;
-using ASC.Api.Core;
-using ASC.Mail.Enums.Filter;
-using ASC.Web.Files.Api;
-using ASC.Files.Core.Security;
-using ASC.Web.Files.Utils;
-using ASC.Mail.Core.Dao.Entities;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Filters
 {
     [TestFixture]
-    internal class FilterEngineTests
+    internal class FilterEngineTests : BaseMailTests
     {
         private const int CURRENT_TENANT = 0;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 
-        public UserInfo TestUser { get; private set; }
         public MailBoxData TestMailbox { get; set; }
         public int MailId { get; set; }
-        IServiceProvider ServiceProvider { get; set; }
-        IHost TestHost { get; set; }
 
         [OneTimeSetUp]
-        public void Prepare()
+        public override void Prepare()
         {
-            var args = new string[] { };
-
-            TestHost = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    var buided = config.Build();
-                    var path = buided["pathToConf"];
-                    if (!Path.IsPathRooted(path))
-                    {
-                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
-                    }
-
-                    config.SetBasePath(path);
-
-                    config
-                        .AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                        {"pathToConf", path}
-                        })
-                        .AddJsonFile("appsettings.json")
-                        .AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddJsonFile("storage.json")
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddEnvironmentVariables();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHttpContextAccessor();
-
-                    var diHelper = new DIHelper(services);
-
-                    diHelper
-                        .AddCookieAuthHandler()
-                        .AddCultureMiddleware()
-                        .AddIpSecurityFilter()
-                        .AddPaymentFilter()
-                        .AddProductSecurityFilter()
-                        .AddTenantStatusFilter();
-
-                    diHelper.AddNLogManager("ASC.Api", "ASC.Web");
-
-                    diHelper
-                        .AddTenantManagerService()
-                        .AddUserManagerService()
-                        .AddSecurityContextService()
-                        .AddMailBoxSettingEngineService()
-                        .AddMailboxEngineService()
-                        .AddApiHelperService()
-                        .AddFolderEngineService()
-                        .AddUserFolderEngineService()
-                        .AddFactoryIndexerService()
-                        .AddFactoryIndexerService<MailMail>()
-                        .AddMailGarbageEngineService()
-                        .AddTestEngineService()
-                        .AddMessageEngineService()
-                        .AddFilterEngineService()
-                        .AddCoreSettingsService()
-                        .AddApiDateTimeHelper()
-                        .AddFilesIntegrationService()
-                        .AddFileSecurityService()
-                        .AddFileConverterService();
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //services.AddAutofac(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            TestHost.Start();
-
-            ServiceProvider = TestHost.Services;
+            base.Prepare();
         }
 
         [SetUp]

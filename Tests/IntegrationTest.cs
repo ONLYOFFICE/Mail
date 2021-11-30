@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc.Testing;
+﻿using ASC.CRM;
+
+using Microsoft.AspNetCore.Mvc.Testing;
+
 using System;
 using System.Net.Http;
-using System.Threading.Tasks;
 using System.Net.Http.Headers;
+using System.Threading.Tasks;
 //using Microsoft.Extensions.DependencyInjection.Extensions;
 //using ASC.Core.Common.EF.Context;
 //using Microsoft.Extensions.DependencyInjection;
@@ -18,16 +21,16 @@ namespace ASC.Mail.Tests
         {
             var appFactory = new WebApplicationFactory<Startup>();
             //TODO: Replace real db to Fake inMemmory db
-                //.WithWebHostBuilder(builder => {
-                //    builder.ConfigureServices(services =>
-                //    {
-                //        services.RemoveAll(typeof(DataContext));
-                //        services.AddDbContext<DbContext>(options =>
-                //        {
-                //            options.UseInMemmoryDatabase();
-                //        });
-                //    });
-                //});
+            //.WithWebHostBuilder(builder => {
+            //    builder.ConfigureServices(services =>
+            //    {
+            //        services.RemoveAll(typeof(DataContext));
+            //        services.AddDbContext<DbContext>(options =>
+            //        {
+            //            options.UseInMemmoryDatabase();
+            //        });
+            //    });
+            //});
 
             TestClient = appFactory.CreateClient();
 
@@ -36,15 +39,17 @@ namespace ASC.Mail.Tests
             TestClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        protected async Task AuthenticateAsync() {
+        protected async Task AuthenticateAsync()
+        {
             TestClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", await GetJwtAsync());
         }
 
-        private async Task<string> GetJwtAsync() {
+        private async Task<string> GetJwtAsync()
+        {
 
             //TODO: Change response token
-           var token = await Task.FromResult("4PgTLAGww7BnJ9JrqwZ/NNShlILIqL11TsIG/7m9HmJRQzXrbyo03PhS0r/WxsUh2Bf7r/XefPif3rNpQN/" +
-                "AL3CUsMhTt04fs7DLhPeLxpU0fVOUhVImdeiayHJ5s0GjQTfEAFEwDEA3QBtHIvczoQ==");
+            var token = await Task.FromResult("4PgTLAGww7BnJ9JrqwZ/NNShlILIqL11TsIG/7m9HmJRQzXrbyo03PhS0r/WxsUh2Bf7r/XefPif3rNpQN/" +
+                 "AL3CUsMhTt04fs7DLhPeLxpU0fVOUhVImdeiayHJ5s0GjQTfEAFEwDEA3QBtHIvczoQ==");
 
             return token;
         }

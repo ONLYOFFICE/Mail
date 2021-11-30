@@ -5,10 +5,6 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail", "Server\ASC.Mail.csproj", "{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{CEF28478-491F-40DB-84BC-B738858C47B2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Tests", "Tests\ASC.Mail.Tests.csproj", "{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Core", "Core\ASC.Mail.Core.csproj", "{C2DD5352-AC40-4962-978C-0031860C8CA4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Aggregator.Service", "Services\ASC.Mail.Aggregator.Service\ASC.Mail.Aggregator.Service.csproj", "{3FB12384-EFDF-4069-B625-61D13552A630}"
@@ -18,6 +14,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.StorageCleaner.Service", "Services\ASC.Mail.StorageCleaner.Service\ASC.Mail.StorageCleaner.Service.csproj", "{A7B69BF5-8998-4B10-A6F7-F0E8CA04EFAD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Watchdog.Service", "Services\ASC.Mail.Watchdog.Service\ASC.Mail.Watchdog.Service.csproj", "{5F332535-6B77-46C9-A4E0-0F7E91166558}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ASC.Mail.Tests", "Tests\ASC.Mail.Tests.csproj", "{4F8E5049-EE1A-4D68-B511-869B913879EC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{198EBFFE-F5FD-4D8B-9AB4-FAEAF1645338}.Release|Any CPU.Build.0 = Release|Any CPU
-		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2DD5352-AC40-4962-978C-0031860C8CA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -53,12 +47,13 @@ Global
 		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5F332535-6B77-46C9-A4E0-0F7E91166558}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F8E5049-EE1A-4D68-B511-869B913879EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F8E5049-EE1A-4D68-B511-869B913879EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F8E5049-EE1A-4D68-B511-869B913879EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F8E5049-EE1A-4D68-B511-869B913879EC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{205D2DE5-79BD-4DAE-988A-8C405B4F28EB} = {CEF28478-491F-40DB-84BC-B738858C47B2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DD110BE7-5062-4A9B-9E7F-8E676562FD44}

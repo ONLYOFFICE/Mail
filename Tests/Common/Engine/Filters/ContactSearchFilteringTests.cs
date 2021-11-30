@@ -24,146 +24,71 @@
 */
 
 
+using ASC.Core;
+using ASC.ElasticSearch;
+using ASC.Mail.Aggregator.Tests.Common.Utils;
+using ASC.Mail.Core.Dao.Entities;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums;
+using ASC.Mail.Tests;
+using ASC.Mail.Utils;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
-using System.IO;
-using ASC.Core;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using ASC.Mail.Utils;
-using NUnit.Framework;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Api.Core.Auth;
-using ASC.Api.Core.Middleware;
-using ASC.Mail.Core.Engine;
-using Autofac;
-using ASC.ElasticSearch;
-using ASC.Api.Core;
-using ASC.Web.Files.Api;
-using ASC.Files.Core.Security;
-using ASC.Web.Files.Utils;
-using ASC.Core.Users;
-using ASC.Mail.Core.Dao.Entities;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Filters
 {
     [TestFixture]
-    internal class ContactSearchFilteringTests
+    internal class ContactSearchFilteringTests : BaseMailTests
     {
         private const int CURRENT_TENANT = 0;
-        public UserInfo TestUser { get; private set; }
 
         private const int CONTACT_ID_1 = 777;
         private const int CONTACT_ID_2 = 778;
         private const int CONTACT_ID_3 = 779;
 
-        IServiceProvider ServiceProvider { get; set; }
-        IHost TestHost { get; set; }
-
         [OneTimeSetUp]
-        public void Prepare()
+        public override void Prepare()
         {
-            var args = new string[] { };
+            base.Prepare();
 
-            TestHost = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    var buided = config.Build();
-                    var path = buided["pathToConf"];
-                    if (!Path.IsPathRooted(path))
-                    {
-                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
-                    }
+            //using var scope = ServiceProvider.CreateScope();
 
-                    config.SetBasePath(path);
+            var userManager = serviceScope.ServiceProvider.GetService<UserManager>();
+            var tenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
+            var securityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
+            var apiHelper = serviceScope.ServiceProvider.GetService<ApiHelper>();
 
-                    config
-                        .AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                        {"pathToConf", path}
-                        })
-                        .AddJsonFile("appsettings.json")
-                        .AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddJsonFile("storage.json")
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddEnvironmentVariables();
+            tenantManager.GetTenant(CURRENT_TENANT);
+            var e = tenantManager.GetCurrentTenant(false);
 
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHttpContextAccessor();
-
-                    var diHelper = new DIHelper(services);
-
-                    diHelper
-                        .AddCookieAuthHandler()
-                        .AddCultureMiddleware()
-                        .AddIpSecurityFilter()
-                        .AddPaymentFilter()
-                        .AddProductSecurityFilter()
-                        .AddTenantStatusFilter();
-
-                    diHelper.AddNLogManager("ASC.Api", "ASC.Web");
-
-                    diHelper
-                        .AddTenantManagerService()
-                        .AddUserManagerService()
-                        .AddSecurityContextService()
-                        .AddMailBoxSettingEngineService()
-                        .AddMailboxEngineService()
-                        .AddApiHelperService()
-                        .AddFolderEngineService()
-                        .AddUserFolderEngineService()
-                        .AddFactoryIndexerService()
-                        .AddFactoryIndexerService<MailContact>()
-                        .AddMailGarbageEngineService()
-                        .AddTestEngineService()
-                        .AddMessageEngineService()
-                        .AddIndexEngineService()
-                        .AddCoreSettingsService()
-                        .AddApiDateTimeHelper()
-                        .AddFilesIntegrationService()
-                        .AddFileSecurityService()
-                        .AddFileConverterService();
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //services.AddAutofac(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            TestHost.Start();
-
-            ServiceProvider = TestHost.Services;
-        }
-
-        [SetUp]
-        public void SetUp()
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
             securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
+            var testEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
 
             TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
         }
+
+        //[SetUp]
+        //public void SetUp()
+        //{
+        //    using var scope = ServiceProvider.CreateScope();
+        //    var userManager = scope.ServiceProvider.GetService<UserManager>();
+        //    var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+        //    var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+        //    var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
+
+        //    tenantManager.SetCurrentTenant(CURRENT_TENANT);
+        //    securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
+
+        //    var testEngine = scope.ServiceProvider.GetService<TestEngine>();
+
+        //    TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+        //}
 
         [TearDown]
         public void CleanUp()
