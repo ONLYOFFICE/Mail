@@ -24,32 +24,26 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using ASC.Core;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using NUnit.Framework;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using ASC.Common;
-using ASC.Api.Core.Auth;
-using ASC.Api.Core.Middleware;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Autofac;
-using ASC.Mail.Core.Engine;
-using ASC.Common.Logging;
-using ASC.Api.Core;
 using ASC.Mail.Clients;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Extensions;
+using ASC.Mail.Models;
+using ASC.Mail.Tests;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using NUnit.Framework;
+
+using System;
+using System.IO;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Filters
 {
     [TestFixture]
-    internal class FilterConditionsTests
+    internal class FilterConditionsTests : BaseMailTests
     {
         private const int CURRENT_TENANT = 0;
 
@@ -62,75 +56,10 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
 
-        IServiceProvider ServiceProvider { get; set; }
-        IHost TestHost { get; set; }
-
         [OneTimeSetUp]
-        public void Prepare()
+        public override void Prepare()
         {
-            var args = new string[] { };
-
-            TestHost = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    var buided = config.Build();
-                    var path = buided["pathToConf"];
-                    if (!Path.IsPathRooted(path))
-                    {
-                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
-                    }
-
-                    config.SetBasePath(path);
-
-                    config
-                        .AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                        {"pathToConf", path}
-                        })
-                        .AddJsonFile("appsettings.json")
-                        .AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddJsonFile("storage.json")
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddEnvironmentVariables();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHttpContextAccessor();
-
-                    var diHelper = new DIHelper(services);
-
-                    diHelper
-                        .AddCookieAuthHandler()
-                        .AddCultureMiddleware()
-                        .AddIpSecurityFilter()
-                        .AddPaymentFilter()
-                        .AddProductSecurityFilter()
-                        .AddTenantStatusFilter();
-
-                    diHelper.AddNLogManager("ASC.Api", "ASC.Web");
-
-                    diHelper
-                        .AddTenantManagerService()
-                        .AddSecurityContextService()
-                        .AddApiContextService()
-                        .AddFilterEngineService()
-                        .AddCoreSettingsService();
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //services.AddAutofac(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            TestHost.Start();
-
-            ServiceProvider = TestHost.Services;
+            base.Prepare();
 
             using var scope = ServiceProvider.CreateScope();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();

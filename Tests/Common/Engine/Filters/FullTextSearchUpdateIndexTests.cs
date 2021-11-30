@@ -24,129 +24,38 @@
 */
 
 
+using ASC.Core;
+using ASC.ElasticSearch;
+using ASC.Mail.Aggregator.Tests.Common.Utils;
+using ASC.Mail.Core.Dao.Entities;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums;
+using ASC.Mail.Tests;
+using ASC.Mail.Utils;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using ASC.Core;
-using ASC.Core.Users;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using ASC.Mail.Utils;
-using NUnit.Framework;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Api.Core.Auth;
-using ASC.Api.Core.Middleware;
-using ASC.Mail.Core.Engine;
-using Autofac;
-using ASC.ElasticSearch;
-using ASC.Api.Core;
-using ASC.Web.Files.Api;
-using ASC.Files.Core.Security;
-using ASC.Web.Files.Utils;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Entities;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Filters
 {
     [TestFixture]
-    internal class FullTextSearchUpdateIndexTests
+    internal class FullTextSearchUpdateIndexTests : BaseMailTests
     {
         private const int CURRENT_TENANT = 0;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
         public const string EMAIL_NAME = "Test User";
 
-        public UserInfo TestUser { get; set; }
-        IServiceProvider ServiceProvider { get; set; }
-        IHost TestHost { get; set; }
 
         [OneTimeSetUp]
-        public void Prepare()
+        public override void Prepare()
         {
-            var args = new string[] { };
-
-            TestHost = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    var buided = config.Build();
-                    var path = buided["pathToConf"];
-                    if (!Path.IsPathRooted(path))
-                    {
-                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
-                    }
-
-                    config.SetBasePath(path);
-
-                    config
-                        .AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                        {"pathToConf", path}
-                        })
-                        .AddJsonFile("appsettings.json")
-                        .AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddJsonFile("storage.json")
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddEnvironmentVariables();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHttpContextAccessor();
-
-                    var diHelper = new DIHelper(services);
-
-                    diHelper
-                        .AddCookieAuthHandler()
-                        .AddCultureMiddleware()
-                        .AddIpSecurityFilter()
-                        .AddPaymentFilter()
-                        .AddProductSecurityFilter()
-                        .AddTenantStatusFilter();
-
-                    diHelper.AddNLogManager("ASC.Api", "ASC.Web");
-
-                    diHelper
-                        .AddTenantManagerService()
-                        .AddUserManagerService()
-                        .AddSecurityContextService()
-                        .AddMailBoxSettingEngineService()
-                        .AddMailboxEngineService()
-                        .AddApiHelperService()
-                        .AddFolderEngineService()
-                        .AddUserFolderEngineService()
-                        .AddFactoryIndexerService()
-                        .AddFactoryIndexerService<MailMail>()
-                        .AddMailGarbageEngineService()
-                        .AddTestEngineService()
-                        .AddMessageEngineService()
-                        .AddTagEngineService()
-                        .AddCoreSettingsService()
-                        .AddApiDateTimeHelper()
-                        .AddFilesIntegrationService()
-                        .AddFileSecurityService()
-                        .AddFileConverterService();
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //services.AddAutofac(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            TestHost.Start();
-
-            ServiceProvider = TestHost.Services;
+            base.Prepare();
         }
 
         [SetUp]
@@ -209,7 +118,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelectIds(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out List<int> mailIds);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out List<int> mailIds);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, mailIds.Count);
@@ -226,7 +135,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
 
             success = factoryIndexer.TrySelect(i => i
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -236,7 +145,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             // No Changes
             Assert.AreEqual(MailMail.Id, wrapper.Id);
             Assert.AreEqual(MailMail.TenantId, wrapper.TenantId);
-            Assert.AreEqual(MailMail.IdUser, wrapper.IdUser);
+            Assert.AreEqual(MailMail.UserId, wrapper.UserId);
             Assert.AreEqual(MailMail.FromText, wrapper.FromText);
             Assert.AreEqual(MailMail.ToText, wrapper.ToText);
             Assert.AreEqual(MailMail.Cc, wrapper.Cc);
@@ -277,7 +186,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelectIds(i => i
                 .Where(s => s.Folder, (byte)FolderType.UserFolder)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out List<int> mailIds);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out List<int> mailIds);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, mailIds.Count);
@@ -303,7 +212,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
 
             success = factoryIndexer.TrySelect(i => i
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -313,7 +222,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             // No Changes
             Assert.AreEqual(MailMail.Id, wrapper.Id);
             Assert.AreEqual(MailMail.TenantId, wrapper.TenantId);
-            Assert.AreEqual(MailMail.IdUser, wrapper.IdUser);
+            Assert.AreEqual(MailMail.UserId, wrapper.UserId);
             Assert.AreEqual(MailMail.FromText, wrapper.FromText);
             Assert.AreEqual(MailMail.ToText, wrapper.ToText);
             Assert.AreEqual(MailMail.Cc, wrapper.Cc);
@@ -354,7 +263,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelectIds(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out List<int> mailIds);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out List<int> mailIds);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, mailIds.Count);
@@ -385,7 +294,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
 
             success = factoryIndexer.TrySelect(i => i
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -395,7 +304,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             // No Changes
             Assert.AreEqual(MailMail.Id, wrapper.Id);
             Assert.AreEqual(MailMail.TenantId, wrapper.TenantId);
-            Assert.AreEqual(MailMail.IdUser, wrapper.IdUser);
+            Assert.AreEqual(MailMail.UserId, wrapper.UserId);
             Assert.AreEqual(MailMail.FromText, wrapper.FromText);
             Assert.AreEqual(MailMail.ToText, wrapper.ToText);
             Assert.AreEqual(MailMail.Cc, wrapper.Cc);
@@ -445,7 +354,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -476,7 +385,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -503,7 +412,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -544,7 +453,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -571,7 +480,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -610,7 +519,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             var success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out IReadOnlyCollection<MailMail> wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -629,7 +538,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
 
             success = factoryIndexer.TrySelect(i => i
                 .Where(s => s.Folder, (byte)FolderType.Inbox)
-                .Where(s => s.IdUser, TestUser.ID.ToString()), out wrappers);
+                .Where(s => s.UserId, TestUser.ID.ToString()), out wrappers);
 
             Assert.AreEqual(true, success);
             Assert.AreEqual(1, wrappers.Count);
@@ -654,7 +563,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             {
                 Id = 1,
                 TenantId = CURRENT_TENANT,
-                IdUser = TestUser.ID.ToString(),
+                UserId = TestUser.ID.ToString(),
                 FromText = from,
                 ToText = to,
                 Cc = cc,
@@ -663,7 +572,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
                 Folder = inUserFolder ? (byte)FolderType.UserFolder : (byte)FolderType.Inbox,
                 DateSent = now,
                 Unread = true,
-                IdMailbox = 1,
+                MailboxId = 1,
                 HasAttachments = true,
                 Importance = true,
                 IsRemoved = false,
@@ -685,7 +594,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
                         }
                     }
                     : new List<MailUserFolder>(),
-                TimeModified = now
+                LastModifiedOn = now
             };
 
             return MailMail;

@@ -24,35 +24,32 @@
 */
 
 
+using ASC.Api.Core;
+using ASC.Core;
+using ASC.ElasticSearch;
+using ASC.Mail.Aggregator.Tests.Common.Utils;
+using ASC.Mail.Core.Dao.Entities;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums;
+using ASC.Mail.Models;
+using ASC.Mail.Tests;
+using ASC.Mail.Utils;
+
+using Autofac;
+
+using Microsoft.Extensions.DependencyInjection;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using ASC.Core;
-using ASC.Core.Users;
-using ASC.ElasticSearch;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using ASC.Mail.Utils;
-using NUnit.Framework;
-using Microsoft.Extensions.DependencyInjection;
-using ASC.Mail.Core.Engine;
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Api.Core.Auth;
-using ASC.Api.Core.Middleware;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using Autofac;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using ASC.Api.Core;
-using ASC.Mail.Core.Dao.Entities;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Engine
 {
     [TestFixture]
-    internal class ChainEngineTests
+    internal class ChainEngineTests : BaseMailTests
     {
         private const int CURRENT_TENANT = 0;
         public const string PASSWORD = "123456";
@@ -63,89 +60,13 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         private const string EML1_FILE_NAME = @"bad_encoding.eml";
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
 
-        public UserInfo TestUser { get; private set; }
         private MailBoxData TestMailbox { get; set; }
         private int MailId { get; set; }
-        IServiceProvider ServiceProvider { get; set; }
-        IHost TestHost { get; set; }
 
         [OneTimeSetUp]
-        public void Prepare()
+        public override void Prepare()
         {
-            var args = new string[] { };
-
-            TestHost = Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration((hostContext, config) =>
-                {
-                    var buided = config.Build();
-                    var path = buided["pathToConf"];
-                    if (!Path.IsPathRooted(path))
-                    {
-                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
-                    }
-
-                    config.SetBasePath(path);
-
-                    config
-                        .AddInMemoryCollection(new Dictionary<string, string>
-                        {
-                        {"pathToConf", path}
-                        })
-                        .AddJsonFile("appsettings.json")
-                        .AddJsonFile($"appsettings.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddJsonFile("storage.json")
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{hostContext.HostingEnvironment.EnvironmentName}.json", true)
-                        .AddEnvironmentVariables();
-
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHttpContextAccessor();
-
-                    var diHelper = new DIHelper(services);
-
-                    diHelper
-                        .AddCookieAuthHandler()
-                        .AddCultureMiddleware()
-                        .AddIpSecurityFilter()
-                        .AddPaymentFilter()
-                        .AddProductSecurityFilter()
-                        .AddTenantStatusFilter();
-
-                    diHelper.AddNLogManager("ASC.Api", "ASC.Web");
-
-                    diHelper
-                        .AddTenantManagerService()
-                        .AddUserManagerService()
-                        .AddSecurityContextService()
-                        .AddAccountEngineService()
-                        .AddMailBoxSettingEngineService()
-                        .AddMailboxEngineService()
-                        .AddApiHelperService()
-                        .AddFolderEngineService()
-                        .AddUserFolderEngineService()
-                        .AddFactoryIndexerService()
-                        .AddFactoryIndexerService<MailMail>()
-                        .AddMailGarbageEngineService()
-                        .AddTestEngineService()
-                        .AddMessageEngineService()
-                        .AddCoreSettingsService()
-                        .AddApiDateTimeHelper();
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //services.AddAutofac(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            TestHost.Start();
-
-            ServiceProvider = TestHost.Services;
+            base.Prepare();
         }
 
         [SetUp]
@@ -164,6 +85,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
 
             TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
 
+
+            //вынести
             var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
 
             var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
@@ -199,7 +122,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
 
             var t = scope.ServiceProvider.GetService<MailMail>();
             if (factoryIndexer.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.IdUser, TestUser.ID.ToString())).Wait();
+                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID.ToString())).Wait();
 
             // Clear TestUser mail data
             var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
@@ -479,8 +402,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING,
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING,
                 FromMessage = 0
             };
 
@@ -549,8 +472,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING,
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING,
                 FromMessage = 0
             };
 
@@ -618,8 +541,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING,
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING,
                 FromMessage = 0
             };
 
@@ -686,8 +609,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING,
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING,
                 FromMessage = 0
             };
 
@@ -754,8 +677,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING
             };
 
             var chains1 = messageEngine.GetConversations(filter, out bool hasMore);
@@ -877,8 +800,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.ASCENDING
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.ASCENDING
             };
 
             bool hasMore;
@@ -1003,8 +926,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
             {
                 PrimaryFolder = FolderType.Inbox,
                 PageSize = page_size,
-                Sort = Defines.ORDER_BY_DATE_CHAIN,
-                SortOrder = Defines.DESCENDING,
+                Sort = DefineConstants.ORDER_BY_DATE_CHAIN,
+                SortOrder = DefineConstants.DESCENDING,
                 Unread = true
             };
 
