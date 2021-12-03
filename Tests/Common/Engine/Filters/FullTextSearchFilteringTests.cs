@@ -32,7 +32,6 @@ using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -43,12 +42,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class FullTextSearchFilteringTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
         public const string EMAIL_NAME = "Test User";
@@ -133,6 +132,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(1)]
         public void CheckFtSearchSubjectMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -200,6 +200,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(2)]
         public void CheckFtSearchSubjectContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -268,6 +269,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(3)]
         public void CheckFtSearchFromMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -333,6 +335,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(4)]
         public void CheckFtSearchFromContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -398,6 +401,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(5)]
         public void CheckFtSearchToOrCcMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -480,6 +484,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(6)]
         public void CheckFtSearchToOrCcContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -562,6 +567,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(7)]
         public void CheckFtSearchByFromEmailOnly()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -619,6 +625,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(8)]
         public void CheckFtSearchFromAndSubjectMatchAll()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -693,6 +700,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(9)]
         public void CheckFtSearchFromAndSubjectMatchAtLeastOne()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -767,6 +775,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(10)]
         public void CheckFtSearchToWithDiffMatchAll()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -851,6 +860,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(11)]
         public void CheckFtSearchWithCalendar()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -926,6 +936,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(12)]
         public void CheckFtSortByDateSend()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -1086,6 +1097,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(13)]
         public void CheckFtPrevOrNextMessage()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -1202,6 +1214,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(14)]
         public void CheckFtSearchWithTags()
         {
             using var scope = ServiceProvider.CreateScope();

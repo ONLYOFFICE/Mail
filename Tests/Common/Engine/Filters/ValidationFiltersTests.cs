@@ -24,16 +24,18 @@
 */
 
 
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Enums;
+using ASC.Mail.Enums.Filter;
+using ASC.Mail.Models;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using ASC.Mail.Enums.Filter;
-using NUnit.Framework;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class ValidationFiltersTests

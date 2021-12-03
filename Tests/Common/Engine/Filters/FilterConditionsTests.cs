@@ -31,7 +31,6 @@ using ASC.Mail.Enums;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Extensions;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -40,12 +39,12 @@ using NUnit.Framework;
 using System;
 using System.IO;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class FilterConditionsTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
 
         public MailMessageData MessageData { get; private set; }
 
@@ -61,10 +60,12 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         {
             base.Prepare();
 
+            //в базу скорее всего
             using var scope = ServiceProvider.CreateScope();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
 
+            //отделить
             using var fs = new FileStream(Eml1Path, FileMode.Open, FileAccess.Read);
 
             var mimeMessage = MailClient.ParseMimeMessage(fs);
@@ -74,6 +75,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(1)]
         public void CheckFromEmailConditionMatchSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -98,6 +100,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(2)]
         public void CheckFromEmailConditionContainsSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -122,6 +125,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(3)]
         public void CheckFromEmailConditionNotMatchSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -146,6 +150,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(4)]
         public void CheckFromEmailConditionNotContainsSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -170,6 +175,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(5)]
         public void CheckToEmailsConditionMatchSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -205,17 +211,17 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(6)]
         public void CheckCcEmailsConditionMatchSuccess()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+            //using var scope = ServiceProvider.CreateScope();
+            var tenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
+            var securityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
 
             tenantManager.SetCurrentTenant(CURRENT_TENANT);
             securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-            var filterEngine = scope.ServiceProvider.GetService<FilterEngine>();
-
+            var factory = serviceScope.ServiceProvider.GetService<MailEnginesFactory>();
             var condition = new MailSieveFilterConditionData
             {
                 Key = ConditionKeyType.Cc,
@@ -223,7 +229,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
                 Value = "mono.mail.4test@mail.ru"
             };
 
-            var success = filterEngine.IsConditionSucceed(condition, MessageData);
+            var success = factory.FilterEngine.IsConditionSucceed(condition, MessageData);
 
             Assert.AreEqual(true, success);
 
@@ -234,12 +240,13 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
                 Value = "mono.mail.4test@yandex.ru"
             };
 
-            success = filterEngine.IsConditionSucceed(condition, MessageData);
+            success = factory.FilterEngine.IsConditionSucceed(condition, MessageData);
 
             Assert.AreEqual(true, success);
         }
 
         [Test]
+        [Order(7)]
         public void CheckToOrCcEmailsConditionMatchSuccess()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -275,6 +282,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(8)]
         public void CheckSubjectConditionMatchSuccess()
         {
             using var scope = ServiceProvider.CreateScope();

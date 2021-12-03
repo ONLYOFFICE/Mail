@@ -30,7 +30,6 @@ using ASC.Mail.Aggregator.Tests.Common.Utils;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -40,12 +39,12 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class ContactSearchFilteringTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
 
         private const int CONTACT_ID_1 = 777;
         private const int CONTACT_ID_2 = 778;
@@ -63,7 +62,9 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             var securityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
             var apiHelper = serviceScope.ServiceProvider.GetService<ApiHelper>();
 
-            tenantManager.GetTenant(CURRENT_TENANT);
+            var tenant = tenantManager.GetTenant(CURRENT_TENANT);
+            tenantManager.SetCurrentTenant(tenant);
+
             var e = tenantManager.GetCurrentTenant(false);
 
             securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
@@ -111,6 +112,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(1)]
         public void CheckContactSearchEmailLocalPartMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -171,6 +173,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(2)]
         public void CheckContactSearchEmailDomainMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -230,6 +233,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(3)]
         public void CheckContactSearchFullEmailMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -289,6 +293,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(4)]
         public void CheckContactSearchNameMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -375,6 +380,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(5)]
         public void CheckContactSearchDescriptionMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -489,6 +495,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(6)]
         public void CheckContactSearchPartPhoneMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -604,6 +611,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(7)]
         public void CheckContactSearchFullPhoneMatch()
         {
             using var scope = ServiceProvider.CreateScope();

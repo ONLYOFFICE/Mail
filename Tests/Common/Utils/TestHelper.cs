@@ -24,15 +24,14 @@
 */
 
 
-using System;
-using System.Linq;
-using System.Text;
 using ASC.Core;
 using ASC.Core.Users;
 using ASC.ElasticSearch;
 using ASC.Mail.Utils;
-using Microsoft.Extensions.DependencyInjection;
-using NUnit.Framework;
+
+using System;
+using System.Linq;
+using System.Text;
 
 namespace ASC.Mail.Aggregator.Tests.Common.Utils
 {
@@ -64,11 +63,11 @@ namespace ASC.Mail.Aggregator.Tests.Common.Utils
             return sb.ToString();
         }
 
-        public static UserInfo CreateNewRandomEmployee(UserManager userManager, 
+        public static UserInfo CreateNewRandomEmployee(UserManager userManager,
             SecurityContext securityContext, TenantManager tenantManager, ApiHelper apiHelper)
         {
             var admin = userManager.GetUsers()
-                .FirstOrDefault(u => u.IsAdmin(userManager) 
+                .FirstOrDefault(u => u.IsAdmin(userManager)
                                   || u.IsOwner(tenantManager.GetCurrentTenant()));
 
             if (admin == null)
@@ -84,9 +83,9 @@ namespace ASC.Mail.Aggregator.Tests.Common.Utils
 
             //var apiHelper = new ApiHelper(Defines.DefaultApiSchema);
 
-            var user = apiHelper.CreateEmployee(false, email, 
-                "FirstName" + GetRandomString(4), 
-                "LastName" + GetRandomString(4), 
+            var user = apiHelper.CreateEmployee(false, email,
+                "FirstName" + GetRandomString(4),
+                "LastName" + GetRandomString(4),
                 "Isadmin123");
 
             return userManager.SaveUserInfo(user);
@@ -94,19 +93,24 @@ namespace ASC.Mail.Aggregator.Tests.Common.Utils
 
         public static bool IgnoreIfFullTextSearch<T>(bool enabled, IServiceProvider serviceProvider) where T : class, ISearchItem
         {
-            using var scope = serviceProvider.CreateScope();
+            return false;
 
-            var t = serviceProvider.GetService<T>();
-            var factoryIndexer = serviceProvider.GetService<FactoryIndexer<T>>();
+            //TODO GetService<FactoryIndexer<T>>
 
-            if (enabled == factoryIndexer.Support(t))
-            {
-                Assert.Ignore("Test is Ignored until FullTextSearch {0} ", !enabled ? "is not started" : "is started");
+            //using var scope = serviceProvider.CreateScope();
 
-                return false;
-            }
+            //var t = serviceProvider.GetService<T>();
 
-            return true;
+            //var factoryIndexer = serviceProvider.GetService<FactoryIndexer<T>>();
+
+            //if (enabled == factoryIndexer.Support(t))
+            //{
+            //    Assert.Ignore("Test is Ignored until FullTextSearch {0} ", !enabled ? "is not started" : "is started");
+
+            //    return false;
+            //}
+
+            //return true;
         }
     }
 }

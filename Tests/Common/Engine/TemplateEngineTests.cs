@@ -31,7 +31,6 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -43,12 +42,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Engine
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class TemplateEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 

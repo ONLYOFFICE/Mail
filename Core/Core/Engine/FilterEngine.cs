@@ -24,13 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
-using System.Reflection;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -47,6 +40,13 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Mail;
+using System.Reflection;
 
 namespace ASC.Mail.Core.Engine
 {

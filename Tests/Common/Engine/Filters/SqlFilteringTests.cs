@@ -32,7 +32,6 @@ using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -43,12 +42,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class SqlFilteringTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 
@@ -125,6 +124,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(1)]
         public void CheckSimpleFilterFromMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -179,6 +179,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(2)]
         public void CheckSimpleFilterFromContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -233,6 +234,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(3)]
         public void CheckSimpleFilterToMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -287,6 +289,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(4)]
         public void CheckSimpleFilterToContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -341,6 +344,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(5)]
         public void CheckSimpleFilterCcMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -395,6 +399,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(6)]
         public void CheckSimpleFilterCcContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -449,6 +454,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(7)]
         public void CheckSimpleFilterToOrCcMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -504,6 +510,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(8)]
         public void CheckSimpleFilterToOrCcContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -559,6 +566,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(8)]
         public void CheckSimpleFilterSubjectMatch()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -613,6 +621,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(10)]
         public void CheckSimpleFilterSubjectContains()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -667,6 +676,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(11)]
         public void CheckComplexFilterFromAndSubjectMatchAll()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -732,6 +742,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(12)]
         public void CheckComplexFilterFromAndSubjectMatchAtLeastOne()
         {
             using var scope = ServiceProvider.CreateScope();

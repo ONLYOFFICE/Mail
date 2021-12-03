@@ -32,7 +32,6 @@ using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -44,12 +43,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class UserFoldersTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 
@@ -133,6 +132,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(1)]
         public void CreateFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -150,6 +150,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(2)]
         public void CreateFolderWithAlreadyExistingNameTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -174,6 +175,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(3)]
         public void CreateFolderWithoutParentTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -192,6 +194,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(4)]
         public void CreateFolderWithoutNameTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -210,6 +213,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(5)]
         public void CreateSubFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -273,6 +277,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }*/
 
         [Test]
+        [Order(6)]
         public void ChangeNameTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -308,6 +313,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(7)]
         public void ChangeNameToExistingTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -342,6 +348,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(8)]
         public void MoveToBaseFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -379,6 +386,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(9)]
         public void MoveFromBaseFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -418,6 +426,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(10)]
         public void WrongMoveFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -446,6 +455,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(11)]
         public void WrongChangeParentToCurrentTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -474,6 +484,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(12)]
         public void WrongChangeParentToChildTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -592,6 +603,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }*/
 
         [Test]
+        [Order(13)]
         public void LoadMessagesToUserFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -676,6 +688,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(14)]
         public void MoveMessagesFromDefaulFolderToUserFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -752,6 +765,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(15)]
         public void MoveMessagesFromUserFolderToDefaulFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -837,6 +851,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.UserFolders
         }
 
         [Test]
+        [Order(16)]
         public void MoveMessagesFromUserFolderToAnotherUserFolderTest()
         {
             using var scope = ServiceProvider.CreateScope();

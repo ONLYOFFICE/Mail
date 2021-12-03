@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
+﻿
 using ASC.Common;
 using ASC.Core;
 
@@ -38,13 +34,13 @@ namespace ASC.Mail.Core.Engine
         public MessageEngine MessageEngine => _messageEngine;
 
         public MailEnginesFactory(
-            AutoreplyEngine autoreplyEngine, 
-            CalendarEngine calendarEngine, 
-            IndexEngine indexEngine, 
-            TagEngine tagEngine, 
-            CrmLinkEngine crmLinkEngine, 
-            EmailInEngine emailInEngine, 
-            FilterEngine filterEngine, 
+            AutoreplyEngine autoreplyEngine,
+            CalendarEngine calendarEngine,
+            IndexEngine indexEngine,
+            TagEngine tagEngine,
+            CrmLinkEngine crmLinkEngine,
+            EmailInEngine emailInEngine,
+            FilterEngine filterEngine,
             MailboxEngine mailboxEngine,
             MessageEngine messageEngine,
             TenantManager tenantManager,

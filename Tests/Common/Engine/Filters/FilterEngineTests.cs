@@ -31,7 +31,6 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -42,12 +41,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Filters
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class FilterEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 
@@ -67,6 +66,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
             var userManager = scope.ServiceProvider.GetService<UserManager>();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+
             var mailBoxSettingEngine = scope.ServiceProvider.GetService<MailBoxSettingEngine>();
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
             var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
@@ -111,6 +111,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(1)]
         public void CreateBaseFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -127,6 +128,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(2)]
         public void CreateFullFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -210,6 +212,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(3)]
         public void GetFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -231,6 +234,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(4)]
         public void GetFiltersTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -251,6 +255,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(5)]
         public void UpdateFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -285,6 +290,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(6)]
         public void DeleteFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -308,6 +314,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(7)]
         public void CreateDisabledFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -327,6 +334,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Filters
         }
 
         [Test]
+        [Order(8)]
         public void EnabledFilterTest()
         {
             using var scope = ServiceProvider.CreateScope();

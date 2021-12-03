@@ -41,12 +41,12 @@
 //using System.Threading;
 //using ASC.Mail.Aggregator.Tests.Common.Utils;
 
-//namespace ASC.Mail.Aggregator.Tests.Common.Engine
+//namespace ASC.Mail.Tests
 //{
 //    [TestFixture]
 //    internal class OperationEngineTests
 //    {
-//        private const int CURRENT_TENANT = 0;
+//        private const int CURRENT_TENANT = 1;
 //        public const string PASSWORD = "123456";
 //        public const string DOMAIN = "gmail.com";
 

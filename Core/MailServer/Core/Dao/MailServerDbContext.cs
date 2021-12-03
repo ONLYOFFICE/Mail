@@ -18,7 +18,7 @@ namespace ASC.Mail.Server.Core.Dao
         public MailServerDbContext(DbContextOptions<MailServerDbContext> options) : base(options) { }
 
         public class MySqlMailServerDbContext : MailServerDbContext { }
-        public class PostgreMailServerDbContext : MailServerDbContext { }
+        public class PostgreSqlMailServerDbContext : MailServerDbContext { }
 
         protected override Dictionary<Provider, Func<BaseDbContext>> ProviderContext
         {
@@ -27,7 +27,7 @@ namespace ASC.Mail.Server.Core.Dao
                 return new Dictionary<Provider, Func<BaseDbContext>>()
                 {
                     { Provider.MySql, () => new MySqlMailServerDbContext() } ,
-                    { Provider.PostgreSql, () => new PostgreMailServerDbContext() } ,
+                    { Provider.PostgreSql, () => new PostgreSqlMailServerDbContext() } ,
                 };
             }
         }

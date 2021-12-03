@@ -32,7 +32,6 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Mail.Tests;
 using ASC.Mail.Utils;
 
 using Autofac;
@@ -46,12 +45,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace ASC.Mail.Aggregator.Tests.Common.Engine
+namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class ChainEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 0;
+        private const int CURRENT_TENANT = 1;
         public const string PASSWORD = "123456";
         public const string DOMAIN = "gmail.com";
 
@@ -85,6 +84,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
 
             TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
 
+            var e = TestFolderPath;
 
             //вынести
             var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
@@ -130,6 +130,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(1)]
         public void RemoveConversationTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -177,6 +178,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(2)]
         public void ReadUnreadConvarsationsTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -186,6 +188,8 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
 
             tenantManager.SetCurrentTenant(CURRENT_TENANT);
             securityContext.AuthenticateMe(TestUser.ID);
+
+            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
 
             var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
             var testEngine = scope.ServiceProvider.GetService<TestEngine>();
@@ -374,6 +378,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(3)]
         public void Paging25Total28Test()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -444,6 +449,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(4)]
         public void Paging50Total57Test()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -513,6 +519,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(5)]
         public void Paging75Total80Test()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -581,6 +588,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(6)]
         public void Paging100Total113Test()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -649,6 +657,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(7)]
         public void Paging25Total58SortDescTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -772,6 +781,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(8)]
         public void Paging25Total58SortAscTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -895,6 +905,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(9)]
         public void Paging25Total28UnreadTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -968,6 +979,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(10)]
         public void ReadUnreadSameChainInDifferentMailboxesTest()
         {
             if (!TestHelper.IgnoreIfFullTextSearch<MailMail>(false, ServiceProvider))
@@ -1100,6 +1112,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(11)]
         public void MoveMessagesFromSameChainIntoDifferentUserFoldersTest()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -1269,6 +1282,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.Engine
         }
 
         [Test]
+        [Order(12)]
         public void SetAndUnsetImportanceByChainedMessagesTest()
         {
             using var scope = ServiceProvider.CreateScope();

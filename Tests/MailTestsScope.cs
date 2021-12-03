@@ -33,6 +33,9 @@ namespace ASC.Mail.Tests
         private TenantStatusFilter TenantStatusFilter { get; }
         private UserManager UserManager { get; }
         private MailSettings MailSettings { get; }
+        private MailGarbageEngine MailGarbageEngine { get; }
+        private MessageEngine MessageEngine { get; }
+        private FilterEngine FilterEngine { get; }
 
         public MailTestsScope(
             ApiDateTimeHelper apiDateTimeHelper,
@@ -52,7 +55,10 @@ namespace ASC.Mail.Tests
             TenantManager tenantManager,
             TenantStatusFilter tenantStatusFilter,
             UserManager userManager,
-            MailSettings mailSettings
+            MailSettings mailSettings,
+            MailGarbageEngine mailGarbageEngine,
+            MessageEngine messageEngine,
+            FilterEngine filterEngine
             )
         {
             ApiDateTimeHelper = apiDateTimeHelper;
@@ -72,6 +78,9 @@ namespace ASC.Mail.Tests
             TenantStatusFilter = tenantStatusFilter;
             UserManager = userManager;
             MailSettings = mailSettings;
+            MailGarbageEngine = mailGarbageEngine;
+            MessageEngine = messageEngine;
+            FilterEngine = filterEngine;
         }
     }
 }

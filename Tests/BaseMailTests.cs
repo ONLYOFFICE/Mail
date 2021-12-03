@@ -1,32 +1,136 @@
 ﻿using ASC.Common;
 using ASC.Common.Caching;
+using ASC.Common.Mapping;
+using ASC.Core;
+using ASC.Core.Common.EF;
+using ASC.Core.Common.EF.Context;
+using ASC.Core.Tenants;
 using ASC.Core.Users;
 using ASC.Mail.Core.Search;
 
-using Autofac;
 using Autofac.Extensions.DependencyInjection;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+
+using NUnit.Framework;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 
 namespace ASC.Mail.Tests
 {
+    [SetUpFixture]
+    public class MySetUpClass
+    {
+        protected IServiceScope Scope { get; set; }
+
+        [OneTimeSetUp]
+        public void CreateDb()
+        {
+            var args = new string[] {
+                "--pathToConf", Path.Combine("..", "..", "..", "..", "config"),
+                "--ConnectionStrings:default:connectionString", BaseMailTests.TestConnection,
+                "--migration:enabled", "true" };
+
+            var host = Host.CreateDefaultBuilder(args)
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                .ConfigureAppConfiguration((hostContext, config) =>
+                {
+                    var buided = config.Build();
+
+                    var path = buided["pathToConf"];
+
+                    if (!Path.IsPathRooted(path))
+                    {
+                        path = Path.GetFullPath(Path.Combine(hostContext.HostingEnvironment.ContentRootPath, path));
+                    }
+
+                    config.SetBasePath(path);
+
+                    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
+                    var env2 = hostContext.HostingEnvironment.EnvironmentName;
+                    config
+                        .AddInMemoryCollection(new Dictionary<string, string>
+                        {
+                            {"pathToConf", path}
+                        })
+                        .AddJsonFile("appsettings.json")
+                        .AddJsonFile($"appsettings.{env}.json", true)
+                        .AddJsonFile("storage.json")
+                        .AddJsonFile("kafka.json")
+                        .AddJsonFile($"kafka.{env}.json", true)
+                        .AddJsonFile("mail.json")
+                        .AddCommandLine(args)
+                        .AddEnvironmentVariables();
+                })
+                .ConfigureServices((hostContext, services) =>
+                {
+                    services.AddHttpContextAccessor();
+                    services.AddMemoryCache();
+
+                    var diHelper = new DIHelper(services);
+
+                    diHelper.TryAdd<MailTestsScope>();
+                    diHelper.TryAdd<FactoryIndexerMailMail>();
+                    diHelper.TryAdd<FactoryIndexerMailContact>();
+                    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+                    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+                })
+                .Build();
+
+            Scope = host.Services.CreateScope();
+            var configuration = Scope.ServiceProvider.GetService<IConfiguration>();
+
+            Migrate(host.Services);
+            Migrate(host.Services, Assembly.GetExecutingAssembly().GetName().Name);
+
+
+        }
+
+        [OneTimeTearDown]
+        public void DropDb()
+        {
+            var context = Scope.ServiceProvider.GetService<DbContextManager<TenantDbContext>>();
+            context.Value.Database.EnsureDeleted();
+        }
+
+        private void Migrate(IServiceProvider serviceProvider, string testAssembly = null)
+        {
+            using var scope = serviceProvider.CreateScope();
+            var c = scope.ServiceProvider.GetService<IConfiguration>();
+
+            if (!string.IsNullOrEmpty(testAssembly))
+            {
+                var configuration = scope.ServiceProvider.GetService<IConfiguration>();
+                configuration["testAssembly"] = testAssembly;
+            }
+
+            using var db = scope.ServiceProvider.GetService<DbContextManager<UserDbContext>>();
+            db.Value.Migrate();
+        }
+    }
+
     public class BaseMailTests
     {
         protected UserInfo TestUser { get; set; }
         protected IServiceProvider ServiceProvider { get; set; }
         protected IHost TestHost { get; set; }
         protected IServiceScope serviceScope { get; set; }
+        protected Tenant CurrentTenant { get; set; }
+        protected SecurityContext SecurityContext { get; set; }
+
+        public const string TestConnection = "Server=localhost;Database=onlyoffice_test;User ID=root;Password=root;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True";
 
         public virtual void Prepare()
         {
-            var args = new string[] { };
+            var args = new string[] {
+                "--pathToConf" , Path.Combine("..", "..","..", "..", "config"),
+                "--ConnectionStrings:default:connectionString", TestConnection,
+                 "--migration:enabled", "true" };
 
             TestHost = Host.CreateDefaultBuilder(args)
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
@@ -56,6 +160,7 @@ namespace ASC.Mail.Tests
                         .AddJsonFile("kafka.json")
                         .AddJsonFile($"kafka.{env}.json", true)
                         .AddJsonFile("mail.json")
+                        .AddCommandLine(args)
                         .AddEnvironmentVariables();
                 })
                 .ConfigureServices((hostContext, services) =>
@@ -67,19 +172,23 @@ namespace ASC.Mail.Tests
 
                     diHelper.TryAdd<MailTestsScope>();
                     diHelper.TryAdd<FactoryIndexerMailMail>();
+                    diHelper.TryAdd<FactoryIndexerMailContact>();
                     diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
-
-                    var builder = new ContainerBuilder();
-                    var container = builder.Build();
-
-                    services.TryAddSingleton(container);
-
-                    //diHelper.RegisterProducts(hostContext.Configuration, hostContext.HostingEnvironment.ContentRootPath);
+                    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
                 })
-                //.UseConsoleLifetime()
                 .Build();
 
             serviceScope = TestHost.Services.CreateScope();
+
+            var tenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
+            var tenant = tenantManager.GetTenant(1);
+
+            tenantManager.SetCurrentTenant(tenant);
+            CurrentTenant = tenant;
+
+            SecurityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
+            SecurityContext.AuthenticateMe(CurrentTenant.OwnerId);
+
             TestHost.Start();
 
             ServiceProvider = TestHost.Services;

@@ -76,48 +76,49 @@ namespace ASC.Mail.Core.Dao
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            ModelBuilderWrapper.From(modelBuilder, Provider)
+            ModelBuilderWrapper
+                .From(modelBuilder, Provider)
                 .AddDbTenant();
 
-            modelBuilder.AddMailAlert();
-            modelBuilder.AddMailAttachment();
-            modelBuilder.AddMailChain();
-            modelBuilder.AddMailChainXCrmEntity();
-            modelBuilder.AddMailContactInfo();
-            modelBuilder.AddMailContact();
-            modelBuilder.AddMailDisplayImages();
-            modelBuilder.AddMailFilter();
-            modelBuilder.AddMailFolder();
-            modelBuilder.AddMailFolderCounters();
-            modelBuilder.AddMailImapFlags();
-            modelBuilder.AddMailImapSpecialMailbox();
-            modelBuilder.AddMailMail();
-            modelBuilder.AddMailMailbox();
-            modelBuilder.AddMailMailboxAutoreply();
-            modelBuilder.AddMailMailboxAutoreplyHistory();
-            modelBuilder.AddMailMailboxDomain();
-            modelBuilder.AddMailMailboxProvider();
-            modelBuilder.AddMailMailboxServer();
-            modelBuilder.AddMailMailboxSignature();
-            modelBuilder.AddMailPopUnorderedDomain();
-            modelBuilder.AddMailServerAddress();
-            modelBuilder.AddMailServerDns();
-            modelBuilder.AddMailServerDomain();
-            modelBuilder.AddMailServerMailGroup();
-            modelBuilder.AddMailServerMailGroupXMailServerAddress();
-            modelBuilder.AddMailServerServer();
-            modelBuilder.AddMailServerServerType();
-            modelBuilder.AddMailServerServerXTenant();
-            modelBuilder.AddMailTag();
-            modelBuilder.AddCrmTag();
-            modelBuilder.AddCrmEntityTag();
-            modelBuilder.AddMailTagAddresses();
-            modelBuilder.AddMailTagMail();
-            modelBuilder.AddMailUserFolder();
-            modelBuilder.AddMailUserFolderTree();
-            modelBuilder.AddMailUserFolderXMail();
-            modelBuilder.AddCrmContact();
-            modelBuilder.AddCrmContactInfo();
+            modelBuilder.AddMailAlert()
+                .AddMailAttachment()
+                .AddMailChain()
+                .AddMailChainXCrmEntity()
+                .AddMailContactInfo()
+                .AddMailContact()
+                .AddMailDisplayImages()
+                .AddMailFilter()
+                .AddMailFolder()
+                .AddMailFolderCounters()
+                .AddMailImapFlags()
+                .AddMailImapSpecialMailbox()
+                .AddMailMail()
+                .AddMailMailbox()
+                .AddMailMailboxAutoreply()
+                .AddMailMailboxAutoreplyHistory()
+                .AddMailMailboxDomain()
+                .AddMailMailboxProvider()
+                .AddMailMailboxServer()
+                .AddMailMailboxSignature()
+                .AddMailPopUnorderedDomain()
+                .AddMailServerAddress()
+                .AddMailServerDns()
+                .AddMailServerDomain()
+                .AddMailServerMailGroup()
+                .AddMailServerMailGroupXMailServerAddress()
+                .AddMailServerServer()
+                .AddMailServerServerType()
+                .AddMailServerServerXTenant()
+                .AddMailTag()
+                .AddCrmTag()
+                .AddCrmEntityTag()
+                .AddMailTagAddresses()
+                .AddMailTagMail()
+                .AddMailUserFolder()
+                .AddMailUserFolderTree()
+                .AddMailUserFolderXMail()
+                .AddCrmContact()
+                .AddCrmContactInfo();
 
             OnModelCreatingPartial(modelBuilder);
         }
