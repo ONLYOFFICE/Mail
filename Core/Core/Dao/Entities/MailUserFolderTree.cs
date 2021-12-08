@@ -6,22 +6,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_user_folder_tree")]
     public partial class MailUserFolderTree: BaseEntity
-    {
-        [Key]
-        [Column("folder_id", TypeName = "int(11) unsigned")]
+    {        
         public int FolderId { get; set; }
-        [Key]
-        [Column("parent_id", TypeName = "int(11) unsigned")]
         public int ParentId { get; set; }
-        [Column("level", TypeName = "int(11) unsigned")]
         public uint Level { get; set; }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { ParentId, FolderId };
-        }
+        public override object[] GetKeys() => new object[] { ParentId, FolderId };
     }
 
     public static class MailUserFolderTreeExtension
@@ -30,11 +21,25 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailUserFolderTree>(entity =>
             {
+                entity.ToTable("mail_user_folder_tree");
+
                 entity.HasKey(e => new { e.ParentId, e.FolderId })
                     .HasName("PRIMARY");
 
                 entity.HasIndex(e => e.FolderId)
                     .HasDatabaseName("folder_id");
+
+                entity.Property(e => e.FolderId)
+                    .HasColumnName("folder_id")
+                    .HasColumnType("int(11) unsigned");
+
+                entity.Property(e => e.ParentId)
+                    .HasColumnName("parent_id")
+                    .HasColumnType("int(11) unsigned");
+
+                entity.Property(e => e.Level)
+                    .HasColumnName("level")
+                    .HasColumnType("int(11) unsigned");
             });
 
             return modelBuilder;

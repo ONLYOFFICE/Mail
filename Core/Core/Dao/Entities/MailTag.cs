@@ -4,60 +4,35 @@ using ASC.ElasticSearch;
 using ASC.ElasticSearch.Core;
 
 using Microsoft.EntityFrameworkCore;
+
 using Nest;
+
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
     [ElasticsearchType(RelationName = Tables.Tag)]
-    [Table("mail_tag")]
     public partial class MailTag : BaseEntity, ISearchItem
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
         public int Id { get; set; }
-        [Column("tenant", TypeName = "int(11)")]
         public int TenantId { get; set; }
-        [Required]
-        [Column("id_user", TypeName = "varchar(255)")]
         public string IdUser { get; set; }
-        [Required]
-        [Column("name", TypeName = "varchar(255)")]
         public string Name { get; set; }
-        [Column("style", TypeName = "varchar(20)")]
         public string Style { get; set; }
-        [Required]
-        [Column("addresses", TypeName = "text")]
         public string Addresses { get; set; }
-        [Column("count", TypeName = "int(10)")]
         public int Count { get; set; }
-        [Column("crm_id", TypeName = "int(10)")]
         public int CrmId { get; set; }
 
-        [NotMapped]
         [Ignore]
-        public string IndexName
-        {
-            get => Tables.Tag;
-        }
-
-        public Expression<Func<ISearchItem, object[]>> SearchContentFields
-        {
-            get => (a) => new[] { Name, Addresses };
-        }
-
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public string IndexName => Tables.Tag;
 
         public Expression<Func<ISearchItem, object[]>> GetSearchContentFields(SearchSettingsHelper searchSettings)
         {
-            throw new NotImplementedException();
+            return (a) => new[] { Name, Addresses };
         }
+
+        public override object[] GetKeys() => new object[] { Id };
     }
 
     public static class MailTagExtension
@@ -66,24 +41,59 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailTag>(entity =>
             {
+                entity.ToTable("mail_tag");
+
+                entity.Ignore(r => r.IndexName);
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.TenantId)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.HasIndex(e => new { e.TenantId, e.IdUser })
                     .HasDatabaseName("username");
 
                 entity.Property(e => e.Addresses)
+                    .IsRequired()
+                    .HasColumnName("addresses")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.IdUser)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasColumnName("name")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Style)
+                    .HasColumnName("style")
+                    .HasColumnType("varchar(20)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
+
+                entity.Property(e => e.Count)
+                    .HasColumnName("count")
+                    .HasColumnType("int(10)");
+
+                entity.Property(e => e.CrmId)
+                    .HasColumnName("crm_id")
+                    .HasColumnType("int(10)");
             });
 
             return modelBuilder;

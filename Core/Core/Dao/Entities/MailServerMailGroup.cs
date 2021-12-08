@@ -2,31 +2,18 @@
 using ASC.Core.Common.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_server_mail_group")]
     public partial class MailServerMailGroup : BaseEntity
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
         public int Id { get; set; }
-        [Column("id_tenant", TypeName = "int(11)")]
         public int IdTenant { get; set; }
-        [Column("id_address", TypeName = "int(11)")]
         public int IdAddress { get; set; }
-        [Column("date_created", TypeName = "datetime")]
         public DateTime DateCreated { get; set; }
-        [Required]
-        [Column("address", TypeName = "varchar(320)")]
         public string Address { get; set; }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public override object[] GetKeys() => new object[] { Id };
     }
 
     public static class MailServerMailGroupExtension
@@ -35,13 +22,38 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailServerMailGroup>(entity =>
             {
+                entity.ToTable("mail_server_mail_group");
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.IdTenant)
+                    .HasColumnName("id_tenant")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.IdAddress)
+                    .HasColumnName("id_address")
+                    .HasColumnType("int(11)");
+
                 entity.HasIndex(e => e.IdAddress)
                     .HasDatabaseName("mail_server_address_fk_id");
 
                 entity.HasIndex(e => e.IdTenant)
                     .HasDatabaseName("tenant");
 
+                entity.Property(e => e.DateCreated)
+                    .HasColumnName("date_created")
+                    .HasColumnType("datetime");
+
                 entity.Property(e => e.Address)
+                    .IsRequired()
+                    .HasColumnName("address")
+                    .HasColumnType("varchar(320)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
             });

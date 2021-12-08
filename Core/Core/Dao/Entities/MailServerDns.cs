@@ -2,62 +2,33 @@
 using ASC.Core.Common.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_server_dns")]
     public partial class MailServerDns : BaseEntity
     {
-        [Key]
-        [Column("id", TypeName = "int(11) unsigned")]
         public uint Id { get; set; }
-        [Column("tenant", TypeName = "int(11)")]
         public int Tenant { get; set; }
-        [Required]
-        [Column("id_user", TypeName = "varchar(255)")]
         public string IdUser { get; set; }
-        [Column("id_domain", TypeName = "int(11)")]
         public int IdDomain { get; set; }
-        [Required]
-        [Column("dkim_selector", TypeName = "varchar(63)")]
         public string DkimSelector { get; set; }
-        [Column("dkim_private_key", TypeName = "text")]
         public string DkimPrivateKey { get; set; }
-        [Column("dkim_public_key", TypeName = "text")]
         public string DkimPublicKey { get; set; }
-        [Column("dkim_ttl", TypeName = "int(11)")]
         public int DkimTtl { get; set; }
-        [Column("dkim_verified")]
         public bool DkimVerified { get; set; }
-        [Column("dkim_date_checked", TypeName = "datetime")]
         public DateTime? DkimDateChecked { get; set; }
-        [Column("domain_check", TypeName = "text")]
         public string DomainCheck { get; set; }
-        [Column("spf", TypeName = "text")]
         public string Spf { get; set; }
-        [Column("spf_ttl", TypeName = "int(11)")]
         public int SpfTtl { get; set; }
-        [Column("spf_verified")]
         public bool SpfVerified { get; set; }
-        [Column("spf_date_checked", TypeName = "datetime")]
         public DateTime? SpfDateChecked { get; set; }
-        [Column("mx", TypeName = "varchar(255)")]
         public string Mx { get; set; }
-        [Column("mx_ttl", TypeName = "int(11)")]
         public int MxTtl { get; set; }
-        [Column("mx_verified")]
         public bool MxVerified { get; set; }
-        [Column("mx_date_checked", TypeName = "datetime")]
         public DateTime? MxDateChecked { get; set; }
-        [Column("time_modified", TypeName = "timestamp")]
         public DateTime TimeModified { get; set; }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public override object[] GetKeys() => new object[] { Id };
     }
 
     public static class MailServerDnsExtension
@@ -66,45 +37,112 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailServerDns>(entity =>
             {
+                entity.ToTable("mail_server_dns");
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11) unsigned")
+                    .ValueGeneratedOnAdd();
+
                 entity.HasIndex(e => new { e.IdDomain, e.Tenant, e.IdUser })
                     .HasDatabaseName("id_domain_tenant_id_user");
 
+                entity.Property(e => e.Tenant)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.DkimPrivateKey)
+                    .HasColumnName("dkim_private_key")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.DkimPublicKey)
+                    .HasColumnName("dkim_public_key")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.DkimSelector)
+                    .IsRequired()
+                    .HasColumnName("dkim_selector")
+                    .HasColumnType("varchar(63)")
                     .HasDefaultValueSql("'dkim'")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.DkimTtl).HasDefaultValueSql("'300'");
+                entity.Property(e => e.DkimTtl)
+                    .HasColumnName("dkim_ttl")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'300'");
+
+                entity.Property(e => e.DkimVerified)
+                    .HasColumnName("dkim_verified");
+
+                entity.Property(e => e.MxVerified)
+                    .HasColumnName("mx_verified");
 
                 entity.Property(e => e.DomainCheck)
+                    .HasColumnName("domain_check")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.IdDomain).HasDefaultValueSql("'-1'");
+                entity.Property(e => e.IdDomain)
+                    .HasColumnName("id_domain")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'-1'");
+
+                entity.Property(e => e.DkimDateChecked)
+                    .HasColumnName("dkim_date_checked")
+                    .HasColumnType("datetime");
+
+                entity.Property(e => e.MxDateChecked)
+                    .HasColumnName("mx_date_checked")
+                    .HasColumnType("datetime");
+
+                entity.Property(e => e.TimeModified)
+                    .HasColumnName("time_modified")
+                    .HasColumnType("timestamp");
 
                 entity.Property(e => e.IdUser)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Mx)
+                    .HasColumnName("mx")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.MxTtl).HasDefaultValueSql("'300'");
+                entity.Property(e => e.MxTtl)
+                    .HasColumnName("mx_ttl")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'300'");
 
                 entity.Property(e => e.Spf)
+                    .HasColumnName("spf")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.SpfTtl).HasDefaultValueSql("'300'");
+                entity.Property(e => e.SpfTtl)
+                    .HasColumnName("spf_ttl")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'300'");
+
+                entity.Property(e => e.SpfVerified)
+                    .HasColumnName("spf_verified");
+
+                entity.Property(e => e.SpfDateChecked)
+                    .HasColumnName("spf_date_checked")
+                    .HasColumnType("datetime");
 
                 entity.Property(e => e.TimeModified)
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")

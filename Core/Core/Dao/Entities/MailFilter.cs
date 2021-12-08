@@ -2,34 +2,18 @@
 using ASC.Core.Common.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_filter")]
     public partial class MailFilter : BaseEntity
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
         public int Id { get; set; }
-        [Column("tenant", TypeName = "int(11)")]
         public int Tenant { get; set; }
-        [Required]
-        [Column("id_user", TypeName = "varchar(38)")]
         public string IdUser { get; set; }
-        [Required]
-        [Column("enabled")]
         public bool? Enabled { get; set; }
-        [Required]
-        [Column("filter", TypeName = "text")]
         public string Filter { get; set; }
-        [Column("position", TypeName = "int(11)")]
         public int Position { get; set; }
-        [Column("date_created", TypeName = "timestamp")]
         public DateTime? DateCreated { get; set; }
-        [Column("date_modified", TypeName = "timestamp")]
         public DateTime DateModified { get; set; }
 
         public override object[] GetKeys()
@@ -44,22 +28,56 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailFilter>(entity =>
             {
+                entity.ToTable("mail_filter");
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Tenant)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.HasIndex(e => new { e.Tenant, e.IdUser })
                     .HasDatabaseName("tenant_id_user");
 
                 entity.Property(e => e.DateModified)
+                    .HasColumnName("date_modified")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
 
-                entity.Property(e => e.Enabled).HasDefaultValueSql("'1'");
+                entity.Property(e => e.Enabled)
+                    .IsRequired()
+                    .HasColumnName("enabled")
+                    .HasDefaultValueSql("'1'");
 
                 entity.Property(e => e.Filter)
+                    .IsRequired()
+                    .HasColumnName("filter")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.IdUser)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(38)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
+
+                entity.Property(e => e.Position)
+                    .HasColumnName("position")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'0'");
+
+                entity.Property(e => e.DateCreated)
+                .HasColumnName("date_created")
+                .HasColumnType("timestamp");
             });
 
             return modelBuilder;

@@ -6,57 +6,27 @@ using ASC.ElasticSearch.Core;
 using Microsoft.EntityFrameworkCore;
 using Nest;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
     [ElasticsearchType(RelationName = Tables.ContactInfo)]
-    [Table("mail_contact_info")]
     public partial class MailContactInfo : BaseEntity, ISearchItem
     {
-        [Key]
-        [Column("id", TypeName = "int(10) unsigned")]
-        public int Id { get; set; }
-        
-        [Column("tenant", TypeName = "int(11)")]
-        public int TenantId { get; set; }
-        
-        [Required]
-        [Column("id_user", TypeName = "varchar(255)")]
-        public string IdUser { get; set; }
-        
-        [Column("id_contact", TypeName = "int(11) unsigned")]
+        public int Id { get; set; }        
+        public int TenantId { get; set; }     
+        public string IdUser { get; set; }        
         public int IdContact { get; set; }
-        
-        [Required]
-        [Column("data", TypeName = "varchar(255)")]
         public string Data { get; set; }
-        
-        [Column("type", TypeName = "int(11)")]
         public int Type { get; set; }
-        
-        [Column("is_primary")]
         public bool IsPrimary { get; set; }
-        
-        [Column("last_modified", TypeName = "timestamp")]
         public DateTime LastModified { get; set; }
 
         [Nested]
-        [NotMapped]
         public MailContact Contact { get; set; }
 
-        [NotMapped]
         [Ignore]
-        public string IndexName {
-            get { return Tables.ContactInfo; }
-        }
-
-        public Expression<Func<ISearchItem, object[]>> SearchContentFields
-        {
-            get => (a) => new[] { Data };
-        }
+        public string IndexName => Tables.ContactInfo; 
 
         public override object[] GetKeys()
         {
@@ -65,7 +35,7 @@ namespace ASC.Mail.Core.Dao.Entities
 
         public Expression<Func<ISearchItem, object[]>> GetSearchContentFields(SearchSettingsHelper searchSettings)
         {
-            throw new NotImplementedException();
+            return (a) => new[] { Data };
         }
     }
 
@@ -75,6 +45,11 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailContactInfo>(entity =>
             {
+                entity.ToTable("mail_contact_info");
+
+                entity.Ignore(e => e.Contact);
+                entity.Ignore(e => e.IndexName);
+
                 entity.HasIndex(e => e.IdContact)
                     .HasDatabaseName("contact_id");
 
@@ -84,15 +59,45 @@ namespace ASC.Mail.Core.Dao.Entities
                 entity.HasIndex(e => new { e.TenantId, e.IdUser, e.Data })
                     .HasDatabaseName("tenant_id_user_data");
 
-                entity.Property(e => e.Data)
-                    .HasCharSet("utf8")
-                    .UseCollation("utf8_general_ci");
+                entity.HasKey(e => e.Id).HasName("PRIMARY");
 
-                entity.Property(e => e.IdUser)
+                entity.Property(e => e.Id)
+                   .HasColumnName("id")
+                   .HasColumnType("int(10) unsigned")
+                   .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.TenantId)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.Data)
+                    .IsRequired()
+                    .HasColumnName("data")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
+                                               
+                entity.Property(e => e.IdUser)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(255)")
+                    .HasCharSet("utf8")
+                    .UseCollation("utf8_general_ci");
+                                
+                entity.Property(e => e.IdContact)
+                    .HasColumnName("id_contact")
+                    .HasColumnType("int(11) unsigned");
+
+                entity.Property(e => e.Type)
+                    .HasColumnName("type")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.IsPrimary)
+                    .HasColumnName("is_primary");
 
                 entity.Property(e => e.LastModified)
+                    .HasColumnName("last_modified")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
 

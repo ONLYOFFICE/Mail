@@ -2,36 +2,18 @@
 using ASC.Core.Common.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_user_folder_x_mail")]
     public partial class MailUserFolderXMail : BaseEntity
     {
-        [Key]
-        [Column("tenant", TypeName = "int(11)")]
         public int Tenant { get; set; }
-        
-        [Key]
-        [Column("id_user", TypeName = "varchar(38)")]
         public string IdUser { get; set; }
-        
-        [Key]
-        [Column("id_mail", TypeName = "int(11) unsigned")]
         public int IdMail { get; set; }
-        
-        [Key]
-        [Column("id_folder", TypeName = "int(11) unsigned")]
         public int IdFolder { get; set; }
-        [Column("time_created", TypeName = "timestamp")]
         public DateTime TimeCreated { get; set; }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { Tenant, IdUser, IdMail };
-        }
+        public override object[] GetKeys() => new object[] { Tenant, IdUser, IdMail };
     }
 
     public static class MailUserFolderXMailExtension
@@ -40,6 +22,8 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailUserFolderXMail>(entity =>
             {
+                entity.ToTable("mail_user_folder_x_mail");
+
                 entity.HasKey(e => new { e.Tenant, e.IdUser, e.IdMail, e.IdFolder })
                     .HasName("PRIMARY");
 
@@ -49,11 +33,27 @@ namespace ASC.Mail.Core.Dao.Entities
                 entity.HasIndex(e => e.IdMail)
                     .HasDatabaseName("id_mail");
 
+                entity.Property(e => e.Tenant)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.IdMail)
+                    .HasColumnName("id_mail")
+                    .HasColumnType("int(11) unsigned");
+
+                entity.Property(e => e.IdFolder)
+                    .HasColumnName("id_folder")
+                    .HasColumnType("int(11) unsigned");
+
                 entity.Property(e => e.IdUser)
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(38)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.TimeCreated)
+                    .HasColumnName("time_created")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
             });

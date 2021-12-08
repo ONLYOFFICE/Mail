@@ -2,38 +2,21 @@
 using ASC.Core.Common.EF;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_server_address")]
     public partial class MailServerAddress : BaseEntity
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
         public int Id { get; set; }
-        [Column("tenant", TypeName = "int(11)")]
         public int Tenant { get; set; }
-        [Required]
-        [Column("name", TypeName = "varchar(64)")]
         public string Name { get; set; }
-        [Column("id_domain", TypeName = "int(11)")]
         public int IdDomain { get; set; }
-        [Column("id_mailbox", TypeName = "int(11)")]
         public int IdMailbox { get; set; }
-        [Column("is_mail_group", TypeName = "int(10)")]
         public bool IsMailGroup { get; set; }
-        [Column("is_alias", TypeName = "int(10)")]
         public bool IsAlias { get; set; }
-        [Column("date_created", TypeName = "datetime")]
         public DateTime DateCreated { get; set; }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public override object[] GetKeys() => new object[] { Id };
     }
 
     public static class MailServerAddressExtension
@@ -42,13 +25,50 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailServerAddress>(entity =>
             {
+                entity.ToTable("mail_server_address");
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Tenant)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.HasIndex(e => e.IdDomain)
-                    .HasDatabaseName("domain_index");
+                    .HasDatabaseName("domain_index");                
 
                 entity.HasIndex(e => e.IdMailbox)
                     .HasDatabaseName("id_mailbox_fk_index");
 
+                entity.Property(e => e.IdDomain)
+                    .HasColumnName("id_domain")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.IdMailbox)
+                    .HasColumnName("id_mailbox")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.IsMailGroup)
+                    .HasColumnName("is_mail_group")
+                    .HasColumnType("int(10)");
+
+                entity.Property(e => e.IsAlias)
+                    .HasColumnName("is_alias")
+                    .HasColumnType("int(10)");
+
+                entity.Property(e => e.DateCreated)
+                    .HasColumnName("date_created")
+                    .HasColumnType("datetime");
+
                 entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasColumnName("name")
+                    .HasColumnType("varchar(64)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
             });

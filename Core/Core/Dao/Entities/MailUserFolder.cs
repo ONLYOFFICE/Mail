@@ -6,72 +6,33 @@ using ASC.ElasticSearch.Core;
 using Microsoft.EntityFrameworkCore;
 using Nest;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
     [ElasticsearchType(RelationName = Tables.UserFolder)]
-    [Table("mail_user_folder")]
     public partial class MailUserFolder : BaseEntity, ISearchItem
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
         public int Id { get; set; }
-
-        [Column("parent_id", TypeName = "int(11)")]
         public int ParentId { get; set; }
-        
-        [Column("tenant", TypeName = "int(11)")]
         public int TenantId { get; set; }
-        
-        [Required]
-        [Column("id_user", TypeName = "varchar(38)")]
         public string IdUser { get; set; }
-        
-        [Required]
-        [Column("name", TypeName = "varchar(400)")]
         public string Name { get; set; }
-        
-        [Column("folders_count", TypeName = "int(11) unsigned")]
         public uint FoldersCount { get; set; }
-        
-        [Column("unread_messages_count", TypeName = "int(11) unsigned")]
         public uint UnreadMessagesCount { get; set; }
-        
-        [Column("total_messages_count", TypeName = "int(11) unsigned")]
         public uint TotalMessagesCount { get; set; }
-        
-        [Column("unread_conversations_count", TypeName = "int(11) unsigned")]
         public uint UnreadConversationsCount { get; set; }
-        
-        [Column("total_conversations_count", TypeName = "int(11) unsigned")]
         public uint TotalConversationsCount { get; set; }
-        
-        [Column("modified_on", TypeName = "timestamp")]
         public DateTime ModifiedOn { get; set; }
 
-        [NotMapped]
         [Ignore]
-        public string IndexName
-        {
-            get => Tables.UserFolder;
-        }
+        public string IndexName => Tables.UserFolder;
 
-        public Expression<Func<ISearchItem, object[]>> SearchContentFields
-        {
-            get => (a) => new[] { Name };
-        }
-
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public override object[] GetKeys() => new object[] { Id };
 
         public Expression<Func<ISearchItem, object[]>> GetSearchContentFields(SearchSettingsHelper searchSettings)
         {
-            throw new NotImplementedException();
+            return (a) => new[] { Name };
         }
     }
 
@@ -81,20 +42,68 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailUserFolder>(entity =>
             {
+                entity.ToTable("mail_user_folder");
+
+                entity.Ignore(r => r.IndexName);
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
+
                 entity.HasIndex(e => new { e.TenantId, e.IdUser, e.ParentId })
                     .HasDatabaseName("tenant_user_parent");
 
+                entity.Property(e => e.ParentId)
+                    .HasColumnName("parent_id")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.TenantId)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.IdUser)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(38)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.ModifiedOn)
+                    .HasColumnName("modified_on")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
 
                 entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasColumnName("name")
+                    .HasColumnType("varchar(400)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
+
+                entity.Property(e => e.FoldersCount)
+                    .HasColumnName("folders_count")
+                    .HasColumnType("int(11) unsigned");
+                
+                entity.Property(e => e.UnreadMessagesCount)
+                    .HasColumnName("unread_messages_count")
+                    .HasColumnType("int(11) unsigned");
+                
+                entity.Property(e => e.TotalMessagesCount)
+                    .HasColumnName("total_messages_count")
+                    .HasColumnType("int(11) unsigned");
+                
+                entity.Property(e => e.UnreadConversationsCount)
+                    .HasColumnName("unread_conversations_count")
+                    .HasColumnType("int(11) unsigned");
+                
+                entity.Property(e => e.TotalConversationsCount)
+                    .HasColumnName("total_conversations_count")
+                    .HasColumnType("int(11) unsigned");
             });
 
             return modelBuilder;

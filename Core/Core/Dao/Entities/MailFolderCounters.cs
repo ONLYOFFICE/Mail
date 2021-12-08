@@ -3,39 +3,18 @@ using ASC.Core.Common.EF;
 using ASC.Mail.Enums;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ASC.Mail.Core.Dao.Entities
 {
-    [Table("mail_folder_counters")]
     public partial class MailFolderCounters : BaseEntity
     {
-        [Key]
-        [Column("tenant", TypeName = "int(11)")]
         public int Tenant { get; set; }
-
-        [Key]
-        [Column("id_user", TypeName = "varchar(255)")]
         public string IdUser { get; set; }
-
-        [Key]
-        [Column("folder", TypeName = "smallint(5) unsigned")]
         public FolderType Folder { get; set; }
-
-        [Column("unread_messages_count", TypeName = "int(10) unsigned")]
         public uint UnreadMessagesCount { get; set; }
-
-        [Column("total_messages_count", TypeName = "int(10) unsigned")]
         public uint TotalMessagesCount { get; set; }
-
-        [Column("unread_conversations_count", TypeName = "int(10) unsigned")]
         public uint UnreadConversationsCount { get; set; }
-
-        [Column("total_conversations_count", TypeName = "int(10) unsigned")]
         public uint TotalConversationsCount { get; set; }
-
-        [Column("time_modified", TypeName = "timestamp")]
         public DateTime TimeModified { get; set; }
 
         public override object[] GetKeys()
@@ -50,16 +29,46 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailFolderCounters>(entity =>
             {
+                entity.ToTable("mail_folder_counters");
+
                 entity.HasKey(e => new { e.Tenant, e.IdUser, e.Folder })
                     .HasName("PRIMARY");
 
+                entity.Property(e => e.Tenant)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.Folder)
+                    .HasColumnName("folder")
+                    .HasColumnType("smallint(5) unsigned");
+
                 entity.Property(e => e.IdUser)
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.TimeModified)
+                    .HasColumnName("time_modified")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
+
+                entity.Property(e => e.UnreadMessagesCount)
+                    .HasColumnName("unread_messages_count")
+                    .HasColumnType("int(10) unsigned");
+
+                entity.Property(e => e.TotalMessagesCount)
+                    .HasColumnName("total_messages_count")
+                    .HasColumnType("int(10) unsigned");
+
+                entity.Property(e => e.UnreadConversationsCount)
+                    .HasColumnName("unread_conversations_count")
+                    .HasColumnType("int(10) unsigned");
+
+                entity.Property(e => e.TotalConversationsCount)
+                    .HasColumnName("total_conversations_count")
+                    .HasColumnType("int(10) unsigned");
             });
 
             return modelBuilder;

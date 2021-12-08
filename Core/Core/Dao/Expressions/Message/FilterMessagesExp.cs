@@ -24,16 +24,17 @@
 */
 
 
+using ASC.ElasticSearch;
+using ASC.Mail.Core.Dao.Entities;
+using ASC.Mail.Enums;
+using ASC.Mail.Models;
+
+using Microsoft.Extensions.DependencyInjection;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ASC.Mail.Core.Dao.Expressions.Message
 {
@@ -72,14 +73,14 @@ namespace ASC.Mail.Core.Dao.Expressions.Message
             User = user;
             Ids = ids;
 
-            StartIndex = filter.Page.HasValue ? 0 : (int?) null;
+            StartIndex = filter.Page.HasValue ? 0 : (int?)null;
 
             if (filter.Page.HasValue
                 && filter.Page.Value > 0
                 && filter.PageSize.HasValue
                 && filter.PageSize.Value > 0)
             {
-                StartIndex = filter.Page.Value*filter.PageSize;
+                StartIndex = filter.Page.Value * filter.PageSize;
             }
 
             Limit = Filter.PageSize;
@@ -147,7 +148,7 @@ namespace ASC.Mail.Core.Dao.Expressions.Message
 
             if (!string.IsNullOrEmpty(Filter.SearchText)) //TODO: fix  && !FactoryIndexer<MailWrapper>.Support)
             {
-                filterExp = filterExp.And(m => 
+                filterExp = filterExp.And(m =>
                         m.FromText.Contains(Filter.SearchText, StringComparison.InvariantCultureIgnoreCase)
                      || m.ToText.Contains(Filter.SearchText, StringComparison.InvariantCultureIgnoreCase)
                      || m.Cc.Contains(Filter.SearchText, StringComparison.InvariantCultureIgnoreCase)
@@ -168,8 +169,8 @@ namespace ASC.Mail.Core.Dao.Expressions.Message
 
         public static bool TryGetFullTextSearchIds(
             FactoryIndexer<MailMail> factoryIndexer,
-            IServiceProvider serviceProvider, 
-            MailSearchFilterData filter, 
+            IServiceProvider serviceProvider,
+            MailSearchFilterData filter,
             string user, out List<int> ids, out long total, DateTime? dateSend = null)
         {
             ids = new List<int>();
@@ -181,7 +182,8 @@ namespace ASC.Mail.Core.Dao.Expressions.Message
                 return false;
             }
 
-            if (filter.Page.HasValue && filter.Page.Value < 0) {
+            if (filter.Page.HasValue && filter.Page.Value < 0)
+            {
                 total = 0;
                 return true;
             }
@@ -236,7 +238,7 @@ namespace ASC.Mail.Core.Dao.Expressions.Message
             if (selector == null)
                 selector = new Selector<MailMail>(serviceProvider);
 
-            selector.Where(r => r.Folder, (int) filter.PrimaryFolder);
+            selector.Where(r => r.Folder, (int)filter.PrimaryFolder);
 
             if (filter.MailboxId.HasValue)
             {

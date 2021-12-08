@@ -3,13 +3,10 @@ using ASC.Common;
 using ASC.Core.Common.EF;
 using ASC.ElasticSearch;
 using ASC.ElasticSearch.Core;
-using ASC.Mail.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Nest;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 
 namespace ASC.Mail.Core.Dao.Entities
@@ -26,122 +23,68 @@ namespace ASC.Mail.Core.Dao.Entities
 
     [Transient]
     [ElasticsearchType(RelationName = Tables.Mail)]
-    [Table("mail_mail")]
     public partial class MailMail : BaseEntity, ISearchItemDocument
     {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
-        public int Id { get; set; }
-        [Column("id_mailbox", TypeName = "int(11)")]
+        public int Id { get; set; }        
         public int MailboxId { get; set; }
-        [Required]
-        [Column("id_user", TypeName = "varchar(255)")]
-        public string UserId { get; set; }
-        [Column("tenant", TypeName = "int(11)")]
-        public int TenantId { get; set; }
-        [Column("uidl", TypeName = "varchar(255)")]
+        public string UserId { get; set; } 
+        public int TenantId { get; set; } 
         public string Uidl { get; set; }
-        [Column("md5", TypeName = "varchar(255)")]
         public string Md5 { get; set; }
-        [Required]
-        [Column("address", TypeName = "varchar(255)")]
         public string Address { get; set; }
-        [Column("from_text", TypeName = "text")]
         public string FromText { get; set; }
-        [Column("to_text", TypeName = "text")]
         public string ToText { get; set; }
-        [Column("reply_to", TypeName = "text")]
         public string ReplyTo { get; set; }
-        [Column("cc", TypeName = "text")]
         public string Cc { get; set; }
-        [Column("bcc", TypeName = "text")]
         public string Bcc { get; set; }
-        [Column("subject", TypeName = "text")]
         public string Subject { get; set; }
-        [Required]
-        [Column("introduction", TypeName = "varchar(255)")]
         public string Introduction { get; set; }
-        [Column("importance")]
         public bool Importance { get; set; }
-        [Column("date_received", TypeName = "datetime")]
         public DateTime DateReceived { get; set; }
-        [Column("date_sent", TypeName = "datetime")]
         public DateTime DateSent { get; set; }
-        [Column("size", TypeName = "int(11)")]
         public int Size { get; set; }
-        [Column("attachments_count", TypeName = "int(11)")]
         public int AttachmentsCount { get; set; }
-        [Column("unread", TypeName = "int(11)")]
         public bool Unread { get; set; }
-        [Column("is_answered", TypeName = "int(11)")]
         public bool IsAnswered { get; set; }
-        [Column("is_forwarded", TypeName = "int(11)")]
         public bool IsForwarded { get; set; }
-        [Column("is_from_crm", TypeName = "int(11)")]
         public bool IsFromCrm { get; set; }
-        [Column("is_from_tl", TypeName = "int(11)")]
         public bool IsFromTl { get; set; }
-        [Column("is_text_body_only", TypeName = "int(11)")]
-        public bool IsTextBodyOnly { get; set; }
-        [Column("has_parse_error")]
+        public bool IsTextBodyOnly { get; set; }  
         public bool HasParseError { get; set; }
-        [Column("calendar_uid", TypeName = "varchar(255)")]
         public string CalendarUid { get; set; }
-        [Required]
-        [Column("stream", TypeName = "varchar(38)")]
         public string Stream { get; set; }
-        [Column("folder", TypeName = "int(11)")]
         public int Folder { get; set; }
-        [Column("folder_restore", TypeName = "int(11)")]
         public int FolderRestore { get; set; }
-        [Column("spam", TypeName = "int(11)")]
         public bool Spam { get; set; }
-        [Column("time_modified", TypeName = "timestamp")]
         public DateTime LastModifiedOn { get; set; }
-        [Column("is_removed")]
         public bool IsRemoved { get; set; }
-        [Column("mime_message_id", TypeName = "varchar(255)")]
         public string MimeMessageId { get; set; }
-        [Column("mime_in_reply_to", TypeName = "varchar(255)")]
         public string MimeInReplyTo { get; set; }
-        [Column("chain_id", TypeName = "varchar(255)")]
         public string ChainId { get; set; }
-        [Column("chain_date", TypeName = "datetime")]
         public DateTime ChainDate { get; set; }
 
         [Nested]
-        [NotMapped]
         public ICollection<MailAttachment> Attachments { get; set; }
-
+        
         [Nested]
-        [NotMapped]
         public ICollection<MailUserFolder> UserFolders { get; set; }
-
+        
         [Nested]
-        [NotMapped]
         public ICollection<MailTag> Tags { get; set; }
-
-        [Nested]
-        [NotMapped]
+        
         public bool HasAttachments { get; set; }
-
-        [Nested]
-        [NotMapped]
+        
         public bool WithCalendar { get; set; }
 
         public Document Document { get; set; }
-
-        [NotMapped]
+       
         [Ignore]
         public string IndexName
         {
             get => Tables.Mail;
         }
 
-        public override object[] GetKeys()
-        {
-            return new object[] { Id };
-        }
+        public override object[] GetKeys() => new object[] { Id };
 
         public Expression<Func<ISearchItem, object[]>> GetSearchContentFields(SearchSettingsHelper searchSettings)
         {
@@ -155,7 +98,23 @@ namespace ASC.Mail.Core.Dao.Entities
         {
             modelBuilder.Entity<MailMail>(entity =>
             {
+                entity.ToTable("mail_mail");
+
                 entity.Ignore(r => r.Document);
+                entity.Ignore(r => r.Attachments);
+                entity.Ignore(r => r.UserFolders);
+                entity.Ignore(r => r.Tags);
+                entity.Ignore(r => r.HasAttachments);
+                entity.Ignore(r => r.WithCalendar);
+                entity.Ignore(r => r.IndexName);
+
+                entity.HasKey(e => e.Id)
+                    .HasName("PRIMARY");
+
+                entity.Property(e => e.Id)
+                    .HasColumnName("id")
+                    .HasColumnType("int(11)")
+                    .ValueGeneratedOnAdd();
 
                 entity.HasIndex(e => e.LastModifiedOn)
                     .HasDatabaseName("time_modified");
@@ -178,88 +137,196 @@ namespace ASC.Mail.Core.Dao.Entities
                 entity.HasIndex(e => new { e.TenantId, e.UserId, e.Folder, e.DateSent })
                     .HasDatabaseName("list_messages");
 
+                entity.Property(e => e.MailboxId)
+                    .HasColumnName("id_mailbox")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.TenantId)
+                    .HasColumnName("tenant")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.Address)
+                    .IsRequired()
+                    .HasColumnName("address")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Bcc)
+                    .HasColumnName("bcc")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.CalendarUid)
+                    .HasColumnName("calendar_uid")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Cc)
+                    .HasColumnName("cc")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.ChainDate).HasDefaultValueSql("'1975-01-01 00:00:00'");
+                entity.Property(e => e.ChainDate)
+                    .HasColumnName("chain_date")
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("'1975-01-01 00:00:00'");
 
                 entity.Property(e => e.ChainId)
+                    .HasColumnName("chain_id")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
-                entity.Property(e => e.DateReceived).HasDefaultValueSql("'1975-01-01 00:00:00'");
+                entity.Property(e => e.DateReceived)
+                    .HasColumnName("date_received")
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("'1975-01-01 00:00:00'");
 
-                entity.Property(e => e.DateSent).HasDefaultValueSql("'1975-01-01 00:00:00'");
+                entity.Property(e => e.DateSent)
+                    .HasColumnName("date_sent")
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("'1975-01-01 00:00:00'");
 
-                entity.Property(e => e.Folder).HasDefaultValueSql("'1'");
-
-                entity.Property(e => e.FolderRestore).HasDefaultValueSql("'1'");
 
                 entity.Property(e => e.FromText)
+                    .HasColumnName("from_text")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.UserId)
+                    .IsRequired()
+                    .HasColumnName("id_user")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Introduction)
+                    .IsRequired()
+                    .HasColumnName("introduction")
+                    .HasColumnType("varchar(255)")
                     .HasDefaultValueSql("''")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Md5)
+                .HasColumnName("md5")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.MimeInReplyTo)
+                    .HasColumnName("mime_in_reply_to")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.MimeMessageId)
+                    .HasColumnName("mime_message_id")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.ReplyTo)
+                    .HasColumnName("reply_to")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Stream)
+                    .IsRequired()
+                    .HasColumnName("stream")
+                    .HasColumnType("varchar(38)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Subject)
+                    .HasColumnName("subject")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.LastModifiedOn)
+                    .HasColumnName("time_modified")
+                    .HasColumnType("timestamp")
                     .HasDefaultValueSql("CURRENT_TIMESTAMP")
                     .ValueGeneratedOnAddOrUpdate();
 
                 entity.Property(e => e.ToText)
+                    .HasColumnName("to_text")
+                    .HasColumnType("text")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.Property(e => e.Uidl)
+                    .HasColumnName("uidl")
+                    .HasColumnType("varchar(255)")
                     .HasCharSet("utf8")
                     .UseCollation("utf8_general_ci");
 
                 entity.HasMany(m => m.Attachments)
                     .WithOne(a => a.Mail)
                     .HasForeignKey(a => a.IdMail);
+
+                entity.Property(e => e.Importance)
+                    .HasColumnName("importance");
+
+                entity.Property(e => e.HasParseError)
+                    .HasColumnName("has_parse_error");
+
+                entity.Property(e => e.IsRemoved)
+                    .HasColumnName("is_removed");
+
+                entity.Property(e => e.Size)
+                    .HasColumnName("size")
+                    .HasColumnType("int(11)");
+
+                
+                entity.Property(e => e.IsForwarded)
+                    .HasColumnName("is_forwarded")
+                    .HasColumnType("int(11)");
+                
+                entity.Property(e => e.IsAnswered)
+                    .HasColumnName("is_answered")
+                    .HasColumnType("int(11)");
+                
+                entity.Property(e => e.Unread)
+                    .HasColumnName("unread")
+                    .HasColumnType("int(11)");
+                
+                entity.Property(e => e.IsFromCrm)
+                    .HasColumnName("is_from_crm")
+                    .HasColumnType("int(11)");
+                
+                entity.Property(e => e.IsFromTl)
+                    .HasColumnName("is_from_tl")
+                    .HasColumnType("int(11)");
+                
+                entity.Property(e => e.IsTextBodyOnly)
+                    .HasColumnName("is_text_body_only")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.AttachmentsCount)
+                    .HasColumnName("attachments_count")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.Folder)
+                    .HasColumnName("folder")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'1'"); ;
+                
+                entity.Property(e => e.FolderRestore)
+                    .HasColumnName("folder_restore")
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'1'"); ;
+                
+                entity.Property(e => e.Spam)
+                    .HasColumnName("spam")
+                    .HasColumnType("int(11)");
             });
 
             return modelBuilder;
