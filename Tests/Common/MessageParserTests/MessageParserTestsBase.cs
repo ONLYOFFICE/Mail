@@ -24,25 +24,28 @@
 */
 
 
+using ASC.Mail.Clients;
+using ASC.Mail.Utils;
+
+using MimeKit;
+
+using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
-using ASC.Mail.Clients;
-using ASC.Mail.Utils;
-using MimeKit;
-using NUnit.Framework;
 
 namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
 {
     internal class MessageParserTestsBase
     {
-        protected static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\Data\");
-        protected static readonly string RightParserResultsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\Right_Parsing\");
-        protected static readonly string TestResultsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\Out_Eml\");
+        protected static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Data\");
+        protected static readonly string RightParserResultsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Right_Parsing\");
+        protected static readonly string TestResultsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\Out_Eml\");
 
         protected readonly string utf8Charset = Encoding.UTF8.HeaderName;
 
@@ -62,13 +65,13 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
 
             foreach (var toAdresses in emlMessage.To.Mailboxes)
             {
-                result.To.Add(new TestAddress {Name = toAdresses.Name, Email = toAdresses.Address});
+                result.To.Add(new TestAddress { Name = toAdresses.Name, Email = toAdresses.Address });
             }
 
             result.Cc = new List<TestAddress>();
             foreach (var ccAdresses in emlMessage.Cc.Mailboxes)
             {
-                result.Cc.Add(new TestAddress {Name = ccAdresses.Name, Email = ccAdresses.Address});
+                result.Cc.Add(new TestAddress { Name = ccAdresses.Name, Email = ccAdresses.Address });
             }
 
             result.Subject = emlMessage.Subject;
@@ -86,7 +89,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
             var htmlPart = mimeEntities.FirstOrDefault(b => b.ContentType.MimeType == "text/html") as TextPart;
 
             var internalMessages = mimeEntities.Where(t => t.ContentType.IsMimeType("message", "*")).ToList();
-            if(internalMessages.Any())
+            if (internalMessages.Any())
             {
                 result.AttachmentCount += internalMessages.Count;
             }
@@ -161,7 +164,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
             var mimeMessage = MailClient.ParseMimeMessage(TestFolderPath + emlFileName);
             var emlMessage = ConvertToRightResult(mimeMessage);
             var rightResult = RightParserResult.FromXml(RightParserResultsPath + emlFileName.Replace(".eml", ".xml"));
-            
+
 #if NEED_OUT
             mimeMessage.WriteTo(TestFolderPath + emlFileName);
 #endif
@@ -174,15 +177,15 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
             {
                 toEnumerator.MoveNext();
 
-                if (toEnumerator.Current == null) 
+                if (toEnumerator.Current == null)
                     continue;
 
                 Assert.AreEqual(adress.Email, toEnumerator.Current.Email);
                 Assert.AreEqual(adress.Name, toEnumerator.Current.Name);
             }
 
-            var ccEnumerator = emlMessage.Cc.OrderBy(x=>x.Email).GetEnumerator();
-            foreach (var adress in rightResult.Cc.OrderBy(x=>x.Email))
+            var ccEnumerator = emlMessage.Cc.OrderBy(x => x.Email).GetEnumerator();
+            foreach (var adress in rightResult.Cc.OrderBy(x => x.Email))
             {
                 ccEnumerator.MoveNext();
 
@@ -238,7 +241,7 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
                 Indent = false
             };
 
-            var serializer = new XmlSerializer(typeof (RightParserResult));
+            var serializer = new XmlSerializer(typeof(RightParserResult));
             using (var textWriter = XmlWriter.Create(new StreamWriter(filePath), settings))
             {
                 serializer.Serialize(textWriter, this);
@@ -247,12 +250,12 @@ namespace ASC.Mail.Aggregator.Tests.Common.MessageParserTests
 
         public static RightParserResult FromXml(string filePath)
         {
-            var deserializer = new XmlSerializer(typeof (RightParserResult));
+            var deserializer = new XmlSerializer(typeof(RightParserResult));
             RightParserResult result;
             using (var textReader = new XmlTextReader(new StreamReader(filePath)))
             {
                 textReader.Normalization = false;
-                result = (RightParserResult) deserializer.Deserialize(textReader);
+                result = (RightParserResult)deserializer.Deserialize(textReader);
             }
 
             return result;

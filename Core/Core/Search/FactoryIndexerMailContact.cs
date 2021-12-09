@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Caching;
 using ASC.Common.Logging;
@@ -38,8 +34,9 @@ using ASC.ElasticSearch.Core;
 using ASC.Mail.Core.Dao;
 using ASC.Mail.Core.Dao.Entities;
 
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+
+using System;
 
 namespace ASC.Mail.Core.Search
 {
@@ -63,7 +60,7 @@ namespace ASC.Mail.Core.Search
             LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
         }
 
-        public override void IndexAll()
+        /*public override void IndexAll()
         {
 
             IQueryable<MailContact> GetBaseQuery(DateTime lastIndexed) =>
@@ -132,7 +129,7 @@ namespace ASC.Mail.Core.Search
 
                 throw;
             }
-        }
+        }*/
     }
 
     public class FactoryIndexerMailContactExtension

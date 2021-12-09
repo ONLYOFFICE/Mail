@@ -60,7 +60,7 @@ namespace ASC.Mail.Core.Dao
         public virtual DbSet<MailUserFolderXMail> MailUserFolderXMail { get; set; }
         public virtual DbSet<CrmContact> CrmContact { get; set; }
         public virtual DbSet<CrmContactInfo> CrmContactInfo { get; set; }
-        public virtual DbSet<DbTenant> Tenants { get; set; }
+        public virtual DbSet<CrmCurrencyInfo> CrmCurrencyInfo { get; set; }
 
         protected override Dictionary<Provider, Func<BaseDbContext>> ProviderContext
         {
@@ -76,9 +76,9 @@ namespace ASC.Mail.Core.Dao
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            ModelBuilderWrapper
-                .From(modelBuilder, Provider)
-                .AddDbTenant();
+            //ModelBuilderWrapper
+            //    .From(modelBuilder, Provider)
+            //    .AddDbTenant();
 
             modelBuilder.AddMailAlert()
                 .AddMailAttachment()
@@ -118,7 +118,8 @@ namespace ASC.Mail.Core.Dao
                 .AddMailUserFolderTree()
                 .AddMailUserFolderXMail()
                 .AddCrmContact()
-                .AddCrmContactInfo();
+                .AddCrmContactInfo()
+                .AddCrmCurrencyInfo();
 
             OnModelCreatingPartial(modelBuilder);
         }
