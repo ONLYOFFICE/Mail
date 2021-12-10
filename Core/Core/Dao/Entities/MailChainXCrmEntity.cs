@@ -28,11 +28,11 @@ namespace ASC.Mail.Core.Dao.Entities
                     .HasName("PRIMARY");
 
                 entity.Property(e => e.IdTenant)
-                    .HasColumnName("id_mailbox")
+                    .HasColumnName("id_tenant")
                     .HasColumnType("int(11)");
 
                 entity.Property(e => e.IdMailbox)
-                    .HasColumnName("id_tenant")
+                    .HasColumnName("id_mailbox")
                     .HasColumnType("int(11)");
 
                 entity.Property(e => e.EntityId)
