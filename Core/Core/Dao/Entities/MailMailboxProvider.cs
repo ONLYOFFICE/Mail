@@ -58,6 +58,14 @@ namespace ASC.Mail.Core.Dao.Entities
                     .UseCollation("utf8_general_ci");
             });
 
+            modelBuilder.Entity<MailMailboxProvider>().HasData(new MailMailboxProvider
+            {
+                Id = 69,
+                Name = "googlemail.com",
+                DisplayName = "Google Mail",
+                DisplayShortName = "GMail"
+            });
+
             return modelBuilder;
         }
     }

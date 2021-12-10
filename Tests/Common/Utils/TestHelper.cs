@@ -91,6 +91,15 @@ namespace ASC.Mail.Aggregator.Tests.Common.Utils
             return userManager.SaveUserInfo(user);
         }
 
+        public static string GetTestEmailAddress(string domain)
+        {
+            var startDate = DateTime.Now;
+
+            return string.Format("1test_{0}_{1}_{2}_{3}@{4}",
+                startDate.Day, startDate.Month, startDate.Year,
+                startDate.Ticks, domain);
+        }
+
         public static bool IgnoreIfFullTextSearch<T>(bool enabled, IServiceProvider serviceProvider) where T : class, ISearchItem
         {
             return false;

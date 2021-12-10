@@ -25,7 +25,7 @@
 
 
 using ASC.Core;
-using ASC.ElasticSearch;
+using ASC.Core.Users;
 using ASC.Mail.Aggregator.Tests.Common.Utils;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
@@ -52,6 +52,7 @@ namespace ASC.Mail.Tests
         public const string DOMAIN = "gmail.com";
 
         public MailBoxData TestMailbox { get; set; }
+        public UserInfo TestUser { get; set; }
         public int MailId { get; set; }
 
         private const int PAGE = 0;
@@ -79,7 +80,8 @@ namespace ASC.Mail.Tests
 
             var testEngine = scope.ServiceProvider.GetService<TestEngine>();
 
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+            TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
+            TestUser.Email = TestHelper.GetTestEmailAddress(DOMAIN);
 
             //вынести
             securityContext.AuthenticateMe(TestUser.ID);
@@ -96,7 +98,7 @@ namespace ASC.Mail.Tests
             }
         }
 
-        [TearDown]
+        /*[TearDown]
         public void CleanUp()
         {
             if (TestUser == null || TestUser.ID == Guid.Empty)
@@ -121,7 +123,7 @@ namespace ASC.Mail.Tests
             // Clear TestUser mail data
             var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
             mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
-        }
+        }*/
 
         [Test]
         [Order(1)]

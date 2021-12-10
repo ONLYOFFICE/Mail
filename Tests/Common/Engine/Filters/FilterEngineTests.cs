@@ -25,9 +25,8 @@
 
 
 using ASC.Core;
-using ASC.ElasticSearch;
+using ASC.Core.Users;
 using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums.Filter;
 using ASC.Mail.Models;
@@ -51,6 +50,7 @@ namespace ASC.Mail.Tests
         public const string DOMAIN = "gmail.com";
 
         public MailBoxData TestMailbox { get; set; }
+        public UserInfo TestUser { get; set; }
         public int MailId { get; set; }
 
         [OneTimeSetUp]
@@ -76,10 +76,11 @@ namespace ASC.Mail.Tests
 
             var testEngine = scope.ServiceProvider.GetService<TestEngine>();
 
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+            TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
+            TestUser.Email = TestHelper.GetTestEmailAddress(DOMAIN);
         }
 
-        [TearDown]
+        /*[TearDown]
         public void CleanUp()
         {
             if (TestUser == null || TestUser.ID == Guid.Empty)
@@ -101,14 +102,14 @@ namespace ASC.Mail.Tests
             var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
             var factoryIndexerHelper = scope.ServiceProvider.GetService<FactoryIndexerHelper>();
 
-            /*var t = scope.ServiceProvider.GetService<MailWrapper>();
+            var t = scope.ServiceProvider.GetService<MailWrapper>();
             if (factoryIndexerHelper.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID)).Wait();*/
+                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID)).Wait();
 
             // Clear TestUser mail data
             var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
             mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
-        }
+        }*/
 
         [Test]
         [Order(1)]

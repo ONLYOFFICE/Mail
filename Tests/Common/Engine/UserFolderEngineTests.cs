@@ -24,15 +24,10 @@
 */
 
 
-using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Models;
-using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,110 +36,47 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace ASC.Mail.Tests
 {
     [TestFixture]
     internal class UserFoldersTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 1;
-        public const string PASSWORD = "123456";
-        public const string DOMAIN = "gmail.com";
-
-        private static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-           @"..\..\..\Data\");
         private const string EML1_FILE_NAME = @"bad_encoding.eml";
         private const string EML2_FILE_NAME = @"embed_image.eml";
+        private const string EML3_FILE_NAME = @"exo__with_javascript.eml";
+        private const string EML4_FILE_NAME = @"icloud_ics.eml";
+        private const string EML5_FILE_NAME = @"medium_sample.eml";
+        private const string EML6_FILE_NAME = @"message_mailru.eml";
+
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
         private static readonly string Eml2Path = TestFolderPath + EML2_FILE_NAME;
+        private static readonly string Eml3Path = TestFolderPath + EML3_FILE_NAME;
+        private static readonly string Eml4Path = TestFolderPath + EML4_FILE_NAME;
+        private static readonly string Eml5Path = TestFolderPath + EML5_FILE_NAME;
+        private static readonly string Eml6Path = TestFolderPath + EML6_FILE_NAME;
 
-        public MailBoxData TestMailbox { get; set; }
         public int MailId { get; set; }
+
+        private MessageEngine MessageEngine { get; set; }
+        private UserFolderEngine UserFolderEngine { get; set; }
+        private TestEngine TestEngine { get; set; }
 
         [OneTimeSetUp]
         public override void Prepare()
         {
             base.Prepare();
-        }
 
-        [SetUp]
-        public void SetUp()
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-            var mailBoxSettingEngine = scope.ServiceProvider.GetService<MailBoxSettingEngine>();
-            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
-
-            //вынести из б
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
-
-            var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
-
-            TestMailbox = testMailboxes.FirstOrDefault();
-
-            if (TestMailbox == null || !mailboxEngine.SaveMailBox(TestMailbox))
-            {
-                throw new Exception(string.Format("Can't create mailbox with email: {0}", TestUser.Email));
-            }
-        }
-
-        [TearDown]
-        public void CleanUp()
-        {
-            if (TestUser == null || TestUser.ID == Guid.Empty)
-                return;
-
-            using var scope = ServiceProvider.CreateScope();
-
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            // Remove TestUser profile
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            userManager.DeleteUser(TestUser.ID);
-
-            // Clear TestUser mail index
-            var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-            var t = scope.ServiceProvider.GetService<MailMail>();
-            if (factoryIndexer.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID.ToString())).Wait();
-
-            // Clear TestUser mail data
-            var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
-            mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
+            MessageEngine = serviceScope.ServiceProvider.GetService<MessageEngine>();
+            UserFolderEngine = serviceScope.ServiceProvider.GetService<UserFolderEngine>();
+            TestEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
         }
 
         [Test]
         [Order(1)]
         public void CreateFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var folder = userFolderEngine.Create("Test folder");
+            var folder = UserFolderEngine.Create("CreateFolderTest");
 
             Assert.Greater(folder.Id, 0);
         }
@@ -153,24 +85,15 @@ namespace ASC.Mail.Tests
         [Order(2)]
         public void CreateFolderWithAlreadyExistingNameTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+            const string name = "CreateFolderWithAlreadyExistingNameTest";
 
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            const string name = "Test folder";
-
-            var folder = userFolderEngine.Create(name);
+            var folder = UserFolderEngine.Create(name);
 
             Assert.Greater(folder.Id, 0);
 
             Assert.Throws<AlreadyExistsFolderException>(() =>
             {
-                userFolderEngine.Create(name);
+                UserFolderEngine.Create(name);
             });
         }
 
@@ -178,18 +101,9 @@ namespace ASC.Mail.Tests
         [Order(3)]
         public void CreateFolderWithoutParentTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
             Assert.Throws<ArgumentException>(() =>
             {
-                userFolderEngine.Create("Test folder", 777);
+                UserFolderEngine.Create("CreateFolderWithoutParentTest", 777);
             });
         }
 
@@ -197,18 +111,9 @@ namespace ASC.Mail.Tests
         [Order(4)]
         public void CreateFolderWithoutNameTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
             Assert.Throws<EmptyFolderException>(() =>
             {
-                userFolderEngine.Create("");
+                UserFolderEngine.Create("");
             });
         }
 
@@ -216,24 +121,15 @@ namespace ASC.Mail.Tests
         [Order(5)]
         public void CreateSubFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var folder = userFolderEngine.Create("Test folder");
+            var folder = UserFolderEngine.Create("CreateSubFolderTest");
 
             Assert.Greater(folder.Id, 0);
 
-            var subFolder = userFolderEngine.Create("Test sub folder", folder.Id);
+            var subFolder = UserFolderEngine.Create("CreateSubFolderTestSUB", folder.Id);
 
             Assert.Greater(subFolder.Id, 0);
 
-            var rootFolder = userFolderEngine.Get(folder.Id);
+            var rootFolder = UserFolderEngine.Get(folder.Id);
 
             Assert.IsNotNull(rootFolder);
 
@@ -280,26 +176,17 @@ namespace ASC.Mail.Tests
         [Order(6)]
         public void ChangeNameTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+            const string name = "ChangeNameTest";
 
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            const string name = "Folder Name";
-
-            var folder = userFolderEngine.Create(name);
+            var folder = UserFolderEngine.Create(name);
 
             Assert.Greater(folder.Id, 0);
 
             Assert.AreEqual(name, folder.Name);
 
-            const string new_name = "New Folder Name";
+            const string new_name = "New ChangeNameTest";
 
-            var resultFolder = userFolderEngine.Update(folder.Id, new_name);
+            var resultFolder = UserFolderEngine.Update(folder.Id, new_name);
 
             Assert.IsNotNull(resultFolder);
 
@@ -316,26 +203,17 @@ namespace ASC.Mail.Tests
         [Order(7)]
         public void ChangeNameToExistingTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+            const string name1 = "ChangeNameToExistingTest";
 
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            const string name1 = "Folder Name 1";
-
-            var folder1 = userFolderEngine.Create(name1);
+            var folder1 = UserFolderEngine.Create(name1);
 
             Assert.Greater(folder1.Id, 0);
 
             Assert.AreEqual(name1, folder1.Name);
 
-            const string name2 = "New Folder Name";
+            const string name2 = "New Folder Name ChangeNameToExistingTest";
 
-            var folder2 = userFolderEngine.Create(name2);
+            var folder2 = UserFolderEngine.Create(name2);
 
             Assert.Greater(folder2.Id, 0);
 
@@ -343,7 +221,7 @@ namespace ASC.Mail.Tests
 
             Assert.Throws<AlreadyExistsFolderException>(() =>
             {
-                userFolderEngine.Update(folder2.Id, name1);
+                UserFolderEngine.Update(folder2.Id, name1);
             });
         }
 
@@ -351,26 +229,17 @@ namespace ASC.Mail.Tests
         [Order(8)]
         public void MoveToBaseFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("MoveToBaseFolderTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var folder = userFolderEngine.Create("Folder 1.1");
+            var folder = UserFolderEngine.Create("MoveToBaseFolderTest 1.1");
 
             Assert.Greater(folder.Id, 0);
 
-            userFolderEngine.Update(folder.Id, folder.Name, baseFolder.Id);
+            UserFolderEngine.Update(folder.Id, folder.Name, baseFolder.Id);
 
-            var resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            var resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
 
@@ -378,7 +247,7 @@ namespace ASC.Mail.Tests
 
             Assert.AreEqual(1, resultBaseFolder.FolderCount);
 
-            var resultFolder = userFolderEngine.Get(folder.Id);
+            var resultFolder = UserFolderEngine.Get(folder.Id);
 
             Assert.Greater(resultFolder.Id, 0);
 
@@ -389,38 +258,29 @@ namespace ASC.Mail.Tests
         [Order(9)]
         public void MoveFromBaseFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("MoveFromBaseFolderTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var folder = userFolderEngine.Create("Folder 1.1", baseFolder.Id);
+            var folder = UserFolderEngine.Create("MoveFromBaseFolderTest 1.1", baseFolder.Id);
 
             Assert.Greater(folder.Id, 0);
 
             Assert.AreEqual(baseFolder.Id, folder.ParentId);
 
-            baseFolder = userFolderEngine.Get(baseFolder.Id);
+            baseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.AreEqual(1, baseFolder.FolderCount);
 
-            userFolderEngine.Update(folder.Id, folder.Name, 0);
+            UserFolderEngine.Update(folder.Id, folder.Name, 0);
 
-            var resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            var resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
 
             Assert.AreEqual(0, resultBaseFolder.FolderCount);
 
-            var resultFolder = userFolderEngine.Get(folder.Id);
+            var resultFolder = UserFolderEngine.Get(folder.Id);
 
             Assert.Greater(resultFolder.Id, 0);
         }
@@ -429,20 +289,11 @@ namespace ASC.Mail.Tests
         [Order(10)]
         public void WrongMoveFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("WrongMoveFolderTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var folder = userFolderEngine.Create("Folder 1.1", baseFolder.Id);
+            var folder = UserFolderEngine.Create("WrongMoveFolderTest 1.1", baseFolder.Id);
 
             Assert.Greater(folder.Id, 0);
 
@@ -450,7 +301,7 @@ namespace ASC.Mail.Tests
 
             Assert.Throws<MoveFolderException>(() =>
             {
-                userFolderEngine.Update(baseFolder.Id, baseFolder.Name, folder.Id);
+                UserFolderEngine.Update(baseFolder.Id, baseFolder.Name, folder.Id);
             });
         }
 
@@ -458,20 +309,11 @@ namespace ASC.Mail.Tests
         [Order(11)]
         public void WrongChangeParentToCurrentTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("WrongChangeParentToCurrentTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var folder = userFolderEngine.Create("Folder 1.1", baseFolder.Id);
+            var folder = UserFolderEngine.Create("WrongChangeParentToCurrentTest 1.1", baseFolder.Id);
 
             Assert.Greater(folder.Id, 0);
 
@@ -479,7 +321,7 @@ namespace ASC.Mail.Tests
 
             Assert.Throws<ArgumentException>(() =>
             {
-                userFolderEngine.Update(folder.Id, folder.Name, folder.Id);
+                UserFolderEngine.Update(folder.Id, folder.Name, folder.Id);
             });
         }
 
@@ -487,40 +329,31 @@ namespace ASC.Mail.Tests
         [Order(12)]
         public void WrongChangeParentToChildTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-
-            var root = userFolderEngine.Create("Root");
+            var root = UserFolderEngine.Create("WrongChangeParentToChildTest");
 
             Assert.Greater(root.Id, 0);
 
-            var f1 = userFolderEngine.Create("1", root.Id);
+            var f1 = UserFolderEngine.Create("WrongChangeParentToChildTest 1", root.Id);
 
             Assert.Greater(f1.Id, 0);
 
             Assert.AreEqual(root.Id, f1.ParentId);
 
-            root = userFolderEngine.Get(root.Id);
+            root = UserFolderEngine.Get(root.Id);
 
             Assert.AreEqual(1, root.FolderCount);
 
-            var f11 = userFolderEngine.Create("1.1", f1.Id);
+            var f11 = UserFolderEngine.Create("WrongChangeParentToChildTest 1.1", f1.Id);
 
             Assert.Greater(f11.Id, 0);
 
             Assert.AreEqual(f1.Id, f11.ParentId);
 
-            f1 = userFolderEngine.Get(f1.Id);
+            f1 = UserFolderEngine.Get(f1.Id);
 
             Assert.AreEqual(1, f1.FolderCount);
 
-            var f111 = userFolderEngine.Create("1.1.1", f11.Id);
+            var f111 = UserFolderEngine.Create("WrongChangeParentToChildTest 1.1.1", f11.Id);
 
             Assert.Greater(f111.Id, 0);
 
@@ -528,7 +361,7 @@ namespace ASC.Mail.Tests
 
             Assert.Throws<MoveFolderException>(() =>
             {
-                userFolderEngine.Update(f11.Id, f11.Name, f111.Id);
+                UserFolderEngine.Update(f11.Id, f11.Name, f111.Id);
             });
         }
 
@@ -606,21 +439,11 @@ namespace ASC.Mail.Tests
         [Order(13)]
         public void LoadMessagesToUserFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("LoadMessagesToUserFolderTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            var resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -643,12 +466,12 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId1 = testEngine.LoadSampleMessage(model);
+                mailId1 = TestEngine.LoadSampleMessage(model);
             }
 
             Assert.Greater(mailId1, 0);
 
-            resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -671,12 +494,12 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId2 = testEngine.LoadSampleMessage(model);
+                mailId2 = TestEngine.LoadSampleMessage(model);
             }
 
             Assert.Greater(mailId2, 0);
 
-            resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -691,22 +514,11 @@ namespace ASC.Mail.Tests
         [Order(14)]
         public void MoveMessagesFromDefaulFolderToUserFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("MoveMessagesFromDefaulFolderToUserFolderTest 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            var resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -730,7 +542,7 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId1 = testEngine.LoadSampleMessage(model);
+                mailId1 = TestEngine.LoadSampleMessage(model);
             }
 
             using (var fs = new FileStream(Eml2Path, FileMode.Open, FileAccess.Read))
@@ -744,16 +556,16 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId2 = testEngine.LoadSampleMessage(model);
+                mailId2 = TestEngine.LoadSampleMessage(model);
             }
 
             Assert.Greater(mailId1, 0);
             Assert.Greater(mailId2, 0);
 
-            messageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.UserFolder,
+            MessageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.UserFolder,
                 baseFolder.Id);
 
-            resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -768,22 +580,11 @@ namespace ASC.Mail.Tests
         [Order(15)]
         public void MoveMessagesFromUserFolderToDefaulFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var baseFolder = userFolderEngine.Create("Folder 1");
+            var baseFolder = UserFolderEngine.Create("MoveMessagesFromToDefaul 1");
 
             Assert.Greater(baseFolder.Id, 0);
 
-            var resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            var resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -796,7 +597,7 @@ namespace ASC.Mail.Tests
             int mailId1;
             int mailId2;
 
-            using (var fs = new FileStream(Eml1Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Eml5Path, FileMode.Open, FileAccess.Read))
             {
                 var model = new TestMessageModel
                 {
@@ -807,10 +608,10 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId1 = testEngine.LoadSampleMessage(model);
+                mailId1 = TestEngine.LoadSampleMessage(model);
             }
 
-            using (var fs = new FileStream(Eml2Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Eml6Path, FileMode.Open, FileAccess.Read))
             {
                 var model = new TestMessageModel
                 {
@@ -821,13 +622,13 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId2 = testEngine.LoadSampleMessage(model);
+                mailId2 = TestEngine.LoadSampleMessage(model);
             }
 
             Assert.Greater(mailId1, 0);
             Assert.Greater(mailId2, 0);
 
-            resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -837,9 +638,9 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(1, resultBaseFolder.UnreadChainCount);
             Assert.AreEqual(2, resultBaseFolder.TotalChainCount);
 
-            messageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.Inbox);
+            MessageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.Inbox);
 
-            resultBaseFolder = userFolderEngine.Get(baseFolder.Id);
+            resultBaseFolder = UserFolderEngine.Get(baseFolder.Id);
 
             Assert.IsNotNull(resultBaseFolder);
             Assert.AreEqual(0, resultBaseFolder.ParentId);
@@ -854,22 +655,11 @@ namespace ASC.Mail.Tests
         [Order(16)]
         public void MoveMessagesFromUserFolderToAnotherUserFolderTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var folder1 = userFolderEngine.Create("Folder 1");
+            var folder1 = UserFolderEngine.Create("MoveMessagesFromToAnother 1");
 
             Assert.Greater(folder1.Id, 0);
 
-            var resultFolder1 = userFolderEngine.Get(folder1.Id);
+            var resultFolder1 = UserFolderEngine.Get(folder1.Id);
 
             Assert.IsNotNull(resultFolder1);
             Assert.AreEqual(0, resultFolder1.ParentId);
@@ -879,11 +669,11 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(0, resultFolder1.UnreadChainCount);
             Assert.AreEqual(0, resultFolder1.TotalChainCount);
 
-            var folder2 = userFolderEngine.Create("Folder 2");
+            var folder2 = UserFolderEngine.Create("MoveMessagesFromToAnother 2");
 
             Assert.Greater(folder2.Id, 0);
 
-            var resultFolder2 = userFolderEngine.Get(folder2.Id);
+            var resultFolder2 = UserFolderEngine.Get(folder2.Id);
 
             Assert.IsNotNull(resultFolder2);
             Assert.AreEqual(0, resultFolder2.ParentId);
@@ -896,7 +686,7 @@ namespace ASC.Mail.Tests
             int mailId1;
             int mailId2;
 
-            using (var fs = new FileStream(Eml1Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Eml3Path, FileMode.Open, FileAccess.Read))
             {
                 var model = new TestMessageModel
                 {
@@ -907,10 +697,10 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId1 = testEngine.LoadSampleMessage(model);
+                mailId1 = TestEngine.LoadSampleMessage(model);
             }
 
-            using (var fs = new FileStream(Eml2Path, FileMode.Open, FileAccess.Read))
+            using (var fs = new FileStream(Eml4Path, FileMode.Open, FileAccess.Read))
             {
                 var model = new TestMessageModel
                 {
@@ -921,13 +711,13 @@ namespace ASC.Mail.Tests
                     EmlStream = fs
                 };
 
-                mailId2 = testEngine.LoadSampleMessage(model);
+                mailId2 = TestEngine.LoadSampleMessage(model);
             }
 
             Assert.Greater(mailId1, 0);
             Assert.Greater(mailId2, 0);
 
-            resultFolder1 = userFolderEngine.Get(folder1.Id);
+            resultFolder1 = UserFolderEngine.Get(folder1.Id);
 
             Assert.IsNotNull(resultFolder1);
             Assert.AreEqual(0, resultFolder1.ParentId);
@@ -937,9 +727,9 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(1, resultFolder1.UnreadChainCount);
             Assert.AreEqual(2, resultFolder1.TotalChainCount);
 
-            messageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.UserFolder, folder2.Id);
+            MessageEngine.SetFolder(new List<int> { mailId1, mailId2 }, FolderType.UserFolder, folder2.Id);
 
-            resultFolder1 = userFolderEngine.Get(folder1.Id);
+            resultFolder1 = UserFolderEngine.Get(folder1.Id);
 
             Assert.IsNotNull(resultFolder1);
             Assert.AreEqual(0, resultFolder1.ParentId);
@@ -949,7 +739,7 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(0, resultFolder1.UnreadChainCount);
             Assert.AreEqual(0, resultFolder1.TotalChainCount);
 
-            resultFolder2 = userFolderEngine.Get(folder2.Id);
+            resultFolder2 = UserFolderEngine.Get(folder2.Id);
 
             Assert.IsNotNull(resultFolder2);
             Assert.AreEqual(0, resultFolder2.ParentId);

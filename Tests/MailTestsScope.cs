@@ -6,6 +6,7 @@ using ASC.Core;
 using ASC.CRM.Core;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core.Engine;
+using ASC.Mail.Core.Engine.Operations;
 using ASC.Mail.Utils;
 using ASC.Web.Files.Api;
 using ASC.Web.Files.Utils;
@@ -36,6 +37,12 @@ namespace ASC.Mail.Tests
         private MailGarbageEngine MailGarbageEngine { get; }
         private MessageEngine MessageEngine { get; }
         private FilterEngine FilterEngine { get; }
+        private TestEngine TestEngine { get; }
+        private TemplateEngine TemplateEngine { get; }
+        private DraftEngine DraftEngine { get; }
+        private TagEngine TagEngine { get; }
+        private OperationEngine OperationEngine { get; }
+        private MailRemoveUserFolderOperation MailRemoveUserFolderOperation { get; }
 
         public MailTestsScope(
             ApiDateTimeHelper apiDateTimeHelper,
@@ -58,7 +65,13 @@ namespace ASC.Mail.Tests
             MailSettings mailSettings,
             MailGarbageEngine mailGarbageEngine,
             MessageEngine messageEngine,
-            FilterEngine filterEngine
+            FilterEngine filterEngine,
+            TestEngine testEngine,
+            TemplateEngine templateEngine,
+            DraftEngine draftEngine,
+            TagEngine tagEngine,
+            OperationEngine operationEngine,
+            MailRemoveUserFolderOperation mailRemoveUserFolderOperation
             )
         {
             ApiDateTimeHelper = apiDateTimeHelper;
@@ -81,6 +94,12 @@ namespace ASC.Mail.Tests
             MailGarbageEngine = mailGarbageEngine;
             MessageEngine = messageEngine;
             FilterEngine = filterEngine;
+            TestEngine = testEngine;
+            TemplateEngine = templateEngine;
+            DraftEngine = draftEngine;
+            TagEngine = tagEngine;
+            OperationEngine = operationEngine;
+            MailRemoveUserFolderOperation = mailRemoveUserFolderOperation;
         }
     }
 }

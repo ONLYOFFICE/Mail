@@ -25,6 +25,7 @@
 
 
 using ASC.Core;
+using ASC.Core.Users;
 using ASC.ElasticSearch;
 using ASC.Mail.Aggregator.Tests.Common.Utils;
 using ASC.Mail.Core.Dao.Entities;
@@ -53,6 +54,7 @@ namespace ASC.Mail.Tests
         public const string EMAIL_NAME = "Test User";
 
         public MailBoxData TestMailbox { get; set; }
+        public UserInfo TestUser { get; set; }
         public int MailId { get; set; }
 
         private const int PAGE = 0;
@@ -80,7 +82,8 @@ namespace ASC.Mail.Tests
 
             var testEngine = scope.ServiceProvider.GetService<TestEngine>();
 
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+            TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
+            TestUser.Email = TestHelper.GetTestEmailAddress(DOMAIN);
 
             //вынести
             securityContext.AuthenticateMe(TestUser.ID);
@@ -100,36 +103,36 @@ namespace ASC.Mail.Tests
             }
         }
 
-        [TearDown]
-        public void CleanUp()
-        {
-            if (TestUser == null || TestUser.ID == Guid.Empty)
-                return;
+        /*[TearDown]
+                public void CleanUp()
+                {
+                    if (TestUser == null || TestUser.ID == Guid.Empty)
+                        return;
 
-            using var scope = ServiceProvider.CreateScope();
+                    using var scope = ServiceProvider.CreateScope();
 
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+                    var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+                    var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
 
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
+                    tenantManager.SetCurrentTenant(CURRENT_TENANT);
+                    securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-            // Remove TestUser profile
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            userManager.DeleteUser(TestUser.ID);
+                    // Remove TestUser profile
+                    var userManager = scope.ServiceProvider.GetService<UserManager>();
+                    userManager.DeleteUser(TestUser.ID);
 
-            // Clear TestUser mail index
-            var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                    // Clear TestUser mail index
+                    var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
 
-            var t = scope.ServiceProvider.GetService<MailMail>();
-            if (factoryIndexer.Support(t))
-                factoryIndexer.Delete(s => s.Where(m => m.UserId, TestUser.ID.ToString()));
+                    var t = scope.ServiceProvider.GetService<MailMail>();
+                    if (factoryIndexer.Support(t))
+                        factoryIndexer.Delete(s => s.Where(m => m.UserId, TestUser.ID.ToString()));
 
 
-            // Clear TestUser mail data
-            var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
-            mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
-        }
+                    // Clear TestUser mail data
+                    var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
+                    mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
+                }*/
 
         [Test]
         [Order(1)]

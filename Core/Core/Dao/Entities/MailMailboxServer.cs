@@ -88,6 +88,21 @@ namespace ASC.Mail.Core.Dao.Entities
                     .HasColumnType("tinyint(4)");
             });
 
+            modelBuilder.Entity<MailMailboxServer>().HasData(new MailMailboxServer [] {
+                new MailMailboxServer 
+                { 
+                    Id = 663, IdProvider = 69, Type = "imap", Hostname = "imap.googlemail.com", Port = 993, SocketType = "SSL", Username = "%EMAILADDRESS%", IsUserData = false 
+                } ,
+                new MailMailboxServer
+                {
+                    Id = 664, IdProvider = 69, Type = "pop3", Hostname = "pop.googlemail.com", Port = 995, SocketType = "SSL", Username = "recent:%EMAILADDRESS%", IsUserData = false
+                } ,
+                new MailMailboxServer
+                {
+                    Id = 665, IdProvider = 69, Type = "smtp", Hostname = "smpt.googlemail.com", Port = 465, SocketType = "SSL", Username = "%EMAILADDRESS%", IsUserData = false
+                }
+            });
+
             return modelBuilder;
         }
     }

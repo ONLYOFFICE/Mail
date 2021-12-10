@@ -59,7 +59,8 @@ namespace ASC.Mail.Core.Dao.Entities
 
                 entity.Property(e => e.IsAlias)
                     .HasColumnName("is_alias")
-                    .HasColumnType("int(10)");
+                    .HasColumnType("int(10)")
+                    .HasDefaultValueSql("'0'");
 
                 entity.Property(e => e.DateCreated)
                     .HasColumnName("date_created")

@@ -24,20 +24,14 @@
 */
 
 
-using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using NUnit.Framework;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -47,55 +41,24 @@ namespace ASC.Mail.Tests
     [TestFixture]
     internal class TagEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 1;
-        public const string PASSWORD = "123456";
-        public const string DOMAIN = "gmail.com";
-
-        private static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-           @"..\..\..\Data\");
         private const string EML1_FILE_NAME = @"bad_encoding.eml";
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
 
-        public MailBoxData TestMailbox { get; set; }
         public int MailId { get; set; }
+
+        private TestEngine TestEngine { get; set; }
+        private MessageEngine MessageEngine { get; set; }
+        private TagEngine TagEngine { get; set; }
+
 
         [OneTimeSetUp]
         public override void Prepare()
         {
             base.Prepare();
-        }
 
-        [SetUp]
-        public void SetUp()
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-            var mailBoxSettingEngine = scope.ServiceProvider.GetService<MailBoxSettingEngine>();
-            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
-
-            //вынести
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
-
-            var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
-
-            TestMailbox = testMailboxes.FirstOrDefault();
-
-            if (TestMailbox == null || !mailboxEngine.SaveMailBox(TestMailbox))
-            {
-                throw new Exception(string.Format("Can't create mailbox with email: {0}", TestUser.Email));
-            }
+            TestEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
+            MessageEngine = serviceScope.ServiceProvider.GetService<MessageEngine>();
+            TagEngine = serviceScope.ServiceProvider.GetService<TagEngine>();
 
             using var fs = new FileStream(Eml1Path, FileMode.Open, FileAccess.Read);
 
@@ -108,74 +71,44 @@ namespace ASC.Mail.Tests
                 EmlStream = fs
             };
 
-            MailId = testEngine.LoadSampleMessage(model);
+            MailId = TestEngine.LoadSampleMessage(model);
         }
 
         [TearDown]
-        public void CleanUp()
+        public void DeleteTagsForNextTest()
         {
-            if (TestUser == null || TestUser.ID == Guid.Empty)
-                return;
+            var tags = TagEngine.GetTags();
 
-            using var scope = ServiceProvider.CreateScope();
-
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            // Remove TestUser profile
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            userManager.DeleteUser(TestUser.ID);
-
-            // Clear TestUser mail index
-            var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-            var t = scope.ServiceProvider.GetService<MailMail>();
-            if (factoryIndexer.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID.ToString())).Wait();
-
-            // Clear TestUser mail data
-            var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
-            mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
+            foreach (var tag in tags)
+            {
+                TagEngine.DeleteTag(tag.Id);
+            }
         }
 
         private List<Core.Entities.Tag> CreateTagsOnMessage()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
-            var tag1 = tagEngine.CreateTag("Tag1", "11", new List<string>());
+            var tag1 = TagEngine.CreateTag("Tag1", "11", new List<string>());
 
             Assert.IsNotNull(tag1);
             Assert.Greater(tag1.Id, 0);
 
-            tagEngine.SetMessagesTag(new List<int> { MailId }, tag1.Id);
+            TagEngine.SetMessagesTag(new List<int> { MailId }, tag1.Id);
 
-            var tag2 = tagEngine.CreateTag("Tag2", "10", new List<string>());
+            var tag2 = TagEngine.CreateTag("Tag2", "10", new List<string>());
 
             Assert.IsNotNull(tag1);
             Assert.Greater(tag1.Id, 0);
 
-            tagEngine.SetMessagesTag(new List<int> { MailId }, tag2.Id);
+            TagEngine.SetMessagesTag(new List<int> { MailId }, tag2.Id);
 
-            var tags = tagEngine.GetTags();
+            var tags = TagEngine.GetTags();
 
             Assert.IsNotEmpty(tags);
             Assert.AreEqual(2, tags.Count);
             Assert.Contains(tag1.Id, tags.Select(m => m.Id).ToArray());
             Assert.Contains(tag2.Id, tags.Select(m => m.Id).ToArray());
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(2, message.TagIds.Count);
@@ -187,39 +120,28 @@ namespace ASC.Mail.Tests
 
         private List<Core.Entities.Tag> CreateTagsOnConversation()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
-            var tag1 = tagEngine.CreateTag("Tag1", "11", new List<string>());
+            var tag1 = TagEngine.CreateTag("Tag1", "11", new List<string>());
 
             Assert.IsNotNull(tag1);
             Assert.Greater(tag1.Id, 0);
 
-            tagEngine.SetConversationsTag(new List<int> { MailId }, tag1.Id);
+            TagEngine.SetConversationsTag(new List<int> { MailId }, tag1.Id);
 
-            var tag2 = tagEngine.CreateTag("Tag2", "10", new List<string>());
+            var tag2 = TagEngine.CreateTag("Tag2", "10", new List<string>());
 
             Assert.IsNotNull(tag1);
             Assert.Greater(tag1.Id, 0);
 
-            tagEngine.SetConversationsTag(new List<int> { MailId }, tag2.Id);
+            TagEngine.SetConversationsTag(new List<int> { MailId }, tag2.Id);
 
-            var tags = tagEngine.GetTags();
+            var tags = TagEngine.GetTags();
 
             Assert.IsNotEmpty(tags);
             Assert.AreEqual(2, tags.Count);
             Assert.Contains(tag1.Id, tags.Select(m => m.Id).ToArray());
             Assert.Contains(tag2.Id, tags.Select(m => m.Id).ToArray());
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(2, message.TagIds.Count);
@@ -247,25 +169,14 @@ namespace ASC.Mail.Tests
         [Order(3)]
         public void UnsetMessageFirstTagTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
             var tags = CreateTagsOnMessage();
 
             var tag1 = tags[0];
             var tag2 = tags[1];
 
-            tagEngine.UnsetMessagesTag(new List<int> { MailId }, tag1.Id);
+            TagEngine.UnsetMessagesTag(new List<int> { MailId }, tag1.Id);
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(1, message.TagIds.Count);
@@ -277,25 +188,14 @@ namespace ASC.Mail.Tests
         [Order(4)]
         public void UnsetConversationFirstTagTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
             var tags = CreateTagsOnConversation();
 
             var tag1 = tags[0];
             var tag2 = tags[1];
 
-            tagEngine.UnsetConversationsTag(new List<int> { MailId }, tag1.Id);
+            TagEngine.UnsetConversationsTag(new List<int> { MailId }, tag1.Id);
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(1, message.TagIds.Count);
@@ -307,25 +207,14 @@ namespace ASC.Mail.Tests
         [Order(5)]
         public void UnsetMessageSecondTagTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
             var tags = CreateTagsOnMessage();
 
             var tag1 = tags[0];
             var tag2 = tags[1];
 
-            tagEngine.UnsetMessagesTag(new List<int> { MailId }, tag2.Id);
+            TagEngine.UnsetMessagesTag(new List<int> { MailId }, tag2.Id);
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(1, message.TagIds.Count);
@@ -337,25 +226,14 @@ namespace ASC.Mail.Tests
         [Order(6)]
         public void UnsetConversationSecondTagTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
-
             var tags = CreateTagsOnConversation();
 
             var tag1 = tags[0];
             var tag2 = tags[1];
 
-            tagEngine.UnsetConversationsTag(new List<int> { MailId }, tag2.Id);
+            TagEngine.UnsetConversationsTag(new List<int> { MailId }, tag2.Id);
 
-            var message = messageEngine.GetMessage(MailId, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(MailId, new MailMessageData.Options());
 
             Assert.IsNotEmpty(message.TagIds);
             Assert.AreEqual(1, message.TagIds.Count);

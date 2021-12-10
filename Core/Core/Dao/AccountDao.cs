@@ -24,16 +24,16 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Models;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -76,13 +76,13 @@ namespace ASC.Mail.Core.Dao
                                 MailboxOAuthToken = mb.Token,
                                 MailboxIsServerMailbox = mb.IsServerMailbox,
                                 MailboxEmailInFolder = mb.EmailInFolder,
-                                ServerAddressId = sa.Id,
+                                ServerAddressIsAlias = sa.IsAlias != null ? sa.IsAlias : false,
+                                ServerAddressId = sa.Id != null ? sa.Id : 0,
+                                ServerDomainId = sd.Id != null ? sd.Id : 0,
+                                ServerMailGroupId = sg.Id != null ? sg.Id : 0,
+                                ServerDomainTenant = sd.Tenant != null ? sd.Tenant : 0,
                                 ServerAddressName = sa.Name,
-                                ServerAddressIsAlias = sa.IsAlias,
-                                ServerDomainId = sd.Id,
                                 ServerDomainName = sd.Name,
-                                ServerDomainTenant = sd.Tenant,
-                                ServerMailGroupId = sg.Id,
                                 ServerMailGroupAddress = sg.Address,
                                 MailboxSignature = sig != null
                                  ? new MailSignatureData((int)mb.Id, mb.Tenant, sig.Html, sig.IsActive)
@@ -92,8 +92,7 @@ namespace ASC.Mail.Core.Dao
                                      reply.TurnOnToDate, reply.FromDate, reply.ToDate, reply.Subject, reply.Html)
                                  : new MailAutoreplyData((int)mb.Id, mb.Tenant, false, false,
                                      false, DateTime.MinValue, DateTime.MinValue, string.Empty, string.Empty)
-                            })
-                           .ToList();
+                            }).ToList();
 
             return accounts;
         }

@@ -25,9 +25,6 @@
 
 
 using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
@@ -38,7 +35,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 using NUnit.Framework;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,102 +45,34 @@ namespace ASC.Mail.Tests
     [TestFixture]
     internal class DraftEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 1;
-        public const string PASSWORD = "123456";
-        public const string DOMAIN = "gmail.com";
-
-        private MailBoxData TestMailbox { get; set; }
-
-        private static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-           @"..\..\..\Data\");
         private const string EML1_FILE_NAME = @"bad_encoding.eml";
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
 
+        private FolderEngine FolderEngine { get; set; }
+        private TestEngine TestEngine { get; set; }
+        private MessageEngine MessageEngine { get; set; }
+        private TenantManager TenantManager { get; set; }
+        private CoreSettings CoreSettings { get; set; }
+        private DraftEngine DraftEngine { get; set; }
 
         [OneTimeSetUp]
         public override void Prepare()
         {
             base.Prepare();
-        }
 
-        [SetUp]
-        public void SetUp()
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-            var mailBoxSettingEngine = scope.ServiceProvider.GetService<MailBoxSettingEngine>();
-            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
-
-            //вынести
-            var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
-
-            var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
-
-            TestMailbox = testMailboxes.FirstOrDefault();
-
-            if (TestMailbox == null || !mailboxEngine.SaveMailBox(TestMailbox))
-            {
-                throw new Exception(string.Format("Can't create mailbox with email: {0}", TestUser.Email));
-            }
-        }
-
-        [TearDown]
-        public void CleanUp()
-        {
-            if (TestUser == null || TestUser.ID == Guid.Empty)
-                return;
-
-            using var scope = ServiceProvider.CreateScope();
-
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            // Remove TestUser profile
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            userManager.DeleteUser(TestUser.ID);
-
-            // Clear TestUser mail index
-            var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-            var factoryIndexerHelper = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-            var t = scope.ServiceProvider.GetService<MailMail>();
-            if (factoryIndexer.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID.ToString())).Wait();
-
-            // Clear TestUser mail data
-            var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
-            mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
+            FolderEngine = serviceScope.ServiceProvider.GetService<FolderEngine>();
+            TestEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
+            MessageEngine = serviceScope.ServiceProvider.GetService<MessageEngine>();
+            TenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
+            CoreSettings = serviceScope.ServiceProvider.GetService<CoreSettings>();
+            DraftEngine = serviceScope.ServiceProvider.GetService<DraftEngine>();
         }
 
         [Test]
         [Order(1)]
         public void CreateDraftTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-            var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
-            var draftEngine = scope.ServiceProvider.GetService<DraftEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var folders = folderEngine.GetFolders();
+            var folders = FolderEngine.GetFolders();
 
             Assert.IsNotEmpty(folders);
 
@@ -152,13 +80,13 @@ namespace ASC.Mail.Tests
                 folders.Any(f => f.total == 0 && f.unread == 0 && f.totalMessages == 0 && f.unreadMessages == 0));
 
             var draftItem = new MailDraftData(0, TestMailbox, "test@gmail.com", new List<string>(), new List<string>(), new List<string>(), "subject",
-                MailUtil.CreateMessageId(tenantManager, coreSettings), null, false, null, "Test body", MailUtil.CreateStreamId(), new List<MailAttachmentData>());
+                MailUtil.CreateMessageId(TenantManager, CoreSettings), null, false, null, "Test body", MailUtil.CreateStreamId(), new List<MailAttachmentData>());
 
-            var data = draftEngine.Save(draftItem);
+            var data = DraftEngine.Save(draftItem);
 
             Assert.Greater(data.Id, 0);
 
-            folders = folderEngine.GetFolders();
+            folders = FolderEngine.GetFolders();
 
             var draft = folders.FirstOrDefault(f => f.id == FolderType.Draft);
 
@@ -168,7 +96,7 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(0, draft.total);
             Assert.AreEqual(0, draft.unread);
 
-            var savedDraftData = messageEngine.GetMessage(data.Id, new MailMessageData.Options());
+            var savedDraftData = MessageEngine.GetMessage(data.Id, new MailMessageData.Options());
 
             Assert.AreEqual("subject", savedDraftData.Subject);
             Assert.AreEqual("test@gmail.com", savedDraftData.From);
@@ -178,21 +106,7 @@ namespace ASC.Mail.Tests
         [Order(2)]
         public void CreateForwardDraftTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-            var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
-            var draftEngine = scope.ServiceProvider.GetService<DraftEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var folders = folderEngine.GetFolders();
+            var folders = FolderEngine.GetFolders();
 
             Assert.IsNotEmpty(folders);
 
@@ -212,7 +126,7 @@ namespace ASC.Mail.Tests
                 Body = "Test body"
             };
 
-            var id1 = testEngine.CreateSampleMessage(model);
+            var id1 = TestEngine.CreateSampleMessage(model);
 
             Assert.Greater(id1, 0);
 
@@ -227,25 +141,25 @@ namespace ASC.Mail.Tests
                     Stream = fs
                 };
 
-                attachData = testEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
+                attachData = TestEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
             }
 
             Assert.IsNotNull(attachData);
             Assert.Greater(attachData.fileId, 0);
 
-            var message = messageEngine.GetMessage(id1, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(id1, new MailMessageData.Options());
 
             Assert.AreEqual(1, message.Attachments.Count);
 
             var draftItem = new MailDraftData(0, TestMailbox, "test@gmail.com", new List<string>(), new List<string>(), new List<string>(),
-                "subject", MailUtil.CreateMessageId(tenantManager, coreSettings), null, false, null, "Test body",
+                "subject", MailUtil.CreateMessageId(TenantManager, CoreSettings), null, false, null, "Test body",
                 MailUtil.CreateStreamId(), message.Attachments);
 
-            var data = draftEngine.Save(draftItem);
+            var data = DraftEngine.Save(draftItem);
 
             Assert.Greater(data.Id, 0);
 
-            folders = folderEngine.GetFolders();
+            folders = FolderEngine.GetFolders();
 
             var inbox = folders.FirstOrDefault(f => f.id == FolderType.Inbox);
 
@@ -263,13 +177,13 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(0, draft.total);
             Assert.AreEqual(0, draft.unread);
 
-            var savedDraftData = messageEngine.GetMessage(data.Id, new MailMessageData.Options());
+            var savedDraftData = MessageEngine.GetMessage(data.Id, new MailMessageData.Options());
 
             Assert.AreEqual("subject", savedDraftData.Subject);
             Assert.AreEqual("test@gmail.com", savedDraftData.From);
             Assert.AreEqual(1, savedDraftData.Attachments.Count);
 
-            message = messageEngine.GetMessage(id1, new MailMessageData.Options());
+            message = MessageEngine.GetMessage(id1, new MailMessageData.Options());
 
             Assert.AreEqual(1, message.Attachments.Count);
         }
@@ -278,21 +192,7 @@ namespace ASC.Mail.Tests
         [Order(3)]
         public void CreateDraftWithClonedAttachmentTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-            var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
-            var draftEngine = scope.ServiceProvider.GetService<DraftEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var folders = folderEngine.GetFolders();
+            var folders = FolderEngine.GetFolders();
 
             Assert.IsNotEmpty(folders);
 
@@ -312,7 +212,7 @@ namespace ASC.Mail.Tests
                 Body = "Test body"
             };
 
-            var id1 = testEngine.CreateSampleMessage(model);
+            var id1 = TestEngine.CreateSampleMessage(model);
 
             Assert.Greater(id1, 0);
 
@@ -327,13 +227,13 @@ namespace ASC.Mail.Tests
                     Stream = fs
                 };
 
-                attachData = testEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
+                attachData = TestEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
             }
 
             Assert.IsNotNull(attachData);
             Assert.Greater(attachData.fileId, 0);
 
-            var message = messageEngine.GetMessage(id1, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(id1, new MailMessageData.Options());
 
             Assert.AreEqual(1, message.Attachments.Count);
 
@@ -351,23 +251,23 @@ namespace ASC.Mail.Tests
             Assert.Greater(clonedAttachments.Count, 1);
 
             var draftItem = new MailDraftData(0, TestMailbox, "test@gmail.com", new List<string>(), new List<string>(),
-                new List<string>(), "subject", MailUtil.CreateMessageId(tenantManager, coreSettings), null, false, null, "Test body",
+                new List<string>(), "subject", MailUtil.CreateMessageId(TenantManager, CoreSettings), null, false, null, "Test body",
                 MailUtil.CreateStreamId(), clonedAttachments);
 
             Assert.AreEqual(1, draftItem.Attachments.Count);
 
-            var data = draftEngine.Save(draftItem);
+            var data = DraftEngine.Save(draftItem);
 
             Assert.Greater(data.Id, 0);
             Assert.AreEqual(1, data.Attachments.Count);
 
-            var savedDraftData = messageEngine.GetMessage(data.Id, new MailMessageData.Options());
+            var savedDraftData = MessageEngine.GetMessage(data.Id, new MailMessageData.Options());
 
             Assert.AreEqual("subject", savedDraftData.Subject);
             Assert.AreEqual("test@gmail.com", savedDraftData.From);
             Assert.AreEqual(1, savedDraftData.Attachments.Count);
 
-            message = messageEngine.GetMessage(id1, new MailMessageData.Options());
+            message = MessageEngine.GetMessage(id1, new MailMessageData.Options());
 
             Assert.AreEqual(1, message.Attachments.Count);
         }
@@ -376,16 +276,6 @@ namespace ASC.Mail.Tests
         [Order(4)]
         public void CreateDraftWithAttachmentsTotalExceededTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
-
             var attachments = new List<MailAttachmentData>();
 
             var index = 0;
@@ -415,7 +305,7 @@ namespace ASC.Mail.Tests
 
             Assert.Throws<DraftException>(
                 () => new MailDraftData(0, TestMailbox, "test@gmail.com", new List<string>(), new List<string>(),
-                    new List<string>(), "subject", MailUtil.CreateMessageId(tenantManager, coreSettings), null, false, null, "Test body",
+                    new List<string>(), "subject", MailUtil.CreateMessageId(TenantManager, CoreSettings), null, false, null, "Test body",
                     MailUtil.CreateStreamId(), attachments), "Total size of all files exceeds limit!");
         }
 
@@ -423,21 +313,7 @@ namespace ASC.Mail.Tests
         [Order(5)]
         public void CreateDraftWithAttachAndOpenIt()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-            var coreSettings = scope.ServiceProvider.GetService<CoreSettings>();
-            var draftEngine = scope.ServiceProvider.GetService<DraftEngine>();
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
-            var folders = folderEngine.GetFolders();
+            var folders = FolderEngine.GetFolders();
 
             Assert.IsNotEmpty(folders);
 
@@ -454,7 +330,7 @@ namespace ASC.Mail.Tests
                 Body = "Test body"
             };
 
-            var id1 = testEngine.CreateSampleMessage(model);
+            var id1 = TestEngine.CreateSampleMessage(model);
 
             Assert.Greater(id1, 0);
 
@@ -469,30 +345,30 @@ namespace ASC.Mail.Tests
                     Stream = fs
                 };
 
-                attachData = testEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
+                attachData = TestEngine.AppendAttachmentsToSampleMessage(id1, attachmentModel);
             }
 
             Assert.IsNotNull(attachData);
             Assert.Greater(attachData.fileId, 0);
 
-            var message = messageEngine.GetMessage(id1, new MailMessageData.Options());
+            var message = MessageEngine.GetMessage(id1, new MailMessageData.Options());
 
             Assert.AreEqual(1, message.Attachments.Count);
 
             var draftItem = new MailDraftData(0, TestMailbox, "test@gmail.com",
                 new List<string>(), new List<string>(), new List<string>(), "subject",
-                MailUtil.CreateMessageId(tenantManager, coreSettings), null, false, null, "Test body",
+                MailUtil.CreateMessageId(TenantManager, CoreSettings), null, false, null, "Test body",
                 MailUtil.CreateStreamId(), message.Attachments);
 
-            var data = draftEngine.Save(draftItem);
+            var data = DraftEngine.Save(draftItem);
 
             Assert.AreEqual(1, data.Attachments.Count);
 
-            data = draftEngine.Save(draftItem);
+            data = DraftEngine.Save(draftItem);
 
             Assert.AreEqual(1, data.Attachments.Count);
 
-            data = draftEngine.Save(draftItem);
+            data = DraftEngine.Save(draftItem);
 
             Assert.AreEqual(1, data.Attachments.Count);
         }

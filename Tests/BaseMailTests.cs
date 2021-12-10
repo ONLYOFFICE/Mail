@@ -6,7 +6,11 @@ using ASC.Core.Common.EF;
 using ASC.Core.Common.EF.Context;
 using ASC.Core.Tenants;
 using ASC.Core.Users;
+using ASC.Mail.Aggregator.Tests.Common.Utils;
+using ASC.Mail.Core.Engine;
 using ASC.Mail.Core.Search;
+using ASC.Mail.Models;
+using ASC.Mail.Utils;
 
 using Autofac.Extensions.DependencyInjection;
 
@@ -19,6 +23,7 @@ using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 
 namespace ASC.Mail.Tests
@@ -116,12 +121,22 @@ namespace ASC.Mail.Tests
 
     public class BaseMailTests
     {
-        protected UserInfo TestUser { get; set; }
         protected IServiceProvider ServiceProvider { get; set; }
         protected IHost TestHost { get; set; }
         protected IServiceScope serviceScope { get; set; }
         protected Tenant CurrentTenant { get; set; }
         protected SecurityContext SecurityContext { get; set; }
+        protected UserManager UserManager { get; set; }
+
+        protected MailBoxData TestMailbox { get; set; }
+        protected UserInfo TestUser { get; set; }
+
+        protected const int CURRENT_TENANT = 1;
+        public const string PASSWORD = "123456";
+        public const string DOMAIN = "gmail.com";
+
+        protected static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+           @"..\..\..\Data\");
 
         public const string TestConnection = "Server=localhost;Database=onlyoffice_test;User ID=root;Password=root;Pooling=true;Character Set=utf8;AutoEnlist=false;SSL Mode=none;AllowPublicKeyRetrieval=True";
 
@@ -181,15 +196,32 @@ namespace ASC.Mail.Tests
             serviceScope = TestHost.Services.CreateScope();
 
             var tenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
-            var tenant = tenantManager.GetTenant(1);
+            var tenant = tenantManager.GetTenant(CURRENT_TENANT);
+
+            var mailBoxSettingEngine = serviceScope.ServiceProvider.GetService<MailBoxSettingEngine>();
+            var mailboxEngine = serviceScope.ServiceProvider.GetService<MailboxEngine>();
 
             tenantManager.SetCurrentTenant(tenant);
             CurrentTenant = tenant;
 
+            UserManager = serviceScope.ServiceProvider.GetService<UserManager>();
+
             SecurityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
             SecurityContext.AuthenticateMe(CurrentTenant.OwnerId);
-
             TestHost.Start();
+
+            TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
+            TestUser.Email = TestHelper.GetTestEmailAddress(DOMAIN);
+
+            var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
+            var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
+
+            TestMailbox = testMailboxes.FirstOrDefault();
+
+            if (TestMailbox == null || !mailboxEngine.SaveMailBox(TestMailbox))
+            {
+                throw new Exception(string.Format("Can't create mailbox with email: {0}", TestUser.Email));
+            }
 
             ServiceProvider = TestHost.Services;
         }

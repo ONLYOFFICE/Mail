@@ -24,21 +24,15 @@
 */
 
 
-using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Aggregator.Tests.Common.Utils;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Extensions;
 using ASC.Mail.Models;
-using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 
 using NUnit.Framework;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,55 +43,23 @@ namespace ASC.Mail.Tests
     [TestFixture]
     internal class MessageEngineTests : BaseMailTests
     {
-        private const int CURRENT_TENANT = 1;
-        public const string PASSWORD = "123456";
-        public const string DOMAIN = "gmail.com";
-
-        private static readonly string TestFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-           @"..\..\..\Data\");
         private const string EML1_FILE_NAME = @"bad_encoding.eml";
         private static readonly string Eml1Path = TestFolderPath + EML1_FILE_NAME;
 
-        public MailBoxData TestMailbox { get; set; }
         public int MailId { get; set; }
+
+        private FolderEngine FolderEngine { get; set; }
+        private TestEngine TestEngine { get; set; }
+        private MessageEngine MessageEngine { get; set; }
 
         [OneTimeSetUp]
         public override void Prepare()
         {
             base.Prepare();
-        }
 
-        [SetUp]
-        public void SetUp()
-        {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-            var mailBoxSettingEngine = scope.ServiceProvider.GetService<MailBoxSettingEngine>();
-            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            var testEngine = scope.ServiceProvider.GetService<TestEngine>();
-
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
-
-            //вынести
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var mailboxSettings = mailBoxSettingEngine.GetMailBoxSettings(DOMAIN);
-
-            var testMailboxes = mailboxSettings.ToMailboxList(TestUser.Email, PASSWORD, CURRENT_TENANT, TestUser.ID.ToString());
-
-            TestMailbox = testMailboxes.FirstOrDefault();
-
-            if (TestMailbox == null || !mailboxEngine.SaveMailBox(TestMailbox))
-            {
-                throw new Exception(string.Format("Can't create mailbox with email: {0}", TestUser.Email));
-            }
+            FolderEngine = serviceScope.ServiceProvider.GetService<FolderEngine>();
+            TestEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
+            MessageEngine = serviceScope.ServiceProvider.GetService<MessageEngine>();
 
             using var fs = new FileStream(Eml1Path, FileMode.Open, FileAccess.Read);
 
@@ -110,55 +72,15 @@ namespace ASC.Mail.Tests
                 EmlStream = fs
             };
 
-            MailId = testEngine.LoadSampleMessage(model);
-        }
-
-        [TearDown]
-        public void CleanUp()
-        {
-            if (TestUser == null || TestUser.ID == Guid.Empty)
-                return;
-
-            using var scope = ServiceProvider.CreateScope();
-
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-            // Remove TestUser profile
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            userManager.DeleteUser(TestUser.ID);
-
-            // Clear TestUser mail index
-            var factoryIndexer = scope.ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-            var t = scope.ServiceProvider.GetService<MailMail>();
-            if (factoryIndexer.Support(t))
-                factoryIndexer.DeleteAsync(s => s.Where(m => m.UserId, TestUser.ID.ToString())).Wait();
-
-            // Clear TestUser mail data
-            var mailGarbageEngine = scope.ServiceProvider.GetService<MailGarbageEngine>();
-            mailGarbageEngine.ClearUserMail(TestUser.ID, tenantManager.GetCurrentTenant());
+            MailId = TestEngine.LoadSampleMessage(model);
         }
 
         [Test]
         [Order(1)]
         public void GetMessageStreamTest()
         {
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-
             string htmlBody;
-            using (var stream = messageEngine.GetMessageStream(MailId))
+            using (var stream = MessageEngine.GetMessageStream(MailId))
             {
                 htmlBody = Encoding.UTF8.GetString(stream.ReadToEnd());
             }
@@ -174,18 +96,7 @@ namespace ASC.Mail.Tests
         {
             // Bug 34937
 
-            using var scope = ServiceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetService<UserManager>();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-
-            tenantManager.SetCurrentTenant(CURRENT_TENANT);
-            securityContext.AuthenticateMe(TestUser.ID);
-
-            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
-            var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-
-            var folders = folderEngine.GetFolders();
+            var folders = FolderEngine.GetFolders();
 
             var inbox = folders.FirstOrDefault(f => f.id == FolderType.Inbox);
 
@@ -195,9 +106,9 @@ namespace ASC.Mail.Tests
             Assert.AreEqual(1, inbox.total);
             Assert.AreEqual(1, inbox.unread);
 
-            messageEngine.SetRemoved(new List<int> { MailId });
+            MessageEngine.SetRemoved(new List<int> { MailId });
 
-            folders = folderEngine.GetFolders();
+            folders = FolderEngine.GetFolders();
 
             inbox = folders.FirstOrDefault(f => f.id == FolderType.Inbox);
 

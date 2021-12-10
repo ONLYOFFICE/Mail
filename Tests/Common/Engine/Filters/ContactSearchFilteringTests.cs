@@ -25,12 +25,12 @@
 
 
 using ASC.Core;
+using ASC.Core.Users;
 using ASC.ElasticSearch;
 using ASC.Mail.Aggregator.Tests.Common.Utils;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
-using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -50,6 +50,8 @@ namespace ASC.Mail.Tests
         private const int CONTACT_ID_2 = 778;
         private const int CONTACT_ID_3 = 779;
 
+        public UserInfo TestUser { get; set; }
+
         [OneTimeSetUp]
         public override void Prepare()
         {
@@ -57,21 +59,16 @@ namespace ASC.Mail.Tests
 
             //using var scope = ServiceProvider.CreateScope();
 
-            var userManager = serviceScope.ServiceProvider.GetService<UserManager>();
             var tenantManager = serviceScope.ServiceProvider.GetService<TenantManager>();
             var securityContext = serviceScope.ServiceProvider.GetService<SecurityContext>();
-            var apiHelper = serviceScope.ServiceProvider.GetService<ApiHelper>();
 
             var tenant = tenantManager.GetTenant(CURRENT_TENANT);
             tenantManager.SetCurrentTenant(tenant);
 
-            var e = tenantManager.GetCurrentTenant(false);
-
             securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-            var testEngine = serviceScope.ServiceProvider.GetService<TestEngine>();
 
-            TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+            TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
         }
 
         //[SetUp]
@@ -88,10 +85,10 @@ namespace ASC.Mail.Tests
 
         //    var testEngine = scope.ServiceProvider.GetService<TestEngine>();
 
-        //    TestUser = TestHelper.CreateNewRandomEmployee(userManager, securityContext, tenantManager, apiHelper);
+        //    TestUser = UserManager.GetUsers(Guid.Parse("66faa6e4-f133-11ea-b126-00ffeec8b4ef"));
         //}
 
-        [TearDown]
+        /*[TearDown]
         public void CleanUp()
         {
             using var scope = ServiceProvider.CreateScope();
@@ -109,7 +106,7 @@ namespace ASC.Mail.Tests
             // Remove TestUser profile
             var userManager = scope.ServiceProvider.GetService<UserManager>();
             userManager.DeleteUser(TestUser.ID);
-        }
+        }*/
 
         [Test]
         [Order(1)]
