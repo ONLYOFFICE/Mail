@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-
-using ASC.Api.Core;
+﻿using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Caching;
 using ASC.Common.DependencyInjection;
@@ -17,6 +11,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.StorageCleaner.Service
 {
@@ -66,8 +66,6 @@ namespace ASC.Mail.StorageCleaner.Service
                     config
                         .AddJsonFile("appsettings.json")
                         .AddJsonFile($"appsettings.{env}.json", true)
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{env}.json", true)
                         .AddJsonFile("mail.json")
                         .AddJsonFile($"mail.{env}.json")
                         .AddJsonFile("storage.json")

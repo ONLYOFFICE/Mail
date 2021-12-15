@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-
-using ASC.Api.Core;
+﻿using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Caching;
 using ASC.Common.DependencyInjection;
@@ -22,6 +15,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Aggregator.Service
 {
@@ -76,14 +76,10 @@ namespace ASC.Mail.Aggregator.Service
                         .AddJsonFile($"appsettings.{env}.json", true)
                         .AddJsonFile("storage.json")
                         .AddJsonFile($"storage.{env}.json")
-                        .AddJsonFile("notify.json")
-                        .AddJsonFile("backup.json")
-                        .AddJsonFile("kafka.json")
                         .AddJsonFile("mail.json")
                         .AddJsonFile($"mail.{env}.json")
                         .AddJsonFile("elastic.json")
                         .AddJsonFile($"elastic.{env}.json")
-                        .AddJsonFile($"kafka.{env}.json", true)
                         .AddEnvironmentVariables()
                         .AddCommandLine(args)
                         .AddInMemoryCollection(new Dictionary<string, string>

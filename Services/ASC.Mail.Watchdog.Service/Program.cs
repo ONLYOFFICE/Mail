@@ -69,8 +69,6 @@ namespace ASC.Mail.Watchdog.Service
                     config
                         .AddJsonFile("appsettings.json")
                         .AddJsonFile($"appsettings.{env}.json", true)
-                        .AddJsonFile("kafka.json")
-                        .AddJsonFile($"kafka.{env}.json", true)
                         .AddJsonFile("mail.json")
                         .AddJsonFile($"mail.{env}.json")
                         .AddEnvironmentVariables()
