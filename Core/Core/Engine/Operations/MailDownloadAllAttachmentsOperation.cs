@@ -37,15 +37,13 @@ using ASC.Mail.Extensions;
 using ASC.Mail.Storage;
 using ASC.Web.Core.Files;
 
-using Ionic.Zip;
-using Ionic.Zlib;
+using ICSharpCode.SharpZipLib.Zip;
 
 using Microsoft.Extensions.Options;
 
 using System;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 //using Resources;
 
@@ -121,12 +119,11 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 using (var stream = TempStream.Create())
                 {
-                    using (var zip = new ZipOutputStream(stream, true))
+                    using (var zip = new ZipOutputStream(stream))
                     {
-                        zip.CompressionLevel = CompressionLevel.Level3;
-                        zip.AlternateEncodingUsage = ZipOption.AsNecessary;
-                        zip.AlternateEncoding =
-                            Encoding.GetEncoding(Thread.CurrentThread.CurrentCulture.TextInfo.OEMCodePage);
+                        zip.IsStreamOwner = false;
+                        zip.SetLevel(3);
+                        ZipStrings.UseUnicode = true;
 
                         var attachmentsCount = attachments.Count;
                         var progressMaxValue = (int)MailOperationDownloadAllAttachmentsProgress.ArchivePreparation;
@@ -207,30 +204,11 @@ namespace ASC.Mail.Core.Engine.Operations
         private static void ZipFile(ZipOutputStream zip, string filename, Stream fileStream = null)
         {
             filename = filename ?? "file";
-
-            if (zip.ContainsEntry(filename))
-            {
-                var counter = 1;
-                var tempName = filename;
-                while (zip.ContainsEntry(tempName))
-                {
-                    tempName = filename;
-                    var suffix = " (" + counter + ")";
-                    tempName = 0 < tempName.IndexOf('.')
-                        ? tempName.Insert(tempName.LastIndexOf('.'), suffix)
-                        : tempName + suffix;
-
-                    counter++;
-                }
-                filename = tempName;
-            }
-
-            zip.PutNextEntry(filename);
-
-            if (fileStream != null)
-            {
-                fileStream.CopyTo(zip);
-            }
+            var entry = new ZipEntry(Path.GetFileName(filename));
+            entry.Size = fileStream.Length;
+            zip.PutNextEntry(entry);
+            fileStream.CopyTo(zip);
+            zip.CloseEntry();
         }
     }
 }
