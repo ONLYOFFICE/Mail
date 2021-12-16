@@ -308,7 +308,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
             var ignoredIds = new List<int>();
 
-
+            //TODO: postpone this code into ProcessMailbox
             foreach (var mailbox in mailboxes)
             {
                 var timeoutCancel = new CancellationTokenSource(TaskSecondsLifetime);
