@@ -24,15 +24,15 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Enums;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -74,7 +74,7 @@ namespace ASC.Mail.Core.Dao
 
                 tagsNotInDb = items
                     .FindAll(t =>
-                    !MailDbContext.MailTagMail.ToList().Exists(nt =>
+                    !MailDbContext.MailTagMail.Any(nt =>
                     t.IdMail == nt.IdMail && t.IdTag == nt.IdTag && t.IdUser == nt.IdUser && t.Tenant == nt.Tenant));
 
                 if (tagsNotInDb.Any())
