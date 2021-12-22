@@ -669,7 +669,7 @@ namespace ASC.Mail.Core.Engine
 
             IndexEngine.Update(data, exp, w => w.Folder);
 
-            IndexEngine.Update(data, exp, UpdateAction.Replace, w => w.UserFolders.ToList());
+            IndexEngine.Update(data, exp, UpdateAction.Replace, w => w.UserFolders);
         }
 
         public void SetFolder(IMailDaoFactory MailDaoFactory, List<int> ids, FolderType toFolder,

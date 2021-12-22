@@ -64,10 +64,10 @@ namespace ASC.Mail.Core.Dao.Entities
         public DateTime ChainDate { get; set; }
 
         [Nested]
-        public ICollection<MailAttachment> Attachments { get; set; }
+        public List<MailAttachment> Attachments { get; set; }
         
         [Nested]
-        public ICollection<MailUserFolder> UserFolders { get; set; }
+        public List<MailUserFolder> UserFolders { get; set; }
         
         [Nested]
         public ICollection<MailTag> Tags { get; set; }
