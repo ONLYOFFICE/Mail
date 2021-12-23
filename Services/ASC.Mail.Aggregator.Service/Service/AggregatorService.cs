@@ -52,8 +52,7 @@ namespace ASC.Mail.Aggregator.Service.Service
         private const string CONNECT_MAILBOX = "connect mailbox";
         private const int SIGNALR_WAIT_SECONDS = 30;
 
-        private readonly TaskFactory TaskFactory;
-        private readonly TimeSpan TsTaskStateCheckInterval;
+        private readonly TimeSpan TaskStateCheck;
         private readonly TimeSpan TaskSecondsLifetime;
 
         private bool IsFirstTime = true;
@@ -107,16 +106,13 @@ namespace ASC.Mail.Aggregator.Service.Service
             MailSettings.SkipImapFlags = mailQueueItemSettings.SkipImapFlags;
             MailSettings.SpecialDomainFolders = mailQueueItemSettings.SpecialDomainFolders;
 
-            TsTaskStateCheckInterval = MailSettings.Aggregator.TaskCheckState;
+            TaskStateCheck = MailSettings.Aggregator.TaskCheckState;
 
             if (ConsoleParameters.OnlyUsers != null) MailSettings.Defines.WorkOnUsersOnlyList.AddRange(ConsoleParameters.OnlyUsers.ToList());
 
             if (ConsoleParameters.NoMessagesLimit) MailSettings.Aggregator.MaxMessagesPerSession = -1;
 
             TaskSecondsLifetime = MailSettings.Aggregator.TaskLifetime;
-
-            TaskFactory = new TaskFactory();
-
             if (MailSettings.Aggregator.EnableSignalr) SignalrWorker = signalrWorker;
 
             Filters = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
@@ -162,15 +158,13 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 var tasks = CreateTasks(MailSettings.Aggregator.MaxTasksAtOnce, cancelToken);
 
-                // ***Add a loop to process the tasks one at a time until none remain. 
                 while (tasks.Any())
                 {
-                    // Identify the first task that completes.
-                    var indexTask = Task.WaitAny(tasks.Select(t => t.Task).ToArray(), (int)TsTaskStateCheckInterval.TotalMilliseconds, cancelToken);
+                    var indexTask = Task.WaitAny(
+                        tasks.Select(t => t.Task).ToArray(), (int)TaskStateCheck.TotalMilliseconds, cancelToken);
+
                     if (indexTask > -1)
                     {
-                        // ***Remove the selected task from the list so that you don't 
-                        // process it more than once.
                         var outTask = tasks[indexTask];
 
                         FreeTask(outTask, tasks);
@@ -183,10 +177,11 @@ namespace ASC.Mail.Aggregator.Service.Service
                     }
 
                     var tasks2Free =
-                        tasks.Where(
-                            t =>
-                            t.Task.Status == TaskStatus.Canceled || t.Task.Status == TaskStatus.Faulted ||
-                            t.Task.Status == TaskStatus.RanToCompletion).ToList();
+                        tasks.Where(t =>
+                            t.Task.Status == TaskStatus.Canceled ||
+                            t.Task.Status == TaskStatus.Faulted ||
+                            t.Task.Status == TaskStatus.RanToCompletion)
+                        .ToList();
 
                     if (tasks2Free.Any())
                     {
@@ -311,10 +306,8 @@ namespace ASC.Mail.Aggregator.Service.Service
             //TODO: postpone this code into ProcessMailbox
             foreach (var mailbox in mailboxes)
             {
-                var timeoutCancel = new CancellationTokenSource(TaskSecondsLifetime);
-
                 var commonCancelToken =
-                    CancellationTokenSource.CreateLinkedTokenSource(cancelToken, timeoutCancel.Token).Token;
+                    CancellationTokenSource.CreateLinkedTokenSource(cancelToken, new CancellationTokenSource(TaskSecondsLifetime).Token).Token;
 
                 var log = LogOptions.Get($"ASC.Mail Mbox_{mailbox.MailBoxId}");
 
@@ -327,6 +320,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                             !client.IsConnected ? "Yes" : "No",
                             !client.IsAuthenticated ? "Yes" : "No",
                             client.IsDisposed ? "Yes" : "No");
+
                     else log.InfoFormat("Client was null");
 
                     log.InfoFormat($"ReleaseMailbox(Tenant = {mailbox.TenantId} MailboxId = {mailbox.MailBoxId}, Address = '{mailbox.EMail}')");
@@ -336,7 +330,9 @@ namespace ASC.Mail.Aggregator.Service.Service
                     continue;
                 }
 
-                var task = TaskFactory.StartNew(() => ProcessMailbox(client, MailSettings, log), commonCancelToken);
+                //if code will be posponed then need to up check Task time in config
+                var task = Task.Run(() => ProcessMailbox(client, MailSettings, log), commonCancelToken);
+
                 tasks.Add(new TaskData(mailbox, task));
             }
 
@@ -346,6 +342,104 @@ namespace ASC.Mail.Aggregator.Service.Service
                 Log.Info("No more mailboxes for processing.");
 
             return tasks;
+        }
+
+        private void ProcessMailbox(MailClient client, MailSettings mailSettings, ILog log)
+        {
+            using var scope = ServiceProvider.CreateScope();
+
+            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+
+            tenantManager.SetCurrentTenant(client.Account.TenantId);
+
+            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
+
+            var mailbox = client.Account;
+
+            Stopwatch watch = null;
+
+            if (mailSettings.Aggregator.CollectStatistics)
+            {
+                watch = new Stopwatch();
+                watch.Start();
+            }
+
+            var failed = false;
+
+            log.InfoFormat(
+                "ProcessMailbox(Tenant = {0}, MailboxId = {1} Address = \"{2}\") Is {3}. | Task №: {4}",
+                mailbox.TenantId, mailbox.MailBoxId,
+                mailbox.EMail, mailbox.Active ? "Active" : "Inactive", Task.CurrentId);
+
+            try
+            {
+                client.Log = log;
+
+                client.GetMessage += ClientOnGetMessage;
+
+                client.Aggregate(mailSettings, mailSettings.Aggregator.MaxMessagesPerSession);
+            }
+            catch (OperationCanceledException)
+            {
+                log.InfoFormat(
+                    $"Operation cancel: ProcessMailbox(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")");
+
+                NotifySignalrIfNeed(mailbox, log);
+            }
+            catch (Exception ex)
+            {
+                log.ErrorFormat(
+                    "ProcessMailbox(Tenant = {0}, MailboxId = {1}, Address = \"{2}\")\r\nException: {3}\r\n",
+                    mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail,
+                    ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
+
+                failed = true;
+            }
+            finally
+            {
+                CloseMailClient(client, mailbox, Log);
+
+                if (MailSettings.Aggregator.CollectStatistics && watch != null)
+                {
+                    watch.Stop();
+
+                    LogStatistic(PROCESS_MAILBOX, mailbox, watch.Elapsed, failed);
+                }
+            }
+
+            var state = GetMailboxState(mailbox, log, factory);
+
+            switch (state)
+            {
+                case MailboxState.NoChanges:
+                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} not changed.");
+                    break;
+                case MailboxState.Disabled:
+                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} is deactivated.");
+                    break;
+                case MailboxState.Deleted:
+                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} is removed.");
+
+                    try
+                    {
+                        log.InfoFormat($"RemoveMailBox(Id = {mailbox.MailBoxId}) -> Try clear new data from removed mailbox");
+
+                        factory.MailboxEngine.RemoveMailBox(mailbox);
+                    }
+                    catch (Exception exRem)
+                    {
+                        log.InfoFormat(
+                            $"ProcessMailbox -> RemoveMailBox(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = {mailbox.EMail})\r\nException:{exRem.Message}\r\n");
+                    }
+                    break;
+                case MailboxState.DateChanged:
+                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId}: Begin date was changed.");
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            log.InfoFormat($"Mailbox \"{mailbox.EMail}\" has been processed.");
         }
 
         private MailClient CreateMailClient(MailBoxData mailbox, ILog log, CancellationToken cancelToken)
@@ -369,19 +463,30 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 var factory = tempScope.ServiceProvider.GetService<IMailDaoFactory>();
 
-                var serverFolderAccessInfos = factory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+                var serverFolderAccessInfos = factory
+                    .GetImapSpecialMailboxDao()
+                    .GetServerFolderAccessInfoList();
 
-                log.Debug($"Create Mail client with SslCertificatesErrorPermit = {MailSettings.Defines.SslCertificatesErrorsPermit}");
-                client = new MailClient(mailbox, cancelToken, serverFolderAccessInfos, MailSettings.Aggregator.TcpTimeout,
-                   mailbox.IsTeamlab || MailSettings.Defines.SslCertificatesErrorsPermit, MailSettings.Aggregator.ProtocolLogPath, log, true);
+                log.Debug($"Create Mail client with SslCertificatesErrorPermit = " +
+                    $"{MailSettings.Defines.SslCertificatesErrorsPermit}");
 
-                log.DebugFormat("MailClient.LoginClient(Tenant = {0}, MailboxId = {1} Address = '{2}')",
-                    mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail);
+                client = new MailClient(
+                    mailbox, cancelToken,
+                    serverFolderAccessInfos,
+                    MailSettings.Aggregator.TcpTimeout,
+                    mailbox.IsTeamlab || MailSettings.Defines.SslCertificatesErrorsPermit,
+                    MailSettings.Aggregator.ProtocolLogPath, log, true);
+
+                log.DebugFormat($"MailClient.LoginClient(" +
+                    $"Tenant = {mailbox.TenantId}, " +
+                    $"MailboxId = {mailbox.MailBoxId} " +
+                    $"Address = '{mailbox.EMail}')");
 
                 if (!mailbox.Imap)
                 {
                     client.FuncGetPop3NewMessagesIDs =
-                        uidls => MessageEngine.GetPop3NewMessagesIDs(factory, mailbox, uidls, MailSettings.Aggregator.ChunkOfPop3Uidl);
+                        uidls => MessageEngine.GetPop3NewMessagesIDs(
+                            factory, mailbox, uidls, MailSettings.Aggregator.ChunkOfPop3Uidl);
                 }
 
                 client.Authenticated += ClientOnAuthenticated;
@@ -545,103 +650,6 @@ namespace ASC.Mail.Aggregator.Service.Service
                 log.ErrorFormat(
                     $"CloseMailClient(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")\r\nException:{ex.Message}\r\n");
             }
-        }
-
-        private void ProcessMailbox(MailClient client, MailSettings mailSettings, ILog log)
-        {
-            using var scope = ServiceProvider.CreateScope();
-
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-            tenantManager.SetCurrentTenant(client.Account.TenantId);
-
-            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
-
-            var mailbox = client.Account;
-
-            Stopwatch watch = null;
-
-            if (mailSettings.Aggregator.CollectStatistics)
-            {
-                watch = new Stopwatch();
-                watch.Start();
-            }
-
-            var failed = false;
-
-            log.InfoFormat(
-                "ProcessMailbox(Tenant = {0}, MailboxId = {1} Address = \"{2}\") Is {3}. | Task №: {4}",
-                mailbox.TenantId, mailbox.MailBoxId,
-                mailbox.EMail, mailbox.Active ? "Active" : "Inactive", Task.CurrentId);
-
-            try
-            {
-                client.Log = log;
-
-                client.GetMessage += ClientOnGetMessage;
-
-                client.Aggregate(mailSettings, mailSettings.Aggregator.MaxMessagesPerSession);
-            }
-            catch (OperationCanceledException)
-            {
-                log.InfoFormat(
-                    $"Operation cancel: ProcessMailbox(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")");
-
-                NotifySignalrIfNeed(mailbox, log);
-            }
-            catch (Exception ex)
-            {
-                log.ErrorFormat(
-                    "ProcessMailbox(Tenant = {0}, MailboxId = {1}, Address = \"{2}\")\r\nException: {3}\r\n",
-                    mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail,
-                    ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
-
-                failed = true;
-            }
-            finally
-            {
-                CloseMailClient(client, mailbox, Log);
-
-                if (MailSettings.Aggregator.CollectStatistics && watch != null)
-                {
-                    watch.Stop();
-
-                    LogStatistic(PROCESS_MAILBOX, mailbox, watch.Elapsed, failed);
-                }
-            }
-
-            var state = GetMailboxState(mailbox, log, factory);
-
-            switch (state)
-            {
-                case MailboxState.NoChanges:
-                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} not changed.");
-                    break;
-                case MailboxState.Disabled:
-                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} is deactivated.");
-                    break;
-                case MailboxState.Deleted:
-                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId} is removed.");
-
-                    try
-                    {
-                        log.InfoFormat($"RemoveMailBox(Id = {mailbox.MailBoxId}) -> Try clear new data from removed mailbox");
-
-                        factory.MailboxEngine.RemoveMailBox(mailbox);
-                    }
-                    catch (Exception exRem)
-                    {
-                        log.InfoFormat(
-                            $"ProcessMailbox -> RemoveMailBox(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = {mailbox.EMail})\r\nException:{exRem.Message}\r\n");
-                    }
-                    break;
-                case MailboxState.DateChanged:
-                    log.InfoFormat($"MailBox with Id = {mailbox.MailBoxId}: Begin date was changed.");
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            log.InfoFormat($"Mailbox \"{mailbox.EMail}\" has been processed.");
         }
 
         private void ClientOnAuthenticated(object sender, MailClientEventArgs mailClientEventArgs)
