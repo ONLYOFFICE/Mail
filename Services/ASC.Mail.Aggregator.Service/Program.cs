@@ -99,7 +99,6 @@ namespace ASC.Mail.Aggregator.Service
                     services.AddSingleton(new ConsoleParser(args));
                     diHelper.TryAdd<AggregatorServiceLauncher>();
                     diHelper.TryAdd<AggregatorServiceScope>();
-                    diHelper.TryAdd<AggregatorLogger>();
                     services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
                     services.AddHostedService<AggregatorServiceLauncher>();
                     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));

@@ -24,16 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Security;
-using System.Security.Authentication;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading;
-
 using ASC.Common.Logging;
 using ASC.Mail.Clients.Imap;
 using ASC.Mail.Configuration;
@@ -51,6 +41,16 @@ using MailKit.Search;
 using MailKit.Security;
 
 using MimeKit;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
+using System.Threading;
 
 using AuthenticationException = MailKit.Security.AuthenticationException;
 using MailFolder = ASC.Mail.Models.MailFolder;
