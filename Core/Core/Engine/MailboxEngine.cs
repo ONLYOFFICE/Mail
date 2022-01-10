@@ -26,11 +26,6 @@
 
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -48,6 +43,11 @@ using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -589,6 +589,7 @@ namespace ASC.Mail.Core.Engine
             if (mailbox == null) return true;
 
             MailboxReleasedOptions rOptions = new MailboxReleasedOptions(disableMailbox);
+            rOptions.ServerLoginDelay = account.ServerLoginDelay;
 
             if (account.AuthErrorDate.HasValue)
             {

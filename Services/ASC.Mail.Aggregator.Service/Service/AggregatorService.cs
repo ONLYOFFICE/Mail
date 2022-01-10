@@ -469,50 +469,46 @@ namespace ASC.Mail.Aggregator.Service.Service
                 client.Authenticated += ClientOnAuthenticated;
                 client.LoginClient();
             }
+
             #region Exceptions while login failed
+
             catch (TimeoutException exTimeout)
             {
-                log.WarnFormat(
-                    $"Timeout Exception: CreateTasks -> MailClient.LoginImap(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\") Exception: {exTimeout}");
-
-                connectError = true;
-                stopClient = true;
-            }
-            catch (OperationCanceledException)
-            {
-                log.InfoFormat(
-                    $"Operation Cancel: CreateTasks() -> MailClient.LoginImap(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")");
-
-                stopClient = true;
-            }
-            catch (AuthenticationException authEx)
-            {
-                log.ErrorFormat(
-                    $"CreateTasks() -> MailClient.LoginImap(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")\r\nThe box will be disabled.\r\nAuthentication exception: {authEx}\r\n");
-
-                connectError = true;
-                stopClient = true;
-            }
-            catch (WebException webEx)
-            {
-                log.ErrorFormat(
-                    $"CreateTasks() -> MailClient.LoginImap(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")\r\nThe box will be disabled.\r\nWeb exception: {webEx}\r\n");
+                log.WarnFormat($"LOGIN IMAP [TIMEOUT]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"\r\nException: {exTimeout}");
 
                 connectError = true;
                 stopClient = true;
             }
             catch (ImapProtocolException protocolEx)
             {
-                log.ErrorFormat(
-                    $"CreateTasks() -> MailClient.LoginImap(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")\r\nThe box will be disabled.\r\nImap Protocol Exception: {protocolEx}\r\n");
+                log.ErrorFormat($"LOGIN IMAP [IMAP PROTOCOL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"\r\n{protocolEx}");
+
+                connectError = true;
+                stopClient = true;
+            }
+            catch (OperationCanceledException ocEx)
+            {
+                log.InfoFormat($"LOGIN IMAP [OPERATION CANCEL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"{ocEx}");
+
+                stopClient = true;
+            }
+            catch (AuthenticationException authEx)
+            {
+                log.ErrorFormat($"LOGIN IMAP [AUTHENTICATION]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{authEx}");
+
+                connectError = true;
+                stopClient = true;
+            }
+            catch (WebException webEx)
+            {
+                log.ErrorFormat($"LOGIN IMAP [WEB]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{webEx}");
 
                 connectError = true;
                 stopClient = true;
             }
             catch (Exception ex)
             {
-                log.ErrorFormat(
-                    "CreateTasks() -> MailClient.LoginImap(Tenant = {0}, MailboxId = {1}, Address = \"{2}\")\r\nUnregistered exception: {3}\r\n",
+                log.ErrorFormat("LOGIN IMAP [UNREGISTERED EXCEPTION]\r\nTenant: {0}, MailboxId: {1}, Address: \"{2}\")\r\n{3}",
                     mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail,
                     ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
 
@@ -972,9 +968,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                 if (!tasks.Remove(taskData))
                     Log.Error("Task not exists in tasks array.");
 
-                var mailbox = taskData.Mailbox;
-
-                ReleaseMailbox(mailbox);
+                ReleaseMailbox(taskData.Mailbox);
 
                 taskData.Task.Dispose();
             }

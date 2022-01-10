@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Utils;
 using ASC.Mail.Models;
 using ASC.Web.Studio.Core;
 
 using Microsoft.Extensions.Configuration;
+
+using System;
+using System.Collections.Generic;
 
 using static System.TimeSpan;
 
@@ -91,6 +91,7 @@ namespace ASC.Mail.Configuration
             public bool SslCertificatesErrorsPermit { get; set; }
             public string DefaultApiSchema { get; set; }
             public int DefaultServerLoginDelay { get; set; }
+            public int DefaultServerLoginDelayAfterError { get; set; }
             public int AutoreplyDaysInterval { get; set; }
             public string DefaultServerLoginDelayStr { get; set; }
             public string WebHub { get; set; }
@@ -135,6 +136,7 @@ namespace ASC.Mail.Configuration
                 SslCertificatesErrorsPermit = config.SslCertificatesErrorsPermit;
                 DefaultApiSchema = config.DefaultApiSchema == "https" ? config.DefaultApiSchema : Uri.UriSchemeHttp;
                 DefaultServerLoginDelay = config.DefaultServerLoginDelay == default(int) ? 30 : config.DefaultServerLoginDelay;
+                DefaultServerLoginDelayAfterError = config.DefaultServerLoginDelayAfterError == default(int) ? 60 : config.DefaultServerLoginDelayAfterError;
                 AutoreplyDaysInterval = config.AutoreplyDaysInterval == default(int) ? 1 : config.AutoreplyDaysInterval;
                 OverdueAccountDelay = config.OverdueAccountDelay == Zero ? FromSeconds(600) : config.OverdueAccountDelay;
                 QuotaEndedDelay = config.QuotaEndedDelay == Zero ? FromSeconds(600) : config.QuotaEndedDelay;

@@ -67,6 +67,8 @@ namespace ASC.Mail.Core.Dao
         private const string isRemoved_Column = "is_removed";
         private const string id_Column = "id";
 
+        private const int delayAfterError = 60;
+
         public MailboxDao(
              TenantManager tenantManager,
              SecurityContext securityContext,
@@ -375,9 +377,20 @@ namespace ASC.Mail.Core.Dao
             if (rOptions.ServerLoginDelay < MailSettings.Defines.DefaultServerLoginDelay)
                 rOptions.ServerLoginDelay = MailSettings.Defines.DefaultServerLoginDelay;
 
-            var delay = rOptions.ServerLoginDelay > MailSettings.Defines.DefaultServerLoginDelay
+            var delay = "";
+
+            if (mailbox.DateAuthError.HasValue && mailbox.Enabled)
+            {
+                delay = MailSettings.Defines.DefaultServerLoginDelayAfterError < delayAfterError
+                ? DateTime.UtcNow.AddSeconds(delayAfterError).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
+                : DateTime.UtcNow.AddSeconds(MailSettings.Defines.DefaultServerLoginDelayAfterError).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            }
+            else if (!mailbox.DateAuthError.HasValue)
+            {
+                delay = rOptions.ServerLoginDelay > MailSettings.Defines.DefaultServerLoginDelay
                 ? DateTime.UtcNow.AddSeconds(rOptions.ServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
                 : DateTime.UtcNow.AddSeconds(MailSettings.Defines.DefaultServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+            }
 
             var query = string.Format(
                 "UPDATE {0} SET {1} = 0, {2} = {3}, {4} = '{5}', {6} = {7}, {8} = {9}, " +
