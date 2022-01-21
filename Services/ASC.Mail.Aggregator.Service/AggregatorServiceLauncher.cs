@@ -1,10 +1,8 @@
 ﻿using ASC.Common;
-using ASC.Common.Logging;
 using ASC.Mail.Aggregator.Service.Console;
 using ASC.Mail.Aggregator.Service.Service;
 
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 
 using System;
 using System.Threading;
@@ -15,7 +13,7 @@ namespace ASC.Mail.Aggregator.Service
     [Singletone]
     class AggregatorServiceLauncher : IHostedService
     {
-        private ILog Log { get; }
+        //private ILog Log { get; }
         private AggregatorService AggregatorService { get; }
         private ConsoleParameters ConsoleParameters { get; }
         private ManualResetEvent ResetEvent;
@@ -24,11 +22,11 @@ namespace ASC.Mail.Aggregator.Service
         private CancellationTokenSource Cts;
 
         public AggregatorServiceLauncher(
-            IOptionsMonitor<ILog> options,
+            //IOptionsMonitor<ILog> options,
             AggregatorService aggregatorService,
             ConsoleParser consoleParser)
         {
-            Log = options.Get("ASC.Mail.MainThread");
+            //Log = options.Get("ASC.Mail.MainThread");
             AggregatorService = aggregatorService;
             ConsoleParameters = consoleParser.GetParsedParameters();
 
@@ -37,18 +35,18 @@ namespace ASC.Mail.Aggregator.Service
 
         private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            Log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
+            //Log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            Log.Info("Start service\r\n");
+            //Log.Info("Start service\r\n");
 
             Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             if (ConsoleParameters.IsConsole)
             {
-                Log.Info("Service Start in console-daemon mode");
+                //Log.Info("Service Start in console-daemon mode");
 
                 AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
                 ResetEvent = new ManualResetEvent(false);
@@ -67,20 +65,20 @@ namespace ASC.Mail.Aggregator.Service
         {
             try
             {
-                Log.Info("Trying to stop the service. Await task...");
+                //Log.Info("Trying to stop the service. Await task...");
                 AggregatorService.StopService(Cts);
                 await Task.WhenAll(AggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
             }
             catch (TaskCanceledException)
             {
-                Log.ErrorFormat($"AggregatorServiceTask was canceled.");
+                //Log.ErrorFormat($"AggregatorServiceTask was canceled.");
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"Failed to terminate the service correctly. The details:\r\n{ex}\r\n");
+                //Log.ErrorFormat($"Failed to terminate the service correctly. The details:\r\n{ex}\r\n");
             }
 
-            Log.Info("Stop service\r\n");
+            //Log.Info("Stop service\r\n");
         }
     }
 }

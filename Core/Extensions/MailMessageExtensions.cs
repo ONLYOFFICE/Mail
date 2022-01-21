@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-
 using ASC.Common.Logging;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
@@ -39,6 +33,12 @@ using HtmlAgilityPack;
 using MimeKit;
 using MimeKit.Text;
 using MimeKit.Tnef;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace ASC.Mail.Extensions
 {
@@ -588,7 +588,7 @@ namespace ASC.Mail.Extensions
             if (messagePart != null)
                 messagePart.Message.WriteTo(mailAttach.dataStream);
             else
-                mimePart.Content.DecodeTo(mailAttach.dataStream);
+                mimePart.Content.DecodeTo(mailAttach.dataStream); //maybe memory leak here. call from Mail-Save method. Look at another "DecodeTo", maybe using need
 
             mailAttach.size = mailAttach.dataStream.Length;
 

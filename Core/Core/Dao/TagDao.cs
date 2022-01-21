@@ -24,9 +24,6 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -34,6 +31,9 @@ using ASC.CRM.Core.Enums;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using System.Collections.Generic;
+using System.Linq;
 
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 
@@ -188,7 +188,7 @@ namespace ASC.Mail.Core.Dao
                 CrmId = tag.CrmId
             };
 
-            var entry = MailDbContext.AddOrUpdate(t => t.MailTag, dbTag);
+            var entry = MailDbContext.AddOrUpdate(t => t.MailTag, dbTag); //maybe memory leak here
 
             MailDbContext.SaveChanges();
 

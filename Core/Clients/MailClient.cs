@@ -147,6 +147,8 @@ namespace ASC.Mail.Clients
                     new ProtocolLogger(protocolLogPath)
                 : new NullProtocolLogger();
 
+            if (log == null) log = new NullLog();
+
             Account = mailbox;
             ServerFolderAccessInfos = serverFolderAccessInfos;
             CertificatePermit = certificatePermit;
@@ -355,7 +357,6 @@ namespace ASC.Mail.Clients
                 GetMessage = null;
 
                 StopTokenSource.Dispose();
-
             }
             catch (Exception ex)
             {
@@ -540,15 +541,12 @@ namespace ASC.Mail.Clients
             {
                 if (aggEx.InnerException != null)
                 {
-                    Log.ErrorFormat($"Imap: Exception while logging. See next exception for details.");
                     throw aggEx.InnerException;
                 }
-                Log.ErrorFormat($"Imap: Exception while logging.");
                 throw new Exception("LoginImap failed", aggEx);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("LoginImap error {0}", ex.Message);
                 throw;
             }
             finally
@@ -1187,10 +1185,8 @@ namespace ASC.Mail.Clients
             {
                 if (aggEx.InnerException != null)
                 {
-                    Log.ErrorFormat($"Pop3: Exception while logging. See next exception for details.");
                     throw aggEx.InnerException;
                 }
-                Log.ErrorFormat($"Pop3: Exception while logging.");
                 throw new Exception("LoginPop3 failed", aggEx);
             }
         }

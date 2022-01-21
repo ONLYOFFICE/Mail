@@ -39,6 +39,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 
+
 namespace ASC.Mail.Aggregator.Service.Service
 {
     [Singletone]
@@ -291,6 +292,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             Log.InfoFormat($"Create tasks (need {needCount}).");
 
             var mailboxes = QueueManager.GetLockedMailboxes(needCount).ToList();
+
             var tasks = new List<TaskData>();
 
             foreach (var mailbox in mailboxes)
@@ -313,7 +315,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
         private void ProcessMailbox(MailBoxData mailBox, MailSettings mailSettings, ILog log, CancellationToken token)
         {
-            var client = CreateMailClient(mailBox, log, token);
+            using var client = CreateMailClient(mailBox, log, token);
 
             if (client == null || !client.IsConnected || !client.IsAuthenticated || client.IsDisposed)
             {
@@ -384,8 +386,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                 }
             }
 
-            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
-            var state = GetMailboxState(mailbox, log, factory);
+            var state = GetMailboxState(mailbox, log);
 
             switch (state)
             {
@@ -403,7 +404,8 @@ namespace ASC.Mail.Aggregator.Service.Service
                     {
                         log.InfoFormat($"RemoveMailBox(Id = {mailbox.MailBoxId}) -> Try clear new data from removed mailbox");
 
-                        factory.MailboxEngine.RemoveMailBox(mailbox);
+                        var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+                        mailboxEngine.RemoveMailBox(mailbox);
                     }
                     catch (Exception exRem)
                     {
@@ -421,6 +423,8 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
 
             log.InfoFormat($"Mailbox \"{mailbox.EMail}\" has been processed.");
+
+            //dispose log?
         }
 
         private MailClient CreateMailClient(MailBoxData mailbox, ILog log, CancellationToken cancelToken)
@@ -441,7 +445,6 @@ namespace ASC.Mail.Aggregator.Service.Service
             try
             {
                 using var scope = ServiceProvider.CreateScope();
-
                 var factory = scope.ServiceProvider.GetService<IMailDaoFactory>();
 
                 var serverFolderAccessInfos = factory
@@ -590,9 +593,9 @@ namespace ASC.Mail.Aggregator.Service.Service
                 var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
                 tenantManager.SetCurrentTenant(mailbox.TenantId);
 
-                var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
+                var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
-                factory.MailboxEngine.SetMaiboxAuthError(mailbox.MailBoxId, mailbox.AuthErrorDate.Value);
+                mailboxEngine.SetMaiboxAuthError(mailbox.MailBoxId, mailbox.AuthErrorDate.Value);
             }
             catch (Exception ex)
             {
@@ -633,9 +636,8 @@ namespace ASC.Mail.Aggregator.Service.Service
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             tenantManager.SetCurrentTenant(mailClientEventArgs.Mailbox.TenantId);
 
-            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
-
-            factory.MailboxEngine.SetMaiboxAuthError(mailClientEventArgs.Mailbox.MailBoxId, mailClientEventArgs.Mailbox.AuthErrorDate);
+            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+            mailboxEngine.SetMaiboxAuthError(mailClientEventArgs.Mailbox.MailBoxId, mailClientEventArgs.Mailbox.AuthErrorDate);
         }
 
         private void ClientOnGetMessage(object sender, MailClientMessageEventArgs mailClientMessageEventArgs)
@@ -684,6 +686,8 @@ namespace ASC.Mail.Aggregator.Service.Service
                     watch.Stop();
 
                     LogStatistic(PROCESS_MESSAGE, mailbox, watch.Elapsed, failed);
+
+                    GC.Collect();
                 }
             }
         }
@@ -706,11 +710,9 @@ namespace ASC.Mail.Aggregator.Service.Service
             tenantManager.SetCurrentTenant(mailbox.TenantId);
             securityContext.AuthenticateMe(new Guid(mailbox.UserId));
 
-            var factory = scope.ServiceProvider.GetService<MailEnginesFactory>();
+            var messageEngine = scope.ServiceProvider.GetService<MessageEngine>();
 
-            var mailEnginesFactory = scope.ServiceProvider.GetService<MailEnginesFactory>();
-
-            var message = factory.MessageEngine.Save(mailbox, boxInfo.MimeMessage, uidl, boxInfo.Folder, null, boxInfo.Unread, log);
+            var message = messageEngine.Save(mailbox, boxInfo.MimeMessage, uidl, boxInfo.Folder, null, boxInfo.Unread, log);
 
             if (message == null || message.Id <= 0) return false;
 
@@ -718,7 +720,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
             log.Info("DoOptionalOperations -> START");
 
-            DoOptionalOperations(message, boxInfo.MimeMessage, mailbox, boxInfo.Folder, log, mailEnginesFactory);
+            DoOptionalOperations(message, boxInfo.MimeMessage, mailbox, boxInfo.Folder, log, scope);
 
             log.Info("DoOptionalOperations -> END");
 
@@ -733,13 +735,15 @@ namespace ASC.Mail.Aggregator.Service.Service
             DateChanged
         }
 
-        private MailboxState GetMailboxState(MailBoxData mailbox, ILog log, MailEnginesFactory mailFactory)
+        private MailboxState GetMailboxState(MailBoxData mailbox, ILog log)
         {
             try
             {
                 log.Debug("GetMailBoxState()");
 
-                var status = mailFactory.MailboxEngine.GetMailboxStatus(new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, null));
+                using var scope = ServiceProvider.CreateScope();
+                var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+                var status = mailboxEngine.GetMailboxStatus(new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, null));
 
                 if (mailbox.BeginDate != status.BeginDate)
                 {
@@ -792,20 +796,18 @@ namespace ASC.Mail.Aggregator.Service.Service
             return crmAvailable;
         }
 
-        private List<MailSieveFilterData> GetFilters(MailEnginesFactory factory, ILog log)
+        private List<MailSieveFilterData> GetFilters(FilterEngine filterEngine, string userId, ILog log)
         {
-            var user = factory.UserId;
-
-            if (string.IsNullOrEmpty(user))
+            if (string.IsNullOrEmpty(userId))
                 return new List<MailSieveFilterData>();
 
             try
             {
-                if (Filters.ContainsKey(user)) return Filters[user];
+                if (Filters.ContainsKey(userId)) return Filters[userId];
 
-                var filters = factory.FilterEngine.GetList();
+                var filters = filterEngine.GetList();
 
-                Filters.TryAdd(user, filters);
+                Filters.TryAdd(userId, filters);
 
                 return filters;
             }
@@ -817,17 +819,25 @@ namespace ASC.Mail.Aggregator.Service.Service
             return new List<MailSieveFilterData>();
         }
 
-        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, MailFolder folder, ILog log, MailEnginesFactory mailFactory)
+        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, MailFolder folder, ILog log, IServiceScope scope)
         {
             try
             {
                 var tagIds = new List<int>();
 
+                var tagEngine = scope.ServiceProvider.GetService<TagEngine>();
+                var indexEngine = scope.ServiceProvider.GetService<IndexEngine>();
+                var crmLinkEngine = scope.ServiceProvider.GetService<CrmLinkEngine>();
+                var emailInEngine = scope.ServiceProvider.GetService<EmailInEngine>();
+                var autoreplyEngine = scope.ServiceProvider.GetService<AutoreplyEngine>();
+                var calendarEngine = scope.ServiceProvider.GetService<CalendarEngine>();
+                var filterEngine = scope.ServiceProvider.GetService<FilterEngine>();
+
                 if (folder.Tags.Any())
                 {
                     log.Debug("DoOptionalOperations -> GetOrCreateTags()");
 
-                    tagIds = mailFactory.TagEngine.GetOrCreateTags(mailbox.TenantId, mailbox.UserId, folder.Tags);
+                    tagIds = tagEngine.GetOrCreateTags(mailbox.TenantId, mailbox.UserId, folder.Tags);
                 }
 
                 log.Debug("DoOptionalOperations -> IsCrmAvailable()");
@@ -836,7 +846,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                 {
                     log.Debug("DoOptionalOperations -> GetCrmTags()");
 
-                    var crmTagIds = mailFactory.TagEngine.GetCrmTags(message.FromEmail);
+                    var crmTagIds = tagEngine.GetCrmTags(message.FromEmail);
 
                     if (crmTagIds.Any())
                     {
@@ -861,7 +871,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 var mailMail = message.ToMailMail(mailbox.TenantId, new Guid(mailbox.UserId));
 
-                mailFactory.IndexEngine.Add(mailMail);
+                indexEngine.Add(mailMail);
 
                 foreach (var tagId in tagIds)
                 {
@@ -869,7 +879,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                     {
                         log.DebugFormat($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
 
-                        mailFactory.TagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
+                        tagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
                     }
                     catch (Exception e)
                     {
@@ -882,22 +892,21 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 log.Debug("DoOptionalOperations -> AddRelationshipEventForLinkedAccounts()");
 
-                mailFactory.CrmLinkEngine.AddRelationshipEventForLinkedAccounts(mailbox, message);
+                crmLinkEngine.AddRelationshipEventForLinkedAccounts(mailbox, message);
 
                 log.Debug("DoOptionalOperations -> SaveEmailInData()");
 
-                mailFactory.EmailInEngine.SaveEmailInData(mailbox, message, Settings.Defines.DefaultApiSchema);
+                emailInEngine.SaveEmailInData(mailbox, message, Settings.Defines.DefaultApiSchema);
 
                 log.Debug("DoOptionalOperations -> SendAutoreply()");
 
-                mailFactory.AutoreplyEngine.SendAutoreply(mailbox, message, Settings.Defines.DefaultApiSchema, log);
+                autoreplyEngine.SendAutoreply(mailbox, message, Settings.Defines.DefaultApiSchema, log);
 
                 log.Debug("DoOptionalOperations -> UploadIcsToCalendar()");
 
                 if (folder.Folder != Enums.FolderType.Spam)
                 {
-                    mailFactory
-                        .CalendarEngine
+                    calendarEngine
                         .UploadIcsToCalendar(mailbox, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
                             message.CalendarEventCharset, message.CalendarEventMimeType, mailbox.EMail.Address,
                             Settings.Defines.DefaultApiSchema);
@@ -911,9 +920,9 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 log.Debug("DoOptionalOperations -> ApplyFilters()");
 
-                var filters = GetFilters(mailFactory, log);
+                var filters = GetFilters(filterEngine, mailbox.UserId, log);
 
-                mailFactory.FilterEngine.ApplyFilters(message, mailbox, folder, filters);
+                filterEngine.ApplyFilters(message, mailbox, folder, filters);
 
                 log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
 
@@ -963,6 +972,7 @@ namespace ASC.Mail.Aggregator.Service.Service
         {
             try
             {
+                //make dispose in TaskData
                 Log.DebugFormat($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
 
                 if (!tasks.Remove(taskData))
@@ -970,7 +980,9 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 ReleaseMailbox(taskData.Mailbox);
 
-                taskData.Task.Dispose();
+                taskData.Task.Dispose();  //=null
+
+                GC.Collect();
             }
             catch (Exception ex)
             {

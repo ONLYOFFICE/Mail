@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Threading;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -43,6 +37,12 @@ using ASC.Mail.Models;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
+using System.Threading;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -92,7 +92,6 @@ namespace ASC.Mail.Core.Engine
             MailBoxSettingEngine = mailBoxSettingEngine;
             CoreBaseSettings = coreBaseSettings;
             SettingsManager = settingsManager;
-            ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
             Log = option.Get("ASC.Mail.AccountEngine");
         }
@@ -274,6 +273,8 @@ namespace ASC.Mail.Core.Engine
                 Enabled = true
             };
 
+            ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+
             using (var client = new MailClient(mbox, CancellationToken.None, ServerFolderAccessInfos,
                     certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
             {
@@ -300,6 +301,8 @@ namespace ASC.Mail.Core.Engine
         {
             if (mbox == null)
                 throw new NullReferenceException("mbox");
+
+            ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
             using (var client = new MailClient(mbox, CancellationToken.None, ServerFolderAccessInfos,
                     certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
@@ -343,6 +346,8 @@ namespace ASC.Mail.Core.Engine
             foreach (var mb in testMailboxes)
             {
                 LoginResult loginResult;
+
+                ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
                 using (var client = new MailClient(mb, CancellationToken.None, ServerFolderAccessInfos,
                     MailSettings.Aggregator.TcpTimeout, MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
@@ -563,6 +568,8 @@ namespace ASC.Mail.Core.Engine
 
             if (enabled)
             {
+                ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+
                 // Check account connection setting on activation
                 using (var client = new MailClient(tuple.Item1, CancellationToken.None, ServerFolderAccessInfos,
                         certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))

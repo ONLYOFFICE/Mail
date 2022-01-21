@@ -1,6 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using ASC.Mail.Models;
 
-using ASC.Mail.Models;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Aggregator.Service.Queue.Data
 {

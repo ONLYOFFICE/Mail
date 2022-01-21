@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Aggregator.Service.Queue.Data;
@@ -21,6 +13,14 @@ using LiteDB;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
 
 namespace ASC.Mail.Aggregator.Service.Queue
 {

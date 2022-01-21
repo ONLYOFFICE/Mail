@@ -25,7 +25,6 @@
 
 
 using ASC.Common;
-using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Configuration;
@@ -36,7 +35,6 @@ using ASC.Mail.Core.Entities;
 using ASC.Security.Cryptography;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 using System;
 using System.Collections.Generic;
@@ -51,7 +49,6 @@ namespace ASC.Mail.Core.Dao
     {
         private InstanceCrypto InstanceCrypto { get; }
         private MailSettings MailSettings { get; }
-        private readonly ILog Log;
 
         private const string mailboxTableName = "mail_mailbox";
 
@@ -72,7 +69,6 @@ namespace ASC.Mail.Core.Dao
         public MailboxDao(
              TenantManager tenantManager,
              SecurityContext securityContext,
-             IOptionsMonitor<ILog> optionsMonitor,
              DbContextManager<MailDbContext> dbContext,
              InstanceCrypto instanceCrypto,
              MailSettings mailSettings)
@@ -80,8 +76,6 @@ namespace ASC.Mail.Core.Dao
         {
             InstanceCrypto = instanceCrypto;
             MailSettings = mailSettings;
-
-            Log = optionsMonitor.Get("ASC.Mail.MailboxDao");
         }
 
         public Mailbox GetMailBox(IMailboxExp exp)
@@ -99,58 +93,51 @@ namespace ASC.Mail.Core.Dao
         {
             var query = MailDbContext.MailMailbox
                  .Where(exp.GetExpression())
-                 .Select(ToMailbox)
-                 .ToList();
+                 .Select(ToMailbox);
 
             if (!string.IsNullOrEmpty(exp.OrderBy) && exp.OrderAsc.HasValue)
             {
                 if ((bool)exp.OrderAsc)
                 {
-                    query = query.OrderBy(b => b.DateChecked).ToList();
+                    query = query.OrderBy(b => b.DateChecked);
                 }
                 else
                 {
-                    query = query.OrderByDescending(b => b.DateChecked).ToList();
+                    query = query.OrderByDescending(b => b.DateChecked);
                 }
-
             }
 
             if (exp.Limit.HasValue)
             {
-                query = query.Take(exp.Limit.Value).ToList();
+                query = query.Take(exp.Limit.Value);
             }
 
-            var mailboxes = query.ToList();
-
-            return mailboxes;
+            return query.ToList();
         }
         public List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp)
         {
             var query = MailDbContext.MailMailbox
                 .Where(exp.GetExpression())
-                .Select(ToMailbox)
-                .ToList();
+                .Select(ToMailbox);
 
             if (!string.IsNullOrEmpty(exp.OrderBy) && exp.OrderAsc.HasValue)
             {
                 if ((bool)exp.OrderAsc)
                 {
-                    query = query.OrderBy(b => b.DateChecked).ToList();
+                    query = query.OrderBy(b => b.DateChecked);
                 }
                 else
                 {
-                    query = query.OrderByDescending(b => b.DateChecked).ToList();
+                    query = query.OrderByDescending(b => b.DateChecked);
                 }
             }
 
             if (exp.Limit.HasValue)
             {
-                query = query.Take(exp.Limit.Value).ToList();
+                query = query.Take(exp.Limit.Value);
             }
 
-            var mailboxes = query.ToList();
-
-            return mailboxes;
+            return query.ToList();
         }
 
         public Mailbox GetNextMailBox(IMailboxExp exp)
@@ -290,15 +277,6 @@ namespace ASC.Mail.Core.Dao
             }
 
             var result = MailDbContext.SaveChanges();
-
-            if (result > 0)
-            {
-                Log.Debug($"Successfuly disabled mailbox(es)");
-            }
-            else if (result == 0)
-            {
-                Log.Debug($"Failed to disable mailbox(es)");
-            }
 
             return result > 0;
         }

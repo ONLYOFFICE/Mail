@@ -24,16 +24,10 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Expressions.Conversation;
 using ASC.Mail.Core.Dao.Expressions.Message;
 using ASC.Mail.Core.Entities;
@@ -41,6 +35,11 @@ using ASC.Mail.Enums;
 using ASC.Web.Core;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 
@@ -56,20 +55,12 @@ namespace ASC.Mail.Core.Engine
         private SecurityContext SecurityContext { get; }
         private ILog Log { get; }
         private IMailDaoFactory MailDaoFactory { get; }
-        private IndexEngine IndexEngine { get; }
-        private FactoryIndexer<MailMail> FactoryIndexer { get; }
-        private FactoryIndexer FactoryIndexerCommon { get; }
-        private IServiceProvider ServiceProvider { get; }
         private WebItemSecurity WebItemSecurity { get; }
         public TagEngine(
             TenantManager tenantManager,
             SecurityContext securityContext,
             IMailDaoFactory mailDaoFactory,
-            IndexEngine indexEngine,
             WebItemSecurity webItemSecurity,
-            FactoryIndexer<MailMail> factoryIndexer,
-            FactoryIndexer factoryIndexerCommon,
-            IServiceProvider serviceProvider,
             IOptionsMonitor<ILog> option)
         {
             TenantManager = tenantManager;
@@ -77,11 +68,6 @@ namespace ASC.Mail.Core.Engine
 
             MailDaoFactory = mailDaoFactory;
 
-            IndexEngine = indexEngine;
-
-            FactoryIndexer = factoryIndexer;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
             WebItemSecurity = webItemSecurity;
 
             Log = option.Get("ASC.Mail.TagEngine");
