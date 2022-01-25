@@ -58,7 +58,7 @@ namespace ASC.Mail.Extensions
                 if (!calendarParts.Any())
                     return;
 
-                log.DebugFormat("LoadCalendarInfo found {0} calendars", calendarParts.Count);
+                log.Debug($"LoadCalendarInfo found {calendarParts.Count} calendars");
 
                 foreach (var calendarPart in calendarParts)
                 {
@@ -97,7 +97,7 @@ namespace ASC.Mail.Extensions
                     mail.CalendarEventCharset = string.IsNullOrEmpty(p.ContentType.Charset) ? Encoding.UTF8.HeaderName : p.ContentType.Charset;
                     mail.CalendarEventMimeType = p.ContentType.MimeType;
 
-                    log.DebugFormat("Calendar UID: {0} Method: {1} ics: {2}", mail.CalendarUid, calendar.Method, mail.CalendarEventIcs);
+                    log.Debug($"Calendar UID: {mail.CalendarUid} Method: {calendar.Method} ics: {mail.CalendarEventIcs}");
 
                     var calendarExists =
                         message.Attachments

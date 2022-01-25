@@ -24,15 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Security.Authentication;
-using System.Web;
-
 using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Logging;
@@ -56,6 +47,15 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 using RestSharp;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Security.Authentication;
+using System.Web;
 
 namespace ASC.Mail.Utils
 {
@@ -137,13 +137,13 @@ namespace ASC.Mail.Utils
         {
             var user = SecurityContext.CurrentAccount;
 
-            Log.DebugFormat("ApiHelper->Setup: Tenant={0} User='{1}' IsAuthenticated={2} Scheme='{3}' HttpContext is {4}",
-                      Tenant.TenantId, user.ID, user.IsAuthenticated, Scheme,
-                      HttpContext != null
+            var httpCon = HttpContext != null
                           ? string.Format("not null and UrlRewriter = {0}, RequestUrl = {1}",
                             HttpContext.Request.GetUrlRewriter().ToString(),
                             HttpContext.Request.Url().ToString())
-                          : "null");
+                          : "null";
+
+            Log.Debug($"ApiHelper->Setup: Tenant={Tenant.TenantId} User='{user.ID}' IsAuthenticated={user.IsAuthenticated} Scheme='{Scheme}' HttpContext is {httpCon}");
 
             if (!user.IsAuthenticated)
                 throw new AuthenticationException("User not authenticated");
@@ -176,7 +176,7 @@ namespace ASC.Mail.Utils
         {
             Setup();
 
-            Log.DebugFormat("ApiHelper->Execute: request url: {0}/{1}", BaseUrl.Uri.ToString(), request.Resource);
+            Log.Debug($"ApiHelper->Execute: request url: {BaseUrl.Uri}/{request.Resource}");
 
             var client = new RestClient { BaseUrl = BaseUrl.Uri };
 
@@ -197,7 +197,7 @@ namespace ASC.Mail.Utils
         {
             Setup();
 
-            log.DebugFormat("ApiHelper -> Execute: request url: {0}/{1}", BaseUrl.Uri.ToString(), request.Resource);
+            log.Debug($"ApiHelper -> Execute: request url: {BaseUrl.Uri}/{request.Resource}");
 
             var client = new RestClient { BaseUrl = BaseUrl.Uri };
 

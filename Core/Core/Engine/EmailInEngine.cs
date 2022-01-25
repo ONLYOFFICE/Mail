@@ -24,20 +24,22 @@
 */
 
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Net;
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Data.Storage;
-using ASC.Mail.Storage;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Extensions;
 using ASC.Mail.Models;
+using ASC.Mail.Storage;
 using ASC.Mail.Utils;
+
 using Microsoft.Extensions.Options;
+
+using System;
+using System.IO;
+using System.Linq;
+using System.Net;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -80,8 +82,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     if (attachment.dataStream != null)
                     {
-                        Log.DebugFormat("SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{0}', folderId: {1})",
-                                      attachment.fileName, mailbox.EMailInFolder);
+                        Log.Debug($"SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{attachment.fileName}', folderId: {mailbox.EMailInFolder})");
 
                         attachment.dataStream.Seek(0, SeekOrigin.Begin);
 
@@ -93,8 +94,7 @@ namespace ASC.Mail.Core.Engine
 
                         using (var file = attachment.ToAttachmentStream(storage))
                         {
-                            Log.DebugFormat("SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{0}', folderId: {1})",
-                                      file.FileName, mailbox.EMailInFolder);
+                            Log.Debug($"SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{file.FileName}', folderId: {mailbox.EMailInFolder})");
 
                             UploadToDocuments(file.FileStream, file.FileName, attachment.contentType, mailbox, httpContextScheme, Log);
                         }

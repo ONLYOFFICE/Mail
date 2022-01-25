@@ -25,13 +25,14 @@
 
 
 //using System;
-using System;
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core.Common.Configuration;
 using ASC.FederatedLogin;
 using ASC.FederatedLogin.Helpers;
 using ASC.FederatedLogin.LoginProviders;
+
+using System;
 
 namespace ASC.Mail.Authorization
 {
@@ -52,7 +53,7 @@ namespace ASC.Mail.Authorization
         public string RefreshUrl => loginProvider.AccessTokenUrl;
 
         public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory)
-        {            
+        {
             ConsumerFactory = consumerFactory;
 
             this.log = log;
@@ -71,7 +72,7 @@ namespace ASC.Mail.Authorization
             }
             catch (Exception ex)
             {
-                log.ErrorFormat("GoogleOAuth2Authorization() Exception:\r\n{0}\r\n", ex.ToString());
+                log.Error($"GoogleOAuth2Authorization() Exception:\r\n{ex}\r\n");
             }
         }
 
@@ -91,7 +92,7 @@ namespace ASC.Mail.Authorization
             }
             catch (Exception ex)
             {
-                log.ErrorFormat("RequestAccessToken() Exception:\r\n{0}\r\n", ex.ToString());
+                log.Error($"RequestAccessToken() Exception:\r\n{ex}\r\n");
                 return null;
             }
         }

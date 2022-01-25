@@ -176,7 +176,7 @@ namespace ASC.Mail.Core.Engine.Operations
                         "application/zip",
                         "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"");
 
-                    Log.DebugFormat("Zipped archive has been stored to {0}", path.ToString());
+                    Log.Debug($"Zipped archive has been stored to {path}");
                 }
 
                 SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.CreateLink);

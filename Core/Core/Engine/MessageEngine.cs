@@ -1147,8 +1147,7 @@ namespace ASC.Mail.Core.Engine
 
             UpdateMessagesChains(MailDaoFactory, mailbox, message.MimeMessageId, message.ChainId, folder, userFolderId);
 
-            Log.DebugFormat("MailSave() tenant='{0}', user_id='{1}', email='{2}', from='{3}', id_mail='{4}'",
-                mailbox.TenantId, mailbox.UserId, mailbox.EMail, message.From, mailId);
+            Log.Debug($"MailSave() tenant='{mailbox.TenantId}', user_id='{mailbox.UserId}', email='{mailbox.EMail}', from='{message.From}', id_mail='{mailId}'");
 
             return mailId;
         }
@@ -1217,9 +1216,7 @@ namespace ASC.Mail.Core.Engine
                 }
             }
 
-            Log.DebugFormat(
-                "DetectChainId() tenant='{0}', user_id='{1}', mailbox_id='{2}', mime_message_id='{3}' Result: {4}",
-                mailbox.TenantId, mailbox.UserId, mailbox.MailBoxId, mimeMessageId, chainId);
+            Log.Debug($"DetectChainId() tenant='{mailbox.TenantId}', user_id='{mailbox.UserId}', mailbox_id='{mailbox.MailBoxId}', mime_message_id='{mimeMessageId}' Result: {chainId}");
 
             return new ChainInfo
             {
@@ -1351,8 +1348,7 @@ namespace ASC.Mail.Core.Engine
                     }
                 }
 
-                log.DebugFormat("StoreMailBody() tenant='{0}', user_id='{1}', save_body_path='{2}' Result: {3}",
-                            mailBoxData.TenantId, mailBoxData.UserId, savePath, response);
+                log.Debug($"StoreMailBody() tenant='{mailBoxData.TenantId}', user_id='{mailBoxData.UserId}', save_body_path='{savePath}' Result: {response}");
 
                 return response;
             }
@@ -1566,9 +1562,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                log.DebugFormat(
-                    "Problems with mail_directory deleting. Account: {0}. Folder: {1}/{2}/{3}. Exception: {4}",
-                    mailbox.EMail, mailbox.TenantId, mailbox.UserId, streamId, ex.ToString());
+                log.Debug($"Problems with mail_directory deleting. Account: {mailbox.EMail}. Folder: {mailbox.TenantId}/{mailbox.UserId}/{streamId}. Exception: {ex}");
 
                 return false;
             }
@@ -2297,11 +2291,9 @@ namespace ASC.Mail.Core.Engine
 
                 var result = MailDaoFactory.GetChainDao().Delete(deletQuery);
 
-                Log.DebugFormat(
-                    "UpdateChain() row deleted from chain table tenant='{0}', " +
-                    "user_id='{1}', id_mailbox='{2}', folder='{3}', " +
-                    "chain_id='{4}' result={5}",
-                    tenant, user, mailboxId, folder, chainId, result);
+                Log.Debug($"UpdateChain() row deleted from chain table tenant='{tenant}', " +
+                    $"user_id='{user}', id_mailbox='{mailboxId}', folder='{folder}', " +
+                    $"chain_id='{chainId}' result={result}");
 
                 var unreadConvDiff = chainUnreadFlag ? -1 : (int?)null;
 
@@ -2338,9 +2330,7 @@ namespace ASC.Mail.Core.Engine
 
                 MailDaoFactory.GetChainDao().SaveChain(chain);
 
-                Log.DebugFormat(
-                    "UpdateChain() row inserted to chain table tenant='{0}', user_id='{1}', id_mailbox='{2}', folder='{3}', chain_id='{4}'",
-                    tenant, user, mailboxId, folder, chainId);
+                Log.Debug($"UpdateChain() row inserted to chain table tenant='{tenant}', user_id='{user}', id_mailbox='{mailboxId}', folder='{folder}', chain_id='{chainId}'");
 
                 var unreadConvDiff = (int?)null;
                 var totalConvDiff = (int?)null;
@@ -2378,8 +2368,7 @@ namespace ASC.Mail.Core.Engine
                 markRead.GetValueOrDefault(false));
 #if DEBUG
             watch.Stop();
-            Log.DebugFormat("Mail->GetConversation(id={0})->Elapsed {1}ms (NeedProxyHttp={2}, NeedSanitizer={3})", id,
-                watch.Elapsed.TotalMilliseconds, MailSettings.NeedProxyHttp, needSanitize.GetValueOrDefault(false));
+            Log.Debug($"Mail->GetConversation(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={MailSettings.NeedProxyHttp}, NeedSanitizer={needSanitize.GetValueOrDefault(false)})");
 #endif
             var item = list.FirstOrDefault(m => m.Id == id);
 
@@ -2785,8 +2774,9 @@ namespace ASC.Mail.Core.Engine
 
                 attachment.tempStoredUrl = null;
 
-                Log.DebugFormat("StoreAttachmentCopy() tenant='{0}', user_id='{1}', stream_id='{2}', new_s3_key='{3}', copy_s3_url='{4}', storedFileUrl='{5}',  filename='{6}'",
-                    tenant, user, streamId, newS3Key, copyS3Url, attachment.storedFileUrl, attachment.fileName);
+                Log.Debug($"StoreAttachmentCopy() tenant='{tenant}', user_id='{user}', " +
+                    $"stream_id='{streamId}', new_s3_key='{newS3Key}', copy_s3_url='{copyS3Url}', " +
+                    $"storedFileUrl='{attachment.storedFileUrl}',  filename='{attachment.fileName}'");
             }
             catch (Exception ex)
             {
@@ -2995,9 +2985,7 @@ namespace ASC.Mail.Core.Engine
                     try
                     {
 #if DEBUG
-                        Log.DebugFormat(
-                            "Mail->GetMailInfo(id={0})->Start Body Load tenant: {1}, user: '{2}', key='{3}'",
-                            mail.Id, Tenant, User, key);
+                        Log.Debug($"Mail->GetMailInfo(id={mail.Id})->Start Body Load tenant: {Tenant}, user: '{User}', key='{key}'");
 
                         watch.Start();
 #endif
@@ -3018,9 +3006,7 @@ namespace ASC.Mail.Core.Engine
 #endif
                             bool imagesAreBlocked;
 
-                            Log.DebugFormat(
-                                "Mail->GetMailInfo(id={0})->Start Sanitize Body tenant: {1}, user: '{2}', BodyLength: {3} bytes",
-                                mail.Id, Tenant, User, htmlBody.Length);
+                            Log.DebugFormat($"Mail->GetMailInfo(id={mail.Id})->Start Sanitize Body tenant: {Tenant}, user: '{User}', BodyLength: {htmlBody.Length} bytes");
 
                             htmlBody = HtmlSanitizer.Sanitize(htmlBody, out imagesAreBlocked,
                                 new HtmlSanitizer.Options(options.LoadImages, options.NeedProxyHttp));
@@ -3032,10 +3018,8 @@ namespace ASC.Mail.Core.Engine
                             item.ContentIsBlocked = imagesAreBlocked;
                         }
 #if DEBUG
-                        Log.DebugFormat(
-                            "Mail->GetMailInfo(id={0})->Elapsed: BodyLoad={1}ms, Sanitaze={2}ms (NeedSanitizer={3}, NeedProxyHttp={4})",
-                            mail.Id, swtGetBodyMilliseconds, swtSanitazeilliseconds, options.NeedSanitizer,
-                            options.NeedProxyHttp);
+                        Log.DebugFormat($"Mail->GetMailInfo(id={mail.Id})->Elapsed: BodyLoad={swtGetBodyMilliseconds}ms, " +
+                            $"Sanitaze={swtSanitazeilliseconds}ms (NeedSanitizer={options.NeedSanitizer}, NeedProxyHttp={options.NeedProxyHttp})");
 #endif
                     }
                     catch (Exception ex)
@@ -3048,10 +3032,8 @@ namespace ASC.Mail.Core.Engine
 #if DEBUG
                         watch.Stop();
                         swtGetBodyMilliseconds = watch.Elapsed.TotalMilliseconds;
-                        Log.DebugFormat(
-                            "Mail->GetMailInfo(id={0})->Elapsed [BodyLoadFailed]: BodyLoad={1}ms, Sanitaze={2}ms (NeedSanitizer={3}, NeedProxyHttp={4})",
-                            mail.Id, swtGetBodyMilliseconds, swtSanitazeilliseconds, options.NeedSanitizer,
-                            options.NeedProxyHttp);
+                        Log.DebugFormat($"Mail->GetMailInfo(id={mail.Id})->Elapsed [BodyLoadFailed]: BodyLoad={swtGetBodyMilliseconds}ms, " +
+                            $"Sanitaze={swtSanitazeilliseconds}ms (NeedSanitizer={options.NeedSanitizer}, NeedProxyHttp={options.NeedProxyHttp})");
 #endif
                     }
                 }

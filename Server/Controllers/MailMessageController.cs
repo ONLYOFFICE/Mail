@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-
-using ASC.Common.Web;
+﻿using ASC.Common.Web;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Core.Resources;
 using ASC.Mail.Enums;
@@ -14,6 +9,11 @@ using ASC.Web.Api.Routing;
 using ASC.Web.Mail.Resources;
 
 using Microsoft.AspNetCore.Mvc;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ASC.Mail.Controllers
 {
@@ -128,9 +128,7 @@ namespace ASC.Mail.Controllers
             {
 #if DEBUG
                 watch.Stop();
-                Log.DebugFormat(
-                    "Mail->GetMessage(id={0})->Elapsed {1}ms [NotFound] (NeedProxyHttp={2}, NeedSanitizer={3})", id,
-                    watch.Elapsed.TotalMilliseconds, MailSettings.NeedProxyHttp, needSanitizeHtml);
+                Log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms [NotFound] (NeedProxyHttp={MailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
                 throw new ItemNotFoundException(string.Format("Message with {0} wasn't found.", id));
             }
@@ -147,8 +145,7 @@ namespace ASC.Mail.Controllers
             }
 #if DEBUG
             watch.Stop();
-            Log.DebugFormat("Mail->GetMessage(id={0})->Elapsed {1}ms (NeedProxyHttp={2}, NeedSanitizer={3})", id,
-                watch.Elapsed.TotalMilliseconds, MailSettings.NeedProxyHttp, needSanitizeHtml);
+            Log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={MailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
             if (item.Folder != FolderType.UserFolder)
                 return item;

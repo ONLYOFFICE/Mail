@@ -24,14 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -49,6 +41,14 @@ using ASC.Web.Core;
 using ASC.Web.Studio.Utility;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -405,7 +405,7 @@ namespace ASC.Mail.Core.Engine
                     .Distinct(equality)
                     .ToList();
 
-            Log.DebugFormat("SearchEmails (term = '{0}'): {1} sec / {2} items", term, watch.Elapsed.TotalSeconds, contacts.Count);
+            Log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
 
             return contacts;
         }

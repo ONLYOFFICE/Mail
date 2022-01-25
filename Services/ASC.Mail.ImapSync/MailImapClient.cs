@@ -698,7 +698,7 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                log.ErrorFormat($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
+                log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
             }
         }
 
@@ -751,7 +751,7 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                log.ErrorFormat($"StoreMailEml Exception: {ex}");
+                log.Error($"StoreMailEml Exception: {ex}");
             }
 
             return string.Empty;

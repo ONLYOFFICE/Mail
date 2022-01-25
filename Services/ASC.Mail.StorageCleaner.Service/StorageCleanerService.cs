@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Utils;
 using ASC.Mail.Configuration;
@@ -13,6 +8,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 using NLog;
+
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.StorageCleaner.Service
 {
@@ -53,7 +53,7 @@ namespace ASC.Mail.StorageCleaner.Service
             }
             else
             {
-                Log.DebugFormat($"Setup WorkTimer to {TsInterval.TotalMinutes} minutes");
+                Log.Debug($"Setup WorkTimer to {TsInterval.TotalMinutes} minutes");
 
                 WorkTimer.Change(TsInterval, TsInterval);
             }

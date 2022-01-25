@@ -360,7 +360,7 @@ namespace ASC.Mail.Clients
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"MailClient -> Dispose(MailboxId={Account.MailBoxId} MailboxAddres: '{Account.EMail.Address}')\r\nException: {ex.Message}\r\n");
+                Log.Error($"MailClient -> Dispose(MailboxId={Account.MailBoxId} MailboxAddres: '{Account.EMail.Address}')\r\nException: {ex.Message}\r\n");
             }
         }
 
@@ -475,8 +475,7 @@ namespace ASC.Mail.Clients
                     break;
             }
 
-            Log.DebugFormat($"Imap: Connect({Account.Server}:{Account.Port}, " +
-                $"{Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
+            Log.Debug($"Imap: Connect({Account.Server}:{Account.Port}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
 
             try
             {
@@ -511,12 +510,12 @@ namespace ASC.Mail.Clients
 
                 if (string.IsNullOrEmpty(Account.OAuthToken))
                 {
-                    Log.DebugFormat($"Imap: Authentication({Account.Account}).");
+                    Log.Debug($"Imap: Authentication({Account.Account}).");
                     t = Imap.AuthenticateAsync(Account.Account, Account.Password, CancelToken);
                 }
                 else
                 {
-                    Log.DebugFormat("Imap: AuthenticationByOAuth({Account.Account})."); ;
+                    Log.Debug("Imap: AuthenticationByOAuth({Account.Account}).");
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -598,7 +597,7 @@ namespace ASC.Mail.Clients
                     }
                     catch (Exception e)
                     {
-                        Log.ErrorFormat("Open faild: {0} Exception: {1}", folder.Name, e.Message);
+                        Log.Error($"Open faild: {folder.Name} Exception: {e.Message}");
                         continue;
                     }
 
@@ -704,7 +703,7 @@ namespace ASC.Mail.Clients
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("GetImapSubFolders: {0} Exception: {1}", folder.Name, ex.Message);
+                Log.Error($"GetImapSubFolders: {folder.Name} Exception: {ex.Message}");
             }
 
             return new List<IMailFolder>();
@@ -742,14 +741,14 @@ namespace ASC.Mail.Clients
                 if (folderUids.UidValidity.HasValue &&
                     folderUids.UidValidity != folder.UidValidity)
                 {
-                    Log.DebugFormat("Folder '{0}' UIDVALIDITY changed - need refresh folder", folder.Name);
+                    Log.Debug($"Folder '{folder.Name}' UIDVALIDITY changed - need refresh folder");
                     folderUids = new ImapFolderUids(new List<int> { 1, int.MaxValue }, 1, folder.UidValidity); // reset folder check history if uidValidity has been changed
                 }
             }
 
             if (!folderUids.UidValidity.HasValue)
             {
-                Log.DebugFormat("Folder '{0}' Save UIDVALIDITY = {1}", folder.Name, folder.UidValidity);
+                Log.Debug($"Folder '{folder.Name}' Save UIDVALIDITY = {folder.UidValidity}");
                 folderUids.UidValidity = folder.UidValidity; // Update UidValidity
             }
 
@@ -799,11 +798,11 @@ namespace ASC.Mail.Clients
 
                         var progress = new TransferProgress();
 
-                        Log.DebugFormat($"GetMessage(uid='{uid}')");
+                        Log.Debug($"GetMessage(uid='{uid}')");
 
                         var message = folder.GetMessage(uid, CancelToken, progress);
 
-                        Log.DebugFormat($"BytesTransferred = {progress.BytesTransferred}");
+                        Log.Debug($"BytesTransferred = {progress.BytesTransferred}");
 
                         var uid1 = uid;
                         var info = infoList.FirstOrDefault(t => t.UniqueId == uid1);
@@ -812,8 +811,7 @@ namespace ASC.Mail.Clients
 
                         if (message.Date < Account.BeginDate)
                         {
-                            Log.DebugFormat("Skip message (Date = {0}) on BeginDate = {1}", message.Date,
-                                Account.BeginDate);
+                            Log.Debug($"Skip message (Date = {message.Date}) on BeginDate = {Account.BeginDate}");
                             imapIntervals.SetBeginIndex(toUid);
                             beginDateUid = toUid;
                             break;
@@ -1084,15 +1082,12 @@ namespace ASC.Mail.Clients
                 }
                 else
                 {
-                    Log.DebugFormat(
-                        "AppendCopyToSenFolder(Mailbox: '{0}', Tenant: {1}, User: '{2}'): Skip - sent-folder not found",
-                        Account.EMail.Address, Account.TenantId, Account.UserId);
+                    Log.Debug($"AppendCopyToSenFolder(Mailbox: '{Account.EMail.Address}', Tenant: {Account.TenantId}, User: '{Account.UserId}'): Skip - sent-folder not found");
                 }
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("AppendCopyToSenFolder(Mailbox: '{0}', Tenant: {1}, User: '{2}'): Exception:\r\n{3}\r\n",
-                    Account.EMail.Address, Account.TenantId, Account.UserId, ex.ToString());
+                Log.Error($"AppendCopyToSenFolder(Mailbox: '{Account.EMail.Address}', Tenant: {Account.TenantId}, User: '{Account.UserId}'): Exception:\r\n{ex.ToString()}\r\n");
             }
         }
 
@@ -1121,8 +1116,7 @@ namespace ASC.Mail.Clients
                     break;
             }
 
-            Log.DebugFormat("Pop.Connect({0}:{1}, {2})", Account.Server, Account.Port,
-                Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
+            Log.Debug($"Pop.Connect({Account.Server}:{Account.Port}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
             try
             {
                 Pop.SslProtocols = sslProtocols;
@@ -1154,13 +1148,13 @@ namespace ASC.Mail.Clients
 
                 if (string.IsNullOrEmpty(Account.OAuthToken))
                 {
-                    Log.DebugFormat("Pop.Authentication({0})", Account.Account);
+                    Log.Debug($"Pop.Authentication({Account.Account})");
 
                     t = Pop.AuthenticateAsync(Account.Account, Account.Password, CancelToken);
                 }
                 else
                 {
-                    Log.DebugFormat("Pop.AuthenticationByOAuth({0})", Account.Account);
+                    Log.Debug($"Pop.AuthenticationByOAuth({Account.Account})");
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -1231,7 +1225,7 @@ namespace ASC.Mail.Clients
                     return;
                 }
 
-                Log.DebugFormat("Found {0} new messages.\r\n", newMessages.Count);
+                Log.Debug($"Found {newMessages.Count} new messages.\r\n");
 
                 newMessages = FixPop3UidsOrder(newMessages);
 
@@ -1242,9 +1236,7 @@ namespace ASC.Mail.Clients
                     if (!Pop.IsConnected || CancelToken.IsCancellationRequested)
                         break;
 
-                    Log.DebugFormat("Processing new message\tUID: {0}\tUIDL: {1}\t",
-                        newMessage.Key,
-                        newMessage.Value);
+                    Log.Debug($"Processing new message\tUID: {newMessage.Key}\tUIDL: {newMessage.Value}\t");
 
                     try
                     {
@@ -1254,8 +1246,7 @@ namespace ASC.Mail.Clients
 
                         if (message.Date < Account.BeginDate && skipOnDate)
                         {
-                            Log.DebugFormat("Skip message (Date = {0}) on BeginDate = {1}", message.Date,
-                                Account.BeginDate);
+                            Log.Debug($"Skip message (Date = {message.Date}) on BeginDate = {Account.BeginDate}");
                             continue;
                         }
 
@@ -1338,7 +1329,7 @@ namespace ASC.Mail.Clients
                 {
                     if (fstDate < lstDate)
                     {
-                        Log.DebugFormat("Account '{0}' uids order is DESC", Account.EMail.Address);
+                        Log.Debug($"Account '{Account.EMail.Address}' uids order is DESC");
                         newMessages = newMessages
                             .OrderByDescending(item => item.Key)
                             .ToDictionary(id => id.Key, id => id.Value);
@@ -1347,7 +1338,7 @@ namespace ASC.Mail.Clients
                 }
 
 
-                Log.DebugFormat("Account '{0}' uids order is ASC", Account.EMail.Address);
+                Log.Debug($"Account '{Account.EMail.Address}' uids order is ASC");
             }
             catch (Exception)
             {
@@ -1387,8 +1378,7 @@ namespace ASC.Mail.Clients
             }
 
 
-            Log.DebugFormat("Smtp.Connect({0}:{1}, {2})", Account.SmtpServer, Account.SmtpPort,
-                Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
+            Log.Debug($"Smtp.Connect({Account.SmtpServer}:{Account.SmtpPort}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
             try
             {
                 Smtp.SslProtocols = sslProtocols;
@@ -1410,13 +1400,13 @@ namespace ASC.Mail.Clients
 
                 if (string.IsNullOrEmpty(Account.OAuthToken))
                 {
-                    Log.DebugFormat("Smtp.Authentication({0})", Account.SmtpAccount);
+                    Log.Debug($"Smtp.Authentication({Account.SmtpAccount})");
 
                     t = Smtp.AuthenticateAsync(Account.SmtpAccount, Account.SmtpPassword, CancelToken);
                 }
                 else
                 {
-                    Log.DebugFormat("Smtp.AuthenticationByOAuth({0})", Account.SmtpAccount);
+                    Log.Debug($"Smtp.AuthenticationByOAuth({Account.SmtpAccount})");
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 

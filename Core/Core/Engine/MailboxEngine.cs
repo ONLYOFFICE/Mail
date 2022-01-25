@@ -810,7 +810,7 @@ namespace ASC.Mail.Core.Engine
 
             var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, true));
 
-            Log.DebugFormat("Found {0} active tasks", mailboxes.Count);
+            Log.Debug($"Found {mailboxes.Count} active tasks");
 
             return mailboxes;
         }
@@ -824,7 +824,7 @@ namespace ASC.Mail.Core.Engine
 
             var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, false));
 
-            Log.DebugFormat($"Found {mailboxes.Count} inactive tasks");
+            Log.Debug($"Found {mailboxes.Count} inactive tasks");
 
             return mailboxes;
         }

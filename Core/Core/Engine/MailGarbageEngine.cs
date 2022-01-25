@@ -24,16 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading;
-using System.Threading.Tasks;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -49,6 +39,16 @@ using ASC.Mail.Utils;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Runtime.Caching;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -309,7 +309,7 @@ namespace ASC.Mail.Core.Engine
                 .GetAwaiter()
                 .OnCompleted(() =>
                 {
-                    Log.DebugFormat("End Task {0} with status = '{1}'.", task.Id, task.Status);
+                    Log.Debug($"End Task {task.Id} with status = '{task.Status}'.");
                 });
 
             return task;
@@ -336,7 +336,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     taskLog.InfoFormat("Tenant {0} isn't in cache", mailbox.TenantId);
 
-                    taskLog.DebugFormat("GetTenantStatus(OverdueDays={0})", MailSettings.Cleaner.TenantOverdueDays);
+                    taskLog.Debug($"GetTenantStatus(OverdueDays={MailSettings.Cleaner.TenantOverdueDays})");
 
                     type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, Log);
 
@@ -390,7 +390,7 @@ namespace ASC.Mail.Core.Engine
             {
                 if (NeedRemove(mailbox, Log))
                 {
-                    Log.DebugFormat($"Mailbox {mailbox.MailBoxId} need remove. Removal started...");
+                    Log.Debug($"Mailbox {mailbox.MailBoxId} need remove. Removal started...");
                     RemoveMailboxData(mailbox, true, Log);
                 }
                 else if (mailbox.IsRemoved)
@@ -450,7 +450,7 @@ namespace ASC.Mail.Core.Engine
                     mailbox.IsRemoved = true;
                 }
 
-                log.DebugFormat("MailDataStore.GetDataStore(Tenant = {0})", mailbox.TenantId);
+                log.Debug($"MailDataStore.GetDataStore(Tenant = {mailbox.TenantId})");
 
                 var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
 
@@ -468,7 +468,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     var sumCount = 0;
 
-                    log.DebugFormat("GetMailboxAttachsGarbage(limit = {0})", MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
+                    log.Debug($"GetMailboxAttachsGarbage(limit = {MailSettings.Cleaner.MaxFilesToRemoveAtOnce})");
 
                     var attachGrbgList = factory.GetMailGarbageDao().GetMailboxAttachs(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
@@ -510,7 +510,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     var sumCount = 0;
 
-                    log.DebugFormat("GetMailboxMessagesGarbage(limit = {0})", MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
+                    log.Debug($"GetMailboxMessagesGarbage(limit = {MailSettings.Cleaner.MaxFilesToRemoveAtOnce})");
 
                     var messageGrbgList = factory.GetMailGarbageDao().GetMailboxMessages(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
@@ -546,7 +546,7 @@ namespace ASC.Mail.Core.Engine
 
                 CleanupMailboxData(mailbox, totalMailRemove, factory);
 
-                log.DebugFormat("Garbage mailbox '{0}' was totaly removed.", mailbox.EMail.Address);
+                log.Debug($"Garbage mailbox '{mailbox.EMail.Address}' was totaly removed.");
             }
             catch (Exception ex)
             {
@@ -618,7 +618,7 @@ namespace ASC.Mail.Core.Engine
         {
             try
             {
-                log.DebugFormat("Removing file: {0}", path);
+                log.Debug($"Removing file: {path}");
 
                 dataStorage.Delete(string.Empty, path);
 
@@ -636,7 +636,7 @@ namespace ASC.Mail.Core.Engine
 
         private void RemoveUserMailDirectory(int tenant, string userId, ILog log)
         {
-            log.DebugFormat("MailDataStore.GetDataStore(Tenant = {0})", tenant);
+            log.Debug($"MailDataStore.GetDataStore(Tenant = {tenant})");
 
             using var scope = ServiceProvider.CreateScope();
 

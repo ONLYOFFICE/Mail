@@ -71,13 +71,13 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
                 try
                 {
-                    Log.DebugFormat($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})");
+                    Log.Debug($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})");
 
                     SendUnreadUser(mailbox.TenantId, mailbox.UserId);
                 }
                 catch (Exception ex)
                 {
-                    Log.ErrorFormat($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})\r\nException: \r\n{ex}");
+                    Log.Error($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})\r\nException: \r\n{ex}");
                 }
 
                 _waitHandle.Reset();

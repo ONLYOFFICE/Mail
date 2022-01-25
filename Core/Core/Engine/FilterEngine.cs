@@ -443,7 +443,7 @@ namespace ASC.Mail.Core.Engine
                     {
                         Log.Error(ex.ToString());
 
-                        Log.DebugFormat("Disable filter with id={0}", filter.Id);
+                        Log.Debug($"Disable filter with id={filter.Id}");
 
                         filter.Enabled = false;
 

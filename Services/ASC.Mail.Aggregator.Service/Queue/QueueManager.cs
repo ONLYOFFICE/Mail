@@ -71,7 +71,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
                 _dbcFile = Path.Combine(Environment.CurrentDirectory, "dump.db");
                 _dbcJournalFile = Path.Combine(Environment.CurrentDirectory, "dump-journal.db");
 
-                Log.DebugFormat($"Dump file path: {_dbcFile}");
+                Log.Debug($"Dump file path: {_dbcFile}");
 
                 LoadDump();
             }
@@ -175,7 +175,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.Account}')\r\nException: {ex} \r\n");
+                Log.Error($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.Account}')\r\nException: {ex} \r\n");
                 _lockedMailBoxList.RemoveAll(m => m.MailBoxId == mailBoxData.MailBoxId);
             }
         }
@@ -206,7 +206,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> LoadMailboxesFromDump: {ex}");
+                Log.Error($"QueueManager -> LoadMailboxesFromDump: {ex}");
 
                 ReCreateDump();
             }
@@ -234,7 +234,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> LoadTenantsFromDump: {ex}");
+                Log.Error($"QueueManager -> LoadTenantsFromDump: {ex}");
 
                 ReCreateDump();
             }
@@ -253,20 +253,20 @@ namespace ASC.Mail.Aggregator.Service.Queue
             {
                 if (File.Exists(_dbcFile))
                 {
-                    Log.DebugFormat($"Dump file '{_dbcFile}' exists, trying delete");
+                    Log.Debug($"Dump file '{_dbcFile}' exists, trying delete");
 
                     File.Delete(_dbcFile);
 
-                    Log.DebugFormat($"Dump file '{_dbcFile}' deleted");
+                    Log.Debug($"Dump file '{_dbcFile}' deleted");
                 }
 
                 if (File.Exists(_dbcJournalFile))
                 {
-                    Log.DebugFormat($"Dump journal file '{_dbcJournalFile}' exists, trying delete");
+                    Log.Debug($"Dump journal file '{_dbcJournalFile}' exists, trying delete");
 
                     File.Delete(_dbcJournalFile);
 
-                    Log.DebugFormat($"Dump journal file '{_dbcJournalFile}' deleted");
+                    Log.Debug($"Dump journal file '{_dbcJournalFile}' deleted");
                 }
 
                 _db = new LiteDatabase(_dbcFile);
@@ -279,7 +279,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> ReCreateDump() failed Exception: {ex}");
+                Log.Error($"QueueManager -> ReCreateDump() failed Exception: {ex}");
             }
         }
 
@@ -305,7 +305,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> AddMailboxToDumpDb(Id = {mailboxData.MailboxId}) Exception: {ex}");
+                Log.Error($"QueueManager -> AddMailboxToDumpDb(Id = {mailboxData.MailboxId}) Exception: {ex}");
 
                 ReCreateDump();
             }
@@ -330,7 +330,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> DeleteMailboxFromDumpDb(MailboxId = {mailBoxId}) Exception: {ex}");
+                Log.Error($"QueueManager -> DeleteMailboxFromDumpDb(MailboxId = {mailBoxId}) Exception: {ex}");
 
                 ReCreateDump();
             }
@@ -356,7 +356,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> LoadDump() failed Exception: {ex}");
+                Log.Error($"QueueManager -> LoadDump() failed Exception: {ex}");
 
                 ReCreateDump();
             }
@@ -384,7 +384,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> AddTenantToDumpDb(TenantId = {tenantData.Tenant}) Exception: {ex}");
+                Log.Error($"QueueManager -> AddTenantToDumpDb(TenantId = {tenantData.Tenant}) Exception: {ex}");
 
                 ReCreateDump();
             }
@@ -409,7 +409,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> DeleteTenantFromDumpDb(TenantId = {tenantId}) Exception: {ex}");
+                Log.Error($"QueueManager -> DeleteTenantFromDumpDb(TenantId = {tenantId}) Exception: {ex}");
 
                 ReCreateDump();
             }
@@ -467,7 +467,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"QueueManager -> LoadQueue()\r\nException: \r\n {ex}");
+                Log.Error($"QueueManager -> LoadQueue()\r\nException: \r\n {ex}");
             }
         }
 
@@ -475,7 +475,8 @@ namespace ASC.Mail.Aggregator.Service.Queue
         {
             if (QueueIsEmpty || QueueLifetimeExpired)
             {
-                Log.DebugFormat("Queue is {0}. Load new queue.", QueueIsEmpty ? "EMPTY" : "EXPIRED");
+                var queueStr = QueueIsEmpty ? "EMPTY" : "EXPIRED";
+                Log.Debug($"Queue is {queueStr}. Load new queue.");
 
                 LoadQueue();
             }
@@ -534,7 +535,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
                 if (!contains)
                 {
-                    Log.DebugFormat($"Tenant {mailbox.TenantId} isn't in cache");
+                    Log.Debug($"Tenant {mailbox.TenantId} isn't in cache");
                     try
                     {
                         var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Aggregator.TenantOverdueDays, Log);
@@ -593,12 +594,12 @@ namespace ASC.Mail.Aggregator.Service.Queue
                     }
                     catch (Exception e)
                     {
-                        Log.ErrorFormat($"QueueManager -> TryLockMailbox(): GetTariffType \r\nException:{e}\r\n");
+                        Log.Error($"QueueManager -> TryLockMailbox(): GetTariffType \r\nException:{e}\r\n");
                     }
                 }
                 else
                 {
-                    Log.DebugFormat($"Tenant {mailbox.TenantId} is in cache");
+                    Log.Debug($"Tenant {mailbox.TenantId} is in cache");
                 }
 
                 var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager, Log);
@@ -638,7 +639,8 @@ namespace ASC.Mail.Aggregator.Service.Queue
                     return false;
                 }
 
-                Log.DebugFormat("TryLockMailbox {2} (MailboxId: {0} is {1})", mailbox.MailBoxId, mailbox.Active ? "active" : "inactive", mailbox.EMail.Address);
+                var active = mailbox.Active ? "active" : "inactive";
+                Log.Debug($"TryLockMailbox {mailbox.EMail.Address} (MailboxId: {mailbox.MailBoxId} is {active})");
 
                 return mailboxEngine.LockMaibox(mailbox.MailBoxId);
 

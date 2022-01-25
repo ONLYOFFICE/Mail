@@ -235,7 +235,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             if (AggregatorTimer == null)
                 AggregatorTimer = new Timer(AggregatorWork, token, Timeout.Infinite, Timeout.Infinite);
 
-            Log.DebugFormat("Setup Work timer to {0} seconds", Settings.Defines.CheckTimerInterval.TotalSeconds);
+            Log.Debug($"Setup Work timer to {Settings.Defines.CheckTimerInterval.TotalSeconds} seconds");
 
             if (immediately)
             {
@@ -458,10 +458,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                     mailbox.IsTeamlab || Settings.Defines.SslCertificatesErrorsPermit,
                     Settings.Aggregator.ProtocolLogPath, log, true);
 
-                log.DebugFormat($"Login client (" +
-                    $"Tenant: {mailbox.TenantId}, " +
-                    $"MailboxId: {mailbox.MailBoxId} " +
-                    $"Address: '{mailbox.EMail}')");
+                log.Debug($"Login client (Tenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: '{mailbox.EMail}')");
 
                 if (!mailbox.Imap)
                 {
@@ -484,27 +481,27 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
             catch (ImapProtocolException protocolEx)
             {
-                log.ErrorFormat($"LOGIN IMAP [IMAP PROTOCOL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"\r\n{protocolEx}");
+                log.Error($"LOGIN IMAP [IMAP PROTOCOL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"\r\n{protocolEx}");
 
                 connectError = true;
                 stopClient = true;
             }
             catch (OperationCanceledException ocEx)
             {
-                log.InfoFormat($"LOGIN IMAP [OPERATION CANCEL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"{ocEx}");
+                log.Info($"LOGIN IMAP [OPERATION CANCEL]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\"{ocEx}");
 
                 stopClient = true;
             }
             catch (AuthenticationException authEx)
             {
-                log.ErrorFormat($"LOGIN IMAP [AUTHENTICATION]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{authEx}");
+                log.Error($"LOGIN IMAP [AUTHENTICATION]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{authEx}");
 
                 connectError = true;
                 stopClient = true;
             }
             catch (WebException webEx)
             {
-                log.ErrorFormat($"LOGIN IMAP [WEB]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{webEx}");
+                log.Error($"LOGIN IMAP [WEB]\r\nTenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: \"{mailbox.EMail}\")\r\n{webEx}");
 
                 connectError = true;
                 stopClient = true;
@@ -619,7 +616,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
             catch (Exception ex)
             {
-                log.ErrorFormat(
+                log.Error(
                     $"CloseMailClient(Tenant = {mailbox.TenantId}, MailboxId = {mailbox.MailBoxId}, Address = \"{mailbox.EMail}\")\r\nException:{ex.Message}\r\n");
             }
         }
@@ -670,13 +667,13 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 var uidl = mailbox.Imap ? $"{boxInfo.Uid}-{(int)boxInfo.Folder.Folder}" : boxInfo.Uid;
 
-                log.InfoFormat($"Found message (UIDL: '{uidl}', MailboxId = {mailbox.MailBoxId}, Address = {mailbox.EMail})");
+                log.Info($"Found message (UIDL: '{uidl}', MailboxId = {mailbox.MailBoxId}, Address = {mailbox.EMail})");
 
                 if (!SaveAndOptional(mailbox, boxInfo, uidl, log)) return;
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"ClientOnGetMessage() -> \r\nException:{ex}\r\n");
+                Log.Error($"ClientOnGetMessage() -> \r\nException:{ex}\r\n");
                 failed = true;
             }
             finally
@@ -761,7 +758,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
             catch (Exception exGetMbInfo)
             {
-                log.ErrorFormat(
+                log.Error(
                     $"GetMailBoxState(Tenant = {mailbox.TenantId}, " +
                     $"MailboxId = {mailbox.MailBoxId}, " +
                     $"Address = '{mailbox.EMail}') " +
@@ -877,7 +874,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                 {
                     try
                     {
-                        log.DebugFormat($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
+                        log.Debug($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
 
                         tagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
                     }
@@ -930,7 +927,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
             catch (Exception ex)
             {
-                log.ErrorFormat($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
+                log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
             }
         }
 
@@ -955,14 +952,14 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                     var res = storage.Save(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).ToString();
 
-                    log.InfoFormat($"StoreMailEml() Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
+                    log.Info($"StoreMailEml() Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
 
                     return res;
                 }
             }
             catch (Exception ex)
             {
-                log.ErrorFormat($"StoreMailEml Exception: {ex}");
+                log.Error($"StoreMailEml Exception: {ex}");
             }
 
             return string.Empty;
@@ -973,7 +970,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             try
             {
                 //make dispose in TaskData
-                Log.DebugFormat($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
+                Log.Debug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
 
                 if (!tasks.Remove(taskData))
                     Log.Error("Task not exists in tasks array.");
@@ -986,7 +983,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
+                Log.Error($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
             }
         }
 

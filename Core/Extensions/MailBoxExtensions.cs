@@ -24,9 +24,6 @@
 */
 
 
-using System;
-using System.Security.Authentication;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Core.Tenants;
@@ -35,6 +32,9 @@ using ASC.Data.Storage;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
+
+using System;
+using System.Security.Authentication;
 
 namespace ASC.Mail.Extensions
 {
@@ -152,15 +152,13 @@ namespace ASC.Mail.Extensions
                 var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
                 var usedQuota = quotaController.QuotaCurrentGet();
                 quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
-                log.DebugFormat("IsTenantQuotaEnded: {0} Tenant = {1}. Tenant quota = {2}Mb ({3}), used quota = {4}Mb ({5}) ",
-                    quotaEnded,
-                    mailbox.TenantId,
-                    MailUtil.BytesToMegabytes(quota.MaxTotalSize), quota.MaxTotalSize,
-                    MailUtil.BytesToMegabytes(usedQuota), usedQuota);
+                log.Debug($"IsTenantQuotaEnded: {quotaEnded} Tenant = {mailbox.TenantId}. " +
+                    $"Tenant quota = {MailUtil.BytesToMegabytes(quota.MaxTotalSize)}Mb ({quota.MaxTotalSize}), " +
+                    $"used quota = {MailUtil.BytesToMegabytes(usedQuota)}Mb ({usedQuota}) ");
             }
             catch (Exception ex)
             {
-                log.ErrorFormat($"IsQuotaExhausted(Tenant={mailbox.TenantId}) Exception: {ex.Message} StackTrace: \n{ex.StackTrace}");
+                log.Error($"IsQuotaExhausted(Tenant={mailbox.TenantId}) Exception: {ex.Message} StackTrace: \n{ex.StackTrace}");
             }
 
             return quotaEnded;
@@ -190,7 +188,7 @@ namespace ASC.Mail.Extensions
                 if (ex is ApiHelperException)
                 {
                     var apiEx = ex as ApiHelperException;
-                    log.ErrorFormat($"Get portal settings failed (Tenant: {mailbox.TenantId}, User: {mailbox.UserId}, Mailbox: {mailbox.MailBoxId}). Returned status code: {apiEx.StatusCode}");
+                    log.Error($"Get portal settings failed (Tenant: {mailbox.TenantId}, User: {mailbox.UserId}, Mailbox: {mailbox.MailBoxId}). Returned status code: {apiEx.StatusCode}");
                 }
                 else
                 {

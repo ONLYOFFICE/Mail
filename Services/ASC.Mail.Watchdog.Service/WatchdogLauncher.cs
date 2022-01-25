@@ -1,12 +1,12 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Common.Logging;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Watchdog.Service
 {
@@ -71,7 +71,7 @@ namespace ASC.Mail.Watchdog.Service
             catch (Exception e)
             {
 
-                Log.ErrorFormat($"Failed to terminate the service correctly. The details:\r\n{e}\r\n");
+                Log.Error($"Failed to terminate the service correctly. The details:\r\n{e}\r\n");
             }
 
             Log.Info("Service stopped.\r\n");
