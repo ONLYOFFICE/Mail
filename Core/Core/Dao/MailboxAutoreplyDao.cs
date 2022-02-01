@@ -24,16 +24,18 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -51,6 +53,7 @@ namespace ASC.Mail.Core.Dao
         public MailboxAutoreply GetAutoreply(Mailbox mailbox)
         {
             var autoreply = MailDbContext.MailMailboxAutoreply
+                .AsNoTracking()
                 .Where(a => a.Tenant == mailbox.Tenant && a.IdMailbox == mailbox.Id)
                 .Select(ToAutoreply)
                 .DefaultIfEmpty(new MailboxAutoreply
@@ -73,6 +76,7 @@ namespace ASC.Mail.Core.Dao
         public List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds)
         {
             var autoreplies = MailDbContext.MailMailboxAutoreply
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant && mailboxIds.Contains(a.IdMailbox))
                 .Select(ToAutoreply)
                 .ToList();

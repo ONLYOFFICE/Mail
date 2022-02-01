@@ -24,9 +24,6 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -36,6 +33,9 @@ using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 
 using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -53,10 +53,11 @@ namespace ASC.Mail.Core.Dao
         public Attachment GetAttachment(IAttachmentExp exp)
         {
             var attachemnt = MailDbContext.MailAttachment
-                    .Include(a => a.Mail)
-                    .Where(exp.GetExpression())
-                    .Select(ToAttachment)
-                    .FirstOrDefault();
+                .AsNoTracking()
+                .Include(a => a.Mail)
+                .Where(exp.GetExpression())
+                .Select(ToAttachment)
+                .FirstOrDefault();
 
             return attachemnt;
         }
@@ -64,10 +65,11 @@ namespace ASC.Mail.Core.Dao
         public List<Attachment> GetAttachments(IAttachmentsExp exp)
         {
             var attachemnts = MailDbContext.MailAttachment
-                    .Include(a => a.Mail)
-                    .Where(exp.GetExpression())
-                    .Select(ToAttachment)
-                    .ToList();
+                .AsNoTracking()
+                .Include(a => a.Mail)
+                .Where(exp.GetExpression())
+                .Select(ToAttachment)
+                .ToList();
 
             return attachemnts;
         }
@@ -75,26 +77,31 @@ namespace ASC.Mail.Core.Dao
         public long GetAttachmentsSize(IAttachmentsExp exp)
         {
             var size = MailDbContext.MailAttachment
-                   .Where(exp.GetExpression())
-                   .Sum(a => a.Size);
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Sum(a => a.Size);
 
             return size;
         }
 
         public int GetAttachmentsMaxFileNumber(IAttachmentsExp exp)
         {
-            return MailDbContext.MailAttachment
-                   .Where(exp.GetExpression())
-                   .Select(a => a.FileNumber)
-                   .DefaultIfEmpty()
-                   .Max();
+            var number = MailDbContext.MailAttachment
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Select(a => a.FileNumber)
+                .DefaultIfEmpty()
+                .Max();
+
+            return number;
         }
 
         public int GetAttachmentsCount(IAttachmentsExp exp)
         {
             var count = MailDbContext.MailAttachment
-                   .Where(exp.GetExpression())
-                   .Count();
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Count();
 
             return count;
         }

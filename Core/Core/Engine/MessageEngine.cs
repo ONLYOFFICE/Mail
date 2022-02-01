@@ -1315,6 +1315,7 @@ namespace ASC.Mail.Core.Engine
 
             return null;
         }
+
         //TODO: Need refactoring
         public string StoreMailBody(MailBoxData mailBoxData, MailMessageData messageItem, ILog log)
         {
@@ -1363,7 +1364,7 @@ namespace ASC.Mail.Core.Engine
             }
         }
         //TODO: Need refactoring
-        public static Dictionary<int, string> GetPop3NewMessagesIDs(IMailDaoFactory MailDaoFactory, MailBoxData mailBox, Dictionary<int, string> uidls,
+        public Dictionary<int, string> GetPop3NewMessagesIDs(IMailDaoFactory MailDaoFactory, MailBoxData mailBox, Dictionary<int, string> uidls,
             int chunk)
         {
             var newMessages = new Dictionary<int, string>();

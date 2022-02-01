@@ -673,11 +673,9 @@ namespace ASC.Mail.ImapSync
 
                 if (folder.Folder != Enums.FolderType.Spam)
                 {
-                    mailFactory
-                        .CalendarEngine
+                    mailFactory.CalendarEngine
                         .UploadIcsToCalendar(mailbox, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
-                            message.CalendarEventCharset, message.CalendarEventMimeType, mailbox.EMail.Address,
-                            _mailSettings.Defines.DefaultApiSchema);
+                            message.CalendarEventCharset, message.CalendarEventMimeType);
                 }
 
                 if (_mailSettings.Defines.SaveOriginalMessage)

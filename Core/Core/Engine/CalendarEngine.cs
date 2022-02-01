@@ -24,15 +24,17 @@
 */
 
 
-using System;
-using System.IO;
-using System.Linq;
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
+
 using Microsoft.Extensions.Options;
+
+using System;
+using System.IO;
+using System.Linq;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -56,7 +58,7 @@ namespace ASC.Mail.Core.Engine
         }
 
         public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
-            string calendarCharset, string calendarContentType, string calendarEventReceiveEmail, string httpContextScheme)
+            string calendarCharset, string calendarContentType)
         {
             try
             {
@@ -80,7 +82,7 @@ namespace ASC.Mail.Core.Engine
                         .ToLowerInvariant()
                         .Replace("mailto:", "");
 
-                    if (orgEmail.Equals(calendarEventReceiveEmail))
+                    if (orgEmail.Equals(mailBoxData.EMail.Address))
                         alienEvent = false;
                 }
                 else
@@ -95,7 +97,7 @@ namespace ASC.Mail.Core.Engine
                             a.Value.ToString()
                                 .ToLowerInvariant()
                                 .Replace("mailto:", "")
-                                .Equals(calendarEventReceiveEmail)))
+                                .Equals(mailBoxData.EMail.Address)))
                     {
                         alienEvent = false;
                     }
@@ -125,7 +127,7 @@ namespace ASC.Mail.Core.Engine
                           "calendarEventReceiveEmail: '{5}'\r\n" +
                           "Exception:\r\n{6}\r\n",
                     calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
-                    calendarEventReceiveEmail, ex.ToString());
+                    mailBoxData.EMail.Address, ex.ToString());
             }
         }
     }

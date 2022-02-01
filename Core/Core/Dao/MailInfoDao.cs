@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -38,6 +32,14 @@ using ASC.Mail.Core.Dao.Expressions.Message;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -55,6 +57,7 @@ namespace ASC.Mail.Core.Dao
         public List<MailInfo> GetMailInfoList(IMessagesExp exp, bool skipSelectTags = false)
         {
             var query = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression());
 
             if (exp.TagIds != null && exp.TagIds.Any())
@@ -118,6 +121,7 @@ namespace ASC.Mail.Core.Dao
         public long GetMailInfoTotal(IMessagesExp exp)
         {
             var query = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression());
 
             if (exp.TagIds != null && exp.TagIds.Any())
@@ -144,6 +148,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetMailCount(IMessagesExp exp)
         {
             var dictionary = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .GroupBy(m => m.Folder)
                 .Select(g => new
@@ -159,6 +164,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetMailUserFolderCount(List<int> userFolderIds, bool? unread = null)
         {
             var query = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Join(MailDbContext.MailMail, x => (int)x.IdMail, m => m.Id,
                 (x, m) => new
                 {
@@ -183,6 +189,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetMailUserFolderCount(bool? unread = null)
         {
             var query = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Join(MailDbContext.MailMail, x => (int)x.IdMail, m => m.Id,
                 (x, m) => new
                 {
@@ -209,10 +216,12 @@ namespace ASC.Mail.Core.Dao
             //TODO: fix: make one query
 
             var max = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Max(m => m.Id);
 
             var min = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Min(m => m.Id);
 
@@ -232,6 +241,7 @@ namespace ASC.Mail.Core.Dao
             var lambda = Expression.Lambda<Func<MailMail, T>>(body, x);
 
             var max = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Select(lambda.Compile())
                 .DefaultIfEmpty<T>()

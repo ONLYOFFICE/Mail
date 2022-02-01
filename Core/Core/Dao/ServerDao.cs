@@ -24,14 +24,16 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -52,6 +54,7 @@ namespace ASC.Mail.Core.Dao
         public Core.Entities.Server Get(int tenant)
         {
             var server = MailDbContext.MailServerServer
+                .AsNoTracking()
                 .Join(MailDbContext.MailServerServerXTenant, s => s.Id, x => x.IdServer,
                     (s, x) => new
                     {
@@ -67,7 +70,10 @@ namespace ASC.Mail.Core.Dao
 
         public List<Core.Entities.Server> GetList()
         {
-            var list = MailDbContext.MailServerServer.Select(ToServer).ToList();
+            var list = MailDbContext.MailServerServer
+                .AsNoTracking()
+                .Select(ToServer)
+                .ToList();
 
             return list;
         }

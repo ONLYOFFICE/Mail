@@ -24,14 +24,16 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -49,6 +51,7 @@ namespace ASC.Mail.Core.Dao
         public List<int> GetTagIds(string email)
         {
             var tagIds = MailDbContext.MailTagAddresses
+                .AsNoTracking()
                 .Join(MailDbContext.MailTag, ta => (int)ta.IdTag, t => t.Id,
                 (ta, t) => new
                 {
@@ -66,6 +69,7 @@ namespace ASC.Mail.Core.Dao
         public List<string> GetTagAddresses(int tagId)
         {
             var list = MailDbContext.MailTagAddresses
+                .AsNoTracking()
                 .Where(a => a.IdTag == tagId && a.Tenant == Tenant)
                 .Select(a => a.Address)
                 .ToList();

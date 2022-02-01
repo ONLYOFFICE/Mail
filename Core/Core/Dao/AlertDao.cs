@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -35,6 +31,12 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -52,6 +54,7 @@ namespace ASC.Mail.Core.Dao
         public Alert GetAlert(long id)
         {
             var alert = MailDbContext.MailAlerts
+                .AsNoTracking()
                 .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id)
                 .Select(r => new Alert
                 {
@@ -67,6 +70,7 @@ namespace ASC.Mail.Core.Dao
         public List<Alert> GetAlerts(int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty)
         {
             var alerts = MailDbContext.MailAlerts
+                .AsNoTracking()
                 .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
                 .Select(r => new Alert
                 {

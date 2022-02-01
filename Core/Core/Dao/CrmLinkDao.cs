@@ -24,15 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Models;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -50,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public List<CrmContactData> GetLinkedCrmContactEntities(string chainId, int mailboxId)
         {
             var list = MailDbContext.MailChainXCrmEntity
+                .AsNoTracking()
                 .Where(x => x.IdMailbox == mailboxId && x.IdTenant == Tenant && x.IdChain == chainId)
                 .Select(x => new CrmContactData
                 {

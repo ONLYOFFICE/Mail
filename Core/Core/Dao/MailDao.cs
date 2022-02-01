@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -39,6 +33,14 @@ using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Enums;
 using ASC.Mail.Utils;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -108,7 +110,9 @@ namespace ASC.Mail.Core.Dao
 
         public Core.Entities.Mail GetMail(IMessageExp exp)
         {
-            var mail = MailDbContext.MailMail.Where(exp.GetExpression())
+            var mail = MailDbContext.MailMail
+                .AsNoTracking()
+                .Where(exp.GetExpression())
                 .Select(ToMail)
                 .SingleOrDefault();
 
@@ -117,7 +121,9 @@ namespace ASC.Mail.Core.Dao
 
         public Core.Entities.Mail GetNextMail(IMessageExp exp)
         {
-            var mail = MailDbContext.MailMail.Where(exp.GetExpression())
+            var mail = MailDbContext.MailMail
+                .AsNoTracking()
+                .Where(exp.GetExpression())
                 .OrderBy(m => m.Id)
                 .Take(1)
                 .Select(ToMail)
@@ -129,6 +135,7 @@ namespace ASC.Mail.Core.Dao
         public List<string> GetExistingUidls(int mailboxId, List<string> uidlList)
         {
             var existingUidls = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(m => m.MailboxId == mailboxId && uidlList.Contains(m.Uidl))
                 .Select(m => m.Uidl)
                 .ToList();

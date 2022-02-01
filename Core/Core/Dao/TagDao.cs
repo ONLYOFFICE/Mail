@@ -32,6 +32,8 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 
+using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -56,6 +58,7 @@ namespace ASC.Mail.Core.Dao
                 return GetCrmTag(id);
 
             var tag = MailDbContext.MailTag
+                .AsNoTracking()
                 .Where(r => r.TenantId == Tenant && r.IdUser == UserId && r.Id == id)
                 .Select(r => new Tag
                 {
@@ -78,6 +81,7 @@ namespace ASC.Mail.Core.Dao
             var crmTagId = id < 0 ? -id : id;
 
             var crmTag = MailDbContext.CrmTag
+                .AsNoTracking()
                 .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact && r.Id == crmTagId)
                 .Select(r => new Tag
                 {
@@ -97,6 +101,7 @@ namespace ASC.Mail.Core.Dao
         public Tag GetTag(string name)
         {
             var tag = MailDbContext.MailTag
+                .AsNoTracking()
                 .Where(r => r.TenantId == Tenant && r.IdUser == UserId && r.Name == name)
                 .Select(r => new Tag
                 {
@@ -117,6 +122,7 @@ namespace ASC.Mail.Core.Dao
         public List<Tag> GetTags()
         {
             var tags = MailDbContext.MailTag
+                .AsNoTracking()
                 .Where(r => r.TenantId == Tenant && r.IdUser == UserId)
                 .Select(r => new Tag
                 {
@@ -136,6 +142,7 @@ namespace ASC.Mail.Core.Dao
         public List<Tag> GetCrmTags()
         {
             var crmTags = MailDbContext.CrmTag
+                .AsNoTracking()
                 .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact)
                 .Select(r => new Tag
                 {
@@ -155,6 +162,7 @@ namespace ASC.Mail.Core.Dao
         public List<CrmTag> GetCrmTags(List<int> contactIds)
         {
             var query = MailDbContext.CrmEntityTag
+                .AsNoTracking()
                 .Join(MailDbContext.CrmTag,
                     cet => cet.TagId,
                     ct => ct.Id,

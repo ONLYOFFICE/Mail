@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Threading;
@@ -44,6 +38,12 @@ using ASC.Mail.Models;
 using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Diagnostics;
+using System.Linq;
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -63,7 +63,6 @@ namespace ASC.Mail.Core.Engine
             }
         }
 
-        private DistributedTaskCacheNotify DistributedTaskCacheNotify { get; }
         private TenantManager TenantManager { get; }
         private SecurityContext SecurityContext { get; }
         private IMailDaoFactory MailDaoFactory { get; }
@@ -85,7 +84,6 @@ namespace ASC.Mail.Core.Engine
         private TempStream TempStream { get; }
 
         public OperationEngine(
-            DistributedTaskCacheNotify distributedTaskCacheNotify,
             TenantManager tenantManager,
             SecurityContext securityContext,
             IMailDaoFactory mailDaoFactory,
@@ -109,7 +107,6 @@ namespace ASC.Mail.Core.Engine
         {
             MailOperations = distributedTaskQueueOptionsManager.Get("mailOperations");
 
-            DistributedTaskCacheNotify = distributedTaskCacheNotify;
             TenantManager = tenantManager;
             SecurityContext = securityContext;
             MailDaoFactory = mailDaoFactory;

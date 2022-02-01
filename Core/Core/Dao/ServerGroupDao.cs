@@ -24,15 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -50,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public ServerGroup Get(int id)
         {
             var group = MailDbContext.MailServerMailGroup
+                .AsNoTracking()
                 .Where(g => g.IdTenant == Tenant && g.Id == id)
                 .Select(ToServerGroup)
                 .SingleOrDefault();
@@ -60,6 +63,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerGroup> GetList()
         {
             var groups = MailDbContext.MailServerMailGroup
+                .AsNoTracking()
                 .Where(g => g.IdTenant == Tenant)
                 .Select(ToServerGroup)
                 .ToList();
@@ -70,6 +74,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerGroup> GetList(int domainId)
         {
             var groups = MailDbContext.MailServerMailGroup
+                .AsNoTracking()
                 .Join(MailDbContext.MailServerAddress, g => g.IdAddress, a => a.Id,
                     (g, a) => new
                     {

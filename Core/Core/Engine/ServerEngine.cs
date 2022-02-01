@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Security;
-
 using ASC.Common;
 using ASC.Common.Utils;
 using ASC.Core;
@@ -42,6 +36,14 @@ using ASC.Mail.Server.Utils;
 using ASC.Mail.Utils;
 using ASC.Web.Core;
 using ASC.Web.Core.Users;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
+using System.Security;
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -91,6 +93,7 @@ namespace ASC.Mail.Core.Engine
             var MailDbContext = MailDaoFactory.GetContext();
 
             var list = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
                 (a, d) => new
                 {
@@ -109,6 +112,7 @@ namespace ASC.Mail.Core.Engine
             var MailDbContext = MailDaoFactory.GetContext();
 
             var list = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
                 (a, d) => new
                 {

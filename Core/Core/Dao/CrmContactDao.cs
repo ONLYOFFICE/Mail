@@ -33,6 +33,7 @@ using ASC.CRM.Core.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Enums;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 using System;
@@ -68,20 +69,22 @@ namespace ASC.Mail.Core.Dao
                 return ids;
             try
             {
-                var contactList = MailDbContext.CrmContact.Join(MailDbContext.CrmContactInfo, c => c.Id, ci => ci.ContactId,
-                (c, ci) => new
-                {
-                    Contact = c,
-                    Info = ci
-                })
-                .Where(o => o.Contact.TenantId == Tenant && o.Info.TenantId == Tenant && o.Info.Type == (int)ContactInfoType.Email && o.Info.Data == email)
-                .Select(o => new
-                {
-                    o.Contact.Id,
-                    Company = o.Contact.IsCompany,
-                    ShareType = (ShareType)o.Contact.IsShared
-                })
-                .ToList();
+                var contactList = MailDbContext.CrmContact
+                    .AsNoTracking()
+                    .Join(MailDbContext.CrmContactInfo, c => c.Id, ci => ci.ContactId,
+                    (c, ci) => new
+                    {
+                        Contact = c,
+                        Info = ci
+                    })
+                    .Where(o => o.Contact.TenantId == Tenant && o.Info.TenantId == Tenant && o.Info.Type == (int)ContactInfoType.Email && o.Info.Data == email)
+                    .Select(o => new
+                    {
+                        o.Contact.Id,
+                        Company = o.Contact.IsCompany,
+                        ShareType = (ShareType)o.Contact.IsShared
+                    })
+                    .ToList();
 
                 if (!contactList.Any())
                     return ids;

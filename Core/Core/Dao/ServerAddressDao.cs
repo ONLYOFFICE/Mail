@@ -24,16 +24,18 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -51,6 +53,7 @@ namespace ASC.Mail.Core.Dao
         public ServerAddress Get(int id)
         {
             var address = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant && a.Id == id)
                 .Select(ToServerAddress)
                 .SingleOrDefault();
@@ -61,6 +64,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerAddress> GetList(List<int> ids = null)
         {
             var query = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant);
 
             if (ids != null && ids.Any())
@@ -78,6 +82,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerAddress> GetList(int mailboxId)
         {
             var list = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant && a.IdMailbox == mailboxId)
                 .Select(ToServerAddress)
                 .ToList();
@@ -88,6 +93,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerAddress> GetGroupAddresses(int groupId)
         {
             var list = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant)
                .Join(MailDbContext.MailServerMailGroupXMailServerAddress, a => a.Id, g => g.IdAddress,
                 (a, g) => new
@@ -106,6 +112,7 @@ namespace ASC.Mail.Core.Dao
         public List<ServerAddress> GetDomainAddresses(int domainId)
         {
             var list = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Where(a => a.Tenant == Tenant && a.IdDomain == domainId)
                 .Select(ToServerAddress)
                 .ToList();
@@ -223,6 +230,7 @@ namespace ASC.Mail.Core.Dao
             var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
             var exists = MailDbContext.MailServerAddress
+                .AsNoTracking()
                 .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
                 (a, d) => new
                 {

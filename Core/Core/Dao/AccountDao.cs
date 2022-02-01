@@ -31,6 +31,8 @@ using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Models;
 
+using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -92,7 +94,7 @@ namespace ASC.Mail.Core.Dao
                                      reply.TurnOnToDate, reply.FromDate, reply.ToDate, reply.Subject, reply.Html)
                                  : new MailAutoreplyData((int)mb.Id, mb.Tenant, false, false,
                                      false, DateTime.MinValue, DateTime.MinValue, string.Empty, string.Empty)
-                            }).ToList();
+                            }).AsNoTracking().ToList();
 
             return accounts;
         }

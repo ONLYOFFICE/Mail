@@ -31,6 +31,8 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Enums;
 
+using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -92,6 +94,7 @@ namespace ASC.Mail.Core.Dao
         public int CalculateTagCount(int id)
         {
             var count = MailDbContext.MailTagMail
+                .AsNoTracking()
                 .Where(t => t.Tenant == Tenant && t.IdUser == UserId && t.IdTag == id)
                 .Count();
 
@@ -101,6 +104,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, List<int>> GetMailTagsDictionary(List<int> mailIds)
         {
             var dictionary = MailDbContext.MailTagMail
+                .AsNoTracking()
                 .Where(t => t.Tenant == Tenant && t.IdUser == UserId && mailIds.Contains(t.IdMail))
                 .Select(t => new { t.IdMail, t.IdTag })
                 .GroupBy(t => t.IdMail)
@@ -112,6 +116,7 @@ namespace ASC.Mail.Core.Dao
         public List<int> GetTagIds(List<int> mailIds)
         {
             var tagIds = MailDbContext.MailTagMail
+                .AsNoTracking()
                 .Where(t => t.Tenant == Tenant && t.IdUser == UserId && mailIds.Contains(t.IdMail))
                 .Select(t => t.IdTag)
                 .Distinct()
@@ -123,6 +128,7 @@ namespace ASC.Mail.Core.Dao
         public List<int> GetTagIds(int mailboxId)
         {
             var tagIds = MailDbContext.MailTagMail
+                .AsNoTracking()
                 .Join(MailDbContext.MailMail, tm => tm.IdMail, m => m.Id,
                 (tm, m) => new
                 {
@@ -139,7 +145,9 @@ namespace ASC.Mail.Core.Dao
 
         public string GetChainTags(string chainId, FolderType folder, int mailboxId)
         {
-            var tags = MailDbContext.MailTagMail.Join(MailDbContext.MailMail, t => t.IdMail, m => m.Id,
+            var tags = MailDbContext.MailTagMail
+                .AsNoTracking()
+                .Join(MailDbContext.MailMail, t => t.IdMail, m => m.Id,
                 (t, m) => new
                 {
                     Tag = t,

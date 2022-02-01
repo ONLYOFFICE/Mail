@@ -92,8 +92,9 @@ namespace ASC.Mail.Core.Dao
         public List<Mailbox> GetMailBoxes(IMailboxesExp exp)
         {
             var query = MailDbContext.MailMailbox
-                 .Where(exp.GetExpression())
-                 .Select(ToMailbox);
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Select(ToMailbox);
 
             if (!string.IsNullOrEmpty(exp.OrderBy) && exp.OrderAsc.HasValue)
             {
@@ -117,6 +118,7 @@ namespace ASC.Mail.Core.Dao
         public List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp)
         {
             var query = MailDbContext.MailMailbox
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Select(ToMailbox);
 
@@ -143,11 +145,12 @@ namespace ASC.Mail.Core.Dao
         public Mailbox GetNextMailBox(IMailboxExp exp)
         {
             var mailbox = MailDbContext.MailMailbox
-                 .Where(exp.GetExpression())
-                 .OrderBy(mb => mb.Id)
-                 .Select(ToMailbox)
-                 .Take(1)
-                 .SingleOrDefault();
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .OrderBy(mb => mb.Id)
+                .Select(ToMailbox)
+                .Take(1)
+                .SingleOrDefault();
 
             return mailbox;
         }
@@ -155,10 +158,11 @@ namespace ASC.Mail.Core.Dao
         public Tuple<int, int> GetRangeMailboxes(IMailboxExp exp)
         {
             var mbIds = MailDbContext.MailMailbox
-                 .Where(exp.GetExpression())
-                 .OrderBy(mb => mb.Id)
-                 .Select(mb => (int)mb.Id)
-                 .ToList();
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .OrderBy(mb => mb.Id)
+                .Select(mb => (int)mb.Id)
+                .ToList();
 
             var exists = mbIds.Any();
 
@@ -173,6 +177,7 @@ namespace ASC.Mail.Core.Dao
         public List<Tuple<int, string>> GetMailUsers(IMailboxExp exp)
         {
             var list = MailDbContext.MailMailbox
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Select(mb => new Tuple<int, string>(mb.Tenant, mb.IdUser))
                 .ToList();
@@ -434,8 +439,10 @@ namespace ASC.Mail.Core.Dao
         public bool CanAccessTo(IMailboxExp exp)
         {
             var foundIds = MailDbContext.MailMailbox
-               .Where(exp.GetExpression())
-               .Select(mb => mb.Id).ToList();
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Select(mb => mb.Id)
+                .ToList();
 
             return foundIds.Any();
         }
@@ -443,9 +450,10 @@ namespace ASC.Mail.Core.Dao
         public MailboxStatus GetMailBoxStatus(IMailboxExp exp)
         {
             var status = MailDbContext.MailMailbox
-               .Where(exp.GetExpression())
-               .Select(ToMailboxStatus)
-               .FirstOrDefault();
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .Select(ToMailboxStatus)
+                .FirstOrDefault();
 
             return status;
         }

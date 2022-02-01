@@ -24,8 +24,6 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
@@ -33,6 +31,11 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Expressions.UserFolder;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -50,6 +53,7 @@ namespace ASC.Mail.Core.Dao
         public UserFolder Get(int id)
         {
             var userFolder = MailDbContext.MailUserFolder
+                .AsNoTracking()
                 .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Id == id)
                 .Select(ToUserFolder)
                 .SingleOrDefault();
@@ -60,6 +64,7 @@ namespace ASC.Mail.Core.Dao
         public UserFolder GetByMail(uint mailId)
         {
             var folderId = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Where(ufxm => ufxm.IdMail == mailId)
                 .Select(ufxm => ufxm.IdFolder)
                 .Distinct()
@@ -79,6 +84,7 @@ namespace ASC.Mail.Core.Dao
         public List<UserFolder> GetList(IUserFoldersExp exp)
         {
             var query = MailDbContext.MailUserFolder
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Select(ToUserFolder);
 
@@ -118,6 +124,7 @@ namespace ASC.Mail.Core.Dao
         public UserFolder GetRootFolder(int folderId)
         {
             var parentId = MailDbContext.MailUserFolderTree
+                .AsNoTracking()
                 .Where(t => t.FolderId == folderId)
                 .OrderByDescending(t => t.Level)
                 .Select(t => t.ParentId)
@@ -138,6 +145,7 @@ namespace ASC.Mail.Core.Dao
         public UserFolder GetRootFolderByMailId(int mailId)
         {
             var folderId = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Where(ufxm => ufxm.IdMail == mailId)
                 .Select(ufxm => ufxm.IdFolder)
                 .Distinct()
@@ -152,6 +160,7 @@ namespace ASC.Mail.Core.Dao
         public List<UserFolder> GetParentFolders(int folderId)
         {
             var list = MailDbContext.MailUserFolder
+                .AsNoTracking()
                 .Join(MailDbContext.MailUserFolderTree, uf => uf.Id, t => t.ParentId,
                 (uf, t) => new
                 {

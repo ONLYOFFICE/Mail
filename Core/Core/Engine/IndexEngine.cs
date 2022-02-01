@@ -24,14 +24,6 @@
 */
 
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -45,15 +37,21 @@ using ASC.Mail.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Text;
+
 namespace ASC.Mail.Core.Engine
 {
     [Scope]
     public class IndexEngine
     {
         private FactoryIndexerMailMail FactoryIndexerMailMail { get; }
-        private FactoryIndexerMailContact FactoryIndexerMailContact { get; }
         private FactoryIndexer FactoryIndexerCommon { get; }
-        private FactoryIndexer Indexer { get; }
         private IServiceProvider ServiceProvider { get; }
         public Lazy<MailDbContext> LazyMailDbContext { get; }
         private IMailDaoFactory MailDaoFactory { get; }
@@ -61,7 +59,6 @@ namespace ASC.Mail.Core.Engine
 
         public IndexEngine(
             FactoryIndexerMailMail factoryIndexerMailMail,
-            FactoryIndexerMailContact factoryIndexerMailContact,
             FactoryIndexer factoryIndexerCommon,
             IServiceProvider serviceProvider,
             DbContextManager<MailDbContext> dbContext,
@@ -69,7 +66,6 @@ namespace ASC.Mail.Core.Engine
             IOptionsMonitor<ILog> option)
         {
             FactoryIndexerMailMail = factoryIndexerMailMail;
-            FactoryIndexerMailContact = factoryIndexerMailContact;
             FactoryIndexerCommon = factoryIndexerCommon;
             ServiceProvider = serviceProvider;
             LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));

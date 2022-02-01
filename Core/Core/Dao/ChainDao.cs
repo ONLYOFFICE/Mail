@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -38,6 +33,13 @@ using ASC.Mail.Core.Dao.Expressions.Conversation;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -54,14 +56,15 @@ namespace ASC.Mail.Core.Dao
 
         public List<Chain> GetChains(IConversationsExp exp, ILog log = null)
         {
-            var dbChains = MailDbContext.MailChain.Where(exp.GetExpression());
+            var dbChains = MailDbContext.MailChain
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .ToList();
 
             if (log != null)
                 log.Debug($"ChainDao -> Get chains returned {dbChains.Count()} chains.");
 
-            var ch = dbChains.ToList();
-
-            var chains = ch.Select(ToChain).ToList();
+            var chains = dbChains.Select(ToChain).ToList();
 
             return chains;
         }
@@ -69,14 +72,15 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetChainCount(IConversationsExp exp)
         {
             var dictionary = MailDbContext.MailChain
-                    .Where(exp.GetExpression())
-                    .GroupBy(c => c.Folder, (folderId, c) =>
-                    new
-                    {
-                        folder = folderId,
-                        count = c.Count()
-                    })
-                    .ToDictionary(o => o.folder, o => o.count);
+                .AsNoTracking()
+                .Where(exp.GetExpression())
+                .GroupBy(c => c.Folder, (folderId, c) =>
+                new
+                {
+                    folder = folderId,
+                    count = c.Count()
+                })
+                .ToDictionary(o => o.folder, o => o.count);
 
             return dictionary;
         }
@@ -84,6 +88,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetChainUserFolderCount(bool? unread = null)
         {
             var query = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Join(MailDbContext.MailMail, x => x.IdMail, m => m.Id,
                 (x, m) => new
                 {
@@ -117,6 +122,7 @@ namespace ASC.Mail.Core.Dao
         public Dictionary<int, int> GetChainUserFolderCount(List<int> userFolderIds, bool? unread = null)
         {
             var query = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Join(MailDbContext.MailMail, x => x.IdMail, m => m.Id,
                 (x, m) => new
                 {

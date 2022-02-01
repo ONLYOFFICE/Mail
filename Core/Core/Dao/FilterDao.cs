@@ -30,6 +30,9 @@ using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,6 +53,7 @@ namespace ASC.Mail.Core.Dao
         public List<Filter> GetList()
         {
             var filters = MailDbContext.MailFilter
+                .AsNoTracking()
                 .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
                 .Select(ToFilter)
                 .ToList();
@@ -60,6 +64,7 @@ namespace ASC.Mail.Core.Dao
         public Filter Get(int id)
         {
             var filter = MailDbContext.MailFilter
+                .AsNoTracking()
                 .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
                 .Select(ToFilter)
                 .SingleOrDefault();
@@ -71,7 +76,8 @@ namespace ASC.Mail.Core.Dao
         {
             var now = DateTime.UtcNow;
 
-            var mailFilter = new MailFilter { 
+            var mailFilter = new MailFilter
+            {
                 Id = filter.Id,
                 Tenant = filter.Tenant,
                 IdUser = filter.User,

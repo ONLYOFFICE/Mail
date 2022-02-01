@@ -33,6 +33,10 @@ namespace ASC.Mail.Aggregator.Service.Queue
         private IServiceProvider ServiceProvider { get; }
         private CancellationTokenSource CancellationTokenSource { get; }
 
+        private TenantManager _tenantManager;
+        private FolderEngine _folderEngine;
+        private UserManager _userManager;
+
         public SignalrWorker(
             IOptionsMonitor<ILog> optionsMonitor,
             IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
@@ -56,6 +60,12 @@ namespace ASC.Mail.Aggregator.Service.Queue
 
         private void ProcessQueue()
         {
+            using var scope = ServiceProvider.CreateScope();
+
+            _tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+            _folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
+            _userManager = scope.ServiceProvider.GetService<UserManager>();
+
             while (!_workerTerminateSignal)
             {
                 if (!HasQueuedMailbox)
@@ -156,28 +166,21 @@ namespace ASC.Mail.Aggregator.Service.Queue
         {
             try
             {
-                using var scope = ServiceProvider.CreateScope();
-
-                var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
-                var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-                var userManager = scope.ServiceProvider.GetService<UserManager>();
-
                 Log.Debug($"SignalrWorker -> SendUnreadUser(). Try set tenant |{tenant}| for user |{userId}|...");
 
-                tenantManager.SetCurrentTenant(tenant);
+                _tenantManager.SetCurrentTenant(tenant);
 
-                Log.Debug($"SignalrWorker -> SendUnreadUser(). Now current tennant = {tenantManager.GetCurrentTenant().TenantId}");
+                Log.Debug($"SignalrWorker -> SendUnreadUser(). Now current tennant = {_tenantManager.GetCurrentTenant().TenantId}");
 
-                var mailFolderInfos = folderEngine.GetFolders(userId);
+                var mailFolderInfos = _folderEngine.GetFolders(userId);
                 var count = (from mailFolderInfo in mailFolderInfos
                              where mailFolderInfo.id == FolderType.Inbox
                              select mailFolderInfo.unreadMessages)
                     .FirstOrDefault();
 
-                var userInfo = userManager.GetUsers(Guid.Parse(userId));
+                var userInfo = _userManager.GetUsers(Guid.Parse(userId));
                 if (userInfo.ID != Constants.LostUser.ID)
                 {
-                    // sendMailsCount
                     SignalrServiceClient.SendUnreadUser(tenant, userId, count);
                 }
             }

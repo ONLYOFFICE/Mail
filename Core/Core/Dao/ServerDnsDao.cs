@@ -24,15 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -52,6 +54,7 @@ namespace ASC.Mail.Core.Dao
             var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
             var dns = MailDbContext.MailServerDns
+                .AsNoTracking()
                 .Where(d => tenants.Contains(d.Tenant) && d.IdDomain == domainId)
                 .Select(ToServerDns)
                 .SingleOrDefault();
@@ -62,9 +65,10 @@ namespace ASC.Mail.Core.Dao
         public ServerDns GetById(int id)
         {
             var dns = MailDbContext.MailServerDns
-               .Where(d => d.Tenant == Tenant && d.Id == id)
-               .Select(ToServerDns)
-               .SingleOrDefault();
+                .AsNoTracking()
+                .Where(d => d.Tenant == Tenant && d.Id == id)
+                .Select(ToServerDns)
+                .SingleOrDefault();
 
             return dns;
         }
@@ -72,9 +76,10 @@ namespace ASC.Mail.Core.Dao
         public ServerDns GetFree()
         {
             var dns = MailDbContext.MailServerDns
-               .Where(d => d.Tenant == Tenant && d.IdUser == UserId && d.IdDomain == DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID)
-               .Select(ToServerDns)
-               .SingleOrDefault();
+                .AsNoTracking()
+                .Where(d => d.Tenant == Tenant && d.IdUser == UserId && d.IdDomain == DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID)
+                .Select(ToServerDns)
+                .SingleOrDefault();
 
             return dns;
         }

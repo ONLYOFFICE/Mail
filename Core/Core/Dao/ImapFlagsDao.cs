@@ -24,14 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -48,7 +51,9 @@ namespace ASC.Mail.Core.Dao
 
         public List<ImapFlag> GetImapFlags()
         {
-            var list = MailDbContext.MailImapFlags.Select(ToImapFlag)
+            var list = MailDbContext.MailImapFlags
+                .AsNoTracking()
+                .Select(ToImapFlag)
                 .ToList();
 
             return list;

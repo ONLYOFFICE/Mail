@@ -32,6 +32,9 @@ using ASC.Mail.Core.Dao.Expressions.Contact;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
+
+using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -51,11 +54,13 @@ namespace ASC.Mail.Core.Dao
         public ContactCard GetContactCard(int id)
         {
             var contacts = MailDbContext.MailContacts
+                .AsNoTracking()
                 .Where(c => c.TenantId == Tenant && c.IdUser == UserId && c.Id == id)
                 .Select(ToContact)
                 .ToList();
 
             var contactInfos = MailDbContext.MailContactInfo
+                .AsNoTracking()
                 .Where(c => c.IdContact == id)
                 .Select(ToContactInfo)
                 .ToList();
@@ -69,6 +74,7 @@ namespace ASC.Mail.Core.Dao
         public List<ContactCard> GetContactCards(IContactsExp exp)
         {
             var query = MailDbContext.MailContacts
+                .AsNoTracking()
                 .Where(exp.GetExpression());
 
             if (exp.OrderAsc.HasValue)
@@ -77,7 +83,8 @@ namespace ASC.Mail.Core.Dao
                 {
                     query.OrderBy(r => r.Name);
                 }
-                else {
+                else
+                {
                     query.OrderByDescending(r => r.Name);
                 }
             }
@@ -99,7 +106,8 @@ namespace ASC.Mail.Core.Dao
             var ids = contacts.Select(c => c.Id).ToList();
 
             var contactInfos = MailDbContext.MailContactInfo
-                .Where(c => ids.Contains((int)c.IdContact))
+                .AsNoTracking()
+                .Where(c => ids.Contains(c.IdContact))
                 .Select(ToContactInfo)
                 .ToList();
 
@@ -109,6 +117,7 @@ namespace ASC.Mail.Core.Dao
         public int GetContactCardsCount(IContactsExp exp)
         {
             var count = MailDbContext.MailContacts
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Join(MailDbContext.MailContactInfo.DefaultIfEmpty(), c => c.Id, ci => ci.IdContact,
                 (c, ci) => new
@@ -141,7 +150,7 @@ namespace ASC.Mail.Core.Dao
                 ContactName = r.Name,
                 Address = r.Address,
                 Description = r.Description,
-                Type = (ContactType) r.Type,
+                Type = (ContactType)r.Type,
                 HasPhoto = r.HasPhoto
             };
 

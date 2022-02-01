@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -41,7 +35,11 @@ using ASC.Mail.Models;
 using ASC.Mail.Storage;
 using ASC.Mail.Utils;
 
-using Microsoft.Extensions.Options;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
+using System.Text;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -70,7 +68,6 @@ namespace ASC.Mail.Core.Engine
             CacheEngine cacheEngine,
             ApiHelper apiHelper,
             StorageManager storageManager,
-            IOptionsMonitor<ILog> option,
             MailSettings mailSettings)
         {
             SecurityContext = securityContext;

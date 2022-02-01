@@ -147,8 +147,6 @@ namespace ASC.Mail.Clients
                     new ProtocolLogger(protocolLogPath)
                 : new NullProtocolLogger();
 
-            if (log == null) log = new NullLog();
-
             Account = mailbox;
             ServerFolderAccessInfos = serverFolderAccessInfos;
             CertificatePermit = certificatePermit;
@@ -305,6 +303,8 @@ namespace ASC.Mail.Clients
 
         public void Dispose()
         {
+            if (IsDisposed) return;
+
             Log.Info("MailClient -> Dispose()");
 
             try
@@ -357,6 +357,9 @@ namespace ASC.Mail.Clients
                 GetMessage = null;
 
                 StopTokenSource.Dispose();
+
+                if (Log != null)
+                    Log = null;
             }
             catch (Exception ex)
             {
@@ -456,6 +459,8 @@ namespace ASC.Mail.Clients
 
         private void LoginImap(bool enableUtf8 = true)
         {
+            Log.Debug($"Try login IMAP client (Tenant: {Account.TenantId}, MailboxId: {Account.MailBoxId}, Address: '{Account.EMail}')");
+
             var secureSocketOptions = SecureSocketOptions.Auto;
             var sslProtocols = SslProtocols.None;
 
@@ -1097,6 +1102,8 @@ namespace ASC.Mail.Clients
 
         private void LoginPop3(bool enableUtf8 = true)
         {
+            Log.Debug($"Try login POP3 client (Tenant: {Account.TenantId}, MailboxId: {Account.MailBoxId}, Address: '{Account.EMail}')");
+
             var secureSocketOptions = SecureSocketOptions.Auto;
             var sslProtocols = SslProtocols.None;
 

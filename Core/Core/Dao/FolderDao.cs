@@ -32,6 +32,8 @@ using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
 
+using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -51,6 +53,7 @@ namespace ASC.Mail.Core.Dao
         public Folder GetFolder(FolderType folderType)
         {
             var folder = MailDbContext.MailFolderCounters
+                .AsNoTracking()
                 .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folderType)
                 .Select(ToFolder)
                 .SingleOrDefault();
@@ -61,6 +64,7 @@ namespace ASC.Mail.Core.Dao
         public List<Folder> GetFolders(string userId)
         {
             var folders = MailDbContext.MailFolderCounters
+                .AsNoTracking()
                 .Where(f => f.Tenant == Tenant && f.IdUser == userId)
                 .Select(ToFolder)
                 .ToList();
@@ -71,6 +75,7 @@ namespace ASC.Mail.Core.Dao
         public List<Folder> GetFolders()
         {
             var folders = MailDbContext.MailFolderCounters
+                .AsNoTracking()
                 .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
                 .Select(ToFolder)
                 .ToList();

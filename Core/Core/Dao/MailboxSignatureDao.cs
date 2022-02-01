@@ -30,7 +30,9 @@ using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
 using Microsoft.EntityFrameworkCore;
+
 using System.Collections.Generic;
 using System.Linq;
 
@@ -50,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public MailboxSignature GetSignature(int mailboxId)
         {
             var query = MailDbContext.MailMailboxSignature
+                .AsNoTracking()
                 .Join(MailDbContext.MailMailbox,
                     s => s.IdMailbox,
                     mb => (int)mb.Id,
@@ -79,6 +82,7 @@ namespace ASC.Mail.Core.Dao
         public List<MailboxSignature> GetSignatures(List<int> mailboxIds)
         {
             var query = MailDbContext.MailMailboxSignature
+                .AsNoTracking()
                 .Join(MailDbContext.MailMailbox,
                     s => s.IdMailbox,
                     mb => (int)mb.Id,

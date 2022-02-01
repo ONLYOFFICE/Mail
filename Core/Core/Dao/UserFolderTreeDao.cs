@@ -31,7 +31,9 @@ using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Expressions.UserFolder;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
 using Microsoft.EntityFrameworkCore;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,6 +54,7 @@ namespace ASC.Mail.Core.Dao
         public List<UserFolderTreeItem> Get(IUserFoldersTreeExp exp)
         {
             var list = MailDbContext.MailUserFolderTree
+                .AsNoTracking()
                 .Where(exp.GetExpression())
                 .Select(ToUserFolderTreeItem)
                 .ToList();
@@ -80,7 +83,8 @@ namespace ASC.Mail.Core.Dao
             var treeItems = MailDbContext.MailUserFolderTree
                 .AsNoTracking()
                 .Where(t => t.FolderId == parentId)
-                .Select(t => new MailUserFolderTree { 
+                .Select(t => new MailUserFolderTree
+                {
                     FolderId = folderId,
                     ParentId = t.ParentId,
                     Level = t.Level + 1

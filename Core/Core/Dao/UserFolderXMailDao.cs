@@ -24,15 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -50,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public UserFolderXMail Get(int mailId)
         {
             var result = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMail == mailId)
                 .Select(ToUserFolderXMail)
                 .SingleOrDefault();
@@ -60,6 +63,7 @@ namespace ASC.Mail.Core.Dao
         public List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null)
         {
             var query = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
 
             if (folderId.HasValue)
@@ -80,6 +84,7 @@ namespace ASC.Mail.Core.Dao
         public List<int> GetMailIds(int folderId)
         {
             var list = MailDbContext.MailUserFolderXMail
+                .AsNoTracking()
                 .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdFolder == folderId)
                 .Select(r => r.IdMail)
                 .ToList();

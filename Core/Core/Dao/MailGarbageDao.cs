@@ -24,15 +24,17 @@
 */
 
 
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Models;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -50,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public int GetMailboxAttachsCount(MailBoxData mailBoxData)
         {
             var count = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(m => m.MailboxId == mailBoxData.MailBoxId
                     && m.TenantId == mailBoxData.TenantId
                     && m.UserId == mailBoxData.UserId)
@@ -67,6 +70,7 @@ namespace ASC.Mail.Core.Dao
         public List<MailAttachGarbage> GetMailboxAttachs(MailBoxData mailBoxData, int limit)
         {
             var list = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(m => m.MailboxId == mailBoxData.MailBoxId
                     && m.TenantId == mailBoxData.TenantId
                     && m.UserId == mailBoxData.UserId)
@@ -101,6 +105,7 @@ namespace ASC.Mail.Core.Dao
         public int GetMailboxMessagesCount(MailBoxData mailBoxData)
         {
             var count = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(m => m.MailboxId == mailBoxData.MailBoxId
                     && m.TenantId == mailBoxData.TenantId
                     && m.UserId == mailBoxData.UserId)
@@ -112,6 +117,7 @@ namespace ASC.Mail.Core.Dao
         public List<MailMessageGarbage> GetMailboxMessages(MailBoxData mailBoxData, int limit)
         {
             var list = MailDbContext.MailMail
+                .AsNoTracking()
                 .Where(m => m.MailboxId == mailBoxData.MailBoxId
                     && m.TenantId == mailBoxData.TenantId
                     && m.UserId == mailBoxData.UserId)

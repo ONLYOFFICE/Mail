@@ -28,8 +28,10 @@ using ASC.Common;
 using ASC.ElasticSearch;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Enums;
-using ASC.Mail.Models;
+
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,26 +44,26 @@ namespace ASC.Mail.Core.Dao.Expressions.Contact
     {
         public ContactInfoType? InfoType { get; private set; }
         public bool? IsPrimary { get; private set; }
-        public MailDbContext MailDb { get; }
+        public MailDbContext MailDbContext { get; }
         public FactoryIndexer<MailContact> FactoryIndexer { get; }
         public FactoryIndexer FactoryIndexerCommon { get; }
         public IServiceProvider ServiceProvider { get; }
         public string SearchTerm { get; private set; }
         public int? Type { get; set; }
 
-        public FullFilterContactsExp(int tenant, string user, 
+        public FullFilterContactsExp(int tenant, string user,
             MailDbContext mailDbContext,
             FactoryIndexer<MailContact> factoryIndexer,
             FactoryIndexer factoryIndexerCommon,
             IServiceProvider serviceProvider,
-            string searchTerm = null, int? type = null, ContactInfoType? infoType = null, 
+            string searchTerm = null, int? type = null, ContactInfoType? infoType = null,
             bool? isPrimary = null, bool? orderAsc = true, int? startIndex = null,
             int? limit = null)
             : base(tenant, user, orderAsc, startIndex, limit)
         {
             InfoType = infoType;
             IsPrimary = isPrimary;
-            MailDb = mailDbContext;
+            MailDbContext = mailDbContext;
             FactoryIndexer = factoryIndexer;
             FactoryIndexerCommon = factoryIndexerCommon;
             ServiceProvider = serviceProvider;
@@ -103,9 +105,10 @@ namespace ASC.Mail.Core.Dao.Expressions.Contact
 
                 if (!foundIndex)
                 {
-                    var contactInfoQuery = MailDb.MailContactInfo
-                        .Where(o => o.TenantId == Tenant 
-                            && o.IdUser == User 
+                    var contactInfoQuery = MailDbContext.MailContactInfo
+                        .AsNoTracking()
+                        .Where(o => o.TenantId == Tenant
+                            && o.IdUser == User
                             && o.Data.Contains(SearchTerm, StringComparison.InvariantCultureIgnoreCase));
 
                     if (IsPrimary.HasValue)

@@ -24,13 +24,16 @@
 */
 
 
-using System.Linq;
 using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -48,6 +51,7 @@ namespace ASC.Mail.Core.Dao
         public MailboxProvider GetProvider(int id)
         {
             var provider = MailDbContext.MailMailboxProvider
+                .AsNoTracking()
                 .Where(d => d.Id == id)
                 .Select(ToMailboxProvider)
                 .FirstOrDefault();
@@ -58,6 +62,7 @@ namespace ASC.Mail.Core.Dao
         public MailboxProvider GetProvider(string providerName)
         {
             var provider = MailDbContext.MailMailboxProvider
+                .AsNoTracking()
                 .Where(d => d.Name == providerName)
                 .Select(ToMailboxProvider)
                 .FirstOrDefault();

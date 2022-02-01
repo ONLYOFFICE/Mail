@@ -24,14 +24,17 @@
 */
 
 
-using System.Linq;
+using ASC.Common;
 using ASC.Core;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao.Entities;
-using System.Collections.Generic;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Core.Entities;
-using ASC.Common;
+
+using Microsoft.EntityFrameworkCore;
+
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ASC.Mail.Core.Dao
 {
@@ -49,6 +52,7 @@ namespace ASC.Mail.Core.Dao
         public MailboxServer GetServer(int id)
         {
             var server = MailDbContext.MailMailboxServer
+                .AsNoTracking()
                 .Where(s => s.Id == id)
                 .Select(ToMailboxServer)
                 .FirstOrDefault();
@@ -59,9 +63,10 @@ namespace ASC.Mail.Core.Dao
         public List<MailboxServer> GetServers(int providerId, bool isUserData = false)
         {
             var servers = MailDbContext.MailMailboxServer
-               .Where(s => s.IdProvider == providerId && s.IsUserData == isUserData)
-               .Select(ToMailboxServer)
-               .ToList();
+                .AsNoTracking()
+                .Where(s => s.IdProvider == providerId && s.IsUserData == isUserData)
+                .Select(ToMailboxServer)
+                .ToList();
 
             return servers;
         }
