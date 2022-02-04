@@ -802,7 +802,7 @@ namespace ASC.Mail.Clients
                         if (messInfo.Size > maxSize)
                             throw new LimitMessageException($"Message size ({messInfo.Size}) exceeds fixed maximum message size ({maxSize}). The message will be skipped.");
                         else
-                            Log.Debug($"Try get message {uid}. Size: {messInfo.Size}, attachments: {messInfo.Attachments?.Count()}");
+                            Log.Debug($"Try get message {uid}. Size: {messInfo.Size}");
 
                         using var message = folder.GetMessageAsync(uid, CancelToken).GetAwaiter().GetResult();
 

@@ -35,14 +35,14 @@
 	<ItemGroup>
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
-		<PackageReference Include="Grpc.Tools" Version="2.27.0">
+		<PackageReference Include="Grpc.Tools" Version="2.43.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.21" />
 		<PackageReference Include="Ical.Net" Version="4.1.11" />
 		<PackageReference Include="MailKit" Version="3.1.1" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Graph.Core" Version="1.6.0" />
 		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.0" />
@@ -54,37 +54,37 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="6.0.0" />
 		<PackageReference Include="ARSoft.Tools.NetStandard.DXSdata" Version="1.0.0" />
 		<PackageReference Include="Autofac.Configuration" Version="6.0.0" />
-		<PackageReference Include="AutoMapper" Version="10.1.1" />
-		<PackageReference Include="Confluent.Kafka" Version="1.5.2.0" />
-		<PackageReference Include="Google.Protobuf" Version="3.19.1" />
+		<PackageReference Include="AutoMapper" Version="11.0.0" />
+		<PackageReference Include="Confluent.Kafka" Version="1.8.2" />
+		<PackageReference Include="Google.Protobuf" Version="3.19.4" />
 		<PackageReference Include="JWT" Version="6.1.4" />
-		<PackageReference Include="log4net" Version="2.0.11" />
-		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.0" />
+		<PackageReference Include="log4net" Version="2.0.14" />
+		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
-		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.1" />
+		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="NLog" Version="4.7.10" />
+		<PackageReference Include="NLog" Version="4.7.13" />
 		<PackageReference Include="NVelocity" Version="1.2.0" />
 		<PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
-		<PackageReference Include="AWSSDK.Core" Version="3.5.1.25" />
-		<PackageReference Include="AWSSDK.SimpleEmail" Version="3.5.0.27" />
+		<PackageReference Include="AWSSDK.Core" Version="3.7.6.3" />
+		<PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.120" />
 		<PackageReference Include="EntityFramework" Version="6.4.4" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.0" />
-		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.0" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.3" />
+		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.1" />
 		<PackageReference Include="Telegram.Bot" Version="15.7.1" />
-		<PackageReference Include="AWSSDK.CloudFront" Version="3.5.3.16" />
-		<PackageReference Include="AWSSDK.S3" Version="3.5.3.3" />
-		<PackageReference Include="Google.Api.Gax" Version="3.2.0" />
-		<PackageReference Include="Google.Api.Gax.Rest" Version="3.2.0" />
-		<PackageReference Include="Google.Apis.Auth" Version="1.49.0" />
-		<PackageReference Include="Google.Apis.Core" Version="1.49.0" />
-		<PackageReference Include="Google.Apis.Storage.v1" Version="1.49.0.2102" />
-		<PackageReference Include="Google.Cloud.Storage.V1" Version="3.3.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.5" />
+		<PackageReference Include="AWSSDK.CloudFront" Version="3.7.4.30" />
+		<PackageReference Include="AWSSDK.S3" Version="3.7.7.18" />
+		<PackageReference Include="Google.Api.Gax" Version="3.6.0" />
+		<PackageReference Include="Google.Api.Gax.Rest" Version="3.6.0" />
+		<PackageReference Include="Google.Apis.Auth" Version="1.55.0" />
+		<PackageReference Include="Google.Apis.Core" Version="1.55.0" />
+		<PackageReference Include="Google.Apis.Storage.v1" Version="1.55.0.2526" />
+		<PackageReference Include="Google.Cloud.Storage.V1" Version="3.7.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.13" />
 		<PackageReference Include="openstack.net" Version="1.7.9" />
 		<PackageReference Include="DotNetOpenAuth.Ultimate" Version="4.3.4.13329" />
 		<PackageReference Include="Elasticsearch.Net" Version="7.7.1" />
