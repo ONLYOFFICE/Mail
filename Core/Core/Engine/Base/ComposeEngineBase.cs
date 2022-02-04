@@ -24,14 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
-using System.Web;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -50,6 +42,14 @@ using ASC.Mail.Storage;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Net.Mail;
+using System.Web;
 
 using MailMessage = ASC.Mail.Models.MailMessageData;
 

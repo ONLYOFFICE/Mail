@@ -252,7 +252,9 @@ namespace ASC.Mail.Clients
                 if (!uid.IsValid)
                     throw new Exception("IMAP4 uidl not found");
 
-                return Imap.Inbox.GetMessage(uid, CancelToken);
+                var message = Imap.Inbox.GetMessageAsync(uid, CancelToken).Result;
+
+                return message;
             }
             else
             {
@@ -650,9 +652,9 @@ namespace ASC.Mail.Clients
 
         private IEnumerable<IMailFolder> GetImapFolders()
         {
-            Log.Debug("GetImapFolders()");
+            Log.Debug("GetImapFoldersAsync()");
 
-            var personal = Imap.GetFolders(Imap.PersonalNamespaces[0], true, CancelToken).ToList();
+            var personal = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], true, CancelToken).Result.ToList();
 
             if (!personal.Any(mb => mb.Name.Equals("inbox", StringComparison.InvariantCultureIgnoreCase)))
                 personal.Add(Imap.Inbox);
@@ -798,16 +800,13 @@ namespace ASC.Mail.Clients
                         var messInfo = folder.Fetch(new List<UniqueId>() { uid }, MessageSummaryItems.Size).FirstOrDefault();
 
                         if (messInfo.Size > maxSize)
-                            throw new LimitMessageException(string.Format("Message size ({0}) exceeds fixed maximum message size ({1}). The message will be skipped.",
-                                messInfo.Size, maxSize));
+                            throw new LimitMessageException($"Message size ({messInfo.Size}) exceeds fixed maximum message size ({maxSize}). The message will be skipped.");
+                        else
+                            Log.Debug($"Try get message {uid}. Size: {messInfo.Size}, attachments: {messInfo.Attachments?.Count()}");
 
-                        var progress = new TransferProgress();
+                        using var message = folder.GetMessageAsync(uid, CancelToken).GetAwaiter().GetResult();
 
-                        Log.Debug($"GetMessage(uid='{uid}')");
-
-                        var message = folder.GetMessage(uid, CancelToken, progress);
-
-                        Log.Debug($"BytesTransferred = {progress.BytesTransferred}");
+                        Log.Debug($"BytesTransferred = {messInfo.Size}");
 
                         var uid1 = uid;
                         var info = infoList.FirstOrDefault(t => t.UniqueId == uid1);
@@ -844,6 +843,26 @@ namespace ASC.Mail.Clients
                     catch (OperationCanceledException)
                     {
                         break;
+                    }
+                    catch (AggregateException aggE)
+                    {
+                        Log.ErrorFormat(
+                            "ProcessMessages() Tenant={0} User='{1}' Account='{2}', MailboxId={3}, UID={4} Exception:\r\n{5}\r\n",
+                            Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
+                            uid, aggE.InnerException);
+
+                        if (uid != uidsCollection.First() && (int)uid.Id != toUid)
+                        {
+                            imapIntervals.AddHandledInterval(new UidInterval((int)uid.Id + 1, toUid));
+                        }
+                        toUid = (int)uid.Id - 1;
+
+                        if (aggE.InnerException is IOException)
+                        {
+                            break; // stop checking other mailboxes
+                        }
+
+                        continue;
                     }
                     catch (Exception e)
                     {
@@ -1016,7 +1035,7 @@ namespace ASC.Mail.Clients
 
         private IMailFolder GetSentFolder()
         {
-            var folders = Imap.GetFolders(Imap.PersonalNamespaces[0], false, CancelToken).ToList();
+            var folders = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], false, CancelToken).Result.ToList();
 
             if (!folders.Any())
                 return null;
@@ -1247,7 +1266,7 @@ namespace ASC.Mail.Clients
 
                     try
                     {
-                        var message = Pop.GetMessage(newMessage.Key, CancelToken);
+                        var message = Pop.GetMessageAsync(newMessage.Key, CancelToken).Result;
 
                         message.FixDateIssues(logger: Log);
 

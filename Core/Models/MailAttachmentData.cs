@@ -32,7 +32,7 @@ using System.Runtime.Serialization;
 namespace ASC.Mail.Models
 {
     [DataContract(Name = "attachment", Namespace = "")]
-    public class MailAttachmentData: ICloneable
+    public class MailAttachmentData : ICloneable
     {
         private string _contentId;
         public MailAttachmentData()
@@ -54,10 +54,10 @@ namespace ASC.Mail.Models
 
         [DataMember(Name = "fileName", EmitDefaultValue = false)]
         public string fileName { get; set; }
-        
+
         [DataMember(Name = "size", EmitDefaultValue = false)]
         public long size { get; set; }
-        
+
         [DataMember(Name = "contentType", EmitDefaultValue = false)]
         public string contentType { get; set; }
 
@@ -65,14 +65,15 @@ namespace ASC.Mail.Models
         public bool needSaveToTemp { get; set; }
 
         [DataMember(Name = "contentId", EmitDefaultValue = false)]
-        public string contentId {
+        public string contentId
+        {
             get { return string.IsNullOrEmpty(_contentId) ? null : _contentId; }
             set { _contentId = value; }
         }
-        
+
         [DataMember(Name = "fileNumber", EmitDefaultValue = false)]
         public int fileNumber { get; set; }
-        
+
         [DataMember(Name = "storedName", EmitDefaultValue = false)]
         public string storedName { get; set; }
 
@@ -87,14 +88,15 @@ namespace ASC.Mail.Models
 
         [IgnoreDataMember]
         //[AjaxNonSerializable]
-        public bool isTemp {
+        public bool isTemp
+        {
             get { return !string.IsNullOrEmpty(tempStoredUrl); }
         }
 
         [IgnoreDataMember]
         //[AjaxNonSerializable]
         public string storedFileUrl { get; set; }
-        
+
         [IgnoreDataMember]
         //[AjaxNonSerializable]
         public byte[] data { get; set; }
@@ -113,7 +115,8 @@ namespace ASC.Mail.Models
 
         [IgnoreDataMember]
         //[AjaxNonSerializable]
-        public bool isEmbedded {
+        public bool isEmbedded
+        {
             get { return !string.IsNullOrEmpty(contentId) || !string.IsNullOrEmpty(contentLocation); }
         }
 

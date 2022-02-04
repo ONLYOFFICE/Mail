@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 namespace ASC.Mail.Aggregator.Service.Queue
 {
     [Singletone]
-    public class SignalrWorker : IDisposable
+    public class SocketIoNotifier : IDisposable
     {
         private readonly Queue<MailBoxData> _processingQueue;
         private Task _workerTask;
@@ -37,7 +37,7 @@ namespace ASC.Mail.Aggregator.Service.Queue
         private FolderEngine _folderEngine;
         private UserManager _userManager;
 
-        public SignalrWorker(
+        public SocketIoNotifier(
             IOptionsMonitor<ILog> optionsMonitor,
             IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
             IServiceProvider serviceProvider)

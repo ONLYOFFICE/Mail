@@ -47,13 +47,13 @@ namespace ASC.Mail.Aggregator.Service.Service
         private ConsoleParameters ConsoleParameters { get; }
         private IServiceProvider ServiceProvider { get; }
         private QueueManager QueueManager { get; }
-        internal static SignalrWorker SignalrWorker { get; private set; }
+        internal static SocketIoNotifier SignalrWorker { get; private set; }
 
         public static ConcurrentDictionary<string, bool> UserCrmAvailabeDictionary { get; set; } = new ConcurrentDictionary<string, bool>();
         public static ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; } = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
 
-        internal static readonly object CrmAvailabeLocker = new object();
-        internal static readonly object FiltersLocker = new object();
+        internal static readonly object crmAvailabeLocker = new object();
+        internal static readonly object filtersLocker = new object();
 
         public AggregatorService(
             QueueManager queueManager,
@@ -63,7 +63,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             IServiceProvider serviceProvider,
             IConfiguration configuration,
             ConfigurationExtension configurationExtension,
-            SignalrWorker signalrWorker,
+            SocketIoNotifier signalrWorker,
             MailQueueItemSettings mailQueueItemSettings,
             IMailDaoFactory mailDaoFactory)
         {
@@ -305,15 +305,8 @@ namespace ASC.Mail.Aggregator.Service.Service
             handler.DoProcess();
         }
 
-        private void NotifySignalrIfNeed(MailBoxData mailbox, ILog log)
+        internal static void NotifySocketIO(MailBoxData mailbox, ILog log)
         {
-            if (!Settings.Aggregator.EnableSignalr)
-            {
-                log.Debug("Skip NotifySignalrIfNeed: EnableSignalr == false");
-
-                return;
-            }
-
             var now = DateTime.UtcNow;
 
             try
@@ -348,7 +341,6 @@ namespace ASC.Mail.Aggregator.Service.Service
         {
             try
             {
-                //make dispose in TaskData
                 Log.Debug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
 
                 if (!tasks.Remove(taskData))
@@ -356,9 +348,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
                 ReleaseMailbox(taskData.Mailbox);
 
-                taskData.Task.Dispose();  //=null
-
-                GC.Collect();
+                taskData.Dispose(); GC.Collect();
             }
             catch (Exception ex)
             {
@@ -371,8 +361,8 @@ namespace ASC.Mail.Aggregator.Service.Service
             if (mailbox == null)
                 return;
 
-            if (mailbox.LastSignalrNotifySkipped)
-                NotifySignalrIfNeed(mailbox, Log); //TODO: remove dublicate
+            if (mailbox.LastSignalrNotifySkipped && Settings.Aggregator.EnableSignalr)
+                NotifySocketIO(mailbox, Log);
 
             QueueManager.ReleaseMailbox(mailbox);
 

@@ -1007,14 +1007,17 @@ namespace ASC.Mail.Core.Engine
 
             using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
             {
-                id = MailSave(mailbox, message, messageId,
+                lock (sync)
+                {
+                    id = MailSave(mailbox, message, messageId,
                     folder, folderRestore, userFolderId,
                     uidl, md5, saveAttachments, out long usedQuota);
 
-                tx.Commit();
+                    tx.Commit();
+                }
+                return id;
             }
 
-            return id;
         }
 
         public int MailSave(MailBoxData mailbox, MailMessageData message,

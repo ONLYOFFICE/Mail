@@ -24,6 +24,10 @@
 */
 
 
+using ASC.Mail.Enums;
+using ASC.Mail.Extensions;
+using ASC.Mail.Utils;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -32,9 +36,6 @@ using System.IO;
 using System.Net.Mail;
 using System.Runtime.Serialization;
 using System.Text;
-using ASC.Mail.Enums;
-using ASC.Mail.Extensions;
-using ASC.Mail.Utils;
 //using ASC.Specific;
 
 namespace ASC.Mail.Models

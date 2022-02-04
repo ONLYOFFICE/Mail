@@ -1,10 +1,11 @@
 ﻿using ASC.Mail.Models;
 
+using System;
 using System.Threading.Tasks;
 
 namespace ASC.Mail.Aggregator.Service.Queue.Data
 {
-    public class TaskData
+    public class TaskData : IDisposable
     {
         public MailBoxData Mailbox { get; private set; }
 
@@ -14,6 +15,13 @@ namespace ASC.Mail.Aggregator.Service.Queue.Data
         {
             Mailbox = mailBoxData;
             Task = task;
+        }
+
+        public void Dispose()
+        {
+            Task?.Dispose();
+            Task = null;
+            Mailbox = null;
         }
     }
 }

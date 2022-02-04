@@ -27,7 +27,7 @@
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.1" />
 		<PackageReference Include="CommandLineParser" Version="2.8.0" />
 		<PackageReference Include="LiteDB" Version="5.0.10" />
-		<PackageReference Include="MailKit" Version="2.15.0" />
+		<PackageReference Include="MailKit" Version="3.1.1" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="6.0.0" />
 		<PackageReference Include="Microsoft.Graph.Core" Version="1.6.0" />

@@ -116,6 +116,7 @@ namespace ASC.Mail.Configuration
             {
                 DefaultServerLoginDelayStr = config.DefaultServerLoginDelay.ToString();
                 WebHub = config.WebHub ?? "";
+                WebHubInternal = config.WebHubInternal == string.Empty ? "http://localhost:9899" : config.WebHubInternal;
                 IsSignalRAvailable = !string.IsNullOrEmpty(WebHub);
                 MailDaemonEmail = config.MailDaemonEmail ?? "mail-daemon@onlyoffice.com";
                 RecalculateFoldersTimeout = config.RecalculateFoldersTimeout ?? _defaultTimeout;
@@ -129,7 +130,6 @@ namespace ASC.Mail.Configuration
                 ServerDnsDefaultTtl = config.ServerDnsDefaultTtl == default(int) ? 300 : config.ServerDnsDefaultTtl;
                 MaximumMessageBodySize = config.MaximumMessageBodySize ?? 524288;
                 IsAttachmentsGroupOperationsAvailable = config.IsAttachmentsGroupOperationsAvailable;
-                WebHubInternal = config.WebHubInternal == string.Empty ? "http://localhost:9899" : config.WebHubInternal;
                 AuthErrorWarningTimeout = config.AuthErrorWarningTimeout == Zero ? FromHours(1) : config.AuthErrorWarningTimeout;
                 AuthErrorDisableMailboxTimeout = config.AuthErrorDisableMailboxTimeout == Zero ? FromDays(3) : config.AuthErrorDisableMailboxTimeout;
                 SaveOriginalMessage = config.SaveOriginalMessage;

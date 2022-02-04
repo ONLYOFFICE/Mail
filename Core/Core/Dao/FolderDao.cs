@@ -42,6 +42,7 @@ namespace ASC.Mail.Core.Dao
     [Scope]
     public class FolderDao : BaseMailDao, IFolderDao
     {
+
         public FolderDao(
              TenantManager tenantManager,
              SecurityContext securityContext,
@@ -118,6 +119,8 @@ namespace ASC.Mail.Core.Dao
                 return -1;
             }
 
+            MailDbContext.ChangeTracker.Clear();
+
             var mailFolder = MailDbContext.MailFolderCounters
                 .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folder)
                 .SingleOrDefault();
@@ -156,7 +159,6 @@ namespace ASC.Mail.Core.Dao
                 else
                     mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
             }
-
             var result = MailDbContext.SaveChanges();
 
             return result;

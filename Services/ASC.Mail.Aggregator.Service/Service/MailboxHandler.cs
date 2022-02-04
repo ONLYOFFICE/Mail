@@ -118,7 +118,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                 _log.Info(
                     $"Operation cancel: ProcessMailbox. Tenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: {mailbox.EMail}");
 
-                NotifySocketIO(mailbox);
+                AggregatorService.NotifySocketIO(mailbox, _log);
             }
             catch (Exception ex)
             {
@@ -455,42 +455,12 @@ namespace ASC.Mail.Aggregator.Service.Service
                 if (!_settings.Aggregator.EnableSignalr)
                     _log.Debug("Skip notify socketIO... Enable: false");
 
-                else NotifySocketIO(box);
+                else AggregatorService.NotifySocketIO(box, _log);
             }
             catch (Exception ex)
             {
                 _log.Error($"Do optional operation exception:\r\n{ex.Message}");
             }
-        }
-
-        private void NotifySocketIO(MailBoxData mailBox)
-        {
-            var now = DateTime.UtcNow;
-
-            try
-            {
-                if (mailBox.LastSignalrNotify.HasValue &&
-                    !((now - mailBox.LastSignalrNotify.Value).TotalSeconds > SOCKET_WAIT_SECONDS))
-                {
-                    mailBox.LastSignalrNotifySkipped = true;
-                    _log.Info($"Skip notify socketIO: last notification has occured less then {SOCKET_WAIT_SECONDS} seconds ago");
-                    return;
-                }
-
-                if (AggregatorService.SignalrWorker == null)
-                    throw new NullReferenceException("SignalrWorker");
-
-                AggregatorService.SignalrWorker.AddMailbox(mailBox);
-
-                _log.Info($"Notify SocketIO has been succeeded. User: {mailBox.UserId}, tenant: {mailBox.TenantId}.");
-            }
-            catch (Exception ex)
-            {
-                _log.Info($"Notify SocketIO exception. User: {mailBox.UserId}, tenant: {mailBox.TenantId}.\r\n{ex.Message}");
-            }
-
-            mailBox.LastSignalrNotify = now;
-            mailBox.LastSignalrNotifySkipped = false;
         }
 
         private List<MailSieveFilterData> GetFilters(FilterEngine fEngine, string userId)
@@ -499,7 +469,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
             try
             {
-                lock (AggregatorService.FiltersLocker)
+                lock (AggregatorService.filtersLocker)
                 {
                     if (AggregatorService.Filters.ContainsKey(userId)) return AggregatorService.Filters[userId];
                     var filters = fEngine.GetList();
@@ -545,7 +515,7 @@ namespace ASC.Mail.Aggregator.Service.Service
 
             var apiHelper = _scope.ServiceProvider.GetService<ApiHelper>();
 
-            lock (AggregatorService.CrmAvailabeLocker)
+            lock (AggregatorService.crmAvailabeLocker)
             {
                 if (AggregatorService.UserCrmAvailabeDictionary.TryGetValue(box.UserId, out available)) return available;
 
