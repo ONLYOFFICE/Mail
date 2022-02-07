@@ -4,12 +4,13 @@ using System.Text;
 
 namespace ASC.Mail.ImapSync
 {
-    public class CashedTenantUserMailBox
+    [Serializable]
+    public class CachedTenantUserMailBox
     {
-        public string UserName;
-        public int Tenant;
-        public int MailBoxId;
-        public int Folder;
-        public IEnumerable<int> tags;
+        public string UserName { get; set; }
+        public int Tenant { get; set; }
+        public int MailBoxId { get; set; }
+        public int Folder { get; set; }
+        public IEnumerable<int> Tags { get; set; }
     }
 }

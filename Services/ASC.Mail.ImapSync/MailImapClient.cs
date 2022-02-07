@@ -138,7 +138,7 @@ namespace ASC.Mail.ImapSync
             _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed.");
         }
 
-        public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider)
+        public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
         {
             UserName = userName;
             Tenant = tenant;
@@ -155,15 +155,21 @@ namespace ASC.Mail.ImapSync
 
             securityContext = clientScope.GetService<SecurityContext>();
             securityContext.AuthenticateMe(new Guid(UserName));
+
+            
+
+
             _storageFactory = clientScope.GetService<StorageFactory>();
             _mailInfoDao = clientScope.GetService<IMailInfoDao>();
-            _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
+            
 
             _folderEngine = clientScope.GetService<FolderEngine>();
-            _signalrServiceClient = clientScope.GetService<IOptionsSnapshot<SignalrServiceClient>>().Get("mail");
+            _signalrServiceClient = signalrServiceClient;
             _redisClient = clientScope.GetService<RedisClient>();
             _log = clientScope.GetService<ILog>();
             _apiHelper = clientScope.GetService<ApiHelper>();
+
+            _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
 
             var userMailboxesExp = new UserMailboxesExp(tenant, userName, onlyTeamlab: true);
 
@@ -292,6 +298,8 @@ namespace ASC.Mail.ImapSync
                         default:
                             break;
                     }
+
+                    SendUnreadUser();
 
                     _log.Debug($"New Action ({imapAction.FolderAction}) complete with result {result}.");
                 }
@@ -594,7 +602,7 @@ namespace ASC.Mail.ImapSync
             }
         }
 
-        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
+        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, ASC.Mail.Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
         {
             try
             {

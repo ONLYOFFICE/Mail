@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using StackExchange.Redis;
+using StackExchange.Redis.Extensions.Core.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -71,14 +73,10 @@ namespace ASC.Mail.ImapSync
                         .AddJsonFile($"appsettings.{env}.json", true)
                         .AddJsonFile("storage.json")
                         .AddJsonFile($"storage.{env}.json")
-                        .AddJsonFile("notify.json")
-                        .AddJsonFile("backup.json")
-                        .AddJsonFile("kafka.json")
                         .AddJsonFile("mail.json")
                         .AddJsonFile($"mail.{env}.json", true)
                         .AddJsonFile("elastic.json", true)
                         .AddJsonFile($"elastic.{env}.json", true)
-                        .AddJsonFile($"kafka.{env}.json", true)
                         .AddEnvironmentVariables()
                         .AddCommandLine(args)
                         .AddInMemoryCollection(new Dictionary<string, string>
@@ -99,6 +97,9 @@ namespace ASC.Mail.ImapSync
                 diHelper.TryAdd<ImapSyncService>();
                 services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
                 services.AddHostedService<ImapSyncService>();
+
+                var redisConfiguration = hostContext.Configuration.GetSection("Redis").Get<RedisConfiguration>();
+                services.AddSingleton(redisConfiguration);
 
                 services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
             })
