@@ -92,6 +92,7 @@ namespace ASC.Mail.Aggregator.Service
                 {
                     services.AddHttpContextAccessor();
                     services.AddMemoryCache();
+                    services.AddHttpClient();
                     var diHelper = new DIHelper(services);
                     diHelper.TryAdd<FactoryIndexerMailMail>();
                     diHelper.TryAdd<FactoryIndexerMailContact>();
