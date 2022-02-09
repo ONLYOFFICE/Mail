@@ -43,6 +43,8 @@ namespace ASC.Mail.ImapSync
         private readonly MailSettings _mailSettings;
         private readonly RedisClient _redisClient;
 
+        private int _createNewClientCount;
+
         private SignalrServiceClient _signalrServiceClient { get; }
 
         private readonly IServiceProvider _serviceProvider;
@@ -62,8 +64,6 @@ namespace ASC.Mail.ImapSync
             clients = new ConcurrentDictionary<string, MailImapClient>();
 
             _cancelTokenSource = new CancellationTokenSource();
-
-
 
             try
             {
@@ -102,6 +102,8 @@ namespace ASC.Mail.ImapSync
 
         public async Task CreateNewClient(ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
         {
+            _log.Debug($"Create new client count is {++_createNewClientCount}");
+
             var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 
             if (string.IsNullOrEmpty(cashedTenantUserMailBox.UserName)) return;
@@ -114,7 +116,7 @@ namespace ASC.Mail.ImapSync
                 }
                 else
                 {
-                    clients[cashedTenantUserMailBox.UserName]?.CheckRedis(cashedTenantUserMailBox.Folder, cashedTenantUserMailBox.Tags);
+                    await clients[cashedTenantUserMailBox.UserName]?.CheckRedis(cashedTenantUserMailBox.Folder, cashedTenantUserMailBox.Tags);
                 }
                 return;
             }

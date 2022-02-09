@@ -20,7 +20,6 @@ namespace ASC.Mail.ImapSync
 
         private ILog _log;
 
-        public const string RedisClientPrefix = "ASC.MailAction:";
         public const string RedisClientQueuesKey = "asc:channel:insert:asc.mail.core.entities.cachedtenantusermailbox";
 
 
@@ -37,15 +36,8 @@ namespace ASC.Mail.ImapSync
             _redis = new RedisCacheClient(connectionPoolManager, new NewtonsoftSerializer(), redisConfiguration).GetDbFromConfiguration();
         }
 
-        public Task<T> PopFromQueue<T>(string QueueName) where T : class
-        {
-            return _redis.ListGetFromRightAsync<T>(QueueName);
-        }
+        public Task<T> PopFromQueue<T>(string QueueName) where T : class => _redis.ListGetFromRightAsync<T>(QueueName);
 
-        public Task SubscribeQueueKey<T>(Func<T, Task> onNewKey)
-        {
-            return _redis.SubscribeAsync(_channel, onNewKey);
-        }
-
+        public Task SubscribeQueueKey<T>(Func<T, Task> onNewKey) => _redis.SubscribeAsync(_channel, onNewKey, CommandFlags.FireAndForget);
     }
 }

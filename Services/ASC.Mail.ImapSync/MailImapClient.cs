@@ -46,6 +46,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.ImapSync
 {
@@ -54,6 +55,8 @@ namespace ASC.Mail.ImapSync
         public readonly string UserName;
         public readonly int Tenant;
         public readonly string RedisKey;
+
+        private int _checkRedisCount;
 
         public bool IsReady { get; private set; } = false;
 
@@ -97,7 +100,7 @@ namespace ASC.Mail.ImapSync
 
         private bool _IsProcessActionFromImapInNextTurn = false;
 
-        public async void CheckRedis(int folderActivity, IEnumerable<int> tags)
+        public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             _IsDieInNextTurn = false;
 
@@ -134,7 +137,7 @@ namespace ASC.Mail.ImapSync
                 _log.Error($"ProcessActionFromRedis. Error: {ex.Message}.");
             }
 
-            _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed.");
+            _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed. CheckRedisCount is {_checkRedisCount++}");
         }
 
         public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
