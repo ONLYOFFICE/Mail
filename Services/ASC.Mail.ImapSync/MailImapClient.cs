@@ -36,7 +36,6 @@ using ASC.Mail.Utils;
 using MailKit;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 using MimeKit;
 
@@ -156,12 +155,12 @@ namespace ASC.Mail.ImapSync
             securityContext = clientScope.GetService<SecurityContext>();
             securityContext.AuthenticateMe(new Guid(UserName));
 
-            
+
 
 
             _storageFactory = clientScope.GetService<StorageFactory>();
             _mailInfoDao = clientScope.GetService<IMailInfoDao>();
-            
+
 
             _folderEngine = clientScope.GetService<FolderEngine>();
             _signalrServiceClient = signalrServiceClient;

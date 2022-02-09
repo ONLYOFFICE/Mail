@@ -47,8 +47,6 @@ namespace ASC.Mail.ImapSync
 
         private readonly IServiceProvider _serviceProvider;
 
-        int count = 300;
-
         public ImapSyncService(IOptionsMonitor<ILog> options,
             RedisClient redisClient,
             MailSettings mailSettings,
@@ -60,12 +58,12 @@ namespace ASC.Mail.ImapSync
             _mailSettings = mailSettings;
             _serviceProvider = serviceProvider;
             _signalrServiceClient = optionsSnapshot.Get("mail");
-            _signalrServiceClient.EnableSignalr=true;
+            _signalrServiceClient.EnableSignalr = true;
             clients = new ConcurrentDictionary<string, MailImapClient>();
 
             _cancelTokenSource = new CancellationTokenSource();
 
-            
+
 
             try
             {
@@ -92,9 +90,7 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                _redisClient.SubscribeQueueKey<ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
-
-                _log.Info("Success redis subscribe!");
+                return _redisClient.SubscribeQueueKey<ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
             }
             catch (Exception ex)
             {
@@ -102,13 +98,10 @@ namespace ASC.Mail.ImapSync
 
                 return StopAsync(cancellationToken);
             }
-
-            return Task.CompletedTask;
         }
 
         public async Task CreateNewClient(ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
         {
-
             var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 
             if (string.IsNullOrEmpty(cashedTenantUserMailBox.UserName)) return;
@@ -171,7 +164,7 @@ namespace ASC.Mail.ImapSync
                 }
                 catch (Exception ex)
                 {
-                    // clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
+                    clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
 
                     _log.Error($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
                 }

@@ -98,7 +98,7 @@ namespace ASC.Mail.ImapSync
                 services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
                 services.AddHostedService<ImapSyncService>();
 
-                var redisConfiguration = hostContext.Configuration.GetSection("Redis").Get<RedisConfiguration>();
+                var redisConfiguration = hostContext.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
                 services.AddSingleton(redisConfiguration);
 
                 services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));

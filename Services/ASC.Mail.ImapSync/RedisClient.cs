@@ -28,6 +28,8 @@ namespace ASC.Mail.ImapSync
         {
             _log = options.Get("ASC.Mail.RedisClient");
 
+            _log.Info(redisConfiguration.ConnectionString);
+
             _channel = new RedisChannel(RedisClientQueuesKey, RedisChannel.PatternMode.Auto);
 
             var connectionPoolManager = new RedisCacheConnectionPoolManager(redisConfiguration);
@@ -35,14 +37,14 @@ namespace ASC.Mail.ImapSync
             _redis = new RedisCacheClient(connectionPoolManager, new NewtonsoftSerializer(), redisConfiguration).GetDbFromConfiguration();
         }
 
-        public async Task<T> PopFromQueue<T>(string QueueName) where T : class
+        public Task<T> PopFromQueue<T>(string QueueName) where T : class
         {
-            return await _redis.ListGetFromRightAsync<T>(QueueName);
+            return _redis.ListGetFromRightAsync<T>(QueueName);
         }
 
-        public void SubscribeQueueKey<T>(Func<T, Task> onNewKey)
+        public Task SubscribeQueueKey<T>(Func<T, Task> onNewKey)
         {
-            _redis.SubscribeAsync(_channel, onNewKey);
+            return _redis.SubscribeAsync(_channel, onNewKey);
         }
 
     }
