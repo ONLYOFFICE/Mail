@@ -225,6 +225,7 @@ namespace ASC.Mail.Core.Engine
 
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             tenantManager.SetCurrentTenant(domain.Tenant);
+            Log.Debug($"RemoveDomain. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
             var daoFactory = scope.ServiceProvider.GetService<MailDaoFactory>();
             var context = daoFactory.GetContext();
@@ -422,6 +423,7 @@ namespace ASC.Mail.Core.Engine
                 var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
                 tenantManager.SetCurrentTenant(mailbox.TenantId);
+                log.Debug($"RemoveMailboxData. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
                 var mbEngine = scope.ServiceProvider.GetService<MailboxEngine>();
                 var factory = scope.ServiceProvider.GetService<MailDaoFactory>();

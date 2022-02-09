@@ -518,36 +518,6 @@ namespace ASC.Mail.Core.Engine
             return MailDaoFactory.GetMailboxDao().SetMailboxInProcess(id);
         }
 
-        public class MailboxReleasedOptions
-        {
-            public bool? Enabled = null;
-            public int? MessageCount = null;
-            public long? Size = null;
-            public bool? QuotaError = null;
-            public string OAuthToken = null;
-            public string ImapIntervalsJson = null;
-            public bool? ResetImapIntervals = null;
-
-            public bool DisableBox;
-            public int ServerLoginDelay;
-
-            public MailboxReleasedOptions(bool disable)
-            {
-                DisableBox = disable;
-            }
-            public string GetImapIntervalForQuery()
-            {
-                var newInterval = "";
-                foreach (var ch in ImapIntervalsJson)
-                {
-                    if (ch == '{') newInterval += "{{";
-                    else if (ch == '}') newInterval += "}}";
-                    else newInterval += ch;
-                }
-                return $"'{newInterval}'";
-            }
-        }
-
         public bool ReleaseMailbox(MailBoxData account, MailSettings mailSettings)
         {
             var disableMailbox = false;
@@ -588,12 +558,11 @@ namespace ASC.Mail.Core.Engine
 
             if (mailbox == null) return true;
 
-            MailboxReleasedOptions rOptions = new MailboxReleasedOptions(disableMailbox);
-            rOptions.ServerLoginDelay = account.ServerLoginDelay;
+            var rOptions = new MailboxReleasedOptions(account.ServerLoginDelay);
 
             if (account.AuthErrorDate.HasValue)
             {
-                if (rOptions.DisableBox)
+                if (disableMailbox)
                 {
                     rOptions.Enabled = false;
                 }
@@ -701,11 +670,6 @@ namespace ASC.Mail.Core.Engine
             //TODO: Fix OperationEngine.RecalculateFolders();
         }
 
-        /// <summary>
-        /// Set mailbox removed
-        /// </summary>
-        /// <param name="mailBoxData"></param>
-        /// <returns>Return freed quota value</returns>
         public long RemoveMailBoxInfo(MailBoxData mailBoxData)
         {
             long totalAttachmentsSize;
@@ -718,7 +682,8 @@ namespace ASC.Mail.Core.Engine
             var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
-            tenantManager.SetCurrentTenant(mailBoxData.MailBoxId);
+            tenantManager.SetCurrentTenant(mailBoxData.TenantId);
+            Log.Debug($"RemoveMailboxInfo. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
             using (var tx = factory.BeginTransaction())
             {
@@ -977,5 +942,21 @@ namespace ASC.Mail.Core.Engine
 
             return mailboxData;
         }
+    }
+
+    public class MailboxReleasedOptions
+    {
+        public bool? Enabled = null;
+        public int? MessageCount = null;
+        public long? Size = null;
+        public bool? QuotaError = null;
+        public string OAuthToken = null;
+        public string ImapIntervalsJson = null;
+        public bool? ResetImapIntervals = null;
+
+        public int ServerLoginDelay;
+
+        public MailboxReleasedOptions(int logindelay) =>
+            ServerLoginDelay = logindelay;
     }
 }

@@ -31,6 +31,7 @@ using ASC.Mail.Configuration;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Dao.Interfaces;
+using ASC.Mail.Core.Engine;
 using ASC.Mail.Core.Entities;
 using ASC.Security.Cryptography;
 
@@ -40,31 +41,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using static ASC.Mail.Core.Engine.MailboxEngine;
-
 namespace ASC.Mail.Core.Dao
 {
     [Scope]
     public class MailboxDao : BaseMailDao, IMailboxDao
     {
         private InstanceCrypto InstanceCrypto { get; }
-        private MailSettings MailSettings { get; }
 
-        private const string mailboxTableName = "mail_mailbox";
-
-        private const string isProcessed_Column = "is_processed";
-        private const string dateChecked_Column = "date_checked";
-        private const string dateLoginDelayExpires_Column = "date_login_delay_expires";
-        private const string enabled_Column = "enabled";
-        private const string msgCountLast_Column = "msg_count_last";
-        private const string sizeLast_Column = "size_last";
-        private const string quotaError_Column = "quota_error";
-        private const string token_Column = "token";
-        private const string imapIntervals_Column = "imap_intervals";
-        private const string isRemoved_Column = "is_removed";
-        private const string id_Column = "id";
-
-        private const int delayAfterError = 60;
+        private const int DELAY_AFTER_ERROR = 60;
+        private readonly int delayAfterError = 0;
+        private readonly int delay = 0;
 
         public MailboxDao(
              TenantManager tenantManager,
@@ -75,7 +61,8 @@ namespace ASC.Mail.Core.Dao
             : base(tenantManager, securityContext, dbContext)
         {
             InstanceCrypto = instanceCrypto;
-            MailSettings = mailSettings;
+            delayAfterError = mailSettings.Defines.DefaultServerLoginDelayAfterError;
+            delay = mailSettings.Defines.DefaultServerLoginDelay;
         }
 
         public Mailbox GetMailBox(IMailboxExp exp)
@@ -115,6 +102,7 @@ namespace ASC.Mail.Core.Dao
 
             return query.ToList();
         }
+
         public List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp)
         {
             var query = MailDbContext.MailMailbox
@@ -343,53 +331,65 @@ namespace ASC.Mail.Core.Dao
             return result > 0;
         }
 
-        string mySqlUtcNow = "UTC_TIMESTAMP()";
-
         public bool SetMailboxInProcess(int id)
         {
-            return MailDbContext.Database.ExecuteSqlRaw(
-                string.Format(
-                    "UPDATE {0} SET {1} = 1, {2} = {3} WHERE {4} = {5} AND {6} = 0 AND {7} = 0",
-                    mailboxTableName, isProcessed_Column, dateChecked_Column, mySqlUtcNow,
-                    id_Column, id, isProcessed_Column, isRemoved_Column)
-                ) > 0;
+            var box = MailDbContext.MailMailbox
+                .Where(b => b.Id == id && b.IsProcessed == false && b.IsRemoved == false)
+                .FirstOrDefault();
+
+            if (box == null) return false;
+
+            box.IsProcessed = true;
+            box.DateChecked = DateTime.UtcNow;
+
+            var result = MailDbContext.SaveChanges();
+
+            return (result > 0);
         }
 
         public bool ReleaseMailbox(Mailbox mailbox, MailboxReleasedOptions rOptions)
         {
-            if (rOptions.ServerLoginDelay < MailSettings.Defines.DefaultServerLoginDelay)
-                rOptions.ServerLoginDelay = MailSettings.Defines.DefaultServerLoginDelay;
+            if (rOptions.ServerLoginDelay < delay)
+                rOptions.ServerLoginDelay = delay;
 
-            var delay = "";
+            var rBox = MailDbContext.MailMailbox.FirstOrDefault(b => b.Id == mailbox.Id);
+
+            rBox.IsProcessed = false;
+            rBox.DateChecked = DateTime.UtcNow;
 
             if (mailbox.DateAuthError.HasValue && mailbox.Enabled)
             {
-                delay = MailSettings.Defines.DefaultServerLoginDelayAfterError < delayAfterError
-                ? DateTime.UtcNow.AddSeconds(delayAfterError).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
-                : DateTime.UtcNow.AddSeconds(MailSettings.Defines.DefaultServerLoginDelayAfterError).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                rBox.DateLoginDelayExpires = delayAfterError < DELAY_AFTER_ERROR
+                    ? DateTime.UtcNow.AddSeconds(DELAY_AFTER_ERROR)
+                    : DateTime.UtcNow.AddSeconds(delayAfterError); ;
             }
             else if (!mailbox.DateAuthError.HasValue)
             {
-                delay = rOptions.ServerLoginDelay > MailSettings.Defines.DefaultServerLoginDelay
-                ? DateTime.UtcNow.AddSeconds(rOptions.ServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss")
-                : DateTime.UtcNow.AddSeconds(MailSettings.Defines.DefaultServerLoginDelay).ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss");
+                rBox.DateLoginDelayExpires = rOptions.ServerLoginDelay > delay
+                    ? DateTime.UtcNow.AddSeconds(rOptions.ServerLoginDelay)
+                    : DateTime.UtcNow.AddSeconds(delay);
             }
 
-            var query = string.Format(
-                "UPDATE {0} SET {1} = 0, {2} = {3}, {4} = '{5}', {6} = {7}, {8} = {9}, " +
-                "{10} = {11}, {12} = {13}, {14} = {15}, {16} = {17} WHERE {18} = {19}",
-                mailboxTableName, isProcessed_Column,
-                dateChecked_Column, mySqlUtcNow,
-                dateLoginDelayExpires_Column, delay,
-                enabled_Column, rOptions.Enabled.HasValue ? rOptions.Enabled.Value : enabled_Column,
-                msgCountLast_Column, rOptions.MessageCount.HasValue ? rOptions.MessageCount.Value : msgCountLast_Column,
-                sizeLast_Column, rOptions.Size.HasValue ? rOptions.Size.Value : sizeLast_Column,
-                quotaError_Column, rOptions.QuotaError.HasValue ? rOptions.QuotaError.Value : quotaError_Column,
-                token_Column, !string.IsNullOrEmpty(rOptions.OAuthToken) ? InstanceCrypto.Encrypt(rOptions.OAuthToken) : token_Column,
-                imapIntervals_Column, rOptions.ResetImapIntervals.HasValue ? "NULL" : !string.IsNullOrEmpty(rOptions.ImapIntervalsJson) ? rOptions.GetImapIntervalForQuery() : imapIntervals_Column,
-                id_Column, mailbox.Id);
+            if (rOptions.Enabled.HasValue) rBox.Enabled = rOptions.Enabled.Value;
+            if (rOptions.MessageCount.HasValue) rBox.MsgCountLast = rOptions.MessageCount.Value;
+            if (rOptions.Size.HasValue) rBox.SizeLast = rOptions.Size.Value;
+            if (rOptions.QuotaError.HasValue) rBox.QuotaError = rOptions.QuotaError.Value;
+            if (!string.IsNullOrEmpty(rOptions.OAuthToken)) rBox.Token = InstanceCrypto.Encrypt(rOptions.OAuthToken);
+            if (rOptions.ResetImapIntervals.HasValue)
+            {
+                rBox.ImapIntervals = null;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(rOptions.ImapIntervalsJson))
+                {
+                    rBox.ImapIntervals = rOptions.ImapIntervalsJson;
+                }
+            }
 
-            return MailDbContext.Database.ExecuteSqlRaw(query) > 0;
+            var result = MailDbContext.SaveChanges();
+
+            return result > 0;
         }
 
         public bool SetMailboxAuthError(int id, DateTime? authErrorDate)
@@ -422,16 +422,17 @@ namespace ASC.Mail.Core.Dao
                     && mb.DateChecked != null
                     && EF.Functions.DateDiffMinute(mb.DateChecked, DateTime.UtcNow) > timeoutInMinutes);
 
-            var mbList = mailboxes.ToList();
+            var mbList = mailboxes;
 
             if (!mailboxes.Any())
                 return new List<int>();
 
-            var query = string.Format("UPDATE {0} SET {1} = 0 " +
-                "WHERE {1} = 1 AND {2} IS NOT NULL AND TIMESTAMPDIFF(minute, {2}, NOW()) > {4}",
-                mailboxTableName, isProcessed_Column, dateChecked_Column, DateTime.UtcNow, timeoutInMinutes);
+            foreach (var mbox in mailboxes)
+            {
+                mbox.IsProcessed = false;
+            }
 
-            MailDbContext.Database.ExecuteSqlRaw(query);
+            var result = MailDbContext.SaveChanges();
 
             return mbList.Select(mb => (int)mb.Id).ToList();
         }

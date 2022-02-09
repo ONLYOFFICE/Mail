@@ -74,11 +74,28 @@ namespace ASC.Mail.Core.Dao
 
         public int Delete(int id)
         {
-            var result = MailDbContext.Database.ExecuteSqlRaw("DELETE FROM mail_server_domain m WHERE m.id = {0} AND m.tenant = {1}", id, Tenant);
+            var domain = MailDbContext.MailServerDomain
+                .Where(d => d.Id == id && d.Tenant == Tenant)
+                .FirstOrDefault();
 
-            MailDbContext.Database.ExecuteSqlRaw("DELETE FROM mail_server_dns m WHERE m.id_domain = {0} AND m.tenant = {1}", id, Tenant);
+            if (domain != null)
+            {
+                MailDbContext.MailServerDomain.Remove(domain);
 
-            return result;
+                var result = MailDbContext.SaveChanges();
+
+                var dns = MailDbContext.MailServerDns
+                .Where(d => d.IdDomain == id && d.Tenant == Tenant)
+                .FirstOrDefault();
+
+                MailDbContext.MailServerDns.Remove(dns);
+
+                MailDbContext.SaveChanges();
+
+                return result;
+            }
+
+            return 0;
         }
 
         public List<ServerDomain> GetDomains()
