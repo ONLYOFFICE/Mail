@@ -72,7 +72,7 @@ namespace ASC.Mail.ImapSync
 
             if (!(sender is IMailFolder imap_folder)) return;
 
-            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}.");
+            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}. ImapMessagesList.Count={ImapMessagesList.Count}");
 
             MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
 
@@ -86,6 +86,10 @@ namespace ASC.Mail.ImapSync
             if (messageSummary.Flags.HasValue)
             {
                 CompareFlags(imap_folder, messageSummary, e.Flags);
+            }
+            else
+            {
+                _log.Debug($"ImapMessageFlagsChanged. messageSummary.Flags.HasValue=false.");
             }
 
         }
@@ -629,13 +633,23 @@ namespace ASC.Mail.ImapSync
 
         private void CompareFlags(IMailFolder imap_folder, MessageDescriptor oldMessage, MessageFlags newFlag)
         {
-            if (newFlag == oldMessage.Flags) return;
+            if (newFlag == oldMessage.Flags)
+            {
+                _log.Debug($"CompareFlags: newFlag == oldMessage.Flags.");
+
+                return;
+            }
 
             var Uidl = oldMessage.UniqueId.ToUidl(foldersDictionary[imap_folder].Folder);
 
             var _message = WorkFolderMails.FirstOrDefault(x => x.Uidl == Uidl);
 
-            if (_message == null) return;
+            if (_message == null)
+            {
+                _log.Debug($"CompareFlags: _message == null.");
+
+                return;
+            }
 
             var _message_id = _message.Id;
 

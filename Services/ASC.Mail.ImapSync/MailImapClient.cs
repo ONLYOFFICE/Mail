@@ -158,9 +158,6 @@ namespace ASC.Mail.ImapSync
             securityContext = clientScope.GetService<SecurityContext>();
             securityContext.AuthenticateMe(new Guid(UserName));
 
-
-
-
             _storageFactory = clientScope.GetService<StorageFactory>();
             _mailInfoDao = clientScope.GetService<IMailInfoDao>();
 
@@ -251,17 +248,17 @@ namespace ASC.Mail.ImapSync
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (!_IsProcessActionFromImapInNextTurn)
-            {
-                _IsProcessActionFromImapInNextTurn = true;
-                return;
-            }
+            bool needUserUpdate=false;
 
             var ids = new List<int>();
 
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
+                _log.Debug($"ProcessActionFromImapTimer_Elapsed: Start check. ");
+
                 bool result = false;
+
+                needUserUpdate = true;
 
                 ids.Add(imapAction.message_id);
 
@@ -301,8 +298,6 @@ namespace ASC.Mail.ImapSync
                             break;
                     }
 
-                    SendUnreadUser();
-
                     _log.Debug($"New Action ({imapAction.FolderAction}) complete with result {result}.");
                 }
                 catch (Exception ex)
@@ -312,11 +307,14 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
-                    ids.ForEach(x => _log.Debug($"MessageId={x}"));
+                    ids.ForEach(x => _log.Debug($"ProcessActionFromImapTimer_Elapsed: MessageId={x}"));
 
                     ids.Clear();
                 }
             }
+
+            if(needUserUpdate) SendUnreadUser();
+
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -357,6 +355,8 @@ namespace ASC.Mail.ImapSync
             _IsProcessActionFromImapInNextTurn = false;
 
             imapActionsQueue.Enqueue(e);
+
+            _log.Debug($"ImapClient_NewActionFromImap: imapActionsQueue.Count={imapActionsQueue.Count}. Action={e.FolderAction}");
         }
 
         private void ImapClient_MessagesListUpdated(object sender, EventArgs e)
@@ -404,7 +404,7 @@ namespace ASC.Mail.ImapSync
                 aliveTimer.Dispose();
 
                 processActionFromImapTimer.Stop();
-                processActionFromImapTimer.Elapsed += ProcessActionFromImapTimer_Elapsed;
+                processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
                 processActionFromImapTimer.Dispose();
 
                 CancelToken?.Cancel();
@@ -422,6 +422,8 @@ namespace ASC.Mail.ImapSync
         private void UpdateDbFolder(SimpleImapClient simpleImapClient)
         {
             int intMailWorkFolder = (int)simpleImapClient.Folder;
+
+            if (intMailWorkFolder < 1) intMailWorkFolder = 1;
 
             var exp = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId)
                 .SetMailboxId(simpleImapClient.Account.MailBoxId)
@@ -484,8 +486,6 @@ namespace ASC.Mail.ImapSync
                 if (db_message.IsNew ^ unread) _mailEnginesFactory.MessageEngine.SetUnread(new List<int>() { db_message.Id }, unread, true);
                 if (db_message.Importance ^ important) _mailEnginesFactory.MessageEngine.SetImportant(new List<int>() { db_message.Id }, important);
                 if (removed) _mailEnginesFactory.MessageEngine.SetRemoved(new List<int>() { db_message.Id });
-
-                SendUnreadUser();
             }
             catch (Exception ex)
             {
@@ -701,13 +701,13 @@ namespace ASC.Mail.ImapSync
                 mailFactory.FilterEngine.ApplyFilters(message, mailbox, folder, filters);
 
                 log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
-
-                SendUnreadUser();
             }
             catch (Exception ex)
             {
                 log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
             }
+
+            SendUnreadUser();
         }
 
         private List<MailSieveFilterData> GetFilters(MailEnginesFactory factory, ILog log)
