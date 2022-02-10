@@ -519,9 +519,11 @@ namespace ASC.Mail.ImapSync
 
                 message.FixEncodingIssues(_log);
 
+                message.Subject += " - byImapSync";
+
                 var uid = imap_message.UniqueId.ToString();
                 var folder = simpleImapClient.MailWorkFolder;
-                var uidl = string.Format("{0}-{1}", uid, (int)folder.Folder);
+                var uidl = string.Format("{0} - {1}", uid, (int)folder.Folder);
 
                 _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
 
