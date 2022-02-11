@@ -321,7 +321,7 @@ namespace ASC.Mail.Aggregator.Service.Service
                     Unread = args.Unread
                 };
 
-                var uidl = _box.Imap ? $"{boxSaveInfo.Uid} - {(int)boxSaveInfo.Folder.Folder}" : boxSaveInfo.Uid;
+                var uidl = _box.Imap ? $"{boxSaveInfo.Uid}-{(int)boxSaveInfo.Folder.Folder}" : boxSaveInfo.Uid;
 
                 _log.Info($"Found message uidl: {uidl}, {_boxInfo}");
 
