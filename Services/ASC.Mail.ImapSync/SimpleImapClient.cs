@@ -47,7 +47,7 @@ namespace ASC.Mail.ImapSync
 
         private ConcurrentQueue<Task> asyncTasks;
 
-        public Models.MailFolder MailWorkFolder
+        public ASC.Mail.Models.MailFolder MailWorkFolder
         {
             get
             {
@@ -62,7 +62,7 @@ namespace ASC.Mail.ImapSync
                 return MailWorkFolder.Folder;
             }
         }
-        private Dictionary<IMailFolder, Models.MailFolder> foldersDictionary { get; set; }
+        private Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary { get; set; }
 
         #region Event from Imap handlers
 
@@ -72,7 +72,7 @@ namespace ASC.Mail.ImapSync
 
             if (!(sender is IMailFolder imap_folder)) return;
 
-            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}.");
+            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}. ImapMessagesList.Count={ImapMessagesList.Count}");
 
             MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
 
@@ -86,6 +86,10 @@ namespace ASC.Mail.ImapSync
             if (messageSummary.Flags.HasValue)
             {
                 CompareFlags(imap_folder, messageSummary, e.Flags);
+            }
+            else
+            {
+                _log.Debug($"ImapMessageFlagsChanged. messageSummary.Flags.HasValue=false.");
             }
 
         }
@@ -122,7 +126,14 @@ namespace ASC.Mail.ImapSync
 
             asyncTasks = new ConcurrentQueue<Task>();
 
-            foldersDictionary = new Dictionary<IMailFolder, Models.MailFolder>();
+            foldersDictionary = new Dictionary<IMailFolder, ASC.Mail.Models.MailFolder>();
+
+            if (!Account.Enabled)
+            {
+                IsBroken = true;
+
+                return;
+            }
 
             imap = new ImapClient(protocolLogger)
             {
@@ -138,6 +149,8 @@ namespace ASC.Mail.ImapSync
 
         internal void ExecuteUserAction(List<MailInfo> clientMessages, MailUserAction action, int destination)
         {
+            if (IsBroken) return;
+
             if (clientMessages.Count == 0) return;
 
             var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
@@ -167,6 +180,8 @@ namespace ASC.Mail.ImapSync
 
         public void ChangeFolder(int folderActivity)
         {
+            if (folderActivity < 0|| IsBroken) return;
+
             if (folderActivity == (int)Folder) return;
 
             try
@@ -284,6 +299,8 @@ namespace ASC.Mail.ImapSync
 
         internal void Init()
         {
+            if (IsBroken) return;
+
             SetNewImapWorkFolder(imap.Inbox);
 
             IsReady = true;
@@ -616,13 +633,23 @@ namespace ASC.Mail.ImapSync
 
         private void CompareFlags(IMailFolder imap_folder, MessageDescriptor oldMessage, MessageFlags newFlag)
         {
-            if (newFlag == oldMessage.Flags) return;
+            if (newFlag == oldMessage.Flags)
+            {
+                _log.Debug($"CompareFlags: newFlag == oldMessage.Flags.");
+
+                return;
+            }
 
             var Uidl = oldMessage.UniqueId.ToUidl(foldersDictionary[imap_folder].Folder);
 
             var _message = WorkFolderMails.FirstOrDefault(x => x.Uidl == Uidl);
 
-            if (_message == null) return;
+            if (_message == null)
+            {
+                _log.Debug($"CompareFlags: _message == null.");
+
+                return;
+            }
 
             var _message_id = _message.Id;
 
@@ -737,7 +764,7 @@ namespace ASC.Mail.ImapSync
             StopTokenSource?.Dispose();
         }
 
-        private Models.MailFolder DetectFolder(IMailFolder folder)
+        private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
         {
             var folderName = folder.Name.ToLowerInvariant();
 
@@ -752,15 +779,15 @@ namespace ASC.Mail.ImapSync
 
             if ((folder.Attributes & FolderAttributes.Inbox) != 0)
             {
-                return new Models.MailFolder(FolderType.Inbox, folder.Name);
+                return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name);
             }
             if ((folder.Attributes & FolderAttributes.Sent) != 0)
             {
-                return new Models.MailFolder(FolderType.Sent, folder.Name);
+                return new ASC.Mail.Models.MailFolder(FolderType.Sent, folder.Name);
             }
             if ((folder.Attributes & FolderAttributes.Junk) != 0)
             {
-                return new Models.MailFolder(FolderType.Spam, folder.Name);
+                return new ASC.Mail.Models.MailFolder(FolderType.Spam, folder.Name);
             }
             if ((folder.Attributes &
                  (FolderAttributes.All |
@@ -779,7 +806,7 @@ namespace ASC.Mail.ImapSync
                 _mailSettings.ImapFlags.ContainsKey(folderName))
             {
                 folderId = (FolderType)_mailSettings.ImapFlags[folderName];
-                return new Models.MailFolder(folderId, folder.Name);
+                return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
             }
 
             if (_mailSettings.SpecialDomainFolders.Any() &&
@@ -791,15 +818,15 @@ namespace ASC.Mail.ImapSync
                     domainSpecialFolders.ContainsKey(folderName))
                 {
                     var info = domainSpecialFolders[folderName];
-                    return info.skip ? null : new Models.MailFolder(info.folder_id, folder.Name);
+                    return info.skip ? null : new ASC.Mail.Models.MailFolder(info.folder_id, folder.Name);
                 }
             }
 
             if (_mailSettings.DefaultFolders == null || !_mailSettings.DefaultFolders.ContainsKey(folderName))
-                return new Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
+                return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
 
             folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
-            return new Models.MailFolder(folderId, folder.Name);
+            return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
         }
     }
 }

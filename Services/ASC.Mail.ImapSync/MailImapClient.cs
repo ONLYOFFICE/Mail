@@ -36,7 +36,6 @@ using ASC.Mail.Utils;
 using MailKit;
 
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 using MimeKit;
 
@@ -47,6 +46,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.ImapSync
 {
@@ -55,6 +55,8 @@ namespace ASC.Mail.ImapSync
         public readonly string UserName;
         public readonly int Tenant;
         public readonly string RedisKey;
+
+        private int _checkRedisCount;
 
         public bool IsReady { get; private set; } = false;
 
@@ -98,7 +100,7 @@ namespace ASC.Mail.ImapSync
 
         private bool _IsProcessActionFromImapInNextTurn = false;
 
-        public async void CheckRedis(int folderActivity, IEnumerable<int> tags)
+        public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             _IsDieInNextTurn = false;
 
@@ -135,10 +137,10 @@ namespace ASC.Mail.ImapSync
                 _log.Error($"ProcessActionFromRedis. Error: {ex.Message}.");
             }
 
-            _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed.");
+            _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed. CheckRedisCount is {_checkRedisCount++}");
         }
 
-        public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider)
+        public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
         {
             UserName = userName;
             Tenant = tenant;
@@ -155,15 +157,18 @@ namespace ASC.Mail.ImapSync
 
             securityContext = clientScope.GetService<SecurityContext>();
             securityContext.AuthenticateMe(new Guid(UserName));
+
             _storageFactory = clientScope.GetService<StorageFactory>();
             _mailInfoDao = clientScope.GetService<IMailInfoDao>();
-            _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
+
 
             _folderEngine = clientScope.GetService<FolderEngine>();
-            _signalrServiceClient = clientScope.GetService<IOptionsSnapshot<SignalrServiceClient>>().Get("mail");
+            _signalrServiceClient = signalrServiceClient;
             _redisClient = clientScope.GetService<RedisClient>();
             _log = clientScope.GetService<ILog>();
             _apiHelper = clientScope.GetService<ApiHelper>();
+
+            _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
 
             var userMailboxesExp = new UserMailboxesExp(tenant, userName, onlyTeamlab: true);
 
@@ -243,17 +248,17 @@ namespace ASC.Mail.ImapSync
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (!_IsProcessActionFromImapInNextTurn)
-            {
-                _IsProcessActionFromImapInNextTurn = true;
-                return;
-            }
+            bool needUserUpdate=false;
 
             var ids = new List<int>();
 
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
+                _log.Debug($"ProcessActionFromImapTimer_Elapsed: Start check. ");
+
                 bool result = false;
+
+                needUserUpdate = true;
 
                 ids.Add(imapAction.message_id);
 
@@ -302,11 +307,14 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
-                    ids.ForEach(x => _log.Debug($"MessageId={x}"));
+                    ids.ForEach(x => _log.Debug($"ProcessActionFromImapTimer_Elapsed: MessageId={x}"));
 
                     ids.Clear();
                 }
             }
+
+            if(needUserUpdate) SendUnreadUser();
+
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -347,6 +355,8 @@ namespace ASC.Mail.ImapSync
             _IsProcessActionFromImapInNextTurn = false;
 
             imapActionsQueue.Enqueue(e);
+
+            _log.Debug($"ImapClient_NewActionFromImap: imapActionsQueue.Count={imapActionsQueue.Count}. Action={e.FolderAction}");
         }
 
         private void ImapClient_MessagesListUpdated(object sender, EventArgs e)
@@ -394,7 +404,7 @@ namespace ASC.Mail.ImapSync
                 aliveTimer.Dispose();
 
                 processActionFromImapTimer.Stop();
-                processActionFromImapTimer.Elapsed += ProcessActionFromImapTimer_Elapsed;
+                processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
                 processActionFromImapTimer.Dispose();
 
                 CancelToken?.Cancel();
@@ -412,6 +422,8 @@ namespace ASC.Mail.ImapSync
         private void UpdateDbFolder(SimpleImapClient simpleImapClient)
         {
             int intMailWorkFolder = (int)simpleImapClient.Folder;
+
+            if (intMailWorkFolder < 1) intMailWorkFolder = 1;
 
             var exp = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId)
                 .SetMailboxId(simpleImapClient.Account.MailBoxId)
@@ -474,8 +486,6 @@ namespace ASC.Mail.ImapSync
                 if (db_message.IsNew ^ unread) _mailEnginesFactory.MessageEngine.SetUnread(new List<int>() { db_message.Id }, unread, true);
                 if (db_message.Importance ^ important) _mailEnginesFactory.MessageEngine.SetImportant(new List<int>() { db_message.Id }, important);
                 if (removed) _mailEnginesFactory.MessageEngine.SetRemoved(new List<int>() { db_message.Id });
-
-                SendUnreadUser();
             }
             catch (Exception ex)
             {
@@ -509,9 +519,11 @@ namespace ASC.Mail.ImapSync
 
                 message.FixEncodingIssues(_log);
 
+                message.Subject += " - byImapSync";
+
                 var uid = imap_message.UniqueId.ToString();
                 var folder = simpleImapClient.MailWorkFolder;
-                var uidl = string.Format("{0}-{1}", uid, (int)folder.Folder);
+                var uidl = string.Format("{0} - {1}", uid, (int)folder.Folder);
 
                 _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
 
@@ -594,7 +606,7 @@ namespace ASC.Mail.ImapSync
             }
         }
 
-        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
+        private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, ASC.Mail.Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
         {
             try
             {
@@ -691,13 +703,13 @@ namespace ASC.Mail.ImapSync
                 mailFactory.FilterEngine.ApplyFilters(message, mailbox, folder, filters);
 
                 log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
-
-                SendUnreadUser();
             }
             catch (Exception ex)
             {
                 log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
             }
+
+            SendUnreadUser();
         }
 
         private List<MailSieveFilterData> GetFilters(MailEnginesFactory factory, ILog log)
