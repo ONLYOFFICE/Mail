@@ -170,6 +170,10 @@ namespace ASC.Mail.Utils
             BaseUrl = ubBase;
 
             Token = SecurityContext.AuthenticateMe(SecurityContext.CurrentAccount.ID);
+
+            var tokenIsEmpty = !string.IsNullOrEmpty(Token) ? "not empty" : "empty";
+
+            Log.Debug($"ApiHelper->Setup: Token is {tokenIsEmpty}");
         }
 
         public IRestResponse Execute(RestRequest request)
