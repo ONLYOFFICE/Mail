@@ -74,6 +74,7 @@ namespace ASC.Mail.Clients
         public bool IsConnected { get; private set; }
         public bool IsAuthenticated { get; private set; }
         public bool IsDisposed { get; private set; }
+        public bool IsCanceled { get; private set; }
 
         private CancellationToken CancelToken { get; set; }
         private CancellationTokenSource StopTokenSource { get; set; }
@@ -299,8 +300,10 @@ namespace ASC.Mail.Clients
 
         public void Cancel()
         {
+            if (IsCanceled) return;
             Log.Info("MailClient -> Cancel()");
             StopTokenSource.Cancel();
+            IsCanceled = true;
         }
 
         public void Dispose()
