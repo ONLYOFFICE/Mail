@@ -102,7 +102,7 @@ namespace ASC.Mail.ImapSync
 
         public async Task CreateNewClient(ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
         {
-            _log.Debug($"Create new client count is {++_createNewClientCount}");
+            _log.Debug($"Online Users count: {clients.Count}");
 
             var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 

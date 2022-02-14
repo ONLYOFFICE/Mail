@@ -84,7 +84,7 @@ namespace ASC.Mail.ImapSync
         private readonly TenantManager tenantManager;
         private readonly SecurityContext securityContext;
 
-        readonly bool crmAvailable;
+        private bool crmAvailable;
 
         private CancellationTokenSource CancelToken { get; set; }
 
@@ -100,6 +100,8 @@ namespace ASC.Mail.ImapSync
 
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
+            UndateSimplImapClients();
+
             _IsDieInNextTurn = false;
 
             _log.Debug($"ProcessActionFromRedis. Begin read key: {RedisKey}.");
@@ -144,6 +146,11 @@ namespace ASC.Mail.ImapSync
             Tenant = tenant;
             RedisKey = "ASC.MailAction:" + userName;
 
+            if (_redisClient == null)
+            {
+                throw new Exception($"No redis connection. UserName={UserName}");
+            }
+
             _mailSettings = mailSettings;
 
             Filters = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
@@ -159,7 +166,6 @@ namespace ASC.Mail.ImapSync
             _storageFactory = clientScope.GetService<StorageFactory>();
             _mailInfoDao = clientScope.GetService<IMailInfoDao>();
 
-
             _folderEngine = clientScope.GetService<FolderEngine>();
             _signalrServiceClient = signalrServiceClient;
             _redisClient = clientScope.GetService<RedisClient>();
@@ -168,27 +174,11 @@ namespace ASC.Mail.ImapSync
 
             _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
 
-            var userMailboxesExp = new UserMailboxesExp(tenant, userName, onlyTeamlab: true);
-
-            var mailboxes = _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp);
-
-            if (mailboxes == null || mailboxes.Count == 0)
-            {
-                throw new Exception($"No mail boxes. UserName={UserName}");
-            }
-
-            _log.Name = $"ASC.Mail.MailUserClient_{userName}";
-
-            crmAvailable = mailboxes.Any(mailbox => mailbox.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+            _log.Name = $"ASC.Mail.MailUserClient_{userName}";            
 
             CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
-            if (_redisClient == null)
-            {
-                throw new Exception($"No redis connection. UserName={UserName}");
-            }
-
-            simpleImapClients = new Dictionary<MailBoxData, SimpleImapClient>(mailboxes.Count);
+            simpleImapClients = new Dictionary<MailBoxData, SimpleImapClient>();
             imapActionsQueue = new ConcurrentQueue<ImapAction>();
 
             aliveTimer = new System.Timers.Timer((_mailSettings.ImapSync.AliveTimeInMinutes ?? 20) * 60 * 1000);
@@ -201,33 +191,47 @@ namespace ASC.Mail.ImapSync
 
             processActionFromImapTimer.Enabled = true;
 
-            foreach (var mailbox in mailboxes)
-            {
-                CreateSimpleImapClient(mailbox);
-            }
+            UndateSimplImapClients();
 
             aliveTimer.Enabled = true;
 
             IsReady = true;
         }
 
+        private List<MailBoxData> GetUserMailBoxes()
+        {
+            var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, onlyTeamlab: true);
+
+            var mailboxes = _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp);
+
+            return mailboxes.Where(x=>x.Enabled).ToList();
+        }
+
+        private void UndateSimplImapClients()
+        {
+            var mailBoxes = GetUserMailBoxes();
+
+            var newMailBoxes = mailBoxes.Except(simpleImapClients.Keys).ToList();
+
+            newMailBoxes.ForEach(x => CreateSimpleImapClient(x));
+
+            var stopedMailBoxes= simpleImapClients.Keys.Except(mailBoxes).ToList();
+
+            stopedMailBoxes.ForEach(x => DeleteSimpleImapClient(x));
+
+            if (simpleImapClients.Keys.Count == 0)
+            {
+                OnCriticalError.Invoke(this, EventArgs.Empty);
+            }
+
+            crmAvailable = simpleImapClients.Keys.Any(mailbox => mailbox.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+        }
+
         private void CreateSimpleImapClient(MailBoxData mailbox)
         {
             if (simpleImapClients.ContainsKey(mailbox))
             {
-                var deletedSimpleImapClient = simpleImapClients[mailbox];
-                if (deletedSimpleImapClient != null)
-                {
-                    deletedSimpleImapClient.NewMessage -= ImapClient_NewMessage;
-                    deletedSimpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
-                    deletedSimpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
-                    deletedSimpleImapClient.OnCriticalError -= ImapClient_OnCriticalError; ;
-                    deletedSimpleImapClient.OnUidlsChange -= ImapClient_OnUidlsChange;
-                }
-
-                simpleImapClients.Remove(mailbox);
-
-                _log.Debug($"CreateSimpleImapClient: Client MailBoxData id={mailbox.MailBoxId} removed.");
+                DeleteSimpleImapClient(mailbox);
             }
 
             var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
@@ -242,6 +246,23 @@ namespace ASC.Mail.ImapSync
             _log.Debug($"CreateSimpleImapClient: Client MailBoxData id={mailbox.MailBoxId} created.");
 
             simpleImapClient.Init();
+        }
+
+        private void DeleteSimpleImapClient(MailBoxData mailbox)
+        {
+            var deletedSimpleImapClient = simpleImapClients[mailbox];
+            if (deletedSimpleImapClient != null)
+            {
+                deletedSimpleImapClient.NewMessage -= ImapClient_NewMessage;
+                deletedSimpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
+                deletedSimpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
+                deletedSimpleImapClient.OnCriticalError -= ImapClient_OnCriticalError; ;
+                deletedSimpleImapClient.OnUidlsChange -= ImapClient_OnUidlsChange;
+            }
+
+            simpleImapClients.Remove(mailbox);
+
+            _log.Debug($"CreateSimpleImapClient: Client MailBoxData id={mailbox.MailBoxId} removed.");
         }
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -564,9 +585,9 @@ namespace ASC.Mail.ImapSync
                     watch.Stop();
 
                     LogStat(simpleImapClient, "CreateMessageInDB", watch.Elapsed, result);
-                }
 
-                _log.Debug($"CreateMessageInDB time={watch.Elapsed.TotalMilliseconds} ms.");
+                    _log.Debug($"CreateMessageInDB time={watch.Elapsed.TotalMilliseconds} ms.");
+                }
             }
 
             return result;
