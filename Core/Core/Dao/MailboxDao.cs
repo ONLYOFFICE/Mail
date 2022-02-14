@@ -422,7 +422,7 @@ namespace ASC.Mail.Core.Dao
                     && mb.DateChecked != null
                     && EF.Functions.DateDiffMinute(mb.DateChecked, DateTime.UtcNow) > timeoutInMinutes);
 
-            var mbList = mailboxes;
+            var mbList = mailboxes.ToList();
 
             if (!mailboxes.Any())
                 return new List<int>();
