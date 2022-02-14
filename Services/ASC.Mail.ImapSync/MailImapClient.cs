@@ -98,8 +98,6 @@ namespace ASC.Mail.ImapSync
 
         private bool _IsDieInNextTurn = false;
 
-        private bool _IsProcessActionFromImapInNextTurn = false;
-
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             _IsDieInNextTurn = false;
@@ -254,8 +252,6 @@ namespace ASC.Mail.ImapSync
 
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
-                _log.Debug($"ProcessActionFromImapTimer_Elapsed: Start check. ");
-
                 bool result = false;
 
                 needUserUpdate = true;
@@ -289,6 +285,7 @@ namespace ASC.Mail.ImapSync
                             result = _mailEnginesFactory.MessageEngine.SetImportant(ids, false);
                             break;
                         case MailUserAction.SetAsDeleted:
+                            _mailEnginesFactory.MessageEngine.DeleteConversations(Tenant, UserName, ids);
                             break;
                         case MailUserAction.RemovedFromFolder:
                             break;
@@ -298,7 +295,7 @@ namespace ASC.Mail.ImapSync
                             break;
                     }
 
-                    _log.Debug($"New Action ({imapAction.FolderAction}) complete with result {result}.");
+                    _log.Debug($"MailKit Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {ids.Count} messages.");
                 }
                 catch (Exception ex)
                 {
@@ -307,14 +304,11 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
-                    ids.ForEach(x => _log.Debug($"ProcessActionFromImapTimer_Elapsed: MessageId={x}"));
-
                     ids.Clear();
                 }
             }
 
             if(needUserUpdate) SendUnreadUser();
-
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -352,8 +346,6 @@ namespace ASC.Mail.ImapSync
 
         private void ImapClient_NewActionFromImap(object sender, ImapAction e)
         {
-            _IsProcessActionFromImapInNextTurn = false;
-
             imapActionsQueue.Enqueue(e);
 
             _log.Debug($"ImapClient_NewActionFromImap: imapActionsQueue.Count={imapActionsQueue.Count}. Action={e.FolderAction}");
@@ -431,13 +423,20 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClient.WorkFolderMails = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
 
-            if (simpleImapClient.ImapMessagesList == null) return;
+            _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={simpleImapClient.WorkFolderMails.Count}.");
+
+            if (simpleImapClient.ImapMessagesList == null)
+            {
+                _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
+
+                return;
+            }
 
             try
             {
                 foreach (var imap_message in simpleImapClient.ImapMessagesList)
                 {
-                    _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id.ToString()}.");
+                    _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id}.");
 
                     var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
@@ -445,6 +444,8 @@ namespace ASC.Mail.ImapSync
 
                     if (db_message == null)
                     {
+                        _log.Debug($"UpdateDbFolder: imap_message_Uidl={uidl} not found in DB.");
+
                         simpleImapClient.TryGetNewMessage(imap_message.UniqueId);
 
                         continue;
@@ -476,8 +477,8 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                _log.Debug($"SetMessageFlagsFromImap: imap_message_Uidl={imap_message.UniqueId.Id.ToString()}, flag={imap_message.Flags.Value.ToString()}.");
-                _log.Debug($"SetMessageFlagsFromImapp: db_message={db_message.Uidl}, folder={db_message.Folder}, IsRemoved={db_message.IsRemoved}.");
+                _log.Debug($"SetMessageFlagsFromImap: imap_message_Uidl={imap_message.UniqueId.Id}, flag={imap_message.Flags.Value}.");
+                _log.Debug($"SetMessageFlagsFromImap: db_message={db_message.Uidl}, folder={db_message.Folder}, IsRemoved={db_message.IsRemoved}.");
 
                 bool unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
                 bool important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
@@ -521,9 +522,8 @@ namespace ASC.Mail.ImapSync
 
                 message.Subject += " - byImapSync";
 
-                var uid = imap_message.UniqueId.ToString();
                 var folder = simpleImapClient.MailWorkFolder;
-                var uidl = string.Format("{0} - {1}", uid, (int)folder.Folder);
+                var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
                 _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
 

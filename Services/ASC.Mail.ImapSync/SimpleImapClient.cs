@@ -70,7 +70,7 @@ namespace ASC.Mail.ImapSync
         {
             if (!IsReady) return;
 
-            if (!(sender is IMailFolder imap_folder)) return;
+            if (sender is not IMailFolder imap_folder) return;
 
             _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}. ImapMessagesList.Count={ImapMessagesList.Count}");
 
@@ -78,7 +78,7 @@ namespace ASC.Mail.ImapSync
 
             if (messageSummary == null)
             {
-                _log.Warn($"ImapMessageFlagsChanged. No Message summary. Folder= {ImapWorkFolder.Name} Index={e.Index}.");
+                _log.Warn($"ImapMessageFlagsChanged. No Message summary found.");
 
                 return;
             }
@@ -91,7 +91,6 @@ namespace ASC.Mail.ImapSync
             {
                 _log.Debug($"ImapMessageFlagsChanged. messageSummary.Flags.HasValue=false.");
             }
-
         }
 
         private void ImapFolderCountChanged(object sender, EventArgs e)
@@ -118,7 +117,7 @@ namespace ASC.Mail.ImapSync
             _log.Name = $"ASC.Mail.SimpleImap_{Account.MailBoxId}";
 
             var protocolLogger = string.IsNullOrEmpty(_mailSettings.Aggregator.ProtocolLogPath) ? (IProtocolLogger)new NullProtocolLogger() :
-                new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}_{Thread.CurrentThread.ManagedThreadId}.log", true);
+                new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}.log", true);
 
             StopTokenSource = new CancellationTokenSource();
 
@@ -470,10 +469,7 @@ namespace ASC.Mail.ImapSync
             }
         }
 
-        public void TryGetNewMessage(UniqueId uniqueId)
-        {
-            AddTask(new Task(() => GetNewMessage(uniqueId)));
-        }
+        public void TryGetNewMessage(UniqueId uniqueId) => AddTask(new Task(() => GetNewMessage(uniqueId)));
 
         private void GetNewMessage(UniqueId uniqueId)
         {
@@ -635,7 +631,7 @@ namespace ASC.Mail.ImapSync
         {
             if (newFlag == oldMessage.Flags)
             {
-                _log.Debug($"CompareFlags: newFlag == oldMessage.Flags.");
+                _log.Debug($"CompareFlags: Same flags. No need compare.");
 
                 return;
             }
@@ -646,7 +642,7 @@ namespace ASC.Mail.ImapSync
 
             if (_message == null)
             {
-                _log.Debug($"CompareFlags: _message == null.");
+                _log.Debug($"CompareFlags: No message in DB. Uidl={Uidl}");
 
                 return;
             }
