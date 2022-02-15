@@ -23,6 +23,8 @@ namespace ASC.Mail.ImapSync
 
         public bool IsBroken { get; private set; } = false;
 
+        public int CheckServerAliveMitutes { get; set; } = 1;
+
         public Task curentTask { get; private set; }
 
         public List<MessageDescriptor> ImapMessagesList { get; set; }
@@ -179,7 +181,7 @@ namespace ASC.Mail.ImapSync
 
         public void ChangeFolder(int folderActivity)
         {
-            if (folderActivity < 0|| IsBroken) return;
+            if (folderActivity < 0 || IsBroken) return;
 
             if (folderActivity == (int)Folder) return;
 
@@ -501,7 +503,7 @@ namespace ASC.Mail.ImapSync
             {
                 if (imap.Capabilities.HasFlag(ImapCapabilities.Idle))
                 {
-                    DoneToken = new CancellationTokenSource(new TimeSpan(0, 10, 0));
+                    DoneToken = new CancellationTokenSource(new TimeSpan(0, CheckServerAliveMitutes, 0));
 
                     _log.Debug($"Go to Idle. Folder={ImapWorkFolder.Name}.");
 
@@ -509,7 +511,7 @@ namespace ASC.Mail.ImapSync
                 }
                 else
                 {
-                    await Task.Delay(new TimeSpan(0, 10, 0));
+                    await Task.Delay(new TimeSpan(0, CheckServerAliveMitutes, 0));
                     await imap.NoOpAsync();
                 }
             }

@@ -50,13 +50,13 @@ namespace ASC.Mail.ImapSync
         private readonly IServiceProvider _serviceProvider;
 
         public ImapSyncService(IOptionsMonitor<ILog> options,
-            RedisClient redisClient,
+            RedisFactory redisFactory,
             MailSettings mailSettings,
             IServiceProvider serviceProvider,
             IOptionsSnapshot<SignalrServiceClient> optionsSnapshot)
         {
             _options = options;
-            _redisClient = redisClient;
+            _redisClient = redisFactory.GetRedisClient();
             _mailSettings = mailSettings;
             _serviceProvider = serviceProvider;
             _signalrServiceClient = optionsSnapshot.Get("mail");

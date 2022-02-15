@@ -12,7 +12,7 @@ namespace ASC.Mail.ImapSync
     [Scope]
     public class MailClientScope
     {
-
+        private RedisFactory RedisFactory { get; }
         private TenantManager TenantManager { get; }
         private CoreBaseSettings CoreBaseSettings { get; }
         private StorageFactory StorageFactory { get; }
@@ -26,6 +26,7 @@ namespace ASC.Mail.ImapSync
         private ServiceProvider ServiceProvider { get; }
 
         public MailClientScope(
+            RedisFactory redisFactory,
             ServiceProvider serviceProvider,
             TenantManager tenantManager,
             CoreBaseSettings coreBaseSettings,
@@ -47,6 +48,7 @@ namespace ASC.Mail.ImapSync
             MailDaoFactory = mailDaoFactory;
             MailboxEngine = mailboxEngine;
             FolderEngine = folderEngine;
+            RedisFactory= redisFactory;
         }
     }
 }

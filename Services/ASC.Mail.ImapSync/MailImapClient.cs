@@ -60,13 +60,6 @@ namespace ASC.Mail.ImapSync
 
         public bool IsReady { get; private set; } = false;
 
-        public bool WillDieInNextTurn
-        {
-            get
-            {
-                return _IsDieInNextTurn;
-            }
-        }
         public ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; }
 
         private ConcurrentQueue<ImapAction> imapActionsQueue;
@@ -96,13 +89,9 @@ namespace ASC.Mail.ImapSync
 
         private System.Timers.Timer processActionFromImapTimer;
 
-        private bool _IsDieInNextTurn = false;
-
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             UndateSimplImapClients();
-
-            _IsDieInNextTurn = false;
 
             _log.Debug($"ProcessActionFromRedis. Begin read key: {RedisKey}.");
 
@@ -142,20 +131,24 @@ namespace ASC.Mail.ImapSync
 
         public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
         {
+            _mailSettings = mailSettings;
+
             UserName = userName;
             Tenant = tenant;
             RedisKey = "ASC.MailAction:" + userName;
+
+            clientScope = serviceProvider.CreateScope().ServiceProvider;
+
+            var redisFactory = clientScope.GetService<RedisFactory>();
+
+            _redisClient= redisFactory.GetRedisClient();
 
             if (_redisClient == null)
             {
                 throw new Exception($"No redis connection. UserName={UserName}");
             }
 
-            _mailSettings = mailSettings;
-
             Filters = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
-
-            clientScope = serviceProvider.CreateScope().ServiceProvider;
 
             tenantManager = clientScope.GetService<TenantManager>();
             tenantManager.SetCurrentTenant(tenant);
@@ -168,7 +161,7 @@ namespace ASC.Mail.ImapSync
 
             _folderEngine = clientScope.GetService<FolderEngine>();
             _signalrServiceClient = signalrServiceClient;
-            _redisClient = clientScope.GetService<RedisClient>();
+            
             _log = clientScope.GetService<ILog>();
             _apiHelper = clientScope.GetService<ApiHelper>();
 
@@ -207,6 +200,13 @@ namespace ASC.Mail.ImapSync
             return mailboxes.Where(x=>x.Enabled).ToList();
         }
 
+        private bool IsUserOnLine()
+        {
+            var mailboxes = GetUserMailBoxes();
+
+            return mailboxes.Any(x=>x.Active);
+        }
+
         private void UndateSimplImapClients()
         {
             var mailBoxes = GetUserMailBoxes();
@@ -235,6 +235,9 @@ namespace ASC.Mail.ImapSync
             }
 
             var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+
+            string isLocked=_mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
+
             simpleImapClient.NewMessage += ImapClient_NewMessage;
             simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
             simpleImapClient.NewActionFromImap += ImapClient_NewActionFromImap;
@@ -243,7 +246,7 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClients.Add(mailbox, simpleImapClient);
 
-            _log.Debug($"CreateSimpleImapClient: Client MailBoxData id={mailbox.MailBoxId} created.");
+            _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
 
             simpleImapClient.Init();
         }
@@ -262,7 +265,9 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClients.Remove(mailbox);
 
-            _log.Debug($"CreateSimpleImapClient: Client MailBoxData id={mailbox.MailBoxId} removed.");
+            string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailbox, _mailSettings) ? "unlocked" : "didn`t unlock";
+
+            _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} removed and {isLocked}.");
         }
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -334,14 +339,11 @@ namespace ASC.Mail.ImapSync
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (_IsDieInNextTurn)
-            {
-                OnCriticalError?.Invoke(this, EventArgs.Empty);
-            }
-            else
-            {
-                _IsDieInNextTurn = true;
-            }
+            if (IsUserOnLine()) return;
+
+            _log.Debug($"IAliveTimer. No user online.");
+
+            OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
 
         private void ImapClient_OnCriticalError(object sender, bool IsAuthenticationError)

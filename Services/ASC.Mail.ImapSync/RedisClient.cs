@@ -12,28 +12,35 @@ using System.Threading.Tasks;
 namespace ASC.Mail.ImapSync
 {
     [Singletone]
+    public class RedisFactory
+    {
+        private RedisCacheConnectionPoolManager _redisCacheConnectionPoolManager;
+
+        private RedisConfiguration _redisConfiguration;
+
+        public RedisFactory(RedisConfiguration redisConfiguration)
+        {
+            _redisCacheConnectionPoolManager = new RedisCacheConnectionPoolManager(redisConfiguration);
+
+            _redisConfiguration=redisConfiguration;
+        }
+
+        public RedisClient GetRedisClient()=> new RedisClient(_redisConfiguration, _redisCacheConnectionPoolManager);
+    }
+
     public class RedisClient
     {
         private readonly IRedisDatabase _redis;
 
         private readonly RedisChannel _channel;
 
-        private ILog _log;
-
         public const string RedisClientQueuesKey = "asc:channel:insert:asc.mail.core.entities.cachedtenantusermailbox";
 
-
-        public RedisClient(IOptionsMonitor<ILog> options, RedisConfiguration redisConfiguration)
+        public RedisClient(RedisConfiguration redisConfiguration, RedisCacheConnectionPoolManager redisCacheConnectionPoolManager)
         {
-            _log = options.Get("ASC.Mail.RedisClient");
-
-            _log.Info(redisConfiguration.ConnectionString);
-
             _channel = new RedisChannel(RedisClientQueuesKey, RedisChannel.PatternMode.Auto);
 
-            var connectionPoolManager = new RedisCacheConnectionPoolManager(redisConfiguration);
-
-            _redis = new RedisCacheClient(connectionPoolManager, new NewtonsoftSerializer(), redisConfiguration).GetDbFromConfiguration();
+            _redis = new RedisCacheClient(redisCacheConnectionPoolManager, new NewtonsoftSerializer(), redisConfiguration).GetDbFromConfiguration();
         }
 
         public Task<T> PopFromQueue<T>(string QueueName) where T : class => _redis.ListGetFromRightAsync<T>(QueueName);
