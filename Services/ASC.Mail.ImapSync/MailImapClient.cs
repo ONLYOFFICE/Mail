@@ -64,6 +64,8 @@ namespace ASC.Mail.ImapSync
 
         private ConcurrentQueue<ImapAction> imapActionsQueue;
 
+        private SemaphoreSlim _enginesFactorySemaphore;
+
         private readonly IServiceProvider clientScope;
         private readonly MailEnginesFactory _mailEnginesFactory;
         private readonly MailSettings _mailSettings;
@@ -99,6 +101,8 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClients.Select(x => x.Value).AsParallel().ForAll(x => x.ChangeFolder(folderActivity));
 
+            _enginesFactorySemaphore.Wait();
+
             try
             {
                 while (true)
@@ -125,6 +129,10 @@ namespace ASC.Mail.ImapSync
             {
                 _log.Error($"ProcessActionFromRedis. Error: {ex.Message}.");
             }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release(); 
+            }
 
             _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed. CheckRedisCount is {_checkRedisCount++}");
         }
@@ -141,7 +149,7 @@ namespace ASC.Mail.ImapSync
 
             var redisFactory = clientScope.GetService<RedisFactory>();
 
-            _redisClient= redisFactory.GetRedisClient();
+            _redisClient = redisFactory.GetRedisClient();
 
             if (_redisClient == null)
             {
@@ -161,13 +169,14 @@ namespace ASC.Mail.ImapSync
 
             _folderEngine = clientScope.GetService<FolderEngine>();
             _signalrServiceClient = signalrServiceClient;
-            
+
             _log = clientScope.GetService<ILog>();
             _apiHelper = clientScope.GetService<ApiHelper>();
 
             _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
+            _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
 
-            _log.Name = $"ASC.Mail.MailUserClient_{userName}";            
+            _log.Name = $"ASC.Mail.MailUserClient_{userName}";
 
             CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -193,18 +202,34 @@ namespace ASC.Mail.ImapSync
 
         private List<MailBoxData> GetUserMailBoxes()
         {
-            var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, onlyTeamlab: true);
+            List<MailBoxData> mailboxes;
+            _enginesFactorySemaphore.Wait();
 
-            var mailboxes = _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp);
+            try
+            {
+                var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, onlyTeamlab: true);
 
-            return mailboxes.Where(x=>x.Enabled).ToList();
+                mailboxes = _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp);
+            }
+            catch (Exception ex)
+            {
+                mailboxes = new List<MailBoxData>();
+
+                _log.Error($"GetUserMailBoxes exception: {ex}");
+            }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
+
+            return mailboxes.Where(x => x.Enabled).ToList();
         }
 
         private bool IsUserOnLine()
         {
             var mailboxes = GetUserMailBoxes();
 
-            return mailboxes.Any(x=>x.Active);
+            return mailboxes.Any(x => x.Active);
         }
 
         private void UndateSimplImapClients()
@@ -215,7 +240,7 @@ namespace ASC.Mail.ImapSync
 
             newMailBoxes.ForEach(x => CreateSimpleImapClient(x));
 
-            var stopedMailBoxes= simpleImapClients.Keys.Except(mailBoxes).ToList();
+            var stopedMailBoxes = simpleImapClients.Keys.Except(mailBoxes).ToList();
 
             stopedMailBoxes.ForEach(x => DeleteSimpleImapClient(x));
 
@@ -236,7 +261,22 @@ namespace ASC.Mail.ImapSync
 
             var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
 
-            string isLocked=_mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
+            _enginesFactorySemaphore.Wait();
+
+            try
+            {
+                string isLocked = _mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
+
+                _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"CreateSimpleImapClient exception: {ex}");
+            }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
 
             simpleImapClient.NewMessage += ImapClient_NewMessage;
             simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
@@ -246,7 +286,7 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClients.Add(mailbox, simpleImapClient);
 
-            _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
+
 
             simpleImapClient.Init();
         }
@@ -265,14 +305,27 @@ namespace ASC.Mail.ImapSync
 
             simpleImapClients.Remove(mailbox);
 
-            string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailbox, _mailSettings) ? "unlocked" : "didn`t unlock";
+            _enginesFactorySemaphore.Wait();
 
-            _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} removed and {isLocked}.");
+            try
+            {
+                string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailbox, _mailSettings) ? "unlocked" : "didn`t unlock";
+
+                _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} removed and {isLocked}.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"DeleteSimpleImapClient exception: {ex}");
+            }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
         }
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            bool needUserUpdate=false;
+            bool needUserUpdate = false;
 
             var ids = new List<int>();
 
@@ -291,6 +344,8 @@ namespace ASC.Mail.ImapSync
                         continue;
                     }
                 }
+
+                _enginesFactorySemaphore.Wait();
 
                 try
                 {
@@ -330,11 +385,13 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
+                    if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
                     ids.Clear();
                 }
             }
 
-            if(needUserUpdate) SendUnreadUser();
+            if (needUserUpdate) SendUnreadUser();
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -394,6 +451,8 @@ namespace ASC.Mail.ImapSync
 
         private void SetMailboxAuthError(SimpleImapClient simpleImapClient)
         {
+            _enginesFactorySemaphore.Wait();
+
             try
             {
                 if (simpleImapClient.Account.AuthErrorDate.HasValue) return;
@@ -405,6 +464,10 @@ namespace ASC.Mail.ImapSync
             catch (Exception ex)
             {
                 _log.Error($"SetMailboxAuthError(Tenant = {Tenant}, MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}') Exception: {ex}");
+            }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
             }
         }
 
@@ -440,23 +503,24 @@ namespace ASC.Mail.ImapSync
 
             if (intMailWorkFolder < 1) intMailWorkFolder = 1;
 
-            var exp = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId)
-                .SetMailboxId(simpleImapClient.Account.MailBoxId)
-                .SetFolder(intMailWorkFolder);
-
-            simpleImapClient.WorkFolderMails = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
-
-            _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={simpleImapClient.WorkFolderMails.Count}.");
-
-            if (simpleImapClient.ImapMessagesList == null)
-            {
-                _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
-
-                return;
-            }
+            _enginesFactorySemaphore.Wait();
 
             try
             {
+                var exp = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId)
+                                            .SetMailboxId(simpleImapClient.Account.MailBoxId)
+                                            .SetFolder(intMailWorkFolder);
+
+                simpleImapClient.WorkFolderMails = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
+
+                _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={simpleImapClient.WorkFolderMails.Count}.");
+
+                if (simpleImapClient.ImapMessagesList == null)
+                {
+                    _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
+
+                    return;
+                }
                 foreach (var imap_message in simpleImapClient.ImapMessagesList)
                 {
                     _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id}.");
@@ -492,11 +556,17 @@ namespace ASC.Mail.ImapSync
             {
                 _log.Error($"UpdateDbFolder(IMailFolder->{ex.Message}");
             }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
         }
 
         private void SetMessageFlagsFromImap(MessageDescriptor imap_message, MailInfo db_message)
         {
             if (imap_message == null || db_message == null) return;
+
+            //_enginesFactorySemaphore.Wait();
 
             try
             {
@@ -515,6 +585,11 @@ namespace ASC.Mail.ImapSync
             {
                 _log.Error($"SetMessageFlagsFromImap->{ex.Message}");
             }
+            finally
+            {
+               // if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
+
         }
 
         private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
@@ -528,6 +603,8 @@ namespace ASC.Mail.ImapSync
                 watch = new Stopwatch();
                 watch.Start();
             }
+
+            _enginesFactorySemaphore.Wait();
 
             try
             {
@@ -582,6 +659,8 @@ namespace ASC.Mail.ImapSync
             }
             finally
             {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
                 if (_mailSettings.Aggregator.CollectStatistics && watch != null)
                 {
                     watch.Stop();
