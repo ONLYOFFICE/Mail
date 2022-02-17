@@ -70,11 +70,9 @@ namespace ASC.Mail.ImapSync
 
         private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e)
         {
-            if (!IsReady) return;
-
             if (sender is not IMailFolder imap_folder) return;
 
-            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder.Name} Index={e.Index}. ImapMessagesList.Count={ImapMessagesList.Count}");
+            _log.Debug($"ImapMessageFlagsChanged. Folder= {ImapWorkFolder?.Name} Index={e.Index}. ImapMessagesList.Count={ImapMessagesList?.Count}");
 
             MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
 
@@ -85,7 +83,7 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            if (messageSummary.Flags.HasValue)
+            if (messageSummary.Flags.HasValue && IsReady)
             {
                 CompareFlags(imap_folder, messageSummary, e.Flags);
             }
@@ -97,11 +95,9 @@ namespace ASC.Mail.ImapSync
 
         private void ImapFolderCountChanged(object sender, EventArgs e)
         {
-            if (!IsReady) return;
+            _log.Debug($"ImapFolderCountChanged {ImapWorkFolder?.Name} Count={ImapWorkFolder?.Count}.");
 
-            _log.Debug($"ImapFolderCountChanged {ImapWorkFolder.Name} Count={ImapWorkFolder.Count}.");
-
-            AddTask(new Task(() => UpdateMessagesList()));
+            if (IsReady) AddTask(new Task(() => UpdateMessagesList()));
         }
 
         #endregion
@@ -129,13 +125,6 @@ namespace ASC.Mail.ImapSync
 
             foldersDictionary = new Dictionary<IMailFolder, ASC.Mail.Models.MailFolder>();
 
-            if (!Account.Enabled)
-            {
-                IsBroken = true;
-
-                return;
-            }
-
             imap = new ImapClient(protocolLogger)
             {
                 Timeout = _mailSettings.Aggregator.TcpTimeout
@@ -143,9 +132,7 @@ namespace ASC.Mail.ImapSync
 
             imap.Disconnected += Imap_Disconnected;
 
-            Authenticate();
-
-            LoadFoldersFromIMAP();
+            if (Authenticate()) LoadFoldersFromIMAP();
         }
 
         internal void ExecuteUserAction(List<MailInfo> clientMessages, MailUserAction action, int destination)
@@ -201,8 +188,6 @@ namespace ASC.Mail.ImapSync
 
         private void Imap_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            _log.Debug($"Imap_Disconnected.");
-
             if (e.IsRequested)
             {
                 _log.Info("Try reconnect to IMAP...");
@@ -211,15 +196,7 @@ namespace ASC.Mail.ImapSync
             }
             else
             {
-                _log.Info("DisconnectedEventArgs.IsRequested=false.");
-
-                DoneToken?.Cancel();
-
-                StopTokenSource?.Cancel();
-
-                IsBroken = true;
-
-                OnCriticalError?.Invoke(this, false);
+                CriticalError("Imap disconected without chance to reconect.");
             }
         }
 
@@ -248,8 +225,7 @@ namespace ASC.Mail.ImapSync
                     break;
             }
 
-            _log.DebugFormat("Imap.Connect({0}:{1}, {2})", Account.Server, Account.Port,
-                Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
+            _log.Debug($"Connect to {Account.Server}:{Account.Port}, {secureSocketOptions})");
 
             imap.SslProtocols = sslProtocols;
 
@@ -284,16 +260,12 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                _log.Error($"Imap.Authentication Error: {ex.Message}");
-
-                IsBroken = true;
-
-                OnCriticalError?.Invoke(this, true);
+                CriticalError($"Authentication error: {ex}", true);
 
                 return false;
             }
 
-            _log.Debug("Imap logged in.");
+            _log.Debug("IMAP: logged in.");
 
             return true;
         }
@@ -307,6 +279,19 @@ namespace ASC.Mail.ImapSync
             IsReady = true;
 
             TaskManager(Task.CompletedTask);
+        }
+
+        private void CriticalError(string message, bool IsAuthenticationError = false)
+        {
+            IsBroken = true;
+
+            _log.Warn(message);
+
+            DoneToken?.Cancel();
+
+            StopTokenSource?.Cancel();
+
+            OnCriticalError?.Invoke(this, IsAuthenticationError);
         }
 
         private void LoadFoldersFromIMAP()
@@ -382,9 +367,9 @@ namespace ASC.Mail.ImapSync
 
         #endregion
 
-        private void OpenFolder(IMailFolder folder)
+        private bool OpenFolder(IMailFolder folder)
         {
-            if (folder.IsOpen) return;
+            if (folder.IsOpen) return true;
 
             try
             {
@@ -395,7 +380,11 @@ namespace ASC.Mail.ImapSync
             catch (Exception ex)
             {
                 _log.Error($"OpenFolder {folder.Name}: {ex.Message}");
+
+                return false;
             }
+
+            return true;
         }
 
         private void SetNewImapWorkFolder(IMailFolder imapFolder)
@@ -416,9 +405,7 @@ namespace ASC.Mail.ImapSync
                 ImapWorkFolder.MessageFlagsChanged += ImapMessageFlagsChanged;
                 ImapWorkFolder.CountChanged += ImapFolderCountChanged;
 
-                OpenFolder(ImapWorkFolder);
-
-                UpdateMessagesList();
+                if(OpenFolder(ImapWorkFolder)) UpdateMessagesList();
             }
             catch (Exception ex)
             {
@@ -493,12 +480,8 @@ namespace ASC.Mail.ImapSync
             }
         }
 
-        private async Task SetIdle()
+        private async Task<bool> SetIdle()
         {
-            if (ImapWorkFolder == null) return;
-
-            if (!imap.IsAuthenticated) return;
-
             try
             {
                 if (imap.Capabilities.HasFlag(ImapCapabilities.Idle))
@@ -517,11 +500,9 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                _log.Error($"SetIdle, Error:{ex.Message}");
+                CriticalError($"SetIdle error: {ex.Message}.");
 
-                IsBroken = true;
-
-                OnCriticalError?.Invoke(this, false);
+                return false;
             }
             finally
             {
@@ -531,6 +512,8 @@ namespace ASC.Mail.ImapSync
 
                 _log.Debug($"Retrurn from Idle.");
             }
+
+            return true;
         }
 
         private void MoveMessageInImap(IMailFolder sourceFolder, List<UniqueId> uniqueIds, IMailFolder destinationFolder)
@@ -725,7 +708,7 @@ namespace ASC.Mail.ImapSync
 
             if (StopTokenSource != null)
             {
-                if (StopTokenSource.IsCancellationRequested)
+                if (StopTokenSource.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || IsBroken)
                 {
                     OnCriticalError?.Invoke(this, false);
                 }
@@ -738,8 +721,6 @@ namespace ASC.Mail.ImapSync
 
         private void AddTask(Task task)
         {
-            _log.Debug($"AddTask: task id={task.Id} added to queue.");
-
             asyncTasks.Enqueue(task);
 
             DoneToken?.Cancel();
@@ -753,13 +734,13 @@ namespace ASC.Mail.ImapSync
                 ImapWorkFolder.CountChanged -= ImapFolderCountChanged;
             }
 
-            imap?.Dispose();
-
             DoneToken?.Cancel();
             DoneToken?.Dispose();
 
             StopTokenSource?.Cancel();
             StopTokenSource?.Dispose();
+
+            imap?.Dispose();
         }
 
         private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)

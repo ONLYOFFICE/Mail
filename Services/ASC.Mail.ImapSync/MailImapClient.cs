@@ -83,7 +83,7 @@ namespace ASC.Mail.ImapSync
 
         private CancellationTokenSource CancelToken { get; set; }
 
-        private Dictionary<MailBoxData, SimpleImapClient> simpleImapClients;
+        private Dictionary<int, SimpleImapClient> simpleImapClients;
 
         public EventHandler OnCriticalError;
 
@@ -93,13 +93,13 @@ namespace ASC.Mail.ImapSync
 
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
-            UndateSimplImapClients();
+            if (IsReady) UpdateSimplImapClients();
 
             _log.Debug($"ProcessActionFromRedis. Begin read key: {RedisKey}.");
 
             int iterationCount = 0;
 
-            simpleImapClients.Select(x => x.Value).AsParallel().ForAll(x => x.ChangeFolder(folderActivity));
+            simpleImapClients.Values.AsParallel().ForAll(x => x.ChangeFolder(folderActivity));
 
             _enginesFactorySemaphore.Wait();
 
@@ -131,7 +131,7 @@ namespace ASC.Mail.ImapSync
             }
             finally
             {
-                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release(); 
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
             }
 
             _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed. CheckRedisCount is {_checkRedisCount++}");
@@ -180,7 +180,7 @@ namespace ASC.Mail.ImapSync
 
             CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
-            simpleImapClients = new Dictionary<MailBoxData, SimpleImapClient>();
+            simpleImapClients = new Dictionary<int, SimpleImapClient>();
             imapActionsQueue = new ConcurrentQueue<ImapAction>();
 
             aliveTimer = new System.Timers.Timer((_mailSettings.ImapSync.AliveTimeInMinutes ?? 20) * 60 * 1000);
@@ -193,7 +193,7 @@ namespace ASC.Mail.ImapSync
 
             processActionFromImapTimer.Enabled = true;
 
-            UndateSimplImapClients();
+            UpdateSimplImapClients();
 
             aliveTimer.Enabled = true;
 
@@ -232,31 +232,39 @@ namespace ASC.Mail.ImapSync
             return mailboxes.Any(x => x.Active);
         }
 
-        private void UndateSimplImapClients()
+        private void UpdateSimplImapClients()
         {
             var mailBoxes = GetUserMailBoxes();
 
-            var newMailBoxes = mailBoxes.Except(simpleImapClients.Keys).ToList();
+            foreach (var mailBox in mailBoxes)
+            {
+                if (simpleImapClients.ContainsKey(mailBox.MailBoxId)) continue;
 
-            newMailBoxes.ForEach(x => CreateSimpleImapClient(x));
+                CreateSimpleImapClient(mailBox);
+            }
 
-            var stopedMailBoxes = simpleImapClients.Keys.Except(mailBoxes).ToList();
+            var mailBoxIds = mailBoxes.Select(x => x.MailBoxId).ToList();
 
-            stopedMailBoxes.ForEach(x => DeleteSimpleImapClient(x));
+            foreach (var key in simpleImapClients.Keys)
+            {
+                if (mailBoxIds.Contains(key)) continue;
+
+                DeleteSimpleImapClient(key);
+            }
 
             if (simpleImapClients.Keys.Count == 0)
             {
-                OnCriticalError.Invoke(this, EventArgs.Empty);
+                OnCriticalError?.Invoke(this, EventArgs.Empty);
             }
 
-            crmAvailable = simpleImapClients.Keys.Any(mailbox => mailbox.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+            crmAvailable = simpleImapClients.Values.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
         }
 
         private void CreateSimpleImapClient(MailBoxData mailbox)
         {
-            if (simpleImapClients.ContainsKey(mailbox))
+            if (simpleImapClients.ContainsKey(mailbox.MailBoxId))
             {
-                DeleteSimpleImapClient(mailbox);
+                DeleteSimpleImapClient(mailbox.MailBoxId);
             }
 
             var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
@@ -284,16 +292,16 @@ namespace ASC.Mail.ImapSync
             simpleImapClient.OnCriticalError += ImapClient_OnCriticalError;
             simpleImapClient.OnUidlsChange += ImapClient_OnUidlsChange;
 
-            simpleImapClients.Add(mailbox, simpleImapClient);
+            simpleImapClients.Add(mailbox.MailBoxId, simpleImapClient);
 
 
 
             simpleImapClient.Init();
         }
 
-        private void DeleteSimpleImapClient(MailBoxData mailbox)
+        private void DeleteSimpleImapClient(int mailBoxId)
         {
-            var deletedSimpleImapClient = simpleImapClients[mailbox];
+            var deletedSimpleImapClient = simpleImapClients[mailBoxId];
             if (deletedSimpleImapClient != null)
             {
                 deletedSimpleImapClient.NewMessage -= ImapClient_NewMessage;
@@ -303,15 +311,13 @@ namespace ASC.Mail.ImapSync
                 deletedSimpleImapClient.OnUidlsChange -= ImapClient_OnUidlsChange;
             }
 
-            simpleImapClients.Remove(mailbox);
-
             _enginesFactorySemaphore.Wait();
 
             try
             {
-                string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailbox, _mailSettings) ? "unlocked" : "didn`t unlock";
+                string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(deletedSimpleImapClient.Account, _mailSettings) ? "unlocked" : "didn`t unlock";
 
-                _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} removed and {isLocked}.");
+                _log.Debug($"CreateSimpleImapClient: MailboxId={mailBoxId} removed and {isLocked}.");
             }
             catch (Exception ex)
             {
@@ -320,6 +326,8 @@ namespace ASC.Mail.ImapSync
             finally
             {
                 if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
+                simpleImapClients.Remove(mailBoxId);
             }
         }
 
@@ -587,7 +595,7 @@ namespace ASC.Mail.ImapSync
             }
             finally
             {
-               // if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+                // if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
             }
 
         }
