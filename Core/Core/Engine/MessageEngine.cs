@@ -1004,11 +1004,11 @@ namespace ASC.Mail.Core.Engine
             string uidl, string md5, bool saveAttachments)
         {
             int id;
-
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            lock (sync)
             {
-                lock (sync)
+                using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
                 {
+
                     id = MailSave(mailbox, message, messageId,
                     folder, folderRestore, userFolderId,
                     uidl, md5, saveAttachments, out long usedQuota);
