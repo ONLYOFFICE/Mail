@@ -415,26 +415,23 @@ namespace ASC.Mail.Core.Dao
             return result > 0;
         }
 
-        public List<int> SetMailboxesProcessed(int timeoutInMinutes)
+        public List<int> SetMailboxesProcessed(int timeout)
         {
             var mailboxes = MailDbContext.MailMailbox
                 .Where(mb => mb.IsProcessed == true
                     && mb.DateChecked != null
-                    && EF.Functions.DateDiffMinute(mb.DateChecked, DateTime.UtcNow) > timeoutInMinutes);
+                    && EF.Functions.DateDiffMinute(mb.DateChecked, DateTime.UtcNow) > timeout)
+                .ToList();
 
-            var mbList = mailboxes.ToList();
+            if (!mailboxes.Any()) return new List<int>();
 
-            if (!mailboxes.Any())
-                return new List<int>();
-
-            foreach (var mbox in mailboxes)
-            {
-                mbox.IsProcessed = false;
-            }
+            mailboxes.ForEach(mb => mb.IsProcessed = false);
 
             var result = MailDbContext.SaveChanges();
 
-            return mbList.Select(mb => (int)mb.Id).ToList();
+            MailDbContext.ChangeTracker.Clear();
+
+            return mailboxes.Select(mb => (int)mb.Id).ToList();
         }
 
         public bool CanAccessTo(IMailboxExp exp)

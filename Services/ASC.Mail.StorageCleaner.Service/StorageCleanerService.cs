@@ -1,16 +1,12 @@
 ﻿using ASC.Common;
 using ASC.Common.Logging;
-using ASC.Common.Utils;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core.Engine;
+using ASC.Mail.Core.Utils;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
-using NLog;
-
 using System;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,10 +24,9 @@ namespace ASC.Mail.StorageCleaner.Service
             IOptionsMonitor<ILog> options,
             MailGarbageEngine mailGarbageEngine,
             MailSettings settings,
-            IConfiguration configuration,
-            ConfigurationExtension configurationExtension)
+            NlogCongigure mailLogCongigure)
         {
-            ConfigureNLog(configuration, configurationExtension);
+            mailLogCongigure.Configure();
 
             Log = options.Get("ASC.Mail.Cleaner");
             Eraser = mailGarbageEngine;
@@ -126,27 +121,6 @@ namespace ASC.Mail.StorageCleaner.Service
             }
 
             StartTimer(cancelToken);
-        }
-
-        private void ConfigureNLog(IConfiguration configuration, ConfigurationExtension configurationExtension)
-        {
-            var fileName = CrossPlatform.PathCombine(configuration["pathToNlogConf"], "nlog.config");
-
-            LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(fileName);
-            LogManager.ThrowConfigExceptions = false;
-
-            var settings = configurationExtension.GetSetting<NLogSettings>("log");
-            if (!string.IsNullOrEmpty(settings.Name))
-            {
-                LogManager.Configuration.Variables["name"] = settings.Name;
-            }
-
-            if (!string.IsNullOrEmpty(settings.Dir))
-            {
-                LogManager.Configuration.Variables["dir"] = settings.Dir.TrimEnd('/').TrimEnd('\\') + Path.DirectorySeparatorChar;
-            }
-
-            NLog.Targets.Target.Register<SelfCleaningTarget>("SelfCleaning");
         }
     }
 }

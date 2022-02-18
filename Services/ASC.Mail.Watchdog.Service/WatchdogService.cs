@@ -1,20 +1,16 @@
 ﻿
+using ASC.Common;
+using ASC.Common.Logging;
+using ASC.Mail.Configuration;
+using ASC.Mail.Core.Engine;
+using ASC.Mail.Core.Utils;
+
+using Microsoft.Extensions.Options;
+
 using System;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Common.Utils;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Engine;
-
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Options;
-
-using NLog;
 
 namespace ASC.Mail.Watchdog.Service
 {
@@ -26,29 +22,28 @@ namespace ASC.Mail.Watchdog.Service
         private Timer WorkTimer;
         private MailboxEngine MailboxEngine { get; }
 
-        readonly TimeSpan TsInterval;
-        readonly TimeSpan TsTasksTimeoutInterval;
+        readonly TimeSpan Interval;
+        readonly TimeSpan TasksTimeoutInterval;
 
         public WatchdogService(
             IOptionsMonitor<ILog> options,
             MailboxEngine mailboxEngine,
             MailSettings settings,
-            IConfiguration configuration,
-            ConfigurationExtension configurationExtension)
+            NlogCongigure mailLogCongigure)
         {
-            ConfigureNLog(configuration, configurationExtension);
+            mailLogCongigure.Configure();
 
             Log = options.Get("ASC.Mail.WatchdogService");
             MailboxEngine = mailboxEngine;
 
-            TsInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TimerIntervalInMinutes));
-            TsTasksTimeoutInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TasksTimeoutInMinutes));
+            Interval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TimerIntervalInMinutes));
+            TasksTimeoutInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TasksTimeoutInMinutes));
 
             Log.InfoFormat("\r\nConfiguration:\r\n" +
                       "\t- check locked mailboxes in every {0} minutes;\r\n" +
                       "\t- locked mailboxes timeout {1} minutes;\r\n",
-                      TsInterval.TotalMinutes,
-                      TsTasksTimeoutInterval.TotalMinutes);
+                      Interval.TotalMinutes,
+                      TasksTimeoutInterval.TotalMinutes);
         }
 
         internal Task StarService(CancellationToken token)
@@ -78,50 +73,25 @@ namespace ASC.Mail.Watchdog.Service
             {
                 WorkTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
-                Log.InfoFormat("ReleaseLockedMailboxes(timeout is {0} minutes)", TsTasksTimeoutInterval.TotalMinutes);
+                Log.Info($"ReleaseLockedMailboxes(timeout is {TasksTimeoutInterval.TotalMinutes} minutes)");
 
-                var freeMailboxIds = MailboxEngine.ReleaseMailboxes((int)TsTasksTimeoutInterval.TotalMinutes);
+                var freeMailboxIds = MailboxEngine.ReleaseMailboxes((int)TasksTimeoutInterval.TotalMinutes);
 
                 if (freeMailboxIds.Any())
-                {
-                    Log.InfoFormat("Released next locked mailbox's ids: {0}", string.Join(",", freeMailboxIds));
-                }
+                    Log.Info($"Released next locked mailbox's ids: {string.Join(",", freeMailboxIds)}");
                 else
-                {
                     Log.Info("Nothing to do!");
-                }
 
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IntervalTimer_Elapsed() Exception:\r\n{0}", ex.ToString());
+                Log.Error($"IntervalTimer_Elapsed() Exception:\r\n{ex}");
             }
             finally
             {
-                Log.InfoFormat("Waiting for {0} minutes for next check...", TsInterval.TotalMinutes);
-                WorkTimer.Change(TsInterval, TsInterval);
+                Log.Info($"Waiting for {Interval.TotalMinutes} minutes for next check...");
+                WorkTimer.Change(Interval, Interval);
             }
-        }
-
-        private void ConfigureNLog(IConfiguration configuration, ConfigurationExtension configurationExtension)
-        {
-            var fileName = CrossPlatform.PathCombine(configuration["pathToNlogConf"], "nlog.config");
-
-            LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(fileName);
-            LogManager.ThrowConfigExceptions = false;
-
-            var settings = configurationExtension.GetSetting<NLogSettings>("log");
-            if (!string.IsNullOrEmpty(settings.Name))
-            {
-                LogManager.Configuration.Variables["name"] = settings.Name;
-            }
-
-            if (!string.IsNullOrEmpty(settings.Dir))
-            {
-                LogManager.Configuration.Variables["dir"] = settings.Dir.TrimEnd('/').TrimEnd('\\') + Path.DirectorySeparatorChar;
-            }
-
-            NLog.Targets.Target.Register<SelfCleaningTarget>("SelfCleaning");
         }
     }
 }

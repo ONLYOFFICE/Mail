@@ -1,23 +1,19 @@
 ﻿using ASC.Common;
 using ASC.Common.Logging;
-using ASC.Common.Utils;
 using ASC.Mail.Aggregator.Service.Console;
 using ASC.Mail.Aggregator.Service.Queue;
 using ASC.Mail.Aggregator.Service.Queue.Data;
 using ASC.Mail.Configuration;
 using ASC.Mail.Core;
+using ASC.Mail.Core.Utils;
 using ASC.Mail.Models;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-
-using NLog;
 
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -61,20 +57,18 @@ namespace ASC.Mail.Aggregator.Service.Service
             IOptionsMonitor<ILog> optionsMonitor,
             MailSettings mailSettings,
             IServiceProvider serviceProvider,
-            IConfiguration configuration,
-            ConfigurationExtension configurationExtension,
             SocketIoNotifier signalrWorker,
             MailQueueItemSettings mailQueueItemSettings,
-            IMailDaoFactory mailDaoFactory)
+            IMailDaoFactory mailDaoFactory,
+            NlogCongigure mailLogCongigure)
         {
+            mailLogCongigure.Configure();
 
             ServiceProvider = serviceProvider;
             ConsoleParameters = consoleParser.GetParsedParameters();
             QueueManager = queueManager;
 
-            ConfigureLogNLog(configuration, configurationExtension);
             LogOptions = optionsMonitor;
-
 
             Log = optionsMonitor.Get("ASC.Mail.MainThread");
             LogStat = optionsMonitor.Get("ASC.Mail.Stat");
@@ -374,27 +368,6 @@ namespace ASC.Mail.Aggregator.Service.Service
             {
                 Log.Error("Try forget Filters for user failed");
             }
-        }
-
-        private void ConfigureLogNLog(IConfiguration configuration, ConfigurationExtension configurationExtension)
-        {
-            var fileName = CrossPlatform.PathCombine(configuration["pathToNlogConf"], "nlog.config");
-
-            LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(fileName);
-            LogManager.ThrowConfigExceptions = false;
-
-            var settings = configurationExtension.GetSetting<NLogSettings>("log");
-            if (!string.IsNullOrEmpty(settings.Name))
-            {
-                LogManager.Configuration.Variables["name"] = settings.Name;
-            }
-
-            if (!string.IsNullOrEmpty(settings.Dir))
-            {
-                LogManager.Configuration.Variables["dir"] = settings.Dir.TrimEnd('/').TrimEnd('\\') + Path.DirectorySeparatorChar;
-            }
-
-            NLog.Targets.Target.Register<SelfCleaningTarget>("SelfCleaning");
         }
 
         internal static void LogStatistic(string method, MailBoxData mailBoxData, double duration, bool failed)
