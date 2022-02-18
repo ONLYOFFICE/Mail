@@ -19,9 +19,13 @@ using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core.Notify.Signalr;
 using ASC.Mail.Configuration;
+using ASC.Mail.Core.Utils;
+
 using MailKit.Security;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -53,7 +57,8 @@ namespace ASC.Mail.ImapSync
             RedisFactory redisFactory,
             MailSettings mailSettings,
             IServiceProvider serviceProvider,
-            IOptionsSnapshot<SignalrServiceClient> optionsSnapshot)
+            IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
+            NlogCongigure mailLogCongigure)
         {
             _options = options;
             _redisClient = redisFactory.GetRedisClient();
@@ -67,6 +72,8 @@ namespace ASC.Mail.ImapSync
 
             try
             {
+                mailLogCongigure.Configure();
+
                 _log = _options.Get("ASC.Mail.ImapSyncService");
 
                 _log.Info("Service is ready.");

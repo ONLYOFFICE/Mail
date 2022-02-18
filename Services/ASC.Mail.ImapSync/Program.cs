@@ -5,13 +5,17 @@ using ASC.Common.DependencyInjection;
 using ASC.Common.Mapping;
 using ASC.Common.Utils;
 using ASC.Mail.Core.Search;
+
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+
 using StackExchange.Redis.Extensions.Core.Configuration;
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -88,6 +92,7 @@ namespace ASC.Mail.ImapSync
             {
                 services.AddHttpContextAccessor();
                 services.AddMemoryCache();
+                services.AddHttpClient();
                 var diHelper = new DIHelper(services);
                 diHelper.TryAdd<FactoryIndexerMailMail>();
                 diHelper.TryAdd<FactoryIndexerMailContact>();
