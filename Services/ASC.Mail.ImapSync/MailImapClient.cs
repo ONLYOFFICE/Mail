@@ -56,15 +56,14 @@ namespace ASC.Mail.ImapSync
         public readonly int Tenant;
         public readonly string RedisKey;
 
-        private int _checkRedisCount;
-
         public bool IsReady { get; private set; } = false;
 
         public ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; }
 
-        private ConcurrentQueue<ImapAction> imapActionsQueue;
+        private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
+        private readonly Dictionary<int, SimpleImapClient> simpleImapClients;
 
-        private SemaphoreSlim _enginesFactorySemaphore;
+        private readonly SemaphoreSlim _enginesFactorySemaphore;
 
         private readonly IServiceProvider clientScope;
         private readonly MailEnginesFactory _mailEnginesFactory;
@@ -83,19 +82,14 @@ namespace ASC.Mail.ImapSync
 
         private CancellationTokenSource CancelToken { get; set; }
 
-        private Dictionary<int, SimpleImapClient> simpleImapClients;
-
         public EventHandler OnCriticalError;
 
-        private System.Timers.Timer aliveTimer;
-
-        private System.Timers.Timer processActionFromImapTimer;
+        private readonly System.Timers.Timer aliveTimer;
+        private readonly System.Timers.Timer processActionFromImapTimer;
 
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             if (IsReady) UpdateSimplImapClients();
-
-            _log.Debug($"ProcessActionFromRedis. Begin read key: {RedisKey}.");
 
             int iterationCount = 0;
 
@@ -127,14 +121,14 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                _log.Error($"ProcessActionFromRedis. Error: {ex.Message}.");
+                _log.Error($"CheckRedis error: {ex.Message}.");
             }
             finally
             {
                 if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
             }
 
-            _log.Debug($"ProcessActionFromRedis end. {iterationCount} keys readed. CheckRedisCount is {_checkRedisCount++}");
+            _log.Debug($"CheckRedis: {iterationCount} keys readed. User have {simpleImapClients.Count} clients");
         }
 
         public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
@@ -176,14 +170,14 @@ namespace ASC.Mail.ImapSync
             _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
             _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
 
-            _log.Name = $"ASC.Mail.MailUserClient_{userName}";
+            _log.Name = $"ASC.Mail.MailUser_{userName}";
 
             CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
             simpleImapClients = new Dictionary<int, SimpleImapClient>();
             imapActionsQueue = new ConcurrentQueue<ImapAction>();
 
-            aliveTimer = new System.Timers.Timer((_mailSettings.ImapSync.AliveTimeInMinutes ?? 20) * 60 * 1000);
+            aliveTimer = new System.Timers.Timer((_mailSettings.ImapSync.AliveTimeInMinutes ?? 1) * 60 * 1000);
 
             aliveTimer.Elapsed += AliveTimer_Elapsed;
 
@@ -267,12 +261,26 @@ namespace ASC.Mail.ImapSync
                 DeleteSimpleImapClient(mailbox.MailBoxId);
             }
 
-            var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
-
-            _enginesFactorySemaphore.Wait();
+            SimpleImapClient simpleImapClient;
 
             try
             {
+                simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+
+                if (simpleImapClient == null) return;
+
+                simpleImapClient.NewMessage += ImapClient_NewMessage;
+                simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
+                simpleImapClient.NewActionFromImap += ImapClient_NewActionFromImap;
+                simpleImapClient.OnCriticalError += ImapClient_OnCriticalError;
+                simpleImapClient.OnUidlsChange += ImapClient_OnUidlsChange;
+
+                simpleImapClients.Add(mailbox.MailBoxId, simpleImapClient);
+
+                simpleImapClient.Init();
+
+                _enginesFactorySemaphore.Wait();
+
                 string isLocked = _mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
 
                 _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
@@ -285,18 +293,6 @@ namespace ASC.Mail.ImapSync
             {
                 if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
             }
-
-            simpleImapClient.NewMessage += ImapClient_NewMessage;
-            simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
-            simpleImapClient.NewActionFromImap += ImapClient_NewActionFromImap;
-            simpleImapClient.OnCriticalError += ImapClient_OnCriticalError;
-            simpleImapClient.OnUidlsChange += ImapClient_OnUidlsChange;
-
-            simpleImapClients.Add(mailbox.MailBoxId, simpleImapClient);
-
-
-
-            simpleImapClient.Init();
         }
 
         private void DeleteSimpleImapClient(int mailBoxId)
@@ -317,7 +313,7 @@ namespace ASC.Mail.ImapSync
             {
                 string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(deletedSimpleImapClient.Account, _mailSettings) ? "unlocked" : "didn`t unlock";
 
-                _log.Debug($"CreateSimpleImapClient: MailboxId={mailBoxId} removed and {isLocked}.");
+                _log.Debug($"DeleteSimpleImapClient: MailboxId={mailBoxId} removed and {isLocked}.");
             }
             catch (Exception ex)
             {
@@ -393,13 +389,13 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
+                    if (needUserUpdate) SendUnreadUser();
+
                     if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
 
                     ids.Clear();
                 }
             }
-
-            if (needUserUpdate) SendUnreadUser();
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)

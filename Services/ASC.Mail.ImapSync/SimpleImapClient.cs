@@ -437,20 +437,17 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            int maxIndex = ImapMessagesList.Max(x => x.Index);
+            int maxIndex = ImapMessagesList.Max(x => x.Index)+1;
 
             try
             {
                 var newMessagesList = ImapWorkFolder.Fetch(maxIndex, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags).ToMessageDescriptorList();
 
-                foreach (var newMessage in newMessagesList)
-                {
-                    TryGetNewMessage(newMessage.UniqueId);
+                ImapMessagesList.AddRange(newMessagesList);
 
-                    ImapMessagesList.Add(newMessage);
-                }
+                newMessagesList.ForEach(x => TryGetNewMessage(x.UniqueId));
 
-                _log.Debug($"UpdateMessagesList: New messages count={newMessagesList?.Count}.");
+                _log.Debug($"UpdateMessagesList: New messages count={ImapMessagesList?.Count}. {newMessagesList.Count} messages added.");
             }
             catch (Exception ex)
             {
