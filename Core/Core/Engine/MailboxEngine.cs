@@ -934,7 +934,7 @@ namespace ASC.Mail.Core.Engine
                 EMailInFolder = mailbox.EmailInFolder,
                 MailAutoreply = mailAutoReply,
                 AccessTokenRefreshed = false, //TODO: ???
-
+                Active= mailbox.UserOnline,
                 Enabled = mailbox.Enabled,
                 IsRemoved = mailbox.IsRemoved,
                 IsTeamlab = mailbox.IsTeamlabMailbox
