@@ -261,7 +261,7 @@ namespace ASC.Mail.Configuration
             {
                 RedisConnectionString = string.IsNullOrEmpty(imapSync.RedisConnectionString) ? "localhost:6379" : imapSync.RedisConnectionString;
 
-                AliveTimeInMinutes = imapSync.AliveTimeInMinutes ?? 1;
+                AliveTimeInMinutes = imapSync.AliveTimeInMinutes ?? 10;
             }
 
         }

@@ -79,6 +79,8 @@ namespace ASC.Mail.ImapSync
         private readonly SecurityContext securityContext;
 
         private bool crmAvailable;
+        private bool needUserUpdate;
+        private bool needUserMailBoxUpdate;
 
         private CancellationTokenSource CancelToken { get; set; }
 
@@ -89,7 +91,7 @@ namespace ASC.Mail.ImapSync
 
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
-            if (IsReady) UpdateSimplImapClients();
+            needUserMailBoxUpdate = true;
 
             int iterationCount = 0;
 
@@ -192,6 +194,7 @@ namespace ASC.Mail.ImapSync
             aliveTimer.Enabled = true;
 
             IsReady = true;
+            needUserUpdate = false;
         }
 
         private List<MailBoxData> GetUserMailBoxes()
@@ -252,6 +255,8 @@ namespace ASC.Mail.ImapSync
             }
 
             crmAvailable = simpleImapClients.Values.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+
+            needUserMailBoxUpdate = false;
         }
 
         private void CreateSimpleImapClient(MailBoxData mailbox)
@@ -329,9 +334,9 @@ namespace ASC.Mail.ImapSync
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            bool needUserUpdate = false;
-
             var ids = new List<int>();
+
+            if(IsReady&&needUserMailBoxUpdate) UpdateSimplImapClients();
 
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
@@ -389,12 +394,15 @@ namespace ASC.Mail.ImapSync
                 }
                 finally
                 {
-                    if (needUserUpdate) SendUnreadUser();
-
                     if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
 
                     ids.Clear();
                 }
+            }
+
+            if (needUserUpdate)
+            {
+                needUserUpdate = !SendUnreadUser();
             }
         }
 
@@ -563,14 +571,14 @@ namespace ASC.Mail.ImapSync
             finally
             {
                 if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
+                needUserUpdate = true;
             }
         }
 
         private void SetMessageFlagsFromImap(MessageDescriptor imap_message, MailInfo db_message)
         {
             if (imap_message == null || db_message == null) return;
-
-            //_enginesFactorySemaphore.Wait();
 
             try
             {
@@ -587,13 +595,8 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                _log.Error($"SetMessageFlagsFromImap->{ex.Message}");
+                _log.Error($"SetMessageFlagsFromImap: {ex.Message}");
             }
-            finally
-            {
-                // if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-            }
-
         }
 
         private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
@@ -624,7 +627,7 @@ namespace ASC.Mail.ImapSync
 
                 message.FixEncodingIssues(_log);
 
-                message.Subject += " - byImapSync";
+                //message.Subject += " - byImapSync";
 
                 var folder = simpleImapClient.MailWorkFolder;
                 var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
@@ -641,23 +644,17 @@ namespace ASC.Mail.ImapSync
                     return result;
                 }
 
-                _log.Info("DoOptionalOperations->START");
-
                 DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
-
-                _log.Info("DoOptionalOperations->END");
 
                 var messageInfo = MailInfoDao.ToMailInfo(messageDB.ToMailMail(Tenant, Guid.Parse(UserName)), "");
 
                 simpleImapClient.WorkFolderMails.Add(messageInfo);
 
                 _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
-
-
             }
             catch (Exception ex)
             {
-                _log.Error($"CreateMessageInDB Exception:{ex.Message}");
+                _log.Error($"CreateMessageInDB:{ex.Message}");
 
                 result = false;
             }
@@ -689,7 +686,7 @@ namespace ASC.Mail.ImapSync
                 new KeyValuePair<string, object>("isFailed", failed)});
         }
 
-        private void SendUnreadUser()
+        private bool SendUnreadUser()
         {
             try
             {
@@ -705,11 +702,13 @@ namespace ASC.Mail.ImapSync
                     _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                _log.ErrorFormat("Unknown Error. {0}, {1}", e.ToString(),
-                    e.InnerException != null ? e.InnerException.Message : string.Empty);
+                _log.Error($"SendUnreadUser error {ex.Message}. Inner error: {ex.InnerException?.Message}.");
+
+                return false;
             }
+            return true;
         }
 
         private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, ASC.Mail.Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
@@ -815,7 +814,7 @@ namespace ASC.Mail.ImapSync
                 log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
             }
 
-            SendUnreadUser();
+            needUserUpdate = true;
         }
 
         private List<MailSieveFilterData> GetFilters(MailEnginesFactory factory, ILog log)
