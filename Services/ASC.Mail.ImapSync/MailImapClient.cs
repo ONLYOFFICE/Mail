@@ -107,6 +107,8 @@ namespace ASC.Mail.ImapSync
 
                     if (actionFromCache == null) break;
 
+                    if (actionFromCache.Action==MailUserAction.StartImapClient) continue;
+
                     var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName).SetMessageIds(actionFromCache.Uds);
 
                     var messages = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();

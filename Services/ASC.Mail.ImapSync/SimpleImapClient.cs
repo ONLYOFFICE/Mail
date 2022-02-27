@@ -33,6 +33,7 @@ namespace ASC.Mail.ImapSync
 
         private readonly ILog _log;
         private readonly MailSettings _mailSettings;
+        private IMailFolder _trashFolder;
         public readonly MailBoxData Account;
 
         public event EventHandler<ImapAction> NewActionFromImap;
@@ -141,26 +142,59 @@ namespace ASC.Mail.ImapSync
 
             if (clientMessages.Count == 0) return;
 
-            var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
-
-            foreach (var messagesInFolder in messagesByFolders)
+            if ((FolderType)destination == FolderType.Trash)
             {
-                var imapFolder = GetImapFolderByType(messagesInFolder.Key);
+                var messagesByFolders = clientMessages.GroupBy(x => x.FolderRestore);
 
-                if (imapFolder == null) continue;
-
-                var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
-
-                if (action == MailUserAction.MoveTo)
+                foreach (var messagesInFolder in messagesByFolders)
                 {
-                    var imapDestination = GetImapFolderByType(destination);
+                    IMailFolder imapSourceFolder;
 
-                    if (imapDestination == null) continue;
+                    imapSourceFolder = GetImapFolderByType(messagesInFolder.Key);
 
-                    AddTask(new Task(() => MoveMessageInImap(imapFolder, uids, imapDestination)));
+                    if (imapSourceFolder == null) continue;
+
+                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
+
+                    AddTask(new Task(() => MoveMessageInImap(imapSourceFolder, uids, _trashFolder)));
                 }
-                else
+
+                return;
+            }
+
+            if (action == MailUserAction.MoveTo)
+            {
+                var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
+
+                foreach (var messagesInFolder in messagesByFolders)
                 {
+                    IMailFolder imapSourceFolder;
+
+                    imapSourceFolder = GetImapFolderByType(messagesInFolder.Key);
+
+                    if (imapSourceFolder == null) continue;
+
+                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
+
+                    var imapDestinationFolder = GetImapFolderByType(destination);
+
+                    if (imapDestinationFolder == null) continue;
+
+                    AddTask(new Task(() => MoveMessageInImap(imapSourceFolder, uids, imapDestinationFolder)));
+                }
+            }
+            else
+            {
+                var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
+
+                foreach (var messagesInFolder in messagesByFolders)
+                {
+                    var imapFolder = GetImapFolderByType(messagesInFolder.Key);
+
+                    if (imapFolder == null) continue;
+
+                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
+
                     AddTask(new Task(() => SetFlagsInImap(imapFolder, uids, action)));
                 }
             }
@@ -405,7 +439,7 @@ namespace ASC.Mail.ImapSync
                 ImapWorkFolder.MessageFlagsChanged += ImapMessageFlagsChanged;
                 ImapWorkFolder.CountChanged += ImapFolderCountChanged;
 
-                if(OpenFolder(ImapWorkFolder)) UpdateMessagesList();
+                if (OpenFolder(ImapWorkFolder)) UpdateMessagesList();
             }
             catch (Exception ex)
             {
@@ -437,7 +471,7 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            int maxIndex = ImapMessagesList.Max(x => x.Index)+1;
+            int maxIndex = ImapMessagesList.Max(x => x.Index) + 1;
 
             try
             {
@@ -765,11 +799,18 @@ namespace ASC.Mail.ImapSync
             {
                 return new ASC.Mail.Models.MailFolder(FolderType.Spam, folder.Name);
             }
+
+            if ((folder.Attributes & FolderAttributes.Trash) != 0)
+            {
+                _trashFolder = folder;
+
+                return null;
+            }
+
             if ((folder.Attributes &
                  (FolderAttributes.All |
                   FolderAttributes.NoSelect |
                   FolderAttributes.NonExistent |
-                  FolderAttributes.Trash |
                   FolderAttributes.Archive |
                   FolderAttributes.Drafts |
                   FolderAttributes.Flagged)) != 0)
