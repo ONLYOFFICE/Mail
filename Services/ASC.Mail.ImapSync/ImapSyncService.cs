@@ -88,12 +88,7 @@ namespace ASC.Mail.ImapSync
 
         public Task RedisSubscribe(CancellationToken cancellationToken)
         {
-            _log.Info("Try to subscribe redis...");
-
-            if (_redisClient == null)
-            {
-                return StopAsync(cancellationToken);
-            }
+            if (_redisClient == null) return StopAsync(cancellationToken);
 
             try
             {
@@ -104,6 +99,10 @@ namespace ASC.Mail.ImapSync
                 _log.Error($"Didn`t subscribe to redis. Message: {ex.Message}");
 
                 return StopAsync(cancellationToken);
+            }
+            finally
+            {
+                _log.Info("Try to subscribe redis...");
             }
         }
 

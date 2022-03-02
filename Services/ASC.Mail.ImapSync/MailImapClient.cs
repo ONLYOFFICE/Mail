@@ -81,6 +81,7 @@ namespace ASC.Mail.ImapSync
         private bool crmAvailable;
         private bool needUserUpdate;
         private bool needUserMailBoxUpdate;
+        private bool userActivityDetected;
 
         private CancellationTokenSource CancelToken { get; set; }
 
@@ -92,6 +93,13 @@ namespace ASC.Mail.ImapSync
         public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
         {
             needUserMailBoxUpdate = true;
+
+            if (folderActivity == -1)
+            {
+                userActivityDetected = true;
+
+                return;
+            }
 
             int iterationCount = 0;
 
@@ -107,7 +115,7 @@ namespace ASC.Mail.ImapSync
 
                     if (actionFromCache == null) break;
 
-                    if (actionFromCache.Action==MailUserAction.StartImapClient) continue;
+                    if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
 
                     var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName).SetMessageIds(actionFromCache.Uds);
 
@@ -336,48 +344,60 @@ namespace ASC.Mail.ImapSync
 
         private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            var ids = new List<int>();
+            if (IsReady && needUserMailBoxUpdate) UpdateSimplImapClients();
 
-            if(IsReady&&needUserMailBoxUpdate) UpdateSimplImapClients();
+            _enginesFactorySemaphore.Wait();
 
-            while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
+            try
             {
-                bool result = false;
+                var uids = new List<UniqueId>();
 
-                needUserUpdate = true;
-
-                ids.Add(imapAction.message_id);
-
-                if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
+                while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
                 {
-                    if (imapAction.FolderAction == nextImapAction.FolderAction)
+                    bool result = false;
+
+                    needUserUpdate = true;
+
+                    uids.Add(imapAction.MessageUniqueId);
+
+                    if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
                     {
-                        continue;
+                        if (imapAction.IsSameImapFolderAndAction(nextImapAction)) continue;
                     }
-                }
 
-                _enginesFactorySemaphore.Wait();
+                    var Uidl = imapAction.MessageUniqueId.ToUidl(imapAction.MessageFolderType);
 
-                try
-                {
+                    var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
+                                            .SetMailboxId(imapAction.MailBoxId)
+                                            .SetMessageUids(uids.Select(x=>x.ToUidl(imapAction.MessageFolderType)).ToList());
+
+                    var massagesUids = _mailInfoDao.GetMailInfoList(exp.Build()).Select(x=>x.Id).ToList();
+
+                    if (massagesUids.Count()==0)
+                    {
+                        _log.Debug($"CompareFlags: No messages in DB.");
+
+                        return;
+                    }
+
                     switch (imapAction.FolderAction)
                     {
                         case MailUserAction.Nothing:
                             break;
                         case MailUserAction.SetAsRead:
-                            result = _mailEnginesFactory.MessageEngine.SetUnread(ids, false);
+                            result = _mailEnginesFactory.MessageEngine.SetUnread(massagesUids, false);
                             break;
                         case MailUserAction.SetAsUnread:
-                            result = _mailEnginesFactory.MessageEngine.SetUnread(ids, true);
+                            result = _mailEnginesFactory.MessageEngine.SetUnread(massagesUids, true);
                             break;
                         case MailUserAction.SetAsImportant:
-                            result = _mailEnginesFactory.MessageEngine.SetImportant(ids, true);
+                            result = _mailEnginesFactory.MessageEngine.SetImportant(massagesUids, true);
                             break;
                         case MailUserAction.SetAsNotImpotant:
-                            result = _mailEnginesFactory.MessageEngine.SetImportant(ids, false);
+                            result = _mailEnginesFactory.MessageEngine.SetImportant(massagesUids, false);
                             break;
                         case MailUserAction.SetAsDeleted:
-                            _mailEnginesFactory.MessageEngine.DeleteConversations(Tenant, UserName, ids);
+                            _mailEnginesFactory.MessageEngine.DeleteConversations(Tenant, UserName, massagesUids);
                             break;
                         case MailUserAction.RemovedFromFolder:
                             break;
@@ -387,30 +407,31 @@ namespace ASC.Mail.ImapSync
                             break;
                     }
 
-                    _log.Debug($"MailKit Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {ids.Count} messages.");
-                }
-                catch (Exception ex)
-                {
-                    _log.Error($"ProcessActionFromImap: {imapAction.FolderAction}, Count={ids.Count}, Exception: {ex}");
-                    ids.ForEach(x => _log.Error($"MessageId={x}"));
-                }
-                finally
-                {
-                    if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+                    _log.Debug($"MailKit Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {massagesUids.Count} messages.");
 
-                    ids.Clear();
+                    uids.Clear();
                 }
             }
-
-            if (needUserUpdate)
+            catch (Exception ex)
             {
-                needUserUpdate = !SendUnreadUser();
+                _log.Error($"ProcessActionFromImap exception: {ex}");
             }
+            finally
+            {
+                if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+            }
+
+            if (needUserUpdate) needUserUpdate = !SendUnreadUser();
         }
 
         private void AliveTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
         {
-            if (IsUserOnLine()) return;
+            if (userActivityDetected || IsUserOnLine())
+            {
+                userActivityDetected = false;
+
+                return;
+            }
 
             _log.Debug($"IAliveTimer. No user online.");
 
@@ -521,13 +542,13 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                var exp = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId)
+                var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
                                             .SetMailboxId(simpleImapClient.Account.MailBoxId)
                                             .SetFolder(intMailWorkFolder);
 
-                simpleImapClient.WorkFolderMails = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
+                var workFolderMails = _mailInfoDao.GetMailInfoList(exp.Build()).ToList();
 
-                _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={simpleImapClient.WorkFolderMails.Count}.");
+                _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={workFolderMails.Count}.");
 
                 if (simpleImapClient.ImapMessagesList == null)
                 {
@@ -541,7 +562,7 @@ namespace ASC.Mail.ImapSync
 
                     var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
-                    var db_message = simpleImapClient.WorkFolderMails.FirstOrDefault(x => x.Uidl == uidl);
+                    var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl);
 
                     if (db_message == null)
                     {
@@ -649,8 +670,6 @@ namespace ASC.Mail.ImapSync
                 DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
 
                 var messageInfo = MailInfoDao.ToMailInfo(messageDB.ToMailMail(Tenant, Guid.Parse(UserName)), "");
-
-                simpleImapClient.WorkFolderMails.Add(messageInfo);
 
                 _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
             }

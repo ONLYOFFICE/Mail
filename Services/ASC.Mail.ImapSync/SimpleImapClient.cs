@@ -29,7 +29,7 @@ namespace ASC.Mail.ImapSync
 
         public List<MessageDescriptor> ImapMessagesList { get; set; }
         public IMailFolder ImapWorkFolder { get; private set; }
-        public List<MailInfo> WorkFolderMails { get; set; }
+        //public List<MailInfo> WorkFolderMails { get; set; }
 
         private readonly ILog _log;
         private readonly MailSettings _mailSettings;
@@ -652,19 +652,6 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            var Uidl = oldMessage.UniqueId.ToUidl(foldersDictionary[imap_folder].Folder);
-
-            var _message = WorkFolderMails.FirstOrDefault(x => x.Uidl == Uidl);
-
-            if (_message == null)
-            {
-                _log.Debug($"CompareFlags: No message in DB. Uidl={Uidl}");
-
-                return;
-            }
-
-            var _message_id = _message.Id;
-
             _log.Debug($"CompareFlags: {imap_folder.Name} Old flags=({oldMessage.Flags}) New flags {newFlag}.");
 
             try
@@ -679,7 +666,10 @@ namespace ASC.Mail.ImapSync
                         ImapAction imapAction = new ImapAction()
                         {
                             FolderAction = oldSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
-                            message_id = _message_id
+                            MessageFolderName = imap_folder.FullName,
+                            MessageUniqueId = oldMessage.UniqueId,
+                            MessageFolderType = foldersDictionary[imap_folder].Folder,
+                            MailBoxId = Account.MailBoxId
                         };
                         NewActionFromImap(this, imapAction);
                     }
@@ -702,7 +692,10 @@ namespace ASC.Mail.ImapSync
                         ImapAction imapAction = new ImapAction()
                         {
                             FolderAction = oldImportant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
-                            message_id = _message_id
+                            MessageFolderName = imap_folder.FullName,
+                            MessageUniqueId = oldMessage.UniqueId,
+                            MessageFolderType = foldersDictionary[imap_folder].Folder,
+                            MailBoxId = Account.MailBoxId
                         };
                         NewActionFromImap(this, imapAction);
                     }
