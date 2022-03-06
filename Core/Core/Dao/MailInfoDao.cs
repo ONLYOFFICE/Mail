@@ -64,8 +64,8 @@ namespace ASC.Mail.Core.Dao
             {
                 query = query.Where(m =>
                     MailDbContext.MailTagMail
-                        .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId)
-                        .Count() == exp.TagIds.Count);
+                        .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId && exp.TagIds.Contains(t.IdTag))
+                        .FirstOrDefault() != null);
             }
 
             if (exp.UserFolderId.HasValue)
