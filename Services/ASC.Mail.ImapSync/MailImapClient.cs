@@ -96,8 +96,6 @@ namespace ASC.Mail.ImapSync
             if (folderActivity == -1)
             {
                 userActivityDetected = true;
-
-                return;
             }
 
             int iterationCount = 0;
@@ -120,7 +118,7 @@ namespace ASC.Mail.ImapSync
 
                     foreach (var simpleClient in simpleImapClients)
                     {
-                        var clientMessages = messages.Where(x => (x.MailboxId == simpleClient.Account.MailBoxId) && (x.Folder == simpleClient.Folder));
+                        var clientMessages = messages.Where(x => (x.MailboxId == simpleClient.Account.MailBoxId));
 
                         if (clientMessages.Any()) simpleClient.ExecuteUserAction(clientMessages, actionFromCache.Action, actionFromCache.Destination);
                     }
@@ -281,7 +279,7 @@ namespace ASC.Mail.ImapSync
 
                 rootSimpleImapClient.Init("");
 
-                foreach(var folder in rootSimpleImapClient.ImapFoldersFullName)
+                foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
                 {
                     var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
 
@@ -338,14 +336,11 @@ namespace ASC.Mail.ImapSync
         {
             int deletedClientCount = 0;
 
-            var deletedSimpleImapClients = simpleImapClients.Where(x => x.Account.MailBoxId == mailBoxData.MailBoxId);
+            var deletedSimpleImapClients = simpleImapClients.Where(x => x.Account.MailBoxId == mailBoxData.MailBoxId).ToList();
 
-            foreach (var deletedSimpleImapClient in deletedSimpleImapClients)
-            {
-                UnSetEvents(deletedSimpleImapClient);
+            deletedSimpleImapClients.ForEach(x => UnSetEvents(x));
 
-                if (simpleImapClients.Remove(deletedSimpleImapClient)) deletedClientCount++;
-            }
+            simpleImapClients.RemoveAll(x => x.Account.MailBoxId == mailBoxData.MailBoxId);
 
             _enginesFactorySemaphore.Wait();
 
@@ -388,6 +383,7 @@ namespace ASC.Mail.ImapSync
 
                     var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
                                             .SetMailboxId(imapAction.MailBoxId)
+                                            .SetFolder((int)imapAction.MessageFolderType)
                                             .SetMessageUids(uids.Select(x => x.ToUidl(imapAction.MessageFolderType)).ToList());
 
                     var massagesUids = _mailInfoDao.GetMailInfoList(exp.Build()).Select(x => x.Id).ToList();
@@ -428,7 +424,7 @@ namespace ASC.Mail.ImapSync
                             break;
                     }
 
-                    if(result) needUserUpdate = true;
+                    if (result) needUserUpdate = true;
 
                     _log.Debug($"MailKit Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {massagesUids.Count} messages.");
 
@@ -574,9 +570,9 @@ namespace ASC.Mail.ImapSync
                                             .SetMailboxId(simpleImapClient.Account.MailBoxId)
                                             .SetFolder(simpleImapClient.FolderInt);
 
-                if (!simpleImapClient.IsRootFolder)
+                if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
                 {
-                    var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, new string[] { simpleImapClient.ImapWorkFolderFullName });
+                    var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
 
                     exp.SetTagIds(tags);
                 }
@@ -607,16 +603,19 @@ namespace ASC.Mail.ImapSync
                     SetMessageFlagsFromImap(imap_message, db_message);
                 }
 
-                List<int> messagesToRemove = new List<int>();
+                //if (!simpleImapClient.IsRootFolder)
+                //{
+                //    List<int> messagesToRemove = new List<int>();
 
-                foreach (var dbMessage in workFolderMails)
-                {
-                    if (uidlInIMAP.Contains(dbMessage.Uidl)) continue;
+                //    foreach (var dbMessage in workFolderMails)
+                //    {
+                //        if (uidlInIMAP.Contains(dbMessage.Uidl)) continue;
 
-                    messagesToRemove.Add(dbMessage.Id);
-                }
+                //        messagesToRemove.Add(dbMessage.Id);
+                //    }
 
-                _mailEnginesFactory.MessageEngine.SetRemoved(messagesToRemove);
+                //    _mailEnginesFactory.MessageEngine.SetRemoved(messagesToRemove);
+                //}
             }
             catch (Exception ex)
             {
@@ -669,75 +668,86 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                message.FixDateIssues(imap_message?.InternalDate, _log);
-
-                bool unread = false, important = false;
-
-                if ((imap_message != null) && imap_message.Flags.HasValue)
-                {
-                    unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
-                    important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
-                }
-
-                message.FixEncodingIssues(_log);
-
-                var folder = simpleImapClient.MailWorkFolder;
-                var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
-
-                _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
-
-                var messageDB = _mailEnginesFactory.MessageEngine.Save(simpleImapClient.Account, message, uidl, folder, null, unread, _log);
-
-                if (messageDB == null || messageDB.Id <= 0)
-                {
-
-                    var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, null)
+                var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, null)
                                                     .SetMailboxId(simpleImapClient.Account.MailBoxId)
                                                     .SetMimeMessageId(message.MessageId);
 
-                    var messagesInfo = _mailInfoDao.GetMailInfoList(exp.Build());
+                var messagesInfo = _mailInfoDao.GetMailInfoList(exp.Build());
 
-                    if (!messagesInfo.Any())
+                if (!messagesInfo.Any())
+                {
+                    message.FixDateIssues(imap_message?.InternalDate, _log);
+
+                    bool unread = false, important = false;
+
+                    if ((imap_message != null) && imap_message.Flags.HasValue)
                     {
-                        _log.Debug("CreateMessageInDB: failed.");
-                        result = false;
-                        return result;
+                        unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
+                        important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
                     }
 
-                    if(messagesInfo.Count==1)
+                    message.FixEncodingIssues(_log);
+
+                    var folder = simpleImapClient.MailWorkFolder;
+                    var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
+
+                    _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
+
+                    var messageDB = _mailEnginesFactory.MessageEngine.Save(simpleImapClient.Account, message, uidl, folder, null, unread, _log);
+
+                    if (messageDB == null || messageDB.Id <= 0)
                     {
-                        var messageInfo = messagesInfo[0];
+                        _log.Debug("CreateMessageInDB: failed.");
 
-                        if(messageInfo.Folder!= simpleImapClient.Folder)
-                        {
-                            if(messageInfo.FolderRestore == simpleImapClient.Folder)
-                            {
-                                _mailEnginesFactory.MessageEngine.Restore(new List<int>() { messageInfo.Id });
-                            }
-                            else
-                            {
-                                _mailEnginesFactory.MessageEngine.SetFolder(new List<int>() { messageInfo.Id }, simpleImapClient.Folder);
-                            }
-                        }
+                        return false;
+                    }
 
-                        if (messageInfo.IsRemoved)
-                        {
-                            var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved:true)
+                    DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
+
+                    _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
+
+                    return true;
+                }
+
+                var messageInfo = messagesInfo[0];
+
+                if (messageInfo.Folder != simpleImapClient.Folder)
+                {
+                    if (messageInfo.FolderRestore == simpleImapClient.Folder)
+                    {
+                        _mailEnginesFactory.MessageEngine.Restore(new List<int>() { messageInfo.Id });
+                    }
+                    else
+                    {
+                        _mailEnginesFactory.MessageEngine.SetFolder(new List<int>() { messageInfo.Id }, simpleImapClient.Folder);
+                    }
+                }
+
+                string imap_message_uidl = imap_message.UniqueId.ToUidl(messageInfo.Folder);
+
+                if (imap_message_uidl != messageInfo.Uidl)
+                {
+                    var updateUidlQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
                                 .SetMessageId(messageInfo.Id)
                                 .Build();
 
-                            _mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false);
-                        }
-
-                        _log.Info($"Message updated (id: {messageInfo.Id}, From: '{messageInfo.From}', Subject: '{messageInfo.Subject}', Unread: {messageInfo.IsNew})");
-                    }
-
-                    return result;
+                    _mailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
                 }
 
-                DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
+                if (messageInfo.IsRemoved)
+                {
+                    var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
+                        .SetMessageId(messageInfo.Id)
+                        .Build();
 
-                _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
+                    _mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false);
+                }
+
+                _log.Info($"Message updated (id: {messageInfo.Id}, From: '{messageInfo.From}', Subject: '{messageInfo.Subject}', Unread: {messageInfo.IsNew})");
+
+                SetMessageFlagsFromImap(imap_message, messageInfo);
+
+                return true;
             }
             catch (Exception ex)
             {

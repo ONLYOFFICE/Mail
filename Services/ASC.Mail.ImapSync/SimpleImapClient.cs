@@ -145,61 +145,26 @@ namespace ASC.Mail.ImapSync
         {
             if (!IsReady || (!clientMessages.Any())) return;
 
+            var messagesUids = clientMessages.Where(x => x.FolderRestore == Folder).Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
+
             if ((FolderType)destination == FolderType.Trash)
             {
-                var messagesByFolders = clientMessages.GroupBy(x => x.FolderRestore);
-
-                foreach (var messagesInFolder in messagesByFolders)
-                {
-                    IMailFolder imapSourceFolder;
-
-                    imapSourceFolder = GetImapFolderByType(messagesInFolder.Key);
-
-                    if (imapSourceFolder == null) continue;
-
-                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
-
-                    AddTask(new Task(() => MoveMessageInImap(imapSourceFolder, uids, _trashFolder)));
-                }
+                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, _trashFolder)));
 
                 return;
             }
 
             if (action == MailUserAction.MoveTo)
             {
-                var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
+                var imapDestinationFolder = GetImapFolderByType(destination);
 
-                foreach (var messagesInFolder in messagesByFolders)
-                {
-                    IMailFolder imapSourceFolder;
+                if (imapDestinationFolder == null) return;
 
-                    imapSourceFolder = GetImapFolderByType(messagesInFolder.Key);
-
-                    if (imapSourceFolder == null) continue;
-
-                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
-
-                    var imapDestinationFolder = GetImapFolderByType(destination);
-
-                    if (imapDestinationFolder == null) continue;
-
-                    AddTask(new Task(() => MoveMessageInImap(imapSourceFolder, uids, imapDestinationFolder)));
-                }
+                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, imapDestinationFolder)));
             }
             else
             {
-                var messagesByFolders = clientMessages.GroupBy(x => x.Folder);
-
-                foreach (var messagesInFolder in messagesByFolders)
-                {
-                    var imapFolder = GetImapFolderByType(messagesInFolder.Key);
-
-                    if (imapFolder == null) continue;
-
-                    var uids = messagesInFolder.Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
-
-                    AddTask(new Task(() => SetFlagsInImap(imapFolder, uids, action)));
-                }
+                AddTask(new Task(() => SetFlagsInImap(ImapWorkFolder, messagesUids, action)));
             }
         }
 
