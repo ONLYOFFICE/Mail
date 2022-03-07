@@ -10,6 +10,7 @@ namespace ASC.Mail.ImapSync
         public string MessageFolderName { set; get; }
         public FolderType MessageFolderType { set; get; }
         public MailUserAction FolderAction { set; get; }
+        public int MessageIdInDB { set; get; }
 
         public bool IsSameImapFolderAndAction(ImapAction imapAction)
         {

@@ -104,7 +104,8 @@ namespace ASC.Mail.ImapSync
                     MessageFolderName = ImapWorkFolderFullName,
                     MessageUniqueId = messageSummary.UniqueId,
                     MessageFolderType = Folder,
-                    MailBoxId = Account.MailBoxId
+                    MailBoxId = Account.MailBoxId,
+                    MessageIdInDB = messageSummary.MessageIdInDB
                 };
                 NewActionFromImap(this, imapAction);
             }
@@ -141,11 +142,13 @@ namespace ASC.Mail.ImapSync
             if (Authenticate()) LoadFoldersFromIMAP();
         }
 
-        internal void ExecuteUserAction(IEnumerable<MailInfo> clientMessages, MailUserAction action, int destination)
+        internal void ExecuteUserAction(IEnumerable<int> clientMessages, MailUserAction action, int destination)
         {
             if (!IsReady || (!clientMessages.Any())) return;
 
-            var messagesUids = clientMessages.Where(x => x.FolderRestore == Folder).Select(x => x.Uidl.ToUniqueId()).Where(x => x.IsValid).ToList();
+            var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB));
+
+            var messagesUids = messagesOfThisClient.Select(x => x.UniqueId).ToList();
 
             if ((FolderType)destination == FolderType.Trash)
             {
@@ -615,7 +618,8 @@ namespace ASC.Mail.ImapSync
                             MessageFolderName = ImapWorkFolderFullName,
                             MessageUniqueId = oldMessage.UniqueId,
                             MessageFolderType = Folder,
-                            MailBoxId = Account.MailBoxId
+                            MailBoxId = Account.MailBoxId,
+                            MessageIdInDB = oldMessage.MessageIdInDB
                         };
                         NewActionFromImap(this, imapAction);
                     }
@@ -631,7 +635,8 @@ namespace ASC.Mail.ImapSync
                             MessageFolderName = ImapWorkFolderFullName,
                             MessageUniqueId = oldMessage.UniqueId,
                             MessageFolderType = Folder,
-                            MailBoxId = Account.MailBoxId
+                            MailBoxId = Account.MailBoxId,
+                            MessageIdInDB = oldMessage.MessageIdInDB
                         };
                         NewActionFromImap(this, imapAction);
                     }
