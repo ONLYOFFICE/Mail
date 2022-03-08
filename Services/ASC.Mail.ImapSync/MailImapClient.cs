@@ -688,19 +688,7 @@ namespace ASC.Mail.ImapSync
 
                 imap_message.MessageIdInDB = messageInfo.Id;
 
-                if (messageInfo.Folder != simpleImapClient.Folder)
-                {
-                    if (messageInfo.FolderRestore == simpleImapClient.Folder)
-                    {
-                        _mailEnginesFactory.MessageEngine.Restore(new List<int>() { messageInfo.Id });
-                    }
-                    else
-                    {
-                        _mailEnginesFactory.MessageEngine.SetFolder(new List<int>() { messageInfo.Id }, simpleImapClient.Folder);
-                    }
-                }
-
-                string imap_message_uidl = imap_message.UniqueId.ToUidl(messageInfo.Folder);
+                string imap_message_uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
                 if (imap_message_uidl != messageInfo.Uidl)
                 {
@@ -709,6 +697,11 @@ namespace ASC.Mail.ImapSync
                                 .Build();
 
                     _mailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
+                }
+
+                if (messageInfo.Folder != simpleImapClient.Folder)
+                {
+                    _mailEnginesFactory.MessageEngine.SetFolder(new List<int>() { messageInfo.Id }, simpleImapClient.Folder);
                 }
 
                 if (messageInfo.IsRemoved)
@@ -720,7 +713,7 @@ namespace ASC.Mail.ImapSync
                     if(_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false)>0) messageInfo.IsRemoved=false;
                 }
 
-                _log.Info($"Message updated (id: {messageInfo.Id}, From: '{messageInfo.From}', Subject: '{messageInfo.Subject}', Unread: {messageInfo.IsNew})");
+                _log.Info($"Message updated (id: {messageInfo.Id}, Folder: '{simpleImapClient.Folder}'), Subject: '{messageInfo.Subject}'");
 
                 SetMessageFlagsFromImap(imap_message, messageInfo);
 
