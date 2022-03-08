@@ -47,8 +47,6 @@ namespace ASC.Mail.ImapSync
         private readonly MailSettings _mailSettings;
         private readonly RedisClient _redisClient;
 
-        private int _createNewClientCount;
-
         private SignalrServiceClient _signalrServiceClient { get; }
 
         private readonly IServiceProvider _serviceProvider;
@@ -188,7 +186,7 @@ namespace ASC.Mail.ImapSync
                 if (clients.TryRemove(clientKey, out MailImapClient trashValue))
                 {
                     trashValue.OnCriticalError -= Client_DeleteClient;
-                    trashValue?.Dispose();
+                    trashValue?.Stop();
 
                     _log.Info($"ImapSyncService. MailImapClient {clientKey} died and was remove.");
                 }
@@ -219,6 +217,8 @@ namespace ASC.Mail.ImapSync
         {
             try
             {
+                _cancelTokenSource.Cancel();
+
                 _log.Info("Stoping service\r\n");
 
             }

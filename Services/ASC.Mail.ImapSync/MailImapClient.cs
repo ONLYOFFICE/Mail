@@ -325,6 +325,8 @@ namespace ASC.Mail.ImapSync
 
             deletedSimpleImapClients.ForEach(x => UnSetEvents(x));
 
+            deletedSimpleImapClients.ForEach(x => x.Stop());
+
             simpleImapClients.RemoveAll(x => x.Account.MailBoxId == mailBoxData.MailBoxId);
 
             _enginesFactorySemaphore.Wait();
@@ -507,19 +509,10 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                aliveTimer.Stop();
-                aliveTimer.Elapsed -= AliveTimer_Elapsed;
-                aliveTimer.Dispose();
-
-                processActionFromImapTimer.Stop();
-                processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
-                processActionFromImapTimer.Dispose();
-
                 CancelToken?.Cancel();
 
-                simpleImapClients.ForEach(x => x?.Dispose());
-
-                CancelToken?.Dispose();
+                aliveTimer.Dispose();
+                processActionFromImapTimer.Dispose();
             }
             catch (Exception ex)
             {
@@ -686,6 +679,8 @@ namespace ASC.Mail.ImapSync
 
                     imap_message.MessageIdInDB = messageDB.Id;
 
+                    needUserUpdate = true;
+
                     return true;
                 }
 
@@ -728,6 +723,8 @@ namespace ASC.Mail.ImapSync
                 _log.Info($"Message updated (id: {messageInfo.Id}, From: '{messageInfo.From}', Subject: '{messageInfo.Subject}', Unread: {messageInfo.IsNew})");
 
                 SetMessageFlagsFromImap(imap_message, messageInfo);
+
+                needUserUpdate = true;
 
                 return true;
             }
@@ -949,6 +946,19 @@ namespace ASC.Mail.ImapSync
             }
 
             return string.Empty;
+        }
+
+        public void Stop()
+        {
+            IsReady = false;
+
+            aliveTimer.Stop();
+            aliveTimer.Elapsed -= AliveTimer_Elapsed;
+
+            processActionFromImapTimer.Stop();
+            processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
+
+            CancelToken?.Cancel();
         }
     }
 }

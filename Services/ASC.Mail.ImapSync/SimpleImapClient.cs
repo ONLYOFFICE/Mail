@@ -1,6 +1,5 @@
 ﻿using ASC.Common.Logging;
 using ASC.Mail.Configuration;
-using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
 using MailKit;
@@ -45,8 +44,7 @@ namespace ASC.Mail.ImapSync
         public event EventHandler<UniqueIdMap> OnUidlsChange;
 
         private CancellationTokenSource DoneToken { get; set; }
-        private CancellationToken CancelToken { get; set; }
-        private CancellationTokenSource StopTokenSource { get; set; }
+        private CancellationTokenSource CancelToken { get; set; }
         private readonly ImapClient imap;
         private ConcurrentQueue<Task> asyncTasks;
 
@@ -87,6 +85,8 @@ namespace ASC.Mail.ImapSync
 
         private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e)
         {
+            return;
+
             MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
 
             if (messageSummary == null)
@@ -124,9 +124,7 @@ namespace ASC.Mail.ImapSync
             var protocolLogger = string.IsNullOrEmpty(_mailSettings.Aggregator.ProtocolLogPath) ? (IProtocolLogger)new NullProtocolLogger() :
                 new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}.log", true);
 
-            StopTokenSource = new CancellationTokenSource();
-
-            CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, StopTokenSource.Token).Token;
+            CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
             asyncTasks = new ConcurrentQueue<Task>();
 
@@ -216,7 +214,7 @@ namespace ASC.Mail.ImapSync
 
             if (!imap.IsConnected)
             {
-                imap.Connect(Account.Server, Account.Port, secureSocketOptions, CancelToken);
+                imap.Connect(Account.Server, Account.Port, secureSocketOptions, CancelToken.Token);
             }
 
             try
@@ -225,14 +223,14 @@ namespace ASC.Mail.ImapSync
                 {
                     _log.Debug("Imap.EnableUTF8");
 
-                    imap.EnableUTF8(CancelToken);
+                    imap.EnableUTF8(CancelToken.Token);
                 }
 
                 if (string.IsNullOrEmpty(Account.OAuthToken))
                 {
                     _log.DebugFormat("Imap.Authentication({0})", Account.Account);
 
-                    imap.Authenticate(Account.Account, Account.Password, CancelToken);
+                    imap.Authenticate(Account.Account, Account.Password, CancelToken.Token);
                 }
                 else
                 {
@@ -240,7 +238,7 @@ namespace ASC.Mail.ImapSync
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
-                    imap.Authenticate(oauth2, CancelToken);
+                    imap.Authenticate(oauth2, CancelToken.Token);
                 }
             }
             catch (Exception ex)
@@ -280,8 +278,6 @@ namespace ASC.Mail.ImapSync
             _log.Warn(message);
 
             DoneToken?.Cancel();
-
-            StopTokenSource?.Cancel();
 
             OnCriticalError?.Invoke(this, IsAuthenticationError);
         }
@@ -335,7 +331,7 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                result = folder.GetSubfolders(true, CancelToken).ToList();
+                result = folder.GetSubfolders(true, CancelToken.Token).ToList();
 
                 if (result.Any())
                 {
@@ -455,7 +451,7 @@ namespace ASC.Mail.ImapSync
 
             try
             {
-                var mimeMessage = ImapWorkFolder.GetMessage(message.UniqueId, CancelToken);
+                var mimeMessage = ImapWorkFolder.GetMessage(message.UniqueId, CancelToken.Token);
 
                 if (NewMessage != null) NewMessage(this, (mimeMessage, message));
             }
@@ -472,8 +468,6 @@ namespace ASC.Mail.ImapSync
                 if (imap.Capabilities.HasFlag(ImapCapabilities.Idle))
                 {
                     DoneToken = new CancellationTokenSource(new TimeSpan(0, CheckServerAliveMitutes, 0));
-
-                    _log.Debug($"Go to Idle. Folder={ImapWorkFolder.Name}.");
 
                     await imap.IdleAsync(DoneToken.Token);
                 }
@@ -494,8 +488,6 @@ namespace ASC.Mail.ImapSync
                 DoneToken?.Dispose();
 
                 DoneToken = null;
-
-                _log.Debug($"Retrurn from Idle.");
             }
 
             return true;
@@ -657,10 +649,10 @@ namespace ASC.Mail.ImapSync
                 _log.Error($"Task manager: {previosTask.Exception.Message}");
             }
 
+            if (CancelToken.IsCancellationRequested) return;
+
             if (asyncTasks.TryDequeue(out var task))
             {
-                _log.Debug($"TaskManager: new task id={task.Id}.");
-
                 CurentTask = task.ContinueWith(TaskManager);
 
                 task.Start();
@@ -668,18 +660,17 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            _log.Debug($"TaskManager: no task in queue.");
+            _log.Debug($"TaskManager imap client alive, folder {ImapWorkFolder.FullName}.");
 
-            if (StopTokenSource != null)
+            if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
             {
-                if (StopTokenSource.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
-                {
-                    OnCriticalError?.Invoke(this, false);
-                }
-                else
-                {
-                    CurentTask = SetIdle().ContinueWith(TaskManager);
-                }
+                _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder.FullName}.");
+
+                OnCriticalError?.Invoke(this, false);
+            }
+            else
+            {
+                CurentTask = SetIdle().ContinueWith(TaskManager);
             }
         }
 
@@ -701,9 +692,6 @@ namespace ASC.Mail.ImapSync
 
             DoneToken?.Cancel();
             DoneToken?.Dispose();
-
-            StopTokenSource?.Cancel();
-            StopTokenSource?.Dispose();
 
             imap?.Dispose();
         }
@@ -778,6 +766,11 @@ namespace ASC.Mail.ImapSync
 
             folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
             return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
+        }
+
+        public void Stop()
+        {
+            CancelToken.Cancel();
         }
     }
 }
