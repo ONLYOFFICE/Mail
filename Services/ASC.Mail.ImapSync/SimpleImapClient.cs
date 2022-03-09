@@ -407,23 +407,23 @@ namespace ASC.Mail.ImapSync
 
         private void UpdateMessagesList()
         {
-            List<MessageDescriptor> oldMessageDescriptors = ImapMessagesList;
+            List<MessageDescriptor> newMessageDescriptors;
 
             try
             {
-                ImapMessagesList = ImapWorkFolder.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags).ToMessageDescriptorList();
+                newMessageDescriptors = ImapWorkFolder.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags).ToMessageDescriptorList();
             }
             catch (Exception ex)
             {
                 _log.Error($"UpdateMessagesList: Try fetch messages from IMAP folder={ImapWorkFolder.FullName}: {ex.Message}.");
 
-                ImapMessagesList = oldMessageDescriptors;
-
                 return;
             }
 
-            if (oldMessageDescriptors == null)
+            if (ImapMessagesList == null)
             {
+                ImapMessagesList = newMessageDescriptors;
+
                 MessagesListUpdated?.Invoke(this, EventArgs.Empty);
 
                 _log.Debug($"UpdateMessagesList: Load {ImapMessagesList?.Count} messages from IMAP.");
@@ -431,11 +431,16 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
-            foreach (var message in ImapMessagesList)
+            foreach (var message in newMessageDescriptors)
             {
-                if (oldMessageDescriptors.Any(x => x.Index == message.Index)) continue;
+                var oldMessageDescriptor = ImapMessagesList.FirstOrDefault(x => x.Index == message.Index);
 
-                TryGetNewMessage(message.UniqueId);
+                if (oldMessageDescriptor == null)
+                {
+                    ImapMessagesList.Add(message);
+
+                    TryGetNewMessage(message.UniqueId);
+                }
             }
         }
 
@@ -771,6 +776,8 @@ namespace ASC.Mail.ImapSync
         public void Stop()
         {
             CancelToken.Cancel();
+
+            this.Dispose();
         }
     }
 }

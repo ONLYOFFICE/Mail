@@ -673,11 +673,11 @@ namespace ASC.Mail.ImapSync
                         return false;
                     }
 
+                    imap_message.MessageIdInDB = messageDB.Id;
+
                     DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
 
                     _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
-
-                    imap_message.MessageIdInDB = messageDB.Id;
 
                     needUserUpdate = true;
 
@@ -945,6 +945,8 @@ namespace ASC.Mail.ImapSync
         {
             IsReady = false;
 
+            var allAccounts= simpleImapClients.GroupBy(x=>x.Account).Select(x=>x.Key).ToList();
+
             aliveTimer.Stop();
             aliveTimer.Elapsed -= AliveTimer_Elapsed;
 
@@ -952,6 +954,8 @@ namespace ASC.Mail.ImapSync
             processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
 
             CancelToken?.Cancel();
+
+            allAccounts.ForEach(x => DeleteSimpleImapClients(x));
         }
     }
 }
