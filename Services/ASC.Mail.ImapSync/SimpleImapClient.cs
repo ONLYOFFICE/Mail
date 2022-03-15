@@ -41,7 +41,6 @@ namespace ASC.Mail.ImapSync
         public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
         public event EventHandler MessagesListUpdated;
         public event EventHandler<bool> OnCriticalError;
-        public event EventHandler<UniqueIdMap> OnUidlsChange;
 
         private CancellationTokenSource DoneToken { get; set; }
         private CancellationTokenSource CancelToken { get; set; }
@@ -85,6 +84,8 @@ namespace ASC.Mail.ImapSync
 
         private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e)
         {
+            AddTask(new Task(() => UpdateMessagesList()));
+
             return;
 
             MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
@@ -142,7 +143,7 @@ namespace ASC.Mail.ImapSync
 
         internal void ExecuteUserAction(IEnumerable<int> clientMessages, MailUserAction action, int destination)
         {
-            if (!IsReady || (!clientMessages.Any())) return;
+            if (!clientMessages.Any()) return;
 
             var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB));
 
@@ -165,7 +166,7 @@ namespace ASC.Mail.ImapSync
             }
             else
             {
-                AddTask(new Task(() => SetFlagsInImap(ImapWorkFolder, messagesUids, action)));
+                AddTask(new Task(() => SetFlagsInImap( messagesUids, action)));
             }
         }
 
@@ -439,23 +440,21 @@ namespace ASC.Mail.ImapSync
                 {
                     ImapMessagesList.Add(message);
 
-                    TryGetNewMessage(message.UniqueId);
+                    TryGetNewMessage(message);
                 }
             }
         }
 
-        public void TryGetNewMessage(UniqueId uniqueId) => AddTask(new Task(() => GetNewMessage(uniqueId)));
+        public void TryGetNewMessage(MessageDescriptor message) => AddTask(new Task(() => GetNewMessage(message)));
 
-        private void GetNewMessage(UniqueId uniqueId)
+        private void GetNewMessage(MessageDescriptor message)
         {
-            _log.Debug($"GetNewMessage task run: UniqueId={uniqueId}.");
-
-            var message = ImapMessagesList.FirstOrDefault(x => x.UniqueId == uniqueId);
-
             if (message == null) return;
 
             try
             {
+                _log.Debug($"GetNewMessage task run: UniqueId={message.UniqueId}.");
+
                 var mimeMessage = ImapWorkFolder.GetMessage(message.UniqueId, CancelToken.Token);
 
                 if (NewMessage != null) NewMessage(this, (mimeMessage, message));
@@ -513,9 +512,7 @@ namespace ASC.Mail.ImapSync
             {
                 var returnedUidl = sourceFolder.MoveTo(uniqueIds, destinationFolder);
 
-                OnUidlsChange?.Invoke(this, returnedUidl);
-
-                ImapMessagesList = ImapMessagesList.Where(x => !uniqueIds.Contains(x.UniqueId)).ToList();
+                ImapMessagesList.RemoveAll(x=>uniqueIds.Contains(x.UniqueId));
             }
             catch (Exception ex)
             {
@@ -523,19 +520,18 @@ namespace ASC.Mail.ImapSync
             }
         }
 
-        private bool SetFlagsInImap(IMailFolder folder, List<UniqueId> uniqueIds, MailUserAction action)
+        private bool SetFlagsInImap(List<UniqueId> uniqueIds, MailUserAction action)
         {
-            if (folder == null) return false;
             if (uniqueIds.Count == 0) return false;
 
-            _log.Debug($"SetFlagsInImap task run: In {folder} set {action} for {uniqueIds.Count} messages.");
+            _log.Debug($"SetFlagsInImap task run: In {ImapWorkFolder} set {action} for {uniqueIds.Count} messages.");
 
             try
             {
                 switch (action)
                 {
                     case MailUserAction.SetAsRead:
-                        folder.AddFlags(uniqueIds, MessageFlags.Seen, true);
+                        ImapWorkFolder.AddFlags(uniqueIds, MessageFlags.Seen, true);
                         ImapMessagesList.ForEach(x =>
                         {
                             if (uniqueIds.Contains(x.UniqueId))
@@ -545,7 +541,7 @@ namespace ASC.Mail.ImapSync
                         });
                         break;
                     case MailUserAction.SetAsUnread:
-                        folder.RemoveFlags(uniqueIds, MessageFlags.Seen, true);
+                        ImapWorkFolder.RemoveFlags(uniqueIds, MessageFlags.Seen, true);
                         ImapMessagesList.ForEach(x =>
                         {
                             if (uniqueIds.Contains(x.UniqueId))
@@ -555,7 +551,7 @@ namespace ASC.Mail.ImapSync
                         });
                         break;
                     case MailUserAction.SetAsImportant:
-                        folder.AddFlags(uniqueIds, MessageFlags.Flagged, true);
+                        ImapWorkFolder.AddFlags(uniqueIds, MessageFlags.Flagged, true);
                         ImapMessagesList.ForEach(x =>
                         {
                             if (uniqueIds.Contains(x.UniqueId))
@@ -565,7 +561,7 @@ namespace ASC.Mail.ImapSync
                         });
                         break;
                     case MailUserAction.SetAsNotImpotant:
-                        folder.RemoveFlags(uniqueIds, MessageFlags.Flagged, true);
+                        ImapWorkFolder.RemoveFlags(uniqueIds, MessageFlags.Flagged, true);
                         ImapMessagesList.ForEach(x =>
                         {
                             if (uniqueIds.Contains(x.UniqueId))
@@ -578,7 +574,7 @@ namespace ASC.Mail.ImapSync
             }
             catch (Exception ex)
             {
-                _log.Error($"SetMessageFlagIMAP->{folder.Name}, {action}->{ex.Message}");
+                _log.Error($"SetMessageFlagIMAP->{ImapWorkFolder.FullName}, {action}->{ex.Message}");
 
                 return false;
             }

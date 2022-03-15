@@ -44,6 +44,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -299,7 +300,6 @@ namespace ASC.Mail.ImapSync
             simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
             simpleImapClient.NewActionFromImap += ImapClient_NewActionFromImap;
             simpleImapClient.OnCriticalError += ImapClient_OnCriticalError;
-            simpleImapClient.OnUidlsChange += ImapClient_OnUidlsChange;
 
             return true;
         }
@@ -311,8 +311,7 @@ namespace ASC.Mail.ImapSync
             simpleImapClient.NewMessage -= ImapClient_NewMessage;
             simpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
             simpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
-            simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError; ;
-            simpleImapClient.OnUidlsChange -= ImapClient_OnUidlsChange;
+            simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError;
 
             return true;
         }
@@ -404,7 +403,13 @@ namespace ASC.Mail.ImapSync
 
                     if (result) needUserUpdate = true;
 
-                    _log.Debug($"MailKit Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {uids.Count} messages.");
+                    _log.Debug($"ProcessActionFromImapTimer_Elapsed Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {uids.Count} messages.");
+
+                    StringBuilder sb= new StringBuilder();
+
+                    uids.ForEach(x => sb.Append(x.ToString()+", "));
+
+                    _log.Debug($"ProcessActionFromImapTimer_Elapsed ids: {sb.ToString()}");
 
                     uids.Clear();
                 }
@@ -445,14 +450,6 @@ namespace ASC.Mail.ImapSync
                 }
 
                 CreateSimpleImapClients(simpleImapClient.Account);
-            }
-        }
-
-        private void ImapClient_OnUidlsChange(object sender, UniqueIdMap returnedUidls)
-        {
-            if (sender is SimpleImapClient simpleImapClient)
-            {
-
             }
         }
 
@@ -564,7 +561,7 @@ namespace ASC.Mail.ImapSync
                     {
                         _log.Debug($"UpdateDbFolder: imap_message_Uidl={uidl} not found in DB.");
 
-                        simpleImapClient.TryGetNewMessage(imap_message.UniqueId);
+                        simpleImapClient.TryGetNewMessage(imap_message);
 
                         continue;
                     }

@@ -128,7 +128,7 @@ namespace ASC.Mail.ImapSync
             {
                 if (!clients.TryAdd(cashedTenantUserMailBox.UserName, null))
                 {
-                    _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Wait for client start...");
+                    _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Try to create client ...");
 
                     return;
                 }
