@@ -382,7 +382,7 @@ namespace ASC.Mail.Core.Engine
             {
                 var tempStorage = StorageFactory.GetMailStorage(compose.Mailbox.TenantId);
 
-                tempStorage.DeleteDirectory("attachments_temp", compose.Mailbox.UserId + "/" + compose.StreamId + "/");
+                tempStorage.DeleteDirectoryAsync("attachments_temp", compose.Mailbox.UserId + "/" + compose.StreamId + "/").Wait();
             }
             catch (Exception ex)
             {
@@ -427,7 +427,7 @@ namespace ASC.Mail.Core.Engine
 
             var fckStorage = StorageManager.GetDataStoreForCkImages(compose.Mailbox.TenantId);
             var attachmentStorage = StorageManager.GetDataStoreForAttachments(compose.Mailbox.TenantId);
-            var currentMailFckeditorUrl = fckStorage.GetUri(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").ToString();
+            var currentMailFckeditorUrl = fckStorage.GetUriAsync(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
             var currentUserStorageUrl = MailStoragePathCombiner.GetUserMailsDirectory(compose.Mailbox.UserId);
 
             foreach (var embeddedLink in embeddedLinks)
@@ -480,7 +480,7 @@ namespace ASC.Mail.Core.Engine
                         var path = MailStoragePathCombiner.GerStoredFilePath(attach);
                         currentImgStorage = attachmentStorage;
                         attach.storedFileUrl =
-                            MailStoragePathCombiner.GetStoredUrl(currentImgStorage.GetUri(path));
+                            MailStoragePathCombiner.GetStoredUrl(currentImgStorage.GetUriAsync(path).Result);
                     }
 
                     compose.HtmlBody = compose.HtmlBody.Replace(embeddedLink, attach.storedFileUrl);

@@ -24,13 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Web;
-
 using ASC.Common.Logging;
 using ASC.Common.Web;
 using ASC.Files.Core;
@@ -44,6 +37,13 @@ using ASC.Web.Files.Services.WCFService;
 using HtmlAgilityPack;
 
 using MimeKit;
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Web;
 
 namespace ASC.Mail.Extensions
 {
@@ -197,7 +197,7 @@ namespace ASC.Mail.Extensions
 
                 using (var stream = storageManager
                     .GetDataStoreForAttachments(mailAttachmentData.tenant)
-                    .GetReadStream(s3Key))
+                    .GetReadStreamAsync(s3Key).Result)
                 {
                     stream.CopyTo(ms);
                 }
@@ -403,10 +403,10 @@ namespace ASC.Mail.Extensions
                             }
                 };
 
-                fileStorageService.SetAceObject(aceCollection, false);
+                fileStorageService.SetAceObjectAsync(aceCollection, false).Wait();
                 log.InfoFormat("ChangeAttachedFileLinks() Set public accees to file: {0}", fileId);
                 var sharedInfo =
-                    fileStorageService.GetSharedInfo(new List<string> { objectId }, new List<string> { })
+                    fileStorageService.GetSharedInfoAsync(new List<string> { objectId }, new List<string> { }).Result
                                       .Find(r => r.SubjectId == FileConstant.ShareLinkId);
                 linkNode.SetAttributeValue("href", sharedInfo.Link);
                 log.InfoFormat("ChangeAttachedFileLinks() Change file link href: {0}", fileId);
@@ -428,7 +428,7 @@ namespace ASC.Mail.Extensions
 
             var fckStorage = storageManager.GetDataStoreForCkImages(draft.Mailbox.TenantId);
             //todo: replace selector
-            var currentMailFckeditorUrl = fckStorage.GetUri(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").ToString();
+            var currentMailFckeditorUrl = fckStorage.GetUriAsync(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
             var currentMailAttachmentFolderUrl = MailStoragePathCombiner.GetMessageDirectory(draft.Mailbox.UserId,
                 draft.StreamId);
             var currentUserStorageUrl = MailStoragePathCombiner.GetUserMailsDirectory(draft.Mailbox.UserId);

@@ -249,6 +249,9 @@ namespace ASC.Mail.Models
         [DataMember]
         public string CalendarUid { get; set; }
 
+        [DataMember]
+        public bool ReadRequestStatus { get; set; }
+
         [IgnoreDataMember]
         public int CalendarId { get; set; }
 
