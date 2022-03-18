@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Globalization;
-using System.IO;
-using System.Net;
-using System.Web;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Web;
@@ -43,6 +37,12 @@ using ASC.Web.Core.Files;
 using HtmlAgilityPack;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Globalization;
+using System.IO;
+using System.Net;
+using System.Web;
 
 namespace ASC.Mail.Storage
 {
@@ -105,10 +105,8 @@ namespace ASC.Mail.Storage
 
         public static byte[] LoadDataStoreItemData(string domain, string fileLink, IDataStore storage)
         {
-            using (var stream = storage.GetReadStream(domain, fileLink))
-            {
-                return stream.ReadToEnd();
-            }
+            using var stream = storage.GetReadStreamAsync(domain, fileLink).Result;
+            return stream.ReadToEnd();
         }
 
         public string ChangeEditorImagesLinks(string html, int mailboxId)
@@ -121,7 +119,7 @@ namespace ASC.Mail.Storage
             var ckStorage = GetDataStoreForCkImages(Tenant);
             var signatureStorage = GetDataStoreForAttachments(Tenant);
             //todo: replace selector
-            var currentMailCkeditorUrl = ckStorage.GetUri(CKEDITOR_IMAGES_DOMAIN, "").ToString();
+            var currentMailCkeditorUrl = ckStorage.GetUriAsync(CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
 
             var xpathQuery = GetXpathQueryForCkImagesToResaving(currentMailCkeditorUrl);
 
@@ -185,7 +183,7 @@ namespace ASC.Mail.Storage
 
                 using (var reader = new MemoryStream(imageData))
                 {
-                    var uploadUrl = storage.Save(string.Empty, signatureImagePath, reader, contentType, contentDisposition);
+                    var uploadUrl = storage.SaveAsync(string.Empty, signatureImagePath, reader, contentType, contentDisposition).Result;
                     return MailStoragePathCombiner.GetStoredUrl(uploadUrl);
                 }
             }
@@ -237,8 +235,8 @@ namespace ASC.Mail.Storage
                     using (var reader = new MemoryStream(mailAttachmentData.data))
                     {
                         var uploadUrl = (mailAttachmentData.needSaveToTemp)
-                            ? storage.Save("attachments_temp", attachmentPath, reader, mailAttachmentData.fileName)
-                            : storage.Save(attachmentPath, reader, mailAttachmentData.fileName);
+                            ? storage.SaveAsync("attachments_temp", attachmentPath, reader, mailAttachmentData.fileName).Result
+                            : storage.SaveAsync(attachmentPath, reader, mailAttachmentData.fileName).Result;
 
                         mailAttachmentData.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(uploadUrl);
                     }
@@ -246,8 +244,8 @@ namespace ASC.Mail.Storage
                 else
                 {
                     var uploadUrl = (mailAttachmentData.needSaveToTemp)
-                        ? storage.Save("attachments_temp", attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName)
-                        : storage.Save(attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName);
+                        ? storage.SaveAsync("attachments_temp", attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result
+                        : storage.SaveAsync(attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result;
 
                     mailAttachmentData.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(uploadUrl);
                 }

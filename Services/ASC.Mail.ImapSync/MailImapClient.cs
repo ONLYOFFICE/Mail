@@ -111,7 +111,7 @@ namespace ASC.Mail.ImapSync
 
                     if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
 
-                    simpleImapClients.ForEach(x =>x.ExecuteUserAction(actionFromCache.Uds, actionFromCache.Action, actionFromCache.Destination));
+                    simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache.Uds, actionFromCache.Action, actionFromCache.Destination));
                 }
             }
             catch (Exception ex)
@@ -707,7 +707,7 @@ namespace ASC.Mail.ImapSync
                         .SetMessageId(messageInfo.Id)
                         .Build();
 
-                    if(_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false)>0) messageInfo.IsRemoved=false;
+                    if (_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
                 }
 
                 _log.Info($"Message updated (id: {messageInfo.Id}, Folder: '{simpleImapClient.Folder}'), Subject: '{messageInfo.Subject}'");
@@ -923,7 +923,7 @@ namespace ASC.Mail.ImapSync
                 {
                     message.WriteTo(stream);
 
-                    var res = storage.Save(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).ToString();
+                    var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
 
                     log.InfoFormat($"StoreMailEml() Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
 

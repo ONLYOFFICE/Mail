@@ -622,7 +622,7 @@ namespace ASC.Mail.Core.Engine
             {
                 log.Debug($"Removing file: {path}");
 
-                dataStorage.Delete(string.Empty, path);
+                dataStorage.DeleteAsync(string.Empty, path).Wait();
 
                 log.InfoFormat("File: '{0}' removed successfully", path);
             }
@@ -652,7 +652,7 @@ namespace ASC.Mail.Core.Engine
             {
                 log.InfoFormat("RemoveUserMailDirectory(Path: {0}, Tenant = {1} User = '{2}')", userMailDir, tenant, userId);
 
-                dataStorage.DeleteDirectory(userMailDir);
+                dataStorage.DeleteDirectoryAsync(userMailDir).Wait();
             }
             catch (Exception ex)
             {

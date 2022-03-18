@@ -24,8 +24,9 @@
 */
 
 
-using System;
 using ASC.Mail.Enums;
+
+using System;
 
 namespace ASC.Mail.Core.Entities
 {
@@ -66,5 +67,6 @@ namespace ASC.Mail.Core.Entities
         public bool IsTextBodyOnly { get; set; }
         public bool HasParseError { get; set; }
         public string CalendarUid { get; set; }
+        public bool ReadRequestStatus { get; set; }
     }
 }

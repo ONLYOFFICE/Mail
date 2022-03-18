@@ -24,12 +24,14 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using ASC.Web.Core;
 using ASC.Web.Core.Utility.Skins;
 using ASC.Web.Files.Classes;
+
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Threading.Tasks;
 
 namespace ASC.Mail.Storage
 {
@@ -52,22 +54,22 @@ namespace ASC.Mail.Storage
 
         public static string GetSmallSizePhoto(GlobalStore globalStore, WebImageSupplier webImageSupplier, int contacId)
         {
-            return contacId <= 0 
-                ? GetDefaultPhoto(webImageSupplier, SmallSize) 
+            return contacId <= 0
+                ? GetDefaultPhoto(webImageSupplier, SmallSize)
                 : GetPhotoUri(globalStore, webImageSupplier, contacId, SmallSize);
         }
 
         public static string GetMediumSizePhoto(GlobalStore globalStore, WebImageSupplier webImageSupplier, int contacId)
         {
-            return contacId <= 0 
-                ? GetDefaultPhoto(webImageSupplier, MediumSize) 
+            return contacId <= 0
+                ? GetDefaultPhoto(webImageSupplier, MediumSize)
                 : GetPhotoUri(globalStore, webImageSupplier, contacId, MediumSize);
         }
 
         public static string GetBigSizePhoto(GlobalStore globalStore, WebImageSupplier webImageSupplier, int contacId)
         {
-            return contacId <= 0 
-                ? GetDefaultPhoto(webImageSupplier, BigSize) 
+            return contacId <= 0
+                ? GetDefaultPhoto(webImageSupplier, BigSize)
                 : GetPhotoUri(globalStore, webImageSupplier, contacId, BigSize);
         }
 
@@ -84,8 +86,8 @@ namespace ASC.Mail.Storage
             if (!string.IsNullOrEmpty(defaultPhotoUri)) return defaultPhotoUri;
 
             defaultPhotoUri = webImageSupplier.GetAbsoluteWebPath(
-                string.Format("empty_people_logo_{0}_{1}.png", 
-                photoSize.Height, photoSize.Width), 
+                string.Format("empty_people_logo_{0}_{1}.png",
+                photoSize.Height, photoSize.Width),
                 WebItemManager.MailProductID);
 
             ToCache(contacе_id, defaultPhotoUri, photoSize);
@@ -99,7 +101,7 @@ namespace ASC.Mail.Storage
 
             if (!string.IsNullOrEmpty(photoUri)) return photoUri;
 
-            photoUri = FromDataStore(globalStore, contactId, photoSize);
+            photoUri = FromDataStoreAsync(globalStore, contactId, photoSize).Result;
 
             if (string.IsNullOrEmpty(photoUri))
                 photoUri = GetDefaultPhoto(webImageSupplier, photoSize);
@@ -157,11 +159,18 @@ namespace ASC.Mail.Storage
             }
         }
 
-        private static string FromDataStore(GlobalStore globalStore, int contactId, Size photoSize)
+        private static async Task<string> FromDataStoreAsync(GlobalStore globalStore, int contactId, Size photoSize)
         {
             var directoryPath = BuildFileDirectory(contactId);
 
-            var filesUri = globalStore.GetStore().ListFiles(directoryPath, BuildFileName(contactId, photoSize) + "*", false);
+            var filesUri = new Uri[0];
+            var i = 0;
+
+            await foreach (var uri in globalStore.GetStore().ListFilesAsync(directoryPath, BuildFileName(contactId, photoSize) + "*", false))
+            {
+                filesUri[i] = uri;
+                i++;
+            }
 
             return filesUri.Length == 0 ? String.Empty : filesUri[0].ToString();
         }

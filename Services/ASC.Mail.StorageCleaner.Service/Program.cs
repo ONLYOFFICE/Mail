@@ -83,6 +83,7 @@ namespace ASC.Mail.StorageCleaner.Service
                 {
                     services.AddHttpContextAccessor();
                     services.AddMemoryCache();
+                    services.AddHttpClient();
                     var diHelper = new DIHelper(services);
 
                     diHelper.TryAdd<StorageCleanerLauncher>();

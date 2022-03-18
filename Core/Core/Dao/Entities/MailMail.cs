@@ -43,6 +43,7 @@ namespace ASC.Mail.Core.Dao.Entities
         public DateTime DateReceived { get; set; }
         public DateTime DateSent { get; set; }
         public int Size { get; set; }
+        [Ignore]
         public int AttachmentsCount { get; set; }
         public bool Unread { get; set; }
         public bool IsAnswered { get; set; }
@@ -56,6 +57,7 @@ namespace ASC.Mail.Core.Dao.Entities
         public int Folder { get; set; }
         public int FolderRestore { get; set; }
         public bool Spam { get; set; }
+        public bool ReadRequestStatus { get; set; }
         public DateTime LastModifiedOn { get; set; }
         public bool IsRemoved { get; set; }
         public string MimeMessageId { get; set; }
@@ -327,6 +329,10 @@ namespace ASC.Mail.Core.Dao.Entities
                 entity.Property(e => e.Spam)
                     .HasColumnName("spam")
                     .HasColumnType("int(11)");
+
+                entity.Property(e => e.ReadRequestStatus)
+                    .HasColumnName("read_request_status")
+                    .HasColumnType("int(10)");
             });
 
             return modelBuilder;

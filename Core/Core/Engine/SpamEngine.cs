@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -41,6 +36,11 @@ using ASC.Mail.Utils;
 using Microsoft.Extensions.Options;
 
 using Newtonsoft.Json.Linq;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 
 namespace ASC.Mail.Core.Engine
 {
@@ -180,7 +180,7 @@ namespace ASC.Mail.Core.Engine
 
             try
             {
-                var emlUri = dataStore.GetUri(string.Empty, emlPath);
+                var emlUri = dataStore.GetUriAsync(string.Empty, emlPath).Result;
                 var url = MailStoragePathCombiner.GetStoredUrl(emlUri);
 
                 return url;

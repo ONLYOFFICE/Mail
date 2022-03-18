@@ -497,7 +497,7 @@ namespace ASC.Mail.Aggregator.Service.Service
             {
                 using var stream = new MemoryStream();
                 message.WriteTo(stream);
-                var res = storage.Save(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).ToString();
+                var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
                 _log.Debug($"Store mail eml. Tenant: {mailBox.TenantId}, user: {mailBox.UserId}, result: {res}, path {savePath}");
                 return;
             }
