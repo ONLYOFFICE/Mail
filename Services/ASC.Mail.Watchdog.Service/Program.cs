@@ -83,6 +83,7 @@ namespace ASC.Mail.Watchdog.Service
                 {
                     services.AddHttpContextAccessor();
                     services.AddMemoryCache();
+                    services.AddHttpClient();
                     var diHelper = new DIHelper(services);
                     diHelper.TryAdd<WatchdogLauncher>();
                     services.AddHostedService<WatchdogLauncher>();

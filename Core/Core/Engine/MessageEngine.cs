@@ -168,7 +168,7 @@ namespace ASC.Mail.Core.Engine
 
             var key = MailStoragePathCombiner.GetBodyKey(User, mail.Stream);
 
-            return dataStore.GetReadStream(string.Empty, key);
+            return dataStore.GetReadStreamAsync(string.Empty, key).Result;
         }
 
         public Tuple<int, int> GetRangeMessages(IMessagesExp exp)
@@ -1069,7 +1069,8 @@ namespace ASC.Mail.Core.Engine
                 HasParseError = message.HasParseError,
                 CalendarUid = message.CalendarUid,
                 Uidl = uidl,
-                Md5 = md5
+                Md5 = md5,
+                ReadRequestStatus = message.ReadRequestStatus
             };
 
             var mailId = MailDaoFactory.GetMailDao().Save(mail);
@@ -1339,7 +1340,7 @@ namespace ASC.Mail.Core.Engine
                     messageItem.HtmlBodyStream.Seek(0, SeekOrigin.Begin);
 
                     response = Storage
-                            .Save(savePath, messageItem.HtmlBodyStream, MailStoragePathCombiner.BODY_FILE_NAME)
+                            .SaveAsync(savePath, messageItem.HtmlBodyStream, MailStoragePathCombiner.BODY_FILE_NAME).Result
                             .ToString();
                 }
                 else
@@ -1347,7 +1348,7 @@ namespace ASC.Mail.Core.Engine
                     using (var reader = new MemoryStream(Encoding.UTF8.GetBytes(messageItem.HtmlBody)))
                     {
                         response = Storage
-                            .Save(savePath, reader, MailStoragePathCombiner.BODY_FILE_NAME)
+                            .SaveAsync(savePath, reader, MailStoragePathCombiner.BODY_FILE_NAME).Result
                             .ToString();
                     }
                 }
@@ -1362,7 +1363,7 @@ namespace ASC.Mail.Core.Engine
                     "StoreMailBody() Problems with message saving in messageId={0}. \r\n Exception: \r\n {1}\r\n",
                     messageItem.MimeMessageId, ex.ToString());
 
-                Storage.Delete(string.Empty, savePath);
+                Storage.DeleteAsync(string.Empty, savePath).Wait();
                 throw;
             }
         }
@@ -1560,8 +1561,8 @@ namespace ASC.Mail.Core.Engine
             //Trying to delete all attachments and mailbody
             try
             {
-                Storage.DeleteDirectory(string.Empty,
-                    MailStoragePathCombiner.GetMessageDirectory(mailbox.UserId, streamId));
+                Storage.DeleteDirectoryAsync(string.Empty,
+                    MailStoragePathCombiner.GetMessageDirectory(mailbox.UserId, streamId)).Wait();
                 return true;
             }
             catch (Exception ex)
@@ -2546,17 +2547,17 @@ namespace ASC.Mail.Core.Engine
             var fileDao = FilesDaoFactory.GetFileDao<string>();
 
             var file = string.IsNullOrEmpty(version)
-                           ? fileDao.GetFile(fileId)
-                           : fileDao.GetFile(fileId, Convert.ToInt32(version));
+                           ? fileDao.GetFileAsync(fileId).Result
+                           : fileDao.GetFileAsync(fileId, Convert.ToInt32(version)).Result;
 
             if (file == null)
                 throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound, "File not found.");
 
-            if (!FilesSeurity.CanRead(file))
+            if (!FilesSeurity.CanReadAsync(file).Result)
                 throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied,
                                                "Access denied.");
 
-            if (!fileDao.IsExistOnStorage(file))
+            if (!fileDao.IsExistOnStorageAsync(file).Result)
             {
                 throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound,
                                                "File not exists on storage.");
@@ -2607,7 +2608,7 @@ namespace ASC.Mail.Core.Engine
                 var fileName = Path.ChangeExtension(file.Title, convertToExt);
                 Log.InfoFormat("Changed file name - {0} for file {1}:", fileName, file.ID);
 
-                using var readStream = FileConverter.Exec(file, convertToExt);
+                using var readStream = FileConverter.ExecAsync(file, convertToExt).Result;
 
                 if (readStream == null)
                     throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
@@ -2620,7 +2621,7 @@ namespace ASC.Mail.Core.Engine
             }
             else
             {
-                using var readStream = fileDao.GetFileStream(file);
+                using var readStream = fileDao.GetFileStreamAsync(file).Result;
 
                 if (readStream == null)
                     throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
@@ -2760,7 +2761,7 @@ namespace ASC.Mail.Core.Engine
                     s3Key = MailStoragePathCombiner.GerStoredFilePath(attachment);
                 }
 
-                if (!dataClient.IsFile(s3Key)) return;
+                if (!dataClient.IsFileAsync(s3Key).Result) return;
 
                 attachment.fileNumber =
                     !string.IsNullOrEmpty(attachment.contentId) //Upload hack: embedded attachment have to be saved in 0 folder
@@ -2770,7 +2771,7 @@ namespace ASC.Mail.Core.Engine
                 var newS3Key = MailStoragePathCombiner.GetFileKey(user, streamId, attachment.fileNumber,
                                                                     attachment.storedName);
 
-                var copyS3Url = dataClient.Copy(s3Key, string.Empty, newS3Key);
+                var copyS3Url = dataClient.CopyAsync(s3Key, string.Empty, newS3Key).Result;
 
                 attachment.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(copyS3Url);
 
@@ -2878,7 +2879,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     var storage = StorageFactory.GetMailStorage(mailBoxData.TenantId);
 
-                    storedAttachmentsKeys.ForEach(key => storage.Delete(string.Empty, key));
+                    storedAttachmentsKeys.ForEach(key => storage.DeleteAsync(string.Empty, key).Wait());
                 }
 
                 Log.InfoFormat("[Failed] StoreAttachments(mailboxId={0}). All message attachments were deleted.", mailBoxData.MailBoxId);
@@ -2993,7 +2994,7 @@ namespace ASC.Mail.Core.Engine
 
                         watch.Start();
 #endif
-                        using (var s = dataStore.GetReadStream(string.Empty, key))
+                        using (var s = dataStore.GetReadStreamAsync(string.Empty, key).Result)
                         {
                             htmlBody = Encoding.UTF8.GetString(s.ReadToEnd());
                         }

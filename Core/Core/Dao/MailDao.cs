@@ -87,6 +87,7 @@ namespace ASC.Mail.Core.Dao
                 Folder = (int)mail.Folder,
                 FolderRestore = (int)mail.FolderRestore,
                 Spam = mail.Spam,
+                ReadRequestStatus = mail.ReadRequestStatus,
                 MimeMessageId = mail.MimeMessageId,
                 MimeInReplyTo = mail.MimeInReplyTo,
                 ChainId = mail.ChainId,

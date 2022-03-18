@@ -24,6 +24,14 @@
 */
 
 
+using ASC.Common.Logging;
+using ASC.Core;
+using ASC.Mail.Enums;
+using ASC.Mail.Models;
+using ASC.Mail.Utils;
+
+using MimeKit;
+
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -31,12 +39,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Mail;
 using System.Text;
-using ASC.Common.Logging;
-using ASC.Mail.Models;
-using ASC.Mail.Enums;
-using ASC.Mail.Utils;
-using MimeKit;
-using ASC.Core;
 
 namespace ASC.Mail.Extensions
 {
@@ -77,7 +79,7 @@ namespace ASC.Mail.Extensions
                         {
                             var encoding = EncodingTools.GetEncodingByCodepageName(charset);
 
-                            if(encoding == null)
+                            if (encoding == null)
                                 continue;
 
                             var newText = textPart.GetText(charset);
@@ -130,7 +132,7 @@ namespace ASC.Mail.Extensions
 
                 var charset = EncodingTools.DetectCharset(header.RawValue);
 
-                if(string.IsNullOrEmpty(charset))
+                if (string.IsNullOrEmpty(charset))
                     return;
 
                 var newValue = header.GetValue(charset);
@@ -241,6 +243,11 @@ namespace ASC.Mail.Extensions
                 .ToList()
                 .ForEach(h => mail.HeaderFieldNames.Add(h.Field, h.Value));
 
+            var headers = message.Headers.ToList();
+
+            if (headers.Exists(h => h.Id == HeaderId.DispositionNotificationTo))
+                mail.ReadRequestStatus = true;
+
             mail.Folder = folder;
 
             mail.IsNew = unread;
@@ -255,8 +262,8 @@ namespace ASC.Mail.Extensions
         public static MailMessageData CreateCorruptedMesage(this MimeMessage message,
             TenantManager tenantManager, CoreSettings coreSettings,
             FolderType folder = FolderType.Inbox,
-            bool unread = false, 
-            string chainId = "", 
+            bool unread = false,
+            string chainId = "",
             string streamId = "")
         {
             var mailMessage = new MailMessageData
@@ -268,8 +275,8 @@ namespace ASC.Mail.Extensions
                 ? message.Date.UtcDateTime
                 : DateTime.UtcNow);
 
-            MailUtil.SkipErrors(() => mailMessage.MimeMessageId = (string.IsNullOrEmpty(message.MessageId) 
-                ? MailUtil.CreateMessageId(tenantManager, coreSettings) 
+            MailUtil.SkipErrors(() => mailMessage.MimeMessageId = (string.IsNullOrEmpty(message.MessageId)
+                ? MailUtil.CreateMessageId(tenantManager, coreSettings)
                 : message.MessageId)
                     .Trim('<', '>'));
 

@@ -169,12 +169,12 @@ namespace ASC.Mail.Core.Engine.Operations
 
                     stream.Position = 0;
 
-                    var path = mailStorage.Save(
+                    var path = mailStorage.SaveAsync(
                         FileConstant.StorageDomainTmp,
                         string.Format(@"{0}\{1}", ((IAccount)Thread.CurrentPrincipal.Identity).ID, DefineConstants.ARCHIVE_NAME),
                         stream,
                         "application/zip",
-                        "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"");
+                        "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"").Result;
 
                     Log.Debug($"Zipped archive has been stored to {path}");
                 }

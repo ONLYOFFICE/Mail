@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Data.Storage;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Core.Entities;
@@ -35,6 +31,10 @@ using ASC.Mail.Enums;
 using ASC.Mail.Models;
 using ASC.Mail.Storage;
 using ASC.Web.Studio.Utility;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 using ContactInfo = ASC.Mail.Models.ContactInfo;
 
@@ -304,7 +304,7 @@ namespace ASC.Mail.Extensions
             var attachmentPath = MailStoragePathCombiner.GerStoredFilePath(mailAttachmentData);
             var result = new AttachmentStream
             {
-                FileStream = storage.GetReadStream("", attachmentPath, offset),
+                FileStream = storage.GetReadStreamAsync("", attachmentPath, offset).Result,
                 FileName = mailAttachmentData.fileName,
                 FileSize = mailAttachmentData.size
             };
