@@ -1,686 +1,661 @@
-﻿using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Aggregator.Service.Queue.Data;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
+﻿namespace ASC.Mail.Aggregator.Service.Queue;
 
-using LiteDB;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.Caching;
-using System.Threading;
-
-namespace ASC.Mail.Aggregator.Service.Queue
+[Singletone]
+public class QueueManager : IDisposable
 {
-    [Singletone]
-    public class QueueManager : IDisposable
+    private readonly int _maxItemsLimit;
+    private readonly Queue<MailBoxData> _mailBoxQueue;
+    private List<MailBoxData> _lockedMailBoxList;
+
+    private DateTime _loadQueueTime;
+    private MemoryCache _tenantMemCache;
+    private const string DBC_MAILBOXES = "mailboxes";
+    private const string DBC_TENANTS = "tenants";
+    private static string _dbcFile;
+    private static string _dbcJournalFile;
+    private readonly object _locker = new object();
+    private LiteDatabase _db;
+    private ILiteCollection<MailboxData> _mailboxes;
+    private ILiteCollection<TenantData> _tenants;
+
+    private readonly ILog Log;
+    private MailSettings MailSettings { get; }
+    private IServiceProvider ServiceProvider { get; }
+
+    public ManualResetEvent CancelHandler { get; set; }
+
+    public QueueManager(
+        MailSettings mailSettings,
+        IOptionsMonitor<ILog> optionsMonitor,
+        IServiceProvider serviceProvider)
     {
-        private readonly int _maxItemsLimit;
-        private readonly Queue<MailBoxData> _mailBoxQueue;
-        private List<MailBoxData> _lockedMailBoxList;
+        _maxItemsLimit = mailSettings.Aggregator.MaxTasksAtOnce;
+        _mailBoxQueue = new Queue<MailBoxData>();
+        _lockedMailBoxList = new List<MailBoxData>();
 
-        private DateTime _loadQueueTime;
-        private MemoryCache _tenantMemCache;
-        private const string DBC_MAILBOXES = "mailboxes";
-        private const string DBC_TENANTS = "tenants";
-        private static string _dbcFile;
-        private static string _dbcJournalFile;
-        private readonly object _locker = new object();
-        private LiteDatabase _db;
-        private ILiteCollection<MailboxData> _mailboxes;
-        private ILiteCollection<TenantData> _tenants;
+        MailSettings = mailSettings;
+        ServiceProvider = serviceProvider;
 
-        private readonly ILog Log;
-        private MailSettings MailSettings { get; }
-        private IServiceProvider ServiceProvider { get; }
+        Log = optionsMonitor.Get("ASC.Mail.MainThread");
+        _loadQueueTime = DateTime.UtcNow;
+        _tenantMemCache = new MemoryCache("QueueManagerTenantCache");
 
-        public ManualResetEvent CancelHandler { get; set; }
+        CancelHandler = new ManualResetEvent(false);
 
-        public QueueManager(
-            MailSettings mailSettings,
-            IOptionsMonitor<ILog> optionsMonitor,
-            IServiceProvider serviceProvider)
+        if (MailSettings.Aggregator.UseDump)
         {
-            _maxItemsLimit = mailSettings.Aggregator.MaxTasksAtOnce;
-            _mailBoxQueue = new Queue<MailBoxData>();
-            _lockedMailBoxList = new List<MailBoxData>();
+            _dbcFile = Path.Combine(Environment.CurrentDirectory, "dump.db");
+            _dbcJournalFile = Path.Combine(Environment.CurrentDirectory, "dump-journal.db");
 
-            MailSettings = mailSettings;
-            ServiceProvider = serviceProvider;
+            Log.Debug($"Dump file path: {_dbcFile}");
 
-            Log = optionsMonitor.Get("ASC.Mail.MainThread");
-            _loadQueueTime = DateTime.UtcNow;
-            _tenantMemCache = new MemoryCache("QueueManagerTenantCache");
+            LoadDump();
+        }
+    }
 
-            CancelHandler = new ManualResetEvent(false);
+    #region - public methods -
 
-            if (MailSettings.Aggregator.UseDump)
-            {
-                _dbcFile = Path.Combine(Environment.CurrentDirectory, "dump.db");
-                _dbcJournalFile = Path.Combine(Environment.CurrentDirectory, "dump-journal.db");
+    public IEnumerable<MailBoxData> GetLockedMailboxes(int needTasks)
+    {
+        var mbList = new List<MailBoxData>();
+        do
+        {
+            var mailBox = GetLockedMailbox();
+            if (mailBox == null)
+                break;
 
-                Log.Debug($"Dump file path: {_dbcFile}");
+            mbList.Add(mailBox);
 
-                LoadDump();
-            }
+        } while (mbList.Count < needTasks);
+
+        return mbList;
+    }
+
+    public MailBoxData GetLockedMailbox()
+    {
+        MailBoxData mailBoxData;
+
+        do
+        {
+            mailBoxData = GetQueuedMailbox();
+
+        }
+        while (mailBoxData != null && !TryLockMailbox(mailBoxData));
+
+        if (mailBoxData == null)
+            return null;
+
+        if (_lockedMailBoxList.Any(m => m.MailBoxId == mailBoxData.MailBoxId))
+        {
+            Log.Error($"GetLockedMailbox() Stored dublicate with id = {mailBoxData.MailBoxId}, address = {mailBoxData.EMail.Address}. Mailbox not added to the queue.");
+            return null;
         }
 
-        #region - public methods -
+        _lockedMailBoxList.Add(mailBoxData);
 
-        public IEnumerable<MailBoxData> GetLockedMailboxes(int needTasks)
+        CancelHandler.Reset();
+
+        AddMailboxToDumpDb(mailBoxData.ToMailboxData());
+
+        return mailBoxData;
+    }
+
+    public void ReleaseAllProcessingMailboxes(bool firstTime = false)
+    {
+        if (!_lockedMailBoxList.Any())
+            return;
+
+        var cloneCollection = new List<MailBoxData>(_lockedMailBoxList);
+
+        Log.Info("QueueManager -> ReleaseAllProcessingMailboxes()");
+
+        using var scope = ServiceProvider.CreateScope();
+
+        var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+
+        foreach (var mailbox in cloneCollection)
         {
-            var mbList = new List<MailBoxData>();
-            do
-            {
-                var mailBox = GetLockedMailbox();
-                if (mailBox == null)
-                    break;
-
-                mbList.Add(mailBox);
-
-            } while (mbList.Count < needTasks);
-
-            return mbList;
+            ReleaseMailbox(mailbox);
         }
+    }
 
-        public MailBoxData GetLockedMailbox()
+    public void ReleaseMailbox(MailBoxData mailBoxData)
+    {
+        try
         {
-            MailBoxData mailBoxData;
-
-            do
+            if (!_lockedMailBoxList.Any(m => m.MailBoxId == mailBoxData.MailBoxId))
             {
-                mailBoxData = GetQueuedMailbox();
+                Log.WarnFormat($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} " +
+                    $"MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.EMail}') mailbox not found");
 
-            }
-            while (mailBoxData != null && !TryLockMailbox(mailBoxData));
-
-            if (mailBoxData == null)
-                return null;
-
-            if (_lockedMailBoxList.Any(m => m.MailBoxId == mailBoxData.MailBoxId))
-            {
-                Log.Error($"GetLockedMailbox() Stored dublicate with id = {mailBoxData.MailBoxId}, address = {mailBoxData.EMail.Address}. Mailbox not added to the queue.");
-                return null;
-            }
-
-            _lockedMailBoxList.Add(mailBoxData);
-
-            CancelHandler.Reset();
-
-            AddMailboxToDumpDb(mailBoxData.ToMailboxData());
-
-            return mailBoxData;
-        }
-
-        public void ReleaseAllProcessingMailboxes(bool firstTime = false)
-        {
-            if (!_lockedMailBoxList.Any())
                 return;
+            }
 
-            var cloneCollection = new List<MailBoxData>(_lockedMailBoxList);
-
-            Log.Info("QueueManager -> ReleaseAllProcessingMailboxes()");
+            Log.InfoFormat($"QueueManager -> ReleaseMailbox(MailboxId = {mailBoxData.MailBoxId} Address '{mailBoxData.EMail}')");
 
             using var scope = ServiceProvider.CreateScope();
 
+            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+
+            tenantManager.SetCurrentTenant(mailBoxData.TenantId);
+
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
-            foreach (var mailbox in cloneCollection)
+            mailboxEngine.ReleaseMailbox(mailBoxData, MailSettings);
+
+            Log.Debug($"Mailbox {mailBoxData.MailBoxId} will be realesed...Now remove from locked queue by Id.");
+
+            _lockedMailBoxList.RemoveAll(m => m.MailBoxId == mailBoxData.MailBoxId);
+
+            DeleteMailboxFromDumpDb(mailBoxData.MailBoxId);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.Account}')\r\nException: {ex} \r\n");
+            _lockedMailBoxList.RemoveAll(m => m.MailBoxId == mailBoxData.MailBoxId);
+        }
+    }
+
+    public int ProcessingCount
+    {
+        get { return _lockedMailBoxList.Count; }
+    }
+
+    public void LoadMailboxesFromDump()
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        if (_lockedMailBoxList.Any())
+            return;
+
+        try
+        {
+            Log.Debug("QueueManager -> LoadMailboxesFromDump()");
+
+            lock (_locker)
             {
-                ReleaseMailbox(mailbox);
+                var list = _mailboxes.FindAll().ToList();
+
+                _lockedMailBoxList = list.ConvertAll(m => m.ToMailbox()).ToList();
             }
         }
-
-        public void ReleaseMailbox(MailBoxData mailBoxData)
+        catch (Exception ex)
         {
-            try
-            {
-                if (!_lockedMailBoxList.Any(m => m.MailBoxId == mailBoxData.MailBoxId))
-                {
-                    Log.WarnFormat($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} " +
-                        $"MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.EMail}') mailbox not found");
+            Log.Error($"QueueManager -> LoadMailboxesFromDump: {ex}");
 
+            ReCreateDump();
+        }
+    }
+
+    public void LoadTenantsFromDump()
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            Log.Debug("QueueManager -> LoadTenantsFromDump()");
+
+            lock (_locker)
+            {
+                var list = _tenants.FindAll().ToList();
+
+                foreach (var tenantData in list)
+                {
+                    AddTenantToCache(tenantData, false);
+                }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"QueueManager -> LoadTenantsFromDump: {ex}");
+
+            ReCreateDump();
+        }
+    }
+
+    #endregion
+
+    #region - private methods -
+
+    private void ReCreateDump()
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            if (File.Exists(_dbcFile))
+            {
+                Log.Debug($"Dump file '{_dbcFile}' exists, trying delete");
+
+                File.Delete(_dbcFile);
+
+                Log.Debug($"Dump file '{_dbcFile}' deleted");
+            }
+
+            if (File.Exists(_dbcJournalFile))
+            {
+                Log.Debug($"Dump journal file '{_dbcJournalFile}' exists, trying delete");
+
+                File.Delete(_dbcJournalFile);
+
+                Log.Debug($"Dump journal file '{_dbcJournalFile}' deleted");
+            }
+
+            _db = new LiteDatabase(_dbcFile);
+
+            lock (_locker)
+            {
+                _mailboxes = _db.GetCollection<MailboxData>(DBC_MAILBOXES);
+                _tenants = _db.GetCollection<TenantData>(DBC_TENANTS);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"QueueManager -> ReCreateDump() failed Exception: {ex}");
+        }
+    }
+
+    private void AddMailboxToDumpDb(MailboxData mailboxData)
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            lock (_locker)
+            {
+                var mailbox = _mailboxes.FindOne(Query.EQ("MailboxId", mailboxData.MailboxId));
+
+                if (mailbox != null)
                     return;
-                }
 
-                Log.InfoFormat($"QueueManager -> ReleaseMailbox(MailboxId = {mailBoxData.MailBoxId} Address '{mailBoxData.EMail}')");
+                _mailboxes.Insert(mailboxData);
 
-                using var scope = ServiceProvider.CreateScope();
-
-                var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-
-                tenantManager.SetCurrentTenant(mailBoxData.TenantId);
-
-                var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-
-                mailboxEngine.ReleaseMailbox(mailBoxData, MailSettings);
-
-                Log.Debug($"Mailbox {mailBoxData.MailBoxId} will be realesed...Now remove from locked queue by Id.");
-
-                _lockedMailBoxList.RemoveAll(m => m.MailBoxId == mailBoxData.MailBoxId);
-
-                DeleteMailboxFromDumpDb(mailBoxData.MailBoxId);
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> ReleaseMailbox(Tenant = {mailBoxData.TenantId} MailboxId = {mailBoxData.MailBoxId}, Address = '{mailBoxData.Account}')\r\nException: {ex} \r\n");
-                _lockedMailBoxList.RemoveAll(m => m.MailBoxId == mailBoxData.MailBoxId);
+                // Create, if not exists, new index on Name field
+                _mailboxes.EnsureIndex(x => x.MailboxId);
             }
         }
-
-        public int ProcessingCount
+        catch (Exception ex)
         {
-            get { return _lockedMailBoxList.Count; }
+            Log.Error($"QueueManager -> AddMailboxToDumpDb(Id = {mailboxData.MailboxId}) Exception: {ex}");
+
+            ReCreateDump();
         }
+    }
 
-        public void LoadMailboxesFromDump()
+    private void DeleteMailboxFromDumpDb(int mailBoxId)
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
-
-            if (_lockedMailBoxList.Any())
-                return;
-
-            try
+            lock (_locker)
             {
-                Log.Debug("QueueManager -> LoadMailboxesFromDump()");
+                var mailbox = _mailboxes.FindOne(Query.EQ("MailboxId", mailBoxId));
 
-                lock (_locker)
-                {
-                    var list = _mailboxes.FindAll().ToList();
+                if (mailbox == null)
+                    return;
 
-                    _lockedMailBoxList = list.ConvertAll(m => m.ToMailbox()).ToList();
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> LoadMailboxesFromDump: {ex}");
-
-                ReCreateDump();
+                _mailboxes.DeleteMany(Query.EQ("MailboxId", mailBoxId));
             }
         }
-
-        public void LoadTenantsFromDump()
+        catch (Exception ex)
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
+            Log.Error($"QueueManager -> DeleteMailboxFromDumpDb(MailboxId = {mailBoxId}) Exception: {ex}");
 
-            try
+            ReCreateDump();
+        }
+    }
+
+    private void LoadDump()
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            if (File.Exists(_dbcJournalFile))
+                throw new Exception($"Temp dump journal file exists in {_dbcJournalFile}");
+
+            _db = new LiteDatabase(_dbcFile);
+
+            lock (_locker)
             {
-                Log.Debug("QueueManager -> LoadTenantsFromDump()");
-
-                lock (_locker)
-                {
-                    var list = _tenants.FindAll().ToList();
-
-                    foreach (var tenantData in list)
-                    {
-                        AddTenantToCache(tenantData, false);
-                    }
-                }
-
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> LoadTenantsFromDump: {ex}");
-
-                ReCreateDump();
+                _tenants = _db.GetCollection<TenantData>(DBC_TENANTS);
+                _mailboxes = _db.GetCollection<MailboxData>(DBC_MAILBOXES);
             }
         }
-
-        #endregion
-
-        #region - private methods -
-
-        private void ReCreateDump()
+        catch (Exception ex)
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
+            Log.Error($"QueueManager -> LoadDump() failed Exception: {ex}");
 
-            try
+            ReCreateDump();
+        }
+    }
+
+    private void AddTenantToDumpDb(TenantData tenantData)
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            lock (_locker)
             {
-                if (File.Exists(_dbcFile))
-                {
-                    Log.Debug($"Dump file '{_dbcFile}' exists, trying delete");
+                var tenant = _tenants.FindOne(Query.EQ("Tenant", tenantData.Tenant));
 
-                    File.Delete(_dbcFile);
+                if (tenant != null)
+                    return;
 
-                    Log.Debug($"Dump file '{_dbcFile}' deleted");
-                }
+                _tenants.Insert(tenantData);
 
-                if (File.Exists(_dbcJournalFile))
-                {
-                    Log.Debug($"Dump journal file '{_dbcJournalFile}' exists, trying delete");
-
-                    File.Delete(_dbcJournalFile);
-
-                    Log.Debug($"Dump journal file '{_dbcJournalFile}' deleted");
-                }
-
-                _db = new LiteDatabase(_dbcFile);
-
-                lock (_locker)
-                {
-                    _mailboxes = _db.GetCollection<MailboxData>(DBC_MAILBOXES);
-                    _tenants = _db.GetCollection<TenantData>(DBC_TENANTS);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> ReCreateDump() failed Exception: {ex}");
+                // Create, if not exists, new index on Name field
+                _tenants.EnsureIndex(x => x.Tenant);
             }
         }
-
-        private void AddMailboxToDumpDb(MailboxData mailboxData)
+        catch (Exception ex)
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
+            Log.Error($"QueueManager -> AddTenantToDumpDb(TenantId = {tenantData.Tenant}) Exception: {ex}");
 
-            try
+            ReCreateDump();
+        }
+    }
+
+    private void DeleteTenantFromDumpDb(int tenantId)
+    {
+        if (!MailSettings.Aggregator.UseDump)
+            return;
+
+        try
+        {
+            lock (_locker)
             {
-                lock (_locker)
-                {
-                    var mailbox = _mailboxes.FindOne(Query.EQ("MailboxId", mailboxData.MailboxId));
+                var tenant = _tenants.FindOne(Query.EQ("Tenant", tenantId));
 
-                    if (mailbox != null)
-                        return;
+                if (tenant == null)
+                    return;
 
-                    _mailboxes.Insert(mailboxData);
-
-                    // Create, if not exists, new index on Name field
-                    _mailboxes.EnsureIndex(x => x.MailboxId);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> AddMailboxToDumpDb(Id = {mailboxData.MailboxId}) Exception: {ex}");
-
-                ReCreateDump();
+                _tenants.DeleteMany(Query.EQ("Tenant", tenantId));
             }
         }
-
-        private void DeleteMailboxFromDumpDb(int mailBoxId)
+        catch (Exception ex)
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
+            Log.Error($"QueueManager -> DeleteTenantFromDumpDb(TenantId = {tenantId}) Exception: {ex}");
 
-            try
-            {
-                lock (_locker)
-                {
-                    var mailbox = _mailboxes.FindOne(Query.EQ("MailboxId", mailBoxId));
+            ReCreateDump();
+        }
+    }
 
-                    if (mailbox == null)
-                        return;
+    private void AddTenantToCache(TenantData tenantData, bool needDump = true)
+    {
+        var now = DateTime.UtcNow;
 
-                    _mailboxes.DeleteMany(Query.EQ("MailboxId", mailBoxId));
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> DeleteMailboxFromDumpDb(MailboxId = {mailBoxId}) Exception: {ex}");
-
-                ReCreateDump();
-            }
+        if (tenantData.Expired < now)
+        {
+            DeleteTenantFromDumpDb(tenantData.Tenant);
+            return; // Skip Expired tenant
         }
 
-        private void LoadDump()
+        var cacheItem = new CacheItem(tenantData.Tenant.ToString(CultureInfo.InvariantCulture), tenantData);
+
+        var nowOffset = tenantData.Expired - now;
+
+        var absoluteExpiration = DateTime.UtcNow.Add(nowOffset);
+
+        var cacheItemPolicy = new CacheItemPolicy
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
+            RemovedCallback = CacheEntryRemove,
+            AbsoluteExpiration = absoluteExpiration
+        };
 
-            try
-            {
-                if (File.Exists(_dbcJournalFile))
-                    throw new Exception($"Temp dump journal file exists in {_dbcJournalFile}");
+        _tenantMemCache.Add(cacheItem, cacheItemPolicy);
 
-                _db = new LiteDatabase(_dbcFile);
+        if (!needDump)
+            return;
 
-                lock (_locker)
-                {
-                    _tenants = _db.GetCollection<TenantData>(DBC_TENANTS);
-                    _mailboxes = _db.GetCollection<MailboxData>(DBC_MAILBOXES);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> LoadDump() failed Exception: {ex}");
+        AddTenantToDumpDb(tenantData);
+    }
 
-                ReCreateDump();
-            }
-        }
+    private bool QueueIsEmpty
+    {
+        get { return !_mailBoxQueue.Any(); }
+    }
 
-        private void AddTenantToDumpDb(TenantData tenantData)
+    private bool QueueLifetimeExpired
+    {
+        get { return DateTime.UtcNow - _loadQueueTime >= MailSettings.Defines.QueueLifetime; }
+    }
+
+    private void LoadQueue()
+    {
+        try
         {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
-
-            try
-            {
-                lock (_locker)
-                {
-                    var tenant = _tenants.FindOne(Query.EQ("Tenant", tenantData.Tenant));
-
-                    if (tenant != null)
-                        return;
-
-                    _tenants.Insert(tenantData);
-
-                    // Create, if not exists, new index on Name field
-                    _tenants.EnsureIndex(x => x.Tenant);
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> AddTenantToDumpDb(TenantId = {tenantData.Tenant}) Exception: {ex}");
-
-                ReCreateDump();
-            }
-        }
-
-        private void DeleteTenantFromDumpDb(int tenantId)
-        {
-            if (!MailSettings.Aggregator.UseDump)
-                return;
-
-            try
-            {
-                lock (_locker)
-                {
-                    var tenant = _tenants.FindOne(Query.EQ("Tenant", tenantId));
-
-                    if (tenant == null)
-                        return;
-
-                    _tenants.DeleteMany(Query.EQ("Tenant", tenantId));
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> DeleteTenantFromDumpDb(TenantId = {tenantId}) Exception: {ex}");
-
-                ReCreateDump();
-            }
-        }
-
-        private void AddTenantToCache(TenantData tenantData, bool needDump = true)
-        {
-            var now = DateTime.UtcNow;
-
-            if (tenantData.Expired < now)
-            {
-                DeleteTenantFromDumpDb(tenantData.Tenant);
-                return; // Skip Expired tenant
-            }
-
-            var cacheItem = new CacheItem(tenantData.Tenant.ToString(CultureInfo.InvariantCulture), tenantData);
-
-            var nowOffset = tenantData.Expired - now;
-
-            var absoluteExpiration = DateTime.UtcNow.Add(nowOffset);
-
-            var cacheItemPolicy = new CacheItemPolicy
-            {
-                RemovedCallback = CacheEntryRemove,
-                AbsoluteExpiration = absoluteExpiration
-            };
-
-            _tenantMemCache.Add(cacheItem, cacheItemPolicy);
-
-            if (!needDump)
-                return;
-
-            AddTenantToDumpDb(tenantData);
-        }
-
-        private bool QueueIsEmpty
-        {
-            get { return !_mailBoxQueue.Any(); }
-        }
-
-        private bool QueueLifetimeExpired
-        {
-            get { return DateTime.UtcNow - _loadQueueTime >= MailSettings.Defines.QueueLifetime; }
-        }
-
-        private void LoadQueue()
-        {
-            try
-            {
-                using var scope = ServiceProvider.CreateScope();
-                var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-                var mbList = mailboxEngine.GetMailboxesForProcessing(MailSettings, _maxItemsLimit).ToList();
-
-                ReloadQueue(mbList);
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"QueueManager -> LoadQueue()\r\nException: \r\n {ex}");
-            }
-        }
-
-        private MailBoxData GetQueuedMailbox()
-        {
-            if (QueueIsEmpty || QueueLifetimeExpired)
-            {
-                var queueStr = QueueIsEmpty ? "EMPTY" : "EXPIRED";
-                Log.Debug($"Queue is {queueStr}. Load new queue.");
-
-                LoadQueue();
-            }
-
-            return !QueueIsEmpty ? _mailBoxQueue.Dequeue() : null;
-        }
-
-        private void RemoveFromQueue(int tenant)
-        {
-            var mbList = _mailBoxQueue.Where(mb => mb.TenantId != tenant).Select(mb => mb).ToList();
-            ReloadQueue(mbList);
-        }
-
-        private void RemoveFromQueue(int tenant, string user)
-        {
-            Log.Debug("RemoveFromQueue()");
-            var list = _mailBoxQueue.ToList();
-
-            foreach (var b in list)
-            {
-                if (b.UserId == user)
-                    Log.Debug($"Next mailbox will be removed from queue: {b.MailBoxId}");
-            }
-
-            var mbList = _mailBoxQueue.Where(mb => mb.UserId != user).Select(mb => mb).ToList();
-
-            foreach (var box in list.Except(mbList))
-            {
-                Log.Debug($"Mailbox with id |{box.MailBoxId}| for user {box.UserId} from tenant {box.TenantId} was removed from queue");
-            }
+            using var scope = ServiceProvider.CreateScope();
+            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+            var mbList = mailboxEngine.GetMailboxesForProcessing(MailSettings, _maxItemsLimit).ToList();
 
             ReloadQueue(mbList);
         }
-
-        private void ReloadQueue(IEnumerable<MailBoxData> mbList)
+        catch (Exception ex)
         {
-            _mailBoxQueue.Clear();
-            _mailBoxQueue.PushRange(mbList);
-            _loadQueueTime = DateTime.UtcNow;
+            Log.Error($"QueueManager -> LoadQueue()\r\nException: \r\n {ex}");
+        }
+    }
+
+    private MailBoxData GetQueuedMailbox()
+    {
+        if (QueueIsEmpty || QueueLifetimeExpired)
+        {
+            var queueStr = QueueIsEmpty ? "EMPTY" : "EXPIRED";
+            Log.Debug($"Queue is {queueStr}. Load new queue.");
+
+            LoadQueue();
         }
 
-        private bool TryLockMailbox(MailBoxData mailbox)
+        return !QueueIsEmpty ? _mailBoxQueue.Dequeue() : null;
+    }
+
+    private void RemoveFromQueue(int tenant)
+    {
+        var mbList = _mailBoxQueue.Where(mb => mb.TenantId != tenant).Select(mb => mb).ToList();
+        ReloadQueue(mbList);
+    }
+
+    private void RemoveFromQueue(int tenant, string user)
+    {
+        Log.Debug("RemoveFromQueue()");
+        var list = _mailBoxQueue.ToList();
+
+        foreach (var b in list)
         {
-            try
+            if (b.UserId == user)
+                Log.Debug($"Next mailbox will be removed from queue: {b.MailBoxId}");
+        }
+
+        var mbList = _mailBoxQueue.Where(mb => mb.UserId != user).Select(mb => mb).ToList();
+
+        foreach (var box in list.Except(mbList))
+        {
+            Log.Debug($"Mailbox with id |{box.MailBoxId}| for user {box.UserId} from tenant {box.TenantId} was removed from queue");
+        }
+
+        ReloadQueue(mbList);
+    }
+
+    private void ReloadQueue(IEnumerable<MailBoxData> mbList)
+    {
+        _mailBoxQueue.Clear();
+        _mailBoxQueue.PushRange(mbList);
+        _loadQueueTime = DateTime.UtcNow;
+    }
+
+    private bool TryLockMailbox(MailBoxData mailbox)
+    {
+        try
+        {
+            var contains = _tenantMemCache.Contains(mailbox.TenantId.ToString(CultureInfo.InvariantCulture));
+
+            using var scope = ServiceProvider.CreateScope();
+
+            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+            var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
+            var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
+            var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
+            var alertEngine = scope.ServiceProvider.GetService<AlertEngine>();
+            var userManager = scope.ServiceProvider.GetService<UserManager>();
+
+            if (!contains)
             {
-                var contains = _tenantMemCache.Contains(mailbox.TenantId.ToString(CultureInfo.InvariantCulture));
-
-                using var scope = ServiceProvider.CreateScope();
-
-                var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
-                var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
-                var apiHelper = scope.ServiceProvider.GetService<ApiHelper>();
-                var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
-                var alertEngine = scope.ServiceProvider.GetService<AlertEngine>();
-                var userManager = scope.ServiceProvider.GetService<UserManager>();
-
-                if (!contains)
+                Log.Debug($"Tenant {mailbox.TenantId} isn't in cache");
+                try
                 {
-                    Log.Debug($"Tenant {mailbox.TenantId} isn't in cache");
-                    try
+                    var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Aggregator.TenantOverdueDays, Log);
+
+                    Log.InfoFormat("TryLockMailbox -> Returned tenant {0} status: {1}.", mailbox.TenantId, type);
+                    switch (type)
                     {
-                        var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Aggregator.TenantOverdueDays, Log);
+                        case DefineConstants.TariffType.LongDead:
+                            Log.InfoFormat("Tenant {0} is not paid. Disable mailboxes.", mailbox.TenantId);
 
-                        Log.InfoFormat("TryLockMailbox -> Returned tenant {0} status: {1}.", mailbox.TenantId, type);
-                        switch (type)
-                        {
-                            case DefineConstants.TariffType.LongDead:
-                                Log.InfoFormat("Tenant {0} is not paid. Disable mailboxes.", mailbox.TenantId);
+                            mailboxEngine.DisableMailboxes(
+                                new TenantMailboxExp(mailbox.TenantId));
 
-                                mailboxEngine.DisableMailboxes(
-                                    new TenantMailboxExp(mailbox.TenantId));
+                            var userIds =
+                                mailboxEngine.GetMailUsers(new TenantMailboxExp(mailbox.TenantId))
+                                    .ConvertAll(t => t.Item2);
 
-                                var userIds =
-                                    mailboxEngine.GetMailUsers(new TenantMailboxExp(mailbox.TenantId))
-                                        .ConvertAll(t => t.Item2);
+                            alertEngine.CreateDisableAllMailboxesAlert(mailbox.TenantId, userIds);
 
-                                alertEngine.CreateDisableAllMailboxesAlert(mailbox.TenantId, userIds);
+                            RemoveFromQueue(mailbox.TenantId);
 
-                                RemoveFromQueue(mailbox.TenantId);
+                            return false;
 
-                                return false;
+                        case DefineConstants.TariffType.Overdue:
+                            Log.InfoFormat("Tenant {0} is not paid. Stop processing mailboxes.", mailbox.TenantId);
+                            mailboxEngine.SetNextLoginDelay(new TenantMailboxExp(mailbox.TenantId),
+                                MailSettings.Defines.OverdueAccountDelay);
 
-                            case DefineConstants.TariffType.Overdue:
-                                Log.InfoFormat("Tenant {0} is not paid. Stop processing mailboxes.", mailbox.TenantId);
-                                mailboxEngine.SetNextLoginDelay(new TenantMailboxExp(mailbox.TenantId),
-                                    MailSettings.Defines.OverdueAccountDelay);
+                            RemoveFromQueue(mailbox.TenantId);
 
-                                RemoveFromQueue(mailbox.TenantId);
+                            return false;
 
-                                return false;
+                        case DefineConstants.TariffType.Active:
+                            Log.InfoFormat("Tenant {0} is paid.", mailbox.TenantId);
 
-                            case DefineConstants.TariffType.Active:
-                                Log.InfoFormat("Tenant {0} is paid.", mailbox.TenantId);
+                            var expired = DateTime.UtcNow.Add(MailSettings.Defines.TenantCachingPeriod);
 
-                                var expired = DateTime.UtcNow.Add(MailSettings.Defines.TenantCachingPeriod);
+                            var tenantData = new TenantData
+                            {
+                                Tenant = mailbox.TenantId,
+                                TariffType = type,
+                                Expired = expired
+                            };
 
-                                var tenantData = new TenantData
-                                {
-                                    Tenant = mailbox.TenantId,
-                                    TariffType = type,
-                                    Expired = expired
-                                };
+                            AddTenantToCache(tenantData);
 
-                                AddTenantToCache(tenantData);
+                            break;
+                        default:
+                            Log.InfoFormat($"Cannot get tariff type for {mailbox.MailBoxId} mailbox");
+                            mailboxEngine.SetNextLoginDelay(new TenantMailboxExp(mailbox.TenantId),
+                                MailSettings.Defines.OverdueAccountDelay);
 
-                                break;
-                            default:
-                                Log.InfoFormat($"Cannot get tariff type for {mailbox.MailBoxId} mailbox");
-                                mailboxEngine.SetNextLoginDelay(new TenantMailboxExp(mailbox.TenantId),
-                                    MailSettings.Defines.OverdueAccountDelay);
-
-                                RemoveFromQueue(mailbox.TenantId);
-                                break;
-                        }
-                    }
-                    catch (Exception e)
-                    {
-                        Log.Error($"QueueManager -> TryLockMailbox(): GetTariffType \r\nException:{e}\r\n");
+                            RemoveFromQueue(mailbox.TenantId);
+                            break;
                     }
                 }
-                else
+                catch (Exception e)
                 {
-                    Log.Debug($"Tenant {mailbox.TenantId} is in cache");
+                    Log.Error($"QueueManager -> TryLockMailbox(): GetTariffType \r\nException:{e}\r\n");
                 }
-
-                var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager, Log);
-                var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, Log);
-
-                if (isUserTerminated || isUserRemoved)
-                {
-                    string userStatus = "";
-                    if (isUserRemoved) userStatus = "removed";
-                    else if (isUserTerminated) userStatus = "terminated";
-
-                    Log.InfoFormat($"User '{mailbox.UserId}' was {userStatus}. Tenant = {mailbox.TenantId}. Disable mailboxes for user.");
-
-                    mailboxEngine.DisableMailboxes(
-                        new UserMailboxExp(mailbox.TenantId, mailbox.UserId));
-
-                    alertEngine.CreateDisableAllMailboxesAlert(mailbox.TenantId,
-                        new List<string> { mailbox.UserId });
-
-                    RemoveFromQueue(mailbox.TenantId, mailbox.UserId);
-
-                    return false;
-                }
-
-                if (mailbox.IsTenantQuotaEnded(tenantManager, (int)MailSettings.Aggregator.TenantMinQuotaBalance, Log))
-                {
-                    Log.InfoFormat($"Tenant = {mailbox.TenantId} User = {mailbox.UserId}. Quota is ended.");
-
-                    if (!mailbox.QuotaError)
-                        alertEngine.CreateQuotaErrorWarningAlert(mailbox.TenantId, mailbox.UserId);
-
-                    mailboxEngine.SetNextLoginDelay(new UserMailboxExp(mailbox.TenantId, mailbox.UserId),
-                                    MailSettings.Defines.QuotaEndedDelay);
-
-                    RemoveFromQueue(mailbox.TenantId, mailbox.UserId);
-
-                    return false;
-                }
-
-                var active = mailbox.Active ? "active" : "inactive";
-                Log.Debug($"TryLockMailbox {mailbox.EMail.Address} (MailboxId: {mailbox.MailBoxId} is {active})");
-
-                return mailboxEngine.LockMaibox(mailbox.MailBoxId);
-
             }
-            catch (Exception ex)
+            else
             {
-                Log.ErrorFormat("QueueManager -> TryLockMailbox(MailboxId={0} is {1})\r\nException:{2}\r\n", mailbox.MailBoxId,
-                           mailbox.Active ? "active" : "inactive", ex.ToString());
+                Log.Debug($"Tenant {mailbox.TenantId} is in cache");
+            }
+
+            var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager, Log);
+            var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, Log);
+
+            if (isUserTerminated || isUserRemoved)
+            {
+                string userStatus = "";
+                if (isUserRemoved) userStatus = "removed";
+                else if (isUserTerminated) userStatus = "terminated";
+
+                Log.InfoFormat($"User '{mailbox.UserId}' was {userStatus}. Tenant = {mailbox.TenantId}. Disable mailboxes for user.");
+
+                mailboxEngine.DisableMailboxes(
+                    new UserMailboxExp(mailbox.TenantId, mailbox.UserId));
+
+                alertEngine.CreateDisableAllMailboxesAlert(mailbox.TenantId,
+                    new List<string> { mailbox.UserId });
+
+                RemoveFromQueue(mailbox.TenantId, mailbox.UserId);
 
                 return false;
             }
 
-        }
-
-        private void CacheEntryRemove(CacheEntryRemovedArguments arguments)
-        {
-            if (arguments.RemovedReason == CacheEntryRemovedReason.CacheSpecificEviction)
-                return;
-
-            var tenantId = Convert.ToInt32(arguments.CacheItem.Key);
-
-            Log.InfoFormat($"Tenant {tenantId} payment cache is expired.");
-
-            DeleteTenantFromDumpDb(tenantId);
-        }
-
-        #endregion
-
-        public void Dispose()
-        {
-            if (_tenantMemCache != null)
-                _tenantMemCache.Dispose();
-            _tenantMemCache = null;
-
-            if (MailSettings.Aggregator.UseDump)
+            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)MailSettings.Aggregator.TenantMinQuotaBalance, Log))
             {
-                if (_db != null)
-                    _db.Dispose();
-                _db = null;
+                Log.InfoFormat($"Tenant = {mailbox.TenantId} User = {mailbox.UserId}. Quota is ended.");
+
+                if (!mailbox.QuotaError)
+                    alertEngine.CreateQuotaErrorWarningAlert(mailbox.TenantId, mailbox.UserId);
+
+                mailboxEngine.SetNextLoginDelay(new UserMailboxExp(mailbox.TenantId, mailbox.UserId),
+                                MailSettings.Defines.QuotaEndedDelay);
+
+                RemoveFromQueue(mailbox.TenantId, mailbox.UserId);
+
+                return false;
             }
+
+            var active = mailbox.Active ? "active" : "inactive";
+            Log.Debug($"TryLockMailbox {mailbox.EMail.Address} (MailboxId: {mailbox.MailBoxId} is {active})");
+
+            return mailboxEngine.LockMaibox(mailbox.MailBoxId);
+
+        }
+        catch (Exception ex)
+        {
+            Log.ErrorFormat("QueueManager -> TryLockMailbox(MailboxId={0} is {1})\r\nException:{2}\r\n", mailbox.MailBoxId,
+                       mailbox.Active ? "active" : "inactive", ex.ToString());
+
+            return false;
+        }
+
+    }
+
+    private void CacheEntryRemove(CacheEntryRemovedArguments arguments)
+    {
+        if (arguments.RemovedReason == CacheEntryRemovedReason.CacheSpecificEviction)
+            return;
+
+        var tenantId = Convert.ToInt32(arguments.CacheItem.Key);
+
+        Log.InfoFormat($"Tenant {tenantId} payment cache is expired.");
+
+        DeleteTenantFromDumpDb(tenantId);
+    }
+
+    #endregion
+
+    public void Dispose()
+    {
+        if (_tenantMemCache != null)
+            _tenantMemCache.Dispose();
+        _tenantMemCache = null;
+
+        if (MailSettings.Aggregator.UseDump)
+        {
+            if (_db != null)
+                _db.Dispose();
+            _db = null;
         }
     }
 }

@@ -1,71 +1,60 @@
-﻿using ASC.Common;
-using ASC.Mail.Aggregator.Service.Console;
-using ASC.Mail.Aggregator.Service.Service;
+﻿namespace ASC.Mail.Aggregator.Service;
 
-using Microsoft.Extensions.Hosting;
-
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace ASC.Mail.Aggregator.Service
+[Singletone]
+class AggregatorServiceLauncher : IHostedService
 {
-    [Singletone]
-    class AggregatorServiceLauncher : IHostedService
+    private AggregatorService AggregatorService { get; }
+    private ConsoleParameters ConsoleParameters { get; }
+    private ManualResetEvent ResetEvent;
+
+    private Task AggregatorServiceTask;
+    private CancellationTokenSource Cts;
+
+    public AggregatorServiceLauncher(
+        AggregatorService aggregatorService,
+        ConsoleParser consoleParser)
     {
-        private AggregatorService AggregatorService { get; }
-        private ConsoleParameters ConsoleParameters { get; }
-        private ManualResetEvent ResetEvent;
+        AggregatorService = aggregatorService;
+        ConsoleParameters = consoleParser.GetParsedParameters();
 
-        private Task AggregatorServiceTask;
-        private CancellationTokenSource Cts;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+    }
 
-        public AggregatorServiceLauncher(
-            AggregatorService aggregatorService,
-            ConsoleParser consoleParser)
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        if (ConsoleParameters.IsConsole)
         {
-            AggregatorService = aggregatorService;
-            ConsoleParameters = consoleParser.GetParsedParameters();
-
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
+            ResetEvent = new ManualResetEvent(false);
+            System.Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
+            ResetEvent.WaitOne();
+        }
+        else
+        {
+            AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
         }
 
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        return AggregatorServiceTask.IsCompleted ? AggregatorServiceTask : Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            AggregatorService.StopService(Cts);
+            await Task.WhenAll(AggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+        }
+        catch (TaskCanceledException)
         {
         }
-
-        public Task StartAsync(CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            if (ConsoleParameters.IsConsole)
-            {
-                AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
-                ResetEvent = new ManualResetEvent(false);
-                System.Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
-                ResetEvent.WaitOne();
-            }
-            else
-            {
-                AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
-            }
-
-            return AggregatorServiceTask.IsCompleted ? AggregatorServiceTask : Task.CompletedTask;
-        }
-
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                AggregatorService.StopService(Cts);
-                await Task.WhenAll(AggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
-            }
-            catch (TaskCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-            }
         }
     }
 }
