@@ -84,32 +84,9 @@ namespace ASC.Mail.ImapSync
 
         private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e)
         {
+            _log.Debug($"ImapFolderMessageExpunged {ImapWorkFolder?.Name} Index={e?.Index}.");
+
             AddTask(new Task(() => UpdateMessagesList()));
-
-            return;
-
-            MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
-
-            if (messageSummary == null)
-            {
-                _log.Warn($"ImapMessageExpunged. No Message summary found.");
-
-                return;
-            }
-
-            if (NewActionFromImap != null)
-            {
-                ImapAction imapAction = new ImapAction()
-                {
-                    FolderAction = MailUserAction.SetAsDeleted,
-                    MessageFolderName = ImapWorkFolderFullName,
-                    MessageUniqueId = messageSummary.UniqueId,
-                    MessageFolderType = Folder,
-                    MailBoxId = Account.MailBoxId,
-                    MessageIdInDB = messageSummary.MessageIdInDB
-                };
-                NewActionFromImap(this, imapAction);
-            }
         }
 
         #endregion
@@ -166,7 +143,7 @@ namespace ASC.Mail.ImapSync
             }
             else
             {
-                AddTask(new Task(() => SetFlagsInImap( messagesUids, action)));
+                AddTask(new Task(() => SetFlagsInImap(messagesUids, action)));
             }
         }
 
@@ -432,16 +409,38 @@ namespace ASC.Mail.ImapSync
                 return;
             }
 
+            List<MessageDescriptor> deleteList = new List<MessageDescriptor>();
+
+            foreach (var oldMessage in ImapMessagesList)
+            {
+                var newMessage = newMessageDescriptors.FirstOrDefault(x => x.UniqueId == oldMessage.UniqueId);
+
+                if (newMessage == null)
+                {
+                    deleteList.Add(oldMessage);
+
+                    _log.Debug($"UpdateMessagesList: Delete message detect. Uid= {oldMessage.UniqueId} DBid={oldMessage.MessageIdInDB} IMAPIndex={oldMessage.Index}.");
+                }
+                else
+                {
+                    if (oldMessage.Index != newMessage.Index)
+                    {
+                        _log.Debug($"UpdateMessagesList: Change IMAP index. Uid= {oldMessage.UniqueId} DBid={oldMessage.MessageIdInDB} IMAPIndex={oldMessage.Index}->{newMessage.Index}.");
+
+                        oldMessage.Index = newMessage.Index;
+                    }
+
+                    newMessageDescriptors.Remove(newMessage);
+                }
+            }
+
+            deleteList.ForEach(x => ImapMessagesList.Remove(x));
+
             foreach (var message in newMessageDescriptors)
             {
-                var oldMessageDescriptor = ImapMessagesList.FirstOrDefault(x => x.Index == message.Index);
+                ImapMessagesList.Add(message);
 
-                if (oldMessageDescriptor == null)
-                {
-                    ImapMessagesList.Add(message);
-
-                    TryGetNewMessage(message);
-                }
+                TryGetNewMessage(message);
             }
         }
 
@@ -512,7 +511,7 @@ namespace ASC.Mail.ImapSync
             {
                 var returnedUidl = sourceFolder.MoveTo(uniqueIds, destinationFolder);
 
-                ImapMessagesList.RemoveAll(x=>uniqueIds.Contains(x.UniqueId));
+                ImapMessagesList.RemoveAll(x => uniqueIds.Contains(x.UniqueId));
             }
             catch (Exception ex)
             {
