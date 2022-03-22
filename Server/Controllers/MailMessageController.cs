@@ -86,9 +86,9 @@ namespace ASC.Mail.Controllers
 
             long totalMessages;
 
-            var messages = MessageEngine.GetFilteredMessages(filter, out totalMessages);
+            var messages = _messageEngine.GetFilteredMessages(filter, out totalMessages);
 
-            ApiContext.SetTotalCount(totalMessages);
+            _apiContext.SetTotalCount(totalMessages);
 
             return messages;
         }
@@ -116,11 +116,11 @@ namespace ASC.Mail.Controllers
             var watch = new Stopwatch();
             watch.Start();
 #endif
-            var item = MessageEngine.GetMessage(id, new MailMessageData.Options
+            var item = _messageEngine.GetMessage(id, new MailMessageData.Options
             {
                 LoadImages = loadImages.GetValueOrDefault(false),
                 LoadBody = true,
-                NeedProxyHttp = MailSettings.NeedProxyHttp,
+                NeedProxyHttp = _mailSettings.NeedProxyHttp,
                 NeedSanitizer = needSanitizeHtml
             });
 
@@ -128,14 +128,14 @@ namespace ASC.Mail.Controllers
             {
 #if DEBUG
                 watch.Stop();
-                Log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms [NotFound] (NeedProxyHttp={MailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
+                _log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms [NotFound] (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
                 throw new ItemNotFoundException(string.Format("Message with {0} wasn't found.", id));
             }
 
             if (item.WasNew && markRead.HasValue && markRead.Value)
             {
-                MessageEngine.SetUnread(new List<int> { item.Id }, false);
+                _messageEngine.SetUnread(new List<int> { item.Id }, false);
                 item.IsNew = false;
             }
 
@@ -145,7 +145,7 @@ namespace ASC.Mail.Controllers
             }
 #if DEBUG
             watch.Stop();
-            Log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={MailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
+            _log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
             if (item.Folder != FolderType.UserFolder)
                 return item;
@@ -181,9 +181,9 @@ namespace ASC.Mail.Controllers
                 throw new InvalidOperationException("Only folders Templates and Drafts are allowed.");
             }
 
-            var messages = MessageEngine.GetFilteredMessages(filter, out long totalMessages);
+            var messages = _messageEngine.GetFilteredMessages(filter, out long totalMessages);
 
-            ApiContext.SetTotalCount(totalMessages);
+            _apiContext.SetTotalCount(totalMessages);
 
             for (var i = 0; i < messages.Count; i++)
             {
@@ -215,12 +215,12 @@ namespace ASC.Mail.Controllers
 
                 if (filter.PrimaryFolder == FolderType.Draft)
                 {
-                    DraftEngine.Save(model);
+                    _draftEngine.Save(model);
                 }
 
                 if (filter.PrimaryFolder == FolderType.Templates)
                 {
-                    TemplateEngine.Save(model);
+                    _templateEngine.Save(model);
                 }
             }
         }
@@ -294,7 +294,7 @@ namespace ASC.Mail.Controllers
                 UserFolderId = user_folder_id
             };
 
-            var nextId = MessageEngine.GetNextFilteredMessageId(id, filter);
+            var nextId = _messageEngine.GetNextFilteredMessageId(id, filter);
 
             return nextId;
         }
@@ -317,7 +317,7 @@ namespace ASC.Mail.Controllers
             if (attachmentid <= 0)
                 throw new ArgumentException(@"Invalid attachment id. Attachment id must be positive integer", "attachmentid");
 
-            MessageEngine
+            _messageEngine
                 .DeleteMessageAttachments(TenantId, UserId, messageid, new List<int> { attachmentid });
 
             return messageid;
@@ -340,19 +340,19 @@ namespace ASC.Mail.Controllers
             switch (status)
             {
                 case "read":
-                    MessageEngine.SetUnread(ids, false);
+                    _messageEngine.SetUnread(ids, false);
                     break;
 
                 case "unread":
-                    MessageEngine.SetUnread(ids, true);
+                    _messageEngine.SetUnread(ids, true);
                     break;
 
                 case "important":
-                    MessageEngine.SetImportant(ids, true);
+                    _messageEngine.SetImportant(ids, true);
                     break;
 
                 case "normal":
-                    MessageEngine.SetImportant(ids, false);
+                    _messageEngine.SetImportant(ids, false);
                     break;
             }
             return ids;
@@ -371,9 +371,9 @@ namespace ASC.Mail.Controllers
             if (!ids.Any())
                 throw new ArgumentException(@"Empty ids collection", "ids");
 
-            MessageEngine.Restore(ids);
+            _messageEngine.Restore(ids);
 
-            OperationEngine.ApplyFilters(ids);
+            _operationEngine.ApplyFilters(ids);
 
             return ids;
         }
@@ -398,10 +398,10 @@ namespace ASC.Mail.Controllers
             if (!MailFolder.IsIdOk(toFolder))
                 throw new ArgumentException(@"Invalid folder id", "folder");
 
-            MessageEngine.SetFolder(ids, toFolder, userFolderId);
+            _messageEngine.SetFolder(ids, toFolder, userFolderId);
 
             if (toFolder == FolderType.Spam || toFolder == FolderType.Sent || toFolder == FolderType.Inbox)
-                OperationEngine.ApplyFilters(ids);
+                _operationEngine.ApplyFilters(ids);
 
             return ids;
         }
@@ -423,7 +423,7 @@ namespace ASC.Mail.Controllers
 
                 var daemonLabels =
                     new DraftEngine.DeliveryFailureMessageTranslates(
-                        MailSettings.Defines.MailDaemonEmail,
+                        _mailSettings.Defines.MailDaemonEmail,
                         MailApiResource.DeliveryFailureSubject,
                         MailApiResource.DeliveryFailureAutomaticMessage,
                         MailApiResource.DeliveryFailureMessageIdentificator,
@@ -433,7 +433,7 @@ namespace ASC.Mail.Controllers
                         MailApiResource.DeliveryFailureFAQInformation,
                         MailApiResource.DeliveryFailureReason);
 
-                return DraftEngine.Send(model, daemonLabels);
+                return _draftEngine.Send(model, daemonLabels);
             }
             catch (DraftException ex)
             {
@@ -491,7 +491,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                return DraftEngine.Save(model);
+                return _draftEngine.Save(model);
             }
             catch (DraftException ex)
             {
@@ -549,7 +549,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                return TemplateEngine.Save(model);
+                return _templateEngine.Save(model);
             }
             catch (DraftException ex)
             {
@@ -591,7 +591,7 @@ namespace ASC.Mail.Controllers
             if (!ids.Any())
                 throw new ArgumentException(@"Empty ids collection", "ids");
 
-            MessageEngine.SetRemoved(ids);
+            _messageEngine.SetRemoved(ids);
 
             return ids;
         }
@@ -605,7 +605,7 @@ namespace ASC.Mail.Controllers
         [Read(@"messages/template")]
         public MailMessageData GetMessageTemplate()
         {
-            return DraftEngine.GetTemplate();
+            return _draftEngine.GetTemplate();
         }
 
         /// <summary>
@@ -627,7 +627,7 @@ namespace ASC.Mail.Controllers
                 //Thread.CurrentThread.CurrentCulture = CurrentCulture;
                 //Thread.CurrentThread.CurrentUICulture = CurrentCulture;
 
-                var attachment = MessageEngine
+                var attachment = _messageEngine
                     .AttachFileFromDocuments(TenantId, UserId, id, fileId, version, needSaveToTemp);
 
                 return attachment;
@@ -684,7 +684,7 @@ namespace ASC.Mail.Controllers
             if (crm_contact_ids == null)
                 throw new ArgumentException(@"Invalid contact ids list", "crm_contact_ids");
 
-            CrmLinkEngine.ExportMessageToCrm(id_message, crm_contact_ids);
+            _crmLinkEngine.ExportMessageToCrm(id_message, crm_contact_ids);
         }
     }
 }

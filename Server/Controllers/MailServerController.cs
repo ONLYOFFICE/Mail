@@ -24,7 +24,7 @@ namespace ASC.Mail.Controllers
         [Read(@"server")]
         public ServerData GetMailServer()
         {
-            return ServerEngine.GetMailServer();
+            return _serverEngine.GetMailServer();
         }
 
         /// <summary>
@@ -36,9 +36,9 @@ namespace ASC.Mail.Controllers
         [Read(@"serverinfo/get")]
         public ServerFullData GetMailServerFullInfo()
         {
-            var fullServerInfo = ServerEngine.GetMailServerFullInfo();
+            var fullServerInfo = _serverEngine.GetMailServerFullInfo();
 
-            if (!CoreBaseSettings.Standalone)
+            if (!_coreBaseSettings.Standalone)
                 return fullServerInfo;
 
             var commonDomain = fullServerInfo.Domains.FirstOrDefault(d => d.IsSharedDomain);
@@ -62,7 +62,7 @@ namespace ASC.Mail.Controllers
         [Read(@"freedns/get")]
         public ServerDomainDnsData GetUnusedDnsRecords()
         {
-            return ServerEngine.GetOrCreateUnusedDnsData();
+            return _serverEngine.GetOrCreateUnusedDnsData();
         }
 
         /// <summary>
@@ -74,9 +74,9 @@ namespace ASC.Mail.Controllers
         [Read(@"domains/get")]
         public List<ServerDomainData> GetDomains()
         {
-            var listDomainData = ServerDomainEngine.GetDomains();
+            var listDomainData = _serverDomainEngine.GetDomains();
 
-            if (CoreBaseSettings.Standalone)
+            if (_coreBaseSettings.Standalone)
             {
                 //Skip common domain
                 listDomainData = listDomainData.Where(d => !d.IsSharedDomain).ToList();
@@ -94,7 +94,7 @@ namespace ASC.Mail.Controllers
         [Read(@"domains/common")]
         public ServerDomainData GetCommonDomain()
         {
-            var commonDomain = ServerDomainEngine.GetCommonDomain();
+            var commonDomain = _serverDomainEngine.GetCommonDomain();
             return commonDomain;
         }
 
@@ -109,7 +109,7 @@ namespace ASC.Mail.Controllers
         [Create(@"domains/add")]
         public ServerDomainData AddDomain(string name, int id_dns)
         {
-            var domain = ServerDomainEngine.AddDomain(name, id_dns);
+            var domain = _serverDomainEngine.AddDomain(name, id_dns);
             return domain;
         }
 
@@ -123,7 +123,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"domains/remove/{id}")]
         public MailOperationStatus RemoveDomain(int id)
         {
-            var status = ServerDomainEngine.RemoveDomain(id);
+            var status = _serverDomainEngine.RemoveDomain(id);
             return status;
         }
 
@@ -137,7 +137,7 @@ namespace ASC.Mail.Controllers
         [Read(@"domains/dns/get")]
         public ServerDomainDnsData GetDnsRecords(int id)
         {
-            var dns = ServerDomainEngine.GetDnsData(id);
+            var dns = _serverDomainEngine.GetDnsData(id);
             return dns;
         }
 
@@ -151,7 +151,7 @@ namespace ASC.Mail.Controllers
         [Read(@"domains/exists")]
         public bool IsDomainExists(string name)
         {
-            var isExists = ServerDomainEngine.IsDomainExists(name);
+            var isExists = _serverDomainEngine.IsDomainExists(name);
             return isExists;
         }
 
@@ -165,7 +165,7 @@ namespace ASC.Mail.Controllers
         [Read(@"domains/ownership/check")]
         public bool CheckDomainOwnership(string name)
         {
-            var isOwnershipProven = ServerEngine.CheckDomainOwnership(name);
+            var isOwnershipProven = _serverEngine.CheckDomainOwnership(name);
             return isOwnershipProven;
         }
 
@@ -185,7 +185,7 @@ namespace ASC.Mail.Controllers
         public ServerMailboxData CreateMailbox(string name, string local_part, int domain_id, string user_id,
             bool notifyCurrent = false, bool notifyProfile = false)
         {
-            var serverMailbox = ServerMailboxEngine.CreateMailbox(name, local_part, domain_id, user_id);
+            var serverMailbox = _serverMailboxEngine.CreateMailbox(name, local_part, domain_id, user_id);
 
             SendMailboxCreated(serverMailbox, notifyCurrent, notifyProfile);
 
@@ -202,7 +202,7 @@ namespace ASC.Mail.Controllers
         [Create(@"mailboxes/addmy")]
         public ServerMailboxData CreateMyMailbox(string name)
         {
-            var serverMailbox = ServerMailboxEngine.CreateMyCommonDomainMailbox(name);
+            var serverMailbox = _serverMailboxEngine.CreateMyCommonDomainMailbox(name);
             return serverMailbox;
         }
 
@@ -215,7 +215,7 @@ namespace ASC.Mail.Controllers
         [Read(@"mailboxes/get")]
         public List<ServerMailboxData> GetMailboxes()
         {
-            var mailboxes = ServerMailboxEngine.GetMailboxes();
+            var mailboxes = _serverMailboxEngine.GetMailboxes();
             return mailboxes;
         }
 
@@ -231,7 +231,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"mailboxes/remove/{id}")]
         public MailOperationStatus RemoveMailbox(int id)
         {
-            var status = ServerMailboxEngine.RemoveMailbox(id);
+            var status = _serverMailboxEngine.RemoveMailbox(id);
             return status;
         }
 
@@ -246,7 +246,7 @@ namespace ASC.Mail.Controllers
         [Update(@"mailboxes/update")]
         public ServerMailboxData UpdateMailbox(int mailbox_id, string name)
         {
-            var mailbox = ServerMailboxEngine.UpdateMailboxDisplayName(mailbox_id, name);
+            var mailbox = _serverMailboxEngine.UpdateMailboxDisplayName(mailbox_id, name);
             return mailbox;
         }
 
@@ -261,7 +261,7 @@ namespace ASC.Mail.Controllers
         [Update(@"mailboxes/alias/add")]
         public ServerDomainAddressData AddMailboxAlias(int mailbox_id, string alias_name)
         {
-            var serverAlias = ServerMailboxEngine.AddAlias(mailbox_id, alias_name);
+            var serverAlias = _serverMailboxEngine.AddAlias(mailbox_id, alias_name);
             return serverAlias;
         }
 
@@ -276,7 +276,7 @@ namespace ASC.Mail.Controllers
         [Update(@"mailboxes/alias/remove")]
         public int RemoveMailboxAlias(int mailbox_id, int address_id)
         {
-            ServerMailboxEngine.RemoveAlias(mailbox_id, address_id);
+            _serverMailboxEngine.RemoveAlias(mailbox_id, address_id);
 
             return mailbox_id;
         }
@@ -291,7 +291,7 @@ namespace ASC.Mail.Controllers
         [Update(@"mailboxes/changepwd")]
         public void ChangeMailboxPassword(int mailbox_id, string password)
         {
-            ServerMailboxEngine.ChangePassword(mailbox_id, password);
+            _serverMailboxEngine.ChangePassword(mailbox_id, password);
 
             SendMailboxPasswordChanged(mailbox_id);
         }
@@ -307,7 +307,7 @@ namespace ASC.Mail.Controllers
         [Read(@"mailboxes/alias/exists")]
         public bool IsAddressAlreadyRegistered(string local_part, int domain_id)
         {
-            return ServerMailboxEngine.IsAddressAlreadyRegistered(local_part, domain_id);
+            return _serverMailboxEngine.IsAddressAlreadyRegistered(local_part, domain_id);
         }
 
         /// <summary>
@@ -321,7 +321,7 @@ namespace ASC.Mail.Controllers
         [Read(@"mailboxes/alias/valid")]
         public bool IsAddressValid(string local_part, int domain_id)
         {
-            return ServerMailboxEngine.IsAddressValid(local_part, domain_id);
+            return _serverMailboxEngine.IsAddressValid(local_part, domain_id);
         }
 
         /// <summary>
@@ -336,7 +336,7 @@ namespace ASC.Mail.Controllers
         [Create(@"groupaddress/add")]
         public ServerDomainGroupData CreateMailGroup(string name, int domain_id, List<int> address_ids)
         {
-            var group = ServerMailgroupEngine.CreateMailGroup(name, domain_id, address_ids);
+            var group = _serverMailgroupEngine.CreateMailGroup(name, domain_id, address_ids);
 
             return group;
         }
@@ -352,7 +352,7 @@ namespace ASC.Mail.Controllers
         [Update(@"groupaddress/address/add")]
         public ServerDomainGroupData AddMailGroupAddress(int mailgroup_id, int address_id)
         {
-            var group = ServerMailgroupEngine.AddMailGroupMember(mailgroup_id, address_id);
+            var group = _serverMailgroupEngine.AddMailGroupMember(mailgroup_id, address_id);
 
             return group;
         }
@@ -368,7 +368,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"groupaddress/addresses/remove")]
         public int RemoveMailGroupAddress(int mailgroup_id, int address_id)
         {
-            ServerMailgroupEngine.RemoveMailGroupMember(mailgroup_id, address_id);
+            _serverMailgroupEngine.RemoveMailGroupMember(mailgroup_id, address_id);
 
             return address_id;
         }
@@ -382,7 +382,7 @@ namespace ASC.Mail.Controllers
         [Read(@"groupaddress/get")]
         public List<ServerDomainGroupData> GetMailGroups()
         {
-            var groups = ServerMailgroupEngine.GetMailGroups();
+            var groups = _serverMailgroupEngine.GetMailGroups();
 
             return groups;
         }
@@ -397,7 +397,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"groupaddress/remove/{id}")]
         public int RemoveMailGroup(int id)
         {
-            ServerMailgroupEngine.RemoveMailGroup(id);
+            _serverMailgroupEngine.RemoveMailGroup(id);
 
             return id;
         }
@@ -414,7 +414,7 @@ namespace ASC.Mail.Controllers
         [Create(@"notification/address/add")]
         public ServerNotificationAddressData CreateNotificationAddress(string name, string password, int domain_id)
         {
-            var notifyAddress = ServerEngine.CreateNotificationAddress(name, password, domain_id);
+            var notifyAddress = _serverEngine.CreateNotificationAddress(name, password, domain_id);
             return notifyAddress;
         }
 
@@ -426,7 +426,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"notification/address/remove")]
         public void RemoveNotificationAddress(string address)
         {
-            ServerEngine.RemoveNotificationAddress(address);
+            _serverEngine.RemoveNotificationAddress(address);
         }
 
         private void SendMailboxCreated(ServerMailboxData serverMailbox, bool toMailboxUser, bool toUserProfile)
@@ -446,7 +446,7 @@ namespace ASC.Mail.Controllers
                     emails.Add(serverMailbox.Address.Email);
                 }
 
-                var userInfo = UserManager.GetUsers(new Guid(serverMailbox.UserId));
+                var userInfo = _userManager.GetUsers(new Guid(serverMailbox.UserId));
 
                 if (userInfo == null || userInfo.Equals(Constants.LostUser))
                     throw new Exception(string.Format("SendMailboxCreated(mailboxId={0}): user not found",
@@ -465,17 +465,17 @@ namespace ASC.Mail.Controllers
                 }
 
                 var mailbox =
-                    MailboxEngine.GetMailboxData(
+                    _mailboxEngine.GetMailboxData(
                         new ConcreteUserServerMailboxExp(serverMailbox.Id, TenantId, serverMailbox.UserId));
 
                 if (mailbox == null)
                     throw new Exception(string.Format("SendMailboxCreated(mailboxId={0}): mailbox not found",
                         serverMailbox.Id));
 
-                using var scope = ServiceProvider.CreateScope();
+                using var scope = _serviceProvider.CreateScope();
                 var studioNotifyService = scope.ServiceProvider.GetService<StudioNotifyService>();
 
-                if (CoreBaseSettings.Standalone)
+                if (_coreBaseSettings.Standalone)
                 {
                     var encType = Enum.GetName(typeof(EncryptionType), mailbox.Encryption) ?? DefineConstants.START_TLS;
 
@@ -483,28 +483,28 @@ namespace ASC.Mail.Controllers
 
                     try
                     {
-                        mxHost = ServerEngine.GetMailServerMxDomain();
+                        mxHost = _serverEngine.GetMailServerMxDomain();
                     }
                     catch (Exception ex)
                     {
-                        Log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
+                        _log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
                     }
 
-                    studioNotifyService.SendMailboxCreated(emails, userInfo.DisplayUserName(DisplayUserSettingsHelper),
+                    studioNotifyService.SendMailboxCreated(emails, userInfo.DisplayUserName(_displayUserSettingsHelper),
                         mailbox.EMail.Address,
                         string.IsNullOrEmpty(mxHost) ? mailbox.Server : mxHost, encType.ToUpper(), mailbox.Port,
                         mailbox.SmtpPort, mailbox.Account);
                 }
                 else
                 {
-                    studioNotifyService.SendMailboxCreated(emails, userInfo.DisplayUserName(DisplayUserSettingsHelper),
+                    studioNotifyService.SendMailboxCreated(emails, userInfo.DisplayUserName(_displayUserSettingsHelper),
                         mailbox.EMail.Address);
                 }
 
             }
             catch (Exception ex)
             {
-                Log.Error(ex.ToString());
+                _log.Error(ex.ToString());
             }
         }
 
@@ -512,21 +512,21 @@ namespace ASC.Mail.Controllers
         {
             try
             {
-                if (!CoreBaseSettings.Standalone)
+                if (!_coreBaseSettings.Standalone)
                     return;
 
                 if (mailboxId < 0)
                     throw new ArgumentNullException("mailboxId");
 
                 var mailbox =
-                    MailboxEngine.GetMailboxData(
+                    _mailboxEngine.GetMailboxData(
                         new ConcreteTenantServerMailboxExp(mailboxId, TenantId, false));
 
                 if (mailbox == null)
                     throw new Exception(string.Format("SendMailboxPasswordChanged(mailboxId={0}): mailbox not found",
                         mailboxId));
 
-                var userInfo = UserManager.GetUsers(new Guid(mailbox.UserId));
+                var userInfo = _userManager.GetUsers(new Guid(mailbox.UserId));
 
                 if (userInfo == null || userInfo.Equals(Constants.LostUser))
                     throw new Exception(string.Format("SendMailboxPasswordChanged(mailboxId={0}): user not found",
@@ -539,15 +539,15 @@ namespace ASC.Mail.Controllers
                         : mailbox.EMail.Address
                 };
 
-                using var scope = ServiceProvider.CreateScope();
+                using var scope = _serviceProvider.CreateScope();
                 var studioNotifyService = scope.ServiceProvider.GetService<StudioNotifyService>();
 
                 studioNotifyService.SendMailboxPasswordChanged(toEmails,
-                    userInfo.DisplayUserName(DisplayUserSettingsHelper), mailbox.EMail.Address);
+                    userInfo.DisplayUserName(_displayUserSettingsHelper), mailbox.EMail.Address);
             }
             catch (Exception ex)
             {
-                Log.Error(ex.ToString());
+                _log.Error(ex.ToString());
             }
         }
     }

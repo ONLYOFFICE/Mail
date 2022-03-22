@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Configuration;
-using System.Net;
-using System.Net.Mail;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Mail.Core.MailServer.Core.Dao;
@@ -44,13 +39,18 @@ using Newtonsoft.Json.Linq;
 
 using RestSharp;
 
+using System;
+using System.Configuration;
+using System.Net;
+using System.Net.Mail;
+
 namespace ASC.Mail.Server.Core
 {
     [Scope]
     public class ServerEngine
     {
-        private ILog Log { get; }
-        private IMailServerDaoFactory MailServerDaoFactory { get; }
+        private readonly ILog _log;
+        private readonly IMailServerDaoFactory _mailServerDaoFactory;
 
         protected string DbConnectionString { get; private set; }
         internal ServerApi ServerApi { get; private set; }
@@ -60,8 +60,8 @@ namespace ASC.Mail.Server.Core
             IMailServerDaoFactory mailServerDaoFactory
             )
         {
-            MailServerDaoFactory = mailServerDaoFactory;
-            Log = option.Get("ASC.Mail.ServerEngine");
+            _mailServerDaoFactory = mailServerDaoFactory;
+            _log = option.Get("ASC.Mail.ServerEngine");
         }
 
         public ServerEngine(int serverId, string connectionString)
@@ -74,7 +74,7 @@ namespace ASC.Mail.Server.Core
 
             DbConnectionString = connectionStringParser.PostfixAdminDbConnectionString;
 
-            MailServerDaoFactory.SetServerDbConnectionString(DbConnectionString);
+            _mailServerDaoFactory.SetServerDbConnectionString(DbConnectionString);
 
             var json = JObject.Parse(connectionString);
 
@@ -101,7 +101,7 @@ namespace ASC.Mail.Server.Core
 
             DbConnectionString = connectionStringParser.PostfixAdminDbConnectionString;
 
-            MailServerDaoFactory.SetServerDbConnectionString(DbConnectionString);
+            _mailServerDaoFactory.SetServerDbConnectionString(DbConnectionString);
 
             var json = JObject.Parse(connectionString);
 
@@ -128,41 +128,41 @@ namespace ASC.Mail.Server.Core
 
         public int SaveDomain(Domain domain)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
-                return MailServerDaoFactory.GetDomainDao().Save(domain);
+                return _mailServerDaoFactory.GetDomainDao().Save(domain);
             }
         }
 
         public int SaveDkim(Dkim dkim)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
-                return MailServerDaoFactory.GetDkimDao().Save(dkim);
+                return _mailServerDaoFactory.GetDkimDao().Save(dkim);
             }
         }
 
         public int SaveAlias(Alias alias)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
-                return MailServerDaoFactory.GetAliasDao().Save(alias);
+                return _mailServerDaoFactory.GetAliasDao().Save(alias);
             }
         }
 
         public int RemoveAlias(string alias)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
-                return MailServerDaoFactory.GetAliasDao().Remove(alias);
+                return _mailServerDaoFactory.GetAliasDao().Remove(alias);
             }
         }
 
         public void ChangePassword(string username, string newPassword)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
-                var res = MailServerDaoFactory.GetMailboxDao().ChangePassword(username, newPassword);
+                var res = _mailServerDaoFactory.GetMailboxDao().ChangePassword(username, newPassword);
 
                 if (res < 1)
                     throw new Exception(string.Format("Server mailbox \"{0}\" not found", username));
@@ -171,13 +171,13 @@ namespace ASC.Mail.Server.Core
 
         public void SaveMailbox(Mailbox mailbox, Alias address, bool deliver = true)
         {
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
                 using (var tx = context.Database.BeginTransaction())
                 {
-                    MailServerDaoFactory.GetMailboxDao().Save(mailbox, deliver);
+                    _mailServerDaoFactory.GetMailboxDao().Save(mailbox, deliver);
 
-                    MailServerDaoFactory.GetAliasDao().Save(address);
+                    _mailServerDaoFactory.GetAliasDao().Save(address);
 
                     tx.Commit();
                 }
@@ -190,13 +190,13 @@ namespace ASC.Mail.Server.Core
 
             ClearMailboxStorageSpace(mailAddress.User, mailAddress.Host);
 
-            using (var context = MailServerDaoFactory.GetContext())
+            using (var context = _mailServerDaoFactory.GetContext())
             {
                 using (var tx = context.Database.BeginTransaction())
                 {
-                    MailServerDaoFactory.GetMailboxDao().Remove(address);
+                    _mailServerDaoFactory.GetMailboxDao().Remove(address);
 
-                    MailServerDaoFactory.GetAliasDao().Remove(address);
+                    _mailServerDaoFactory.GetAliasDao().Remove(address);
 
                     tx.Commit();
                 }
@@ -209,14 +209,14 @@ namespace ASC.Mail.Server.Core
 
             try
             {
-                using (var context = MailServerDaoFactory.GetContext())
+                using (var context = _mailServerDaoFactory.GetContext())
                 {
                     using (var tx = context.Database.BeginTransaction())
                     {
-                        MailServerDaoFactory.GetAliasDao().RemoveByDomain(domain);
-                        MailServerDaoFactory.GetMailboxDao().RemoveByDomain(domain);
-                        MailServerDaoFactory.GetDomainDao().Remove(domain);
-                        MailServerDaoFactory.GetDkimDao().Remove(domain);
+                        _mailServerDaoFactory.GetAliasDao().RemoveByDomain(domain);
+                        _mailServerDaoFactory.GetMailboxDao().RemoveByDomain(domain);
+                        _mailServerDaoFactory.GetDomainDao().Remove(domain);
+                        _mailServerDaoFactory.GetDkimDao().Remove(domain);
 
                         tx.Commit();
                     }
@@ -224,7 +224,7 @@ namespace ASC.Mail.Server.Core
             }
             catch (Exception c)
             {
-                Log.Error($"{c.Message}\n{c.StackTrace}");
+                _log.Error($"{c.Message}\n{c.StackTrace}");
             }
         }
 
@@ -259,22 +259,22 @@ namespace ASC.Mail.Server.Core
 
             var client = GetApiClient();
 
-            if (client != null) Log.Debug($"ServerEngine -> ClearDomainStorageSpace: Get client URL: {client.BaseUrl}: OK");
+            if (client != null) _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Get client URL: {client.BaseUrl}: OK");
 
             var request = GetApiRequest("domains/{domain_name}", Method.DELETE);
 
-            if (request != null) Log.Debug("ServerEngine -> ClearDomainStorageSpace: Get request: OK");
+            if (request != null) _log.Debug("ServerEngine -> ClearDomainStorageSpace: Get request: OK");
 
             request.AddUrlSegment("domain_name", domain);
 
-            Log.Debug($"ServerEngine -> ClearDomainStorageSpace: Add Url Segment (domain name: {domain}): OK");
+            _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Add Url Segment (domain name: {domain}): OK");
 
-            if (request.Resource != null) Log.Debug($"Request resource: {request.Resource}, method: {request.Method}");
+            if (request.Resource != null) _log.Debug($"Request resource: {request.Resource}, method: {request.Method}");
 
             // execute the request
             var response = client.ExecuteSafe(request);
 
-            Log.Debug($"ServerEngine -> ClearDomainStorageSpace: Response was executing. Status code: {response.StatusCode}");
+            _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Response was executing. Status code: {response.StatusCode}");
 
             if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.NotFound)
                 throw new Exception("MailServer->ClearDomainStorageSpace(). Response code = " + response.StatusCode, response.ErrorException);

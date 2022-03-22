@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Linq;
-using System.Net.Mail;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
@@ -42,6 +38,10 @@ using ASC.Mail.Storage;
 using ASC.Mail.Utils;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Linq;
+using System.Net.Mail;
 
 using MailMessage = ASC.Mail.Models.MailMessageData;
 
@@ -59,7 +59,6 @@ namespace ASC.Mail.Core.Engine
             MessageEngine messageEngine,
             QuotaEngine quotaEngine,
             IndexEngine indexEngine,
-            FolderEngine folderEngine,
             StorageManager storageManager,
             CoreSettings coreSettings,
             StorageFactory storageFactory,
@@ -73,7 +72,6 @@ namespace ASC.Mail.Core.Engine
             messageEngine,
             quotaEngine,
             indexEngine,
-            folderEngine,
             mailDaoFactory,
             storageManager,
             securityContext,
@@ -85,14 +83,13 @@ namespace ASC.Mail.Core.Engine
             mailSettings,
             daemonLabels)
         {
-            Log = option.Get("ASC.Mail.TemplateEngine");
         }
 
         public override MailMessage Save(MessageModel model, DeliveryFailureMessageTranslates translates = null)
         {
             var mailAddress = new MailAddress(model.From);
 
-            var accounts = AccountEngine.GetAccountInfoList().ToAccountData();
+            var accounts = _accountEngine.GetAccountInfoList().ToAccountData();
 
             var account = accounts.FirstOrDefault(a => a.Email.ToLower().Equals(mailAddress.Address));
 
@@ -102,7 +99,7 @@ namespace ASC.Mail.Core.Engine
             if (account.IsGroup)
                 throw new InvalidOperationException("Saving emails from a group address is forbidden");
 
-            var mbox = MailboxEngine.GetMailboxData(
+            var mbox = _mailboxEngine.GetMailboxData(
                 new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
 
             if (mbox == null)
@@ -114,11 +111,11 @@ namespace ASC.Mail.Core.Engine
 
             if (model.Id > 0)
             {
-                var message = MessageEngine.GetMessage(model.Id, new MailMessage.Options
+                var message = _messageEngine.GetMessage(model.Id, new MailMessage.Options
                 {
                     LoadImages = false,
                     LoadBody = true,
-                    NeedProxyHttp = MailSettings.NeedProxyHttp,
+                    NeedProxyHttp = _mailSettings.NeedProxyHttp,
                     NeedSanitizer = false
                 });
 
@@ -127,9 +124,9 @@ namespace ASC.Mail.Core.Engine
                     throw new InvalidOperationException("Saving emails is permitted only in the Templates folder");
                 }
 
-                if (message.HtmlBody.Length > MailSettings.Defines.MaximumMessageBodySize)
+                if (message.HtmlBody.Length > _mailSettings.Defines.MaximumMessageBodySize)
                 {
-                    throw new InvalidOperationException("Message body exceeded limit (" + MailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
+                    throw new InvalidOperationException("Message body exceeded limit (" + _mailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
                 }
 
                 mimeMessageId = message.MimeMessageId;
@@ -150,7 +147,7 @@ namespace ASC.Mail.Core.Engine
             }
             else
             {
-                mimeMessageId = MailUtil.CreateMessageId(TenantManager, CoreSettings);
+                mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings);
                 streamId = MailUtil.CreateStreamId();
             }
 

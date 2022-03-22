@@ -24,9 +24,6 @@
 */
 
 
-using System;
-using System.Linq;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Engine.Operations.Base;
@@ -35,6 +32,9 @@ using ASC.Mail.Extensions;
 using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Linq;
 
 namespace ASC.Mail.Core.Engine.Operations
 {

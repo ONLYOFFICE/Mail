@@ -3,67 +3,67 @@
 [Singletone]
 class WatchdogLauncher : IHostedService
 {
-    private ILog Log { get; }
-    private WatchdogService WatchdogService { get; }
-    private ConsoleParameters ConsoleParameters { get; }
-    private CancellationTokenSource Cts { get; set; }
+    private readonly ILog _log;
+    private readonly WatchdogService _watchdogService;
+    private readonly ConsoleParameters _consoleParameters;
 
-    private Task WatchdogTask { get; set; }
-    private ManualResetEvent MreStop { get; set; }
+    private CancellationTokenSource Cts;
+    private Task _watchdogTask;
+    private ManualResetEvent _mreStop;
 
     public WatchdogLauncher(
         WatchdogService watchdogService,
         IOptionsMonitor<ILog> options,
         ConsoleParser consoleParser)
     {
-        WatchdogService = watchdogService;
-        Log = options.Get("ASC.Mail.WatchdogLauncher");
-        ConsoleParameters = consoleParser.GetParsedParameters();
+        _watchdogService = watchdogService;
+        _log = options.Get("ASC.Mail.WatchdogLauncher");
+        _consoleParameters = consoleParser.GetParsedParameters();
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        Log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
+        _log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Log.Info("Start service\r\n");
+        _log.Info("Start service\r\n");
 
         Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        if (ConsoleParameters.IsConsole)
+        if (_consoleParameters.IsConsole)
         {
-            Log.Info("Service Start in console-daemon mode");
+            _log.Info("Service Start in console-daemon mode");
 
-            WatchdogTask = WatchdogService.StarService(Cts.Token);
+            _watchdogTask = _watchdogService.StarService(Cts.Token);
 
-            MreStop = new ManualResetEvent(false);
+            _mreStop = new ManualResetEvent(false);
             Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
-            MreStop.WaitOne();
+            _mreStop.WaitOne();
         }
         else
         {
-            WatchdogTask = WatchdogService.StarService(Cts.Token);
+            _watchdogTask = _watchdogService.StarService(Cts.Token);
         }
 
-        return WatchdogTask.IsCompleted ? WatchdogTask : Task.CompletedTask;
+        return _watchdogTask.IsCompleted ? _watchdogTask : Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            WatchdogService.StopService(Cts);
-            await Task.WhenAny(WatchdogTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+            _watchdogService.StopService(Cts);
+            await Task.WhenAny(_watchdogTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
         }
         catch (Exception e)
         {
 
-            Log.Error($"Failed to terminate the service correctly. The details:\r\n{e}\r\n");
+            _log.Error($"Failed to terminate the service correctly. The details:\r\n{e}\r\n");
         }
 
-        Log.Info("Service stopped.\r\n");
+        _log.Info("Service stopped.\r\n");
     }
 }

@@ -23,52 +23,47 @@
  *
 */
 
-
-using System;
 using ASC.Common.Logging;
-using ASC.Mail.Core;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Engine;
 using ASC.Mail.Models;
 
+using System;
+
 namespace ASC.Mail.Iterators
 {
-    /// <summary>
-    /// The 'ConcreteIterator' class
-    /// </summary>
     public class MailboxIterator : IMailboxIterator
     {
-        private int Tenant { get; set; }
-        private string UserId { get; set; }
-        public bool? IsRemoved { get; private set; }
-        public ILog Log { get; set; }
+        private readonly int _tenant;
+        private readonly string _userId;
+        private readonly bool? _isRemoved;
+        private readonly ILog _log;
 
-        public int MinMailboxId { get; private set; }
-        public int MaxMailboxId { get; private set; }
+        private readonly int _minMailboxId;
+        private readonly int _maxMailboxId;
 
-        private MailboxEngine MailboxEngine { get; set; }
+        private readonly MailboxEngine _mailboxEngine;
 
-        // Constructor
         public MailboxIterator(MailboxEngine mailboxEngine, int tenant = -1, string userId = null, bool? isRemoved = false, ILog log = null)
         {
             if (!string.IsNullOrEmpty(userId) && tenant < 0)
                 throw new ArgumentException("Tenant must be initialized if user not empty");
 
-            MailboxEngine = mailboxEngine;
+            _mailboxEngine = mailboxEngine;
 
-            Tenant = tenant;
-            UserId = userId;
-            IsRemoved = isRemoved;
+            _tenant = tenant;
+            _userId = userId;
+            _isRemoved = isRemoved;
 
-            Log = log ?? new NullLog();
+            _log = log ?? new NullLog();
 
-            var result = MailboxEngine.GetRangeMailboxes(GetMailboxExp(Tenant, UserId, IsRemoved));
+            var result = _mailboxEngine.GetRangeMailboxes(GetMailboxExp(_tenant, _userId, _isRemoved));
 
             if (result == null)
                 return;
 
-            MinMailboxId = result.Item1;
-            MaxMailboxId = result.Item2;
+            _minMailboxId = result.Item1;
+            _maxMailboxId = result.Item2;
 
             Current = null;
         }
@@ -76,16 +71,16 @@ namespace ASC.Mail.Iterators
         // Gets first item
         public MailBoxData First()
         {
-            if (MinMailboxId == 0 && MinMailboxId == MaxMailboxId)
+            if (_minMailboxId == 0 && _minMailboxId == _maxMailboxId)
             {
                 return null;
             }
 
-            var exp = GetMailboxExp(MinMailboxId, Tenant, UserId, IsRemoved);
-            var mailbox = MailboxEngine.GetMailboxData(exp);
+            var exp = GetMailboxExp(_minMailboxId, _tenant, _userId, _isRemoved);
+            var mailbox = _mailboxEngine.GetMailboxData(exp);
 
-            Current = mailbox == null && MinMailboxId < MaxMailboxId
-                ? GetNextMailbox(MinMailboxId)
+            Current = mailbox == null && _minMailboxId < _maxMailboxId
+                ? GetNextMailbox(_minMailboxId)
                 : mailbox;
 
             return Current;
@@ -110,8 +105,8 @@ namespace ASC.Mail.Iterators
         {
             get
             {
-                return MinMailboxId == 0
-                       || MinMailboxId > MaxMailboxId
+                return _minMailboxId == 0
+                       || _minMailboxId > _maxMailboxId
                        || Current == null;
             }
         }
@@ -120,28 +115,28 @@ namespace ASC.Mail.Iterators
         {
             do
             {
-                if (id < MinMailboxId || id >= MaxMailboxId)
+                if (id < _minMailboxId || id >= _maxMailboxId)
                     return null;
 
                 MailBoxData mailbox;
 
-                var exp = GetNextMailboxExp(id, Tenant, UserId, IsRemoved);
+                var exp = GetNextMailboxExp(id, _tenant, _userId, _isRemoved);
 
                 int failedId;
 
-                if (!MailboxEngine.TryGetNextMailboxData(exp, out mailbox, out failedId))
+                if (!_mailboxEngine.TryGetNextMailboxData(exp, out mailbox, out failedId))
                 {
                     if (failedId > 0)
                     {
                         id = failedId;
 
-                        Log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. Skip it.", id);
+                        _log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. Skip it.", id);
 
                         id++;
                     }
                     else
                     {
-                        Log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. End seek next.", id);
+                        _log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. End seek next.", id);
                         return null;
                     }
                 }
@@ -150,7 +145,7 @@ namespace ASC.Mail.Iterators
                     return mailbox;
                 }
 
-            } while (id <= MaxMailboxId);
+            } while (id <= _maxMailboxId);
 
             return null;
         }

@@ -24,32 +24,32 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-
 using ASC.Common;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.Serialization;
+
 namespace ASC.Mail.Core.Engine
 {
     [Scope]
     public class AlertEngine
     {
-        private IMailDaoFactory MailDaoFactory { get; }
+        private readonly IMailDaoFactory _mailDaoFactory;
 
         public AlertEngine(IMailDaoFactory mailDaoFactory)
         {
-            MailDaoFactory = mailDaoFactory;
+            _mailDaoFactory = mailDaoFactory;
         }
 
         public List<MailAlertData> GetAlerts(/*int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty*/)
         {
-            var alerts = MailDaoFactory.GetAlertDao().GetAlerts();
+            var alerts = _mailDaoFactory.GetAlertDao().GetAlerts();
 
             var alertsList = new List<MailAlertData>();
 
@@ -64,7 +64,7 @@ namespace ASC.Mail.Core.Engine
 
         public bool DeleteAlert(long id)
         {
-            var result = MailDaoFactory.GetAlertDao().DeleteAlert(id);
+            var result = _mailDaoFactory.GetAlertDao().DeleteAlert(id);
 
             if (result <= 0)
                 return false;
@@ -74,12 +74,12 @@ namespace ASC.Mail.Core.Engine
 
         public bool DeleteAlert(MailAlertTypes type)
         {
-            var quotaAlerts = MailDaoFactory.GetAlertDao().GetAlerts(-1, type);
+            var quotaAlerts = _mailDaoFactory.GetAlertDao().GetAlerts(-1, type);
 
             if (!quotaAlerts.Any())
                 return true;
 
-            var result = MailDaoFactory.GetAlertDao().DeleteAlerts(quotaAlerts.Select(a => a.Id).ToList());
+            var result = _mailDaoFactory.GetAlertDao().DeleteAlerts(quotaAlerts.Select(a => a.Id).ToList());
 
             if (result <= 0)
                 throw new Exception("Delete old alerts failed");
@@ -112,7 +112,7 @@ namespace ASC.Mail.Core.Engine
                 Data = jsonData
             };
 
-            var result = MailDaoFactory.GetAlertDao().SaveAlert(alert);
+            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
 
             if (result <= 0)
                 throw new Exception("Save alert failed");
@@ -127,7 +127,7 @@ namespace ASC.Mail.Core.Engine
 
             if (!users.Any()) return result;
 
-            var dao = MailDaoFactory.GetAlertDao();
+            var dao = _mailDaoFactory.GetAlertDao();
 
             foreach (var user in users)
             {
@@ -162,7 +162,7 @@ namespace ASC.Mail.Core.Engine
                 Data = null
             };
 
-            var result = MailDaoFactory.GetAlertDao().SaveAlert(alert, true);
+            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
 
             if (result <= 0)
                 throw new Exception("Save alert failed");
@@ -172,7 +172,7 @@ namespace ASC.Mail.Core.Engine
 
         public int CreateAuthErrorDisableAlert(int tenant, string user, int mailboxId)
         {
-            var dao = MailDaoFactory.GetAlertDao();
+            var dao = _mailDaoFactory.GetAlertDao();
 
             var alerts = dao.GetAlerts(mailboxId, MailAlertTypes.AuthConnectFailure);
 
@@ -212,7 +212,7 @@ namespace ASC.Mail.Core.Engine
                 Data = null
             };
 
-            var result = MailDaoFactory.GetAlertDao().SaveAlert(alert, true);
+            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
 
             if (result <= 0)
                 throw new Exception("Save alert failed");
@@ -255,7 +255,7 @@ namespace ASC.Mail.Core.Engine
                 Data = jsonData
             };
 
-            var result = MailDaoFactory.GetAlertDao().SaveAlert(alert);
+            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
 
             if (result <= 0)
                 throw new Exception("Save alert failed");
@@ -288,7 +288,7 @@ namespace ASC.Mail.Core.Engine
                 Data = jsonData
             };
 
-            var result = MailDaoFactory.GetAlertDao().SaveAlert(alert);
+            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
 
             if (result <= 0)
                 throw new Exception("Save alert failed");

@@ -53,16 +53,16 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class FilterEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private ILog Log { get; }
-        private MessageEngine MessageEngine { get; }
-        private UserFolderEngine UserFolderEngine { get; }
-        private TagEngine TagEngine { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
+        private readonly ILog _log;
+        private readonly MessageEngine _messageEngine;
+        private readonly UserFolderEngine _userFolderEngine;
+        private readonly TagEngine _tagEngine;
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly IMailDaoFactory _mailDaoFactory;
 
         public FilterEngine(
             SecurityContext securityContext,
@@ -73,27 +73,27 @@ namespace ASC.Mail.Core.Engine
             TagEngine tagEngine,
             IOptionsMonitor<ILog> option)
         {
-            MessageEngine = messageEngine;
-            UserFolderEngine = userFolderEngine;
-            TagEngine = tagEngine;
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
+            _messageEngine = messageEngine;
+            _userFolderEngine = userFolderEngine;
+            _tagEngine = tagEngine;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
 
-            MailDaoFactory = mailDaoFactory;
+            _mailDaoFactory = mailDaoFactory;
 
-            Log = option.Get("ASC.Mail.FilterEngine");
+            _log = option.Get("ASC.Mail.FilterEngine");
         }
 
         public MailSieveFilterData Get(int id)
         {
-            var filter = MailDaoFactory.GetFilterDao().Get(id);
+            var filter = _mailDaoFactory.GetFilterDao().Get(id);
 
             return ToFilterData(filter);
         }
 
         public List<MailSieveFilterData> GetList()
         {
-            var filters = MailDaoFactory.GetFilterDao().GetList();
+            var filters = _mailDaoFactory.GetFilterDao().GetList();
 
             return filters
                 .ConvertAll(ToFilterData)
@@ -273,14 +273,14 @@ namespace ASC.Mail.Core.Engine
                 Position = filterData.Position
             };
 
-            var id = MailDaoFactory.GetFilterDao().Save(filter);
+            var id = _mailDaoFactory.GetFilterDao().Save(filter);
 
             return id;
         }
 
         public bool Delete(int id)
         {
-            var res = MailDaoFactory.GetFilterDao().Delete(id);
+            var res = _mailDaoFactory.GetFilterDao().Delete(id);
 
             return res > 0;
         }
@@ -356,7 +356,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error(ex.ToString());
+                _log.Error(ex.ToString());
             }
 
             return false;
@@ -392,7 +392,7 @@ namespace ASC.Mail.Core.Engine
                     var success = IsConditionSucceed(c, message);
                     if (success)
                     {
-                        Log.InfoFormat("Filter condition succeed -> {0} {1} '{2}'",
+                        _log.InfoFormat("Filter condition succeed -> {0} {1} '{2}'",
                             Enum.GetName(typeof(ConditionKeyType), c.Key),
                             Enum.GetName(typeof(ConditionOperationType), c.Operation), c.Value);
                     }
@@ -409,7 +409,7 @@ namespace ASC.Mail.Core.Engine
                         }
                         else if (appliedCount > 0)
                         {
-                            Log.InfoFormat("Skip filter by not match all conditions");
+                            _log.InfoFormat("Skip filter by not match all conditions");
                         }
                         break;
                     case MatchMultiConditionsType.MatchAtLeastOne:
@@ -417,7 +417,7 @@ namespace ASC.Mail.Core.Engine
                             listAppliedFilters.Add(filter);
                         break;
                     default:
-                        Log.Error("Unknown MatchMultiConditionsType");
+                        _log.Error("Unknown MatchMultiConditionsType");
                         break;
                 }
 
@@ -431,7 +431,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     try
                     {
-                        Log.InfoFormat("Apply filter (id={0}) action: '{1}'{2}", filter.Id,
+                        _log.InfoFormat("Apply filter (id={0}) action: '{1}'{2}", filter.Id,
                             Enum.GetName(typeof(ActionType), action.Action),
                             action.Action == ActionType.MarkTag || action.Action == ActionType.MoveTo
                                 ? " id=" + action.Data
@@ -441,9 +441,9 @@ namespace ASC.Mail.Core.Engine
                     }
                     catch (NotFoundFilterDataException ex)
                     {
-                        Log.Error(ex.ToString());
+                        _log.Error(ex.ToString());
 
-                        Log.Debug($"Disable filter with id={filter.Id}");
+                        _log.Debug($"Disable filter with id={filter.Id}");
 
                         filter.Enabled = false;
 
@@ -453,7 +453,7 @@ namespace ASC.Mail.Core.Engine
                     }
                     catch (Exception e)
                     {
-                        Log.ErrorFormat("ApplyFilters(filterId = {0}, mailId = {1}) Exception:\r\n{2}\r\n", filter.Id,
+                        _log.ErrorFormat("ApplyFilters(filterId = {0}, mailId = {1}) Exception:\r\n{2}\r\n", filter.Id,
                             message.Id, e.ToString());
                     }
                 }
@@ -465,10 +465,10 @@ namespace ASC.Mail.Core.Engine
             switch (action.Action)
             {
                 case ActionType.DeleteForever:
-                    MessageEngine.SetRemoved(ids);
+                    _messageEngine.SetRemoved(ids);
                     break;
                 case ActionType.MarkAsRead:
-                    MessageEngine.SetUnread(ids, false);
+                    _messageEngine.SetUnread(ids, false);
                     break;
                 case ActionType.MoveTo:
                     var dataJson = JObject.Parse(action.Data);
@@ -487,7 +487,7 @@ namespace ASC.Mail.Core.Engine
                     {
                         var userFolderId = int.Parse(dataJson["userFolderId"].ToString());
 
-                        var userFolder = UserFolderEngine.Get(userFolderId);
+                        var userFolder = _userFolderEngine.Get(userFolderId);
                         if (userFolder == null)
                         {
                             throw new NotFoundFilterDataException(string.Format("User folder with id={0} not found",
@@ -501,23 +501,23 @@ namespace ASC.Mail.Core.Engine
                         folderId = (int)folderType;
                     }
 
-                    MessageEngine.SetFolder(ids, folderType,
+                    _messageEngine.SetFolder(ids, folderType,
                         folderType == FolderType.UserFolder ? folderId : null);
                     break;
                 case ActionType.MarkTag:
                     var tagId = Convert.ToInt32(action.Data);
 
-                    var tag = TagEngine.GetTag(tagId);
+                    var tag = _tagEngine.GetTag(tagId);
 
                     if (tag == null)
                     {
                         throw new NotFoundFilterDataException(string.Format("Tag with id={0} not found", tagId));
                     }
 
-                    TagEngine.SetMessagesTag(ids, tagId);
+                    _tagEngine.SetMessagesTag(ids, tagId);
                     break;
                 case ActionType.MarkAsImportant:
-                    MessageEngine.SetImportant(ids, true);
+                    _messageEngine.SetImportant(ids, true);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();

@@ -3,34 +3,35 @@
 [Singletone]
 public class SocketIoNotifier : IDisposable
 {
-    private readonly Queue<MailBoxData> _processingQueue;
-    private Task _workerTask;
-    private volatile bool _workerTerminateSignal;
-    private readonly EventWaitHandle _waitHandle;
-    private readonly TimeSpan _timeSpan;
     public bool StartImmediately { get; set; } = true;
 
-    private ILog Log { get; }
-    private SignalrServiceClient SignalrServiceClient { get; }
-    private IServiceProvider ServiceProvider { get; }
-    private CancellationTokenSource CancellationTokenSource { get; }
+    private Task _workerTask;
+    private volatile bool _workerTerminateSignal;
+
+    private readonly Queue<MailBoxData> _processingQueue;
+    private readonly EventWaitHandle _waitHandle;
+    private readonly TimeSpan _timeSpan;
+    private readonly ILog _log;
+    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly CancellationTokenSource _cancellationTokenSource;
 
     public SocketIoNotifier(
         IOptionsMonitor<ILog> optionsMonitor,
         IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
         IServiceProvider serviceProvider)
     {
-        Log = optionsMonitor.Get("ASC.Mail.SignalrWorker");
-        SignalrServiceClient = optionsSnapshot.Get("mail");
-        ServiceProvider = serviceProvider;
-        CancellationTokenSource = new CancellationTokenSource();
+        _log = optionsMonitor.Get("ASC.Mail.SignalrWorker");
+        _signalrServiceClient = optionsSnapshot.Get("mail");
+        _serviceProvider = serviceProvider;
+        _cancellationTokenSource = new CancellationTokenSource();
 
         _workerTerminateSignal = false;
         _processingQueue = new Queue<MailBoxData>();
         _waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
         _timeSpan = TimeSpan.FromSeconds(15);
 
-        _workerTask = new Task(ProcessQueue, CancellationTokenSource.Token);
+        _workerTask = new Task(ProcessQueue, _cancellationTokenSource.Token);
 
         if (StartImmediately)
             _workerTask.Start();
@@ -42,9 +43,9 @@ public class SocketIoNotifier : IDisposable
         {
             if (!HasQueuedMailbox)
             {
-                Log.Debug("No items, waiting.");
+                _log.Debug("No items, waiting.");
                 _waitHandle.WaitOne();
-                Log.Debug("Waking up...");
+                _log.Debug("Waking up...");
             }
 
             var mailbox = NextQueuedMailBoxData;
@@ -53,13 +54,13 @@ public class SocketIoNotifier : IDisposable
 
             try
             {
-                Log.Debug($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})");
+                _log.Debug($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})");
 
                 SendUnreadUser(mailbox.TenantId, mailbox.UserId);
             }
             catch (Exception ex)
             {
-                Log.Error($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})\r\nException: \r\n{ex}");
+                _log.Error($"SignalrWorker -> SendUnreadUser(UserId = {mailbox.UserId} TenantId = {mailbox.TenantId})\r\nException: \r\n{ex}");
             }
 
             _waitHandle.Reset();
@@ -122,12 +123,12 @@ public class SocketIoNotifier : IDisposable
 
         if (_workerTask.Status == TaskStatus.Running)
         {
-            Log.Info("Stop SignalrWorker.");
+            _log.Info("Stop SignalrWorker.");
 
             if (!_workerTask.Wait(_timeSpan))
             {
-                Log.Info("SignalrWorker busy, cancellation of the task.");
-                CancellationTokenSource.Cancel();
+                _log.Info("SignalrWorker busy, cancellation of the task.");
+                _cancellationTokenSource.Cancel();
             }
         }
 
@@ -138,23 +139,23 @@ public class SocketIoNotifier : IDisposable
     {
         try
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
             var userManager = scope.ServiceProvider.GetService<UserManager>();
 
-            Log.Debug($"SignalrWorker -> SendUnreadUser(). Try set tenant |{tenant}| for user |{userId}|...");
+            _log.Debug($"SignalrWorker -> SendUnreadUser(). Try set tenant |{tenant}| for user |{userId}|...");
 
             tenantManager.SetCurrentTenant(tenant);
 
-            Log.Debug($"SignalrWorker -> SendUnreadUser(). Now current tennant = {tenantManager.GetCurrentTenant().TenantId}");
+            _log.Debug($"SignalrWorker -> SendUnreadUser(). Now current tennant = {tenantManager.GetCurrentTenant().TenantId}");
 
             var userInfo = userManager.GetUsers(Guid.Parse(userId));
 
             if (userInfo.ID != Constants.LostUser.ID)
             {
-                Log.Debug($"SignalrWorker -> SendUnreadUser(). SendUnreadUser start");
+                _log.Debug($"SignalrWorker -> SendUnreadUser(). SendUnreadUser start");
 
                 var mailFolderInfos = folderEngine.GetFolders(userId);
                 var count = (from mailFolderInfo in mailFolderInfos
@@ -162,16 +163,16 @@ public class SocketIoNotifier : IDisposable
                              select mailFolderInfo.unreadMessages)
                     .FirstOrDefault();
 
-                SignalrServiceClient.SendUnreadUser(tenant, userId, count);
+                _signalrServiceClient.SendUnreadUser(tenant, userId, count);
             }
             else
             {
-                Log.Debug($"SignalrWorker -> userID == LostUserID");
+                _log.Debug($"SignalrWorker -> userID == LostUserID");
             }
         }
         catch (Exception e)
         {
-            Log.ErrorFormat("SignalrWorker -> Unknown Error. {0}, {1}", e.ToString(),
+            _log.ErrorFormat("SignalrWorker -> Unknown Error. {0}, {1}", e.ToString(),
                 e.InnerException != null ? e.InnerException.Message : string.Empty);
         }
     }

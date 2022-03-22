@@ -27,9 +27,7 @@
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Core;
-using ASC.Core.Common.EF;
 using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao;
 using ASC.Mail.Core.Dao.Entities;
 using ASC.Mail.Core.Search;
 using ASC.Mail.Models;
@@ -50,42 +48,39 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class IndexEngine
     {
-        private FactoryIndexerMailMail FactoryIndexerMailMail { get; }
-        private FactoryIndexer FactoryIndexerCommon { get; }
-        private IServiceProvider ServiceProvider { get; }
-        public Lazy<MailDbContext> LazyMailDbContext { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private ILog Log { get; }
+        private readonly FactoryIndexerMailMail _factoryIndexerMailMail;
+        private readonly FactoryIndexer _factoryIndexerCommon;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly ILog _log;
 
         public IndexEngine(
             FactoryIndexerMailMail factoryIndexerMailMail,
             FactoryIndexer factoryIndexerCommon,
             IServiceProvider serviceProvider,
-            DbContextManager<MailDbContext> dbContext,
             IMailDaoFactory mailDaoFactory,
             IOptionsMonitor<ILog> option)
         {
-            FactoryIndexerMailMail = factoryIndexerMailMail;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
-            LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
-            MailDaoFactory = mailDaoFactory;
-            Log = option.Get("ASC.Mail.IndexEngine");
+            _factoryIndexerMailMail = factoryIndexerMailMail;
+            _factoryIndexerCommon = factoryIndexerCommon;
+            _serviceProvider = serviceProvider;
+            _mailDaoFactory = mailDaoFactory;
+            _log = option.Get("ASC.Mail.IndexEngine");
         }
 
         public bool IsIndexAvailable()
         {
-            var service = ServiceProvider.GetService<MailMail>();
+            var service = _serviceProvider.GetService<MailMail>();
 
-            if (!FactoryIndexerMailMail.Support(service))
+            if (!_factoryIndexerMailMail.Support(service))
             {
-                Log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer<MailWrapper>.Support == false");
+                _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer<MailWrapper>.Support == false");
                 return false;
             }
 
-            if (!FactoryIndexerCommon.CheckState(false))
+            if (!_factoryIndexerCommon.CheckState(false))
             {
-                Log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer.CheckState(false) == false");
+                _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer.CheckState(false) == false");
                 return false;
             }
 
@@ -104,13 +99,13 @@ namespace ASC.Mail.Core.Engine
 
                 if (entityType == typeof(MailMail))
                 {
-                    var indexer = ServiceProvider.GetService<FactoryIndexerMailMail>();
+                    var indexer = _serviceProvider.GetService<FactoryIndexerMailMail>();
                     var mail = data as MailMail;
                     indexer.Index(InitMailDocument(mail));
                 }
                 else if (entityType == typeof(MailContact))
                 {
-                    var indexer = ServiceProvider.GetService<FactoryIndexerMailContact>();
+                    var indexer = _serviceProvider.GetService<FactoryIndexerMailContact>();
                     var contact = data as MailContact;
                     indexer.Index(contact);
                 }
@@ -119,17 +114,17 @@ namespace ASC.Mail.Core.Engine
                     //?? some other entities with index
                 }
 
-                Log.InfoFormat("IndexEngine->Add<{0}>(mail Id = {1}) success", typeof(T), data == null ? -1 : data.Id);
+                _log.InfoFormat("IndexEngine->Add<{0}>(mail Id = {1}) success", typeof(T), data == null ? -1 : data.Id);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Add<{0}>(mail Id = {1}) error: {2}", typeof(T), data == null ? -1 : data.Id, ex.ToString());
+                _log.ErrorFormat("IndexEngine->Add<{0}>(mail Id = {1}) error: {2}", typeof(T), data == null ? -1 : data.Id, ex.ToString());
             }
         }
 
         private MailMail InitMailDocument(MailMail mail)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             tenantManager.SetCurrentTenant(mail.TenantId);
@@ -139,11 +134,11 @@ namespace ASC.Mail.Core.Engine
                 Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(""))
             };
 
-            if (!FactoryIndexerMailMail.CanIndexByContent(mail)) return mail;
+            if (!_factoryIndexerMailMail.CanIndexByContent(mail)) return mail;
 
             try
             {
-                var data = MailDaoFactory.GetMailDao().GetDocumentData(mail);
+                var data = _mailDaoFactory.GetMailDao().GetDocumentData(mail);
 
                 if (!string.IsNullOrEmpty(data))
                 {
@@ -151,7 +146,7 @@ namespace ASC.Mail.Core.Engine
                     return mail;
                 }
 
-                using (var stream = MailDaoFactory.GetMailDao().GetDocumentStream(mail))
+                using (var stream = _mailDaoFactory.GetMailDao().GetDocumentStream(mail))
                 {
                     if (stream == null) return mail;
 
@@ -166,11 +161,11 @@ namespace ASC.Mail.Core.Engine
             }
             catch (FileNotFoundException e)
             {
-                Log.Error("InitDocument FileNotFoundException", e);
+                _log.Error("InitDocument FileNotFoundException", e);
             }
             catch (Exception e)
             {
-                Log.Error("InitDocument", e);
+                _log.Error("InitDocument", e);
             }
 
             return mail;
@@ -186,13 +181,13 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
                 mails.ForEach(x => indexer.Update(x, action, fields));
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Update(count = {0}) error: {1}", mails == null ? 0 : mails.Count,
+                _log.ErrorFormat("IndexEngine->Update(count = {0}) error: {1}", mails == null ? 0 : mails.Count,
                     ex.ToString());
             }
         }
@@ -211,13 +206,13 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
                 indexer.Update(data, expression, action, fields);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
+                _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
             }
         }
 
@@ -235,13 +230,13 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
                 indexer.Update(data, expression, true, fields);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
+                _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
             }
         }
 
@@ -255,7 +250,7 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<T>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<T>>();
 
                 list.ForEach(x => indexer.Update(x, true, fields));
             }
@@ -263,7 +258,7 @@ namespace ASC.Mail.Core.Engine
             {
                 var typeParameterType = typeof(T);
 
-                Log.ErrorFormat("IndexEngine->Update<{0}>(mail Id = {1}) error: {2}", typeParameterType, list == null ? 0 : list.Count, ex.ToString());
+                _log.ErrorFormat("IndexEngine->Update<{0}>(mail Id = {1}) error: {2}", typeParameterType, list == null ? 0 : list.Count, ex.ToString());
             }
         }
 
@@ -277,18 +272,18 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
                 ids.ForEach(id =>
                     indexer.Delete(
-                        r => new Selector<MailMail>(ServiceProvider)
+                        r => new Selector<MailMail>(_serviceProvider)
                             .Where(m => m.Id, id)
                             .Where(e => e.UserId, user.ToString())
                             .Where(e => e.TenantId, tenant)));
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Remove(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
+                _log.ErrorFormat("IndexEngine->Remove(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
             }
         }
 
@@ -302,18 +297,18 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var selector = new Selector<MailMail>(ServiceProvider)
+                var selector = new Selector<MailMail>(_serviceProvider)
                     .Where(m => m.MailboxId, mailBox.MailBoxId)
                     .Where(e => e.UserId, mailBox.UserId)
                     .Where(e => e.TenantId, mailBox.TenantId);
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
                 indexer.Delete(r => selector);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->Remove(mailboxId = {0}) error: {1}", mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
+                _log.ErrorFormat("IndexEngine->Remove(mailboxId = {0}) error: {1}", mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
             }
         }
 
@@ -327,17 +322,17 @@ namespace ASC.Mail.Core.Engine
                 if (!IsIndexAvailable())
                     return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailContact>>();
+                var indexer = _serviceProvider.GetService<FactoryIndexer<MailContact>>();
 
                 indexer.Delete(
-                    r => new Selector<MailContact>(ServiceProvider)
+                    r => new Selector<MailContact>(_serviceProvider)
                         .In(s => s.Id, ids.ToArray())
                         .Where(e => e.IdUser, user.ToString())
                         .Where(e => e.TenantId, tenant));
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("IndexEngine->RemoveContacts(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
+                _log.ErrorFormat("IndexEngine->RemoveContacts(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
             }
         }
     }

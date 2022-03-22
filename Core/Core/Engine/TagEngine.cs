@@ -48,14 +48,15 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class TagEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private TenantManager TenantManager { get; }
-        private SecurityContext SecurityContext { get; }
-        private ILog Log { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private WebItemSecurity WebItemSecurity { get; }
+        private readonly TenantManager _tenantManager;
+        private readonly SecurityContext _securityContext;
+        private readonly ILog _log;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly WebItemSecurity _webItemSecurity;
+
         public TagEngine(
             TenantManager tenantManager,
             SecurityContext securityContext,
@@ -63,31 +64,31 @@ namespace ASC.Mail.Core.Engine
             WebItemSecurity webItemSecurity,
             IOptionsMonitor<ILog> option)
         {
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
+            _tenantManager = tenantManager;
+            _securityContext = securityContext;
 
-            MailDaoFactory = mailDaoFactory;
+            _mailDaoFactory = mailDaoFactory;
 
-            WebItemSecurity = webItemSecurity;
+            _webItemSecurity = webItemSecurity;
 
-            Log = option.Get("ASC.Mail.TagEngine");
+            _log = option.Get("ASC.Mail.TagEngine");
         }
 
         public Tag GetTag(int id)
         {
-            return MailDaoFactory.GetTagDao().GetTag(id);
+            return _mailDaoFactory.GetTagDao().GetTag(id);
         }
 
         public Tag GetTag(string name)
         {
-            return MailDaoFactory.GetTagDao().GetTag(name);
+            return _mailDaoFactory.GetTagDao().GetTag(name);
         }
 
         public List<Tag> GetTags()
         {
-            var tagList = MailDaoFactory.GetTagDao().GetTags();
+            var tagList = _mailDaoFactory.GetTagDao().GetTags();
 
-            if (!WebItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID))
+            if (!_webItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID))
             {
                 return tagList
                     .Where(p => p.TagName != "")
@@ -95,7 +96,7 @@ namespace ASC.Mail.Core.Engine
                     .ToList();
             }
 
-            var actualCrmTags = MailDaoFactory.GetTagDao().GetCrmTags();
+            var actualCrmTags = _mailDaoFactory.GetTagDao().GetCrmTags();
 
             var removedCrmTags =
                 tagList.Where(t => t.Id < 0 && !actualCrmTags.Exists(ct => ct.Id == t.Id))
@@ -103,7 +104,7 @@ namespace ASC.Mail.Core.Engine
 
             if (removedCrmTags.Any())
             {
-                MailDaoFactory.GetTagDao().DeleteTags(removedCrmTags.Select(t => t.Id).ToList());
+                _mailDaoFactory.GetTagDao().DeleteTags(removedCrmTags.Select(t => t.Id).ToList());
                 removedCrmTags.ForEach(t => tagList.Remove(t));
             }
 
@@ -126,12 +127,12 @@ namespace ASC.Mail.Core.Engine
         {
             var tags = new List<CrmTag>();
 
-            var allowedContactIds = MailDaoFactory.GetCrmContactDao().GetCrmContactIds(email);
+            var allowedContactIds = _mailDaoFactory.GetCrmContactDao().GetCrmContactIds(email);
 
             if (!allowedContactIds.Any())
                 return tags;
 
-            tags = MailDaoFactory.GetTagDao().GetCrmTags(allowedContactIds);
+            tags = _mailDaoFactory.GetTagDao().GetCrmTags(allowedContactIds);
 
             return tags
                 .Where(p => !string.IsNullOrEmpty(p.TagTitle))
@@ -141,7 +142,7 @@ namespace ASC.Mail.Core.Engine
 
         public bool IsTagExists(string name)
         {
-            var tag = MailDaoFactory.GetTagDao().GetTag(name);
+            var tag = _mailDaoFactory.GetTagDao().GetTag(name);
 
             return tag != null;
 
@@ -154,7 +155,7 @@ namespace ASC.Mail.Core.Engine
 
             //TODO: Need transaction?
 
-            var tag = MailDaoFactory.GetTagDao().GetTag(name);
+            var tag = _mailDaoFactory.GetTagDao().GetTag(name);
 
             if (tag != null)
                 throw new ArgumentException("Tag name already exists");
@@ -173,14 +174,14 @@ namespace ASC.Mail.Core.Engine
                 CrmId = 0
             };
 
-            var id = MailDaoFactory.GetTagDao().SaveTag(tag);
+            var id = _mailDaoFactory.GetTagDao().SaveTag(tag);
 
             if (id < 0)
                 throw new Exception("Save failed");
 
             foreach (var email in emails)
             {
-                MailDaoFactory.GetTagAddressDao().Save(id, email);
+                _mailDaoFactory.GetTagAddressDao().Save(id, email);
             }
 
             tag.Id = id;
@@ -192,14 +193,14 @@ namespace ASC.Mail.Core.Engine
 
         public Tag UpdateTag(int id, string name, string style, IEnumerable<string> addresses)
         {
-            var tag = MailDaoFactory.GetTagDao().GetTag(id);
+            var tag = _mailDaoFactory.GetTagDao().GetTag(id);
 
             if (tag == null)
                 throw new ArgumentException(@"Tag not found");
 
             if (!tag.TagName.Equals(name))
             {
-                var tagByName = MailDaoFactory.GetTagDao().GetTag(name);
+                var tagByName = _mailDaoFactory.GetTagDao().GetTag(name);
 
                 if (tagByName != null && tagByName.Id != id)
                     throw new ArgumentException(@"Tag name already exists");
@@ -209,17 +210,17 @@ namespace ASC.Mail.Core.Engine
             }
 
             //Start transaction
-            var oldAddresses = MailDaoFactory.GetTagAddressDao().GetTagAddresses(tag.Id);
+            var oldAddresses = _mailDaoFactory.GetTagAddressDao().GetTagAddresses(tag.Id);
 
             var newAddresses = addresses as IList<string> ?? addresses.ToList();
             tag.Addresses = string.Join(";", newAddresses);
 
-            MailDaoFactory.GetTagDao().SaveTag(tag);
+            _mailDaoFactory.GetTagDao().SaveTag(tag);
 
             if (!newAddresses.Any())
             {
                 if (oldAddresses.Any())
-                    MailDaoFactory.GetTagAddressDao().Delete(tag.Id);
+                    _mailDaoFactory.GetTagAddressDao().Delete(tag.Id);
             }
             else
             {
@@ -227,7 +228,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     if (!newAddresses.Contains(oldAddress))
                     {
-                        MailDaoFactory.GetTagAddressDao().Delete(tag.Id, oldAddress);
+                        _mailDaoFactory.GetTagAddressDao().Delete(tag.Id, oldAddress);
                     }
                 }
 
@@ -235,7 +236,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     if (!oldAddresses.Contains(newAddress))
                     {
-                        MailDaoFactory.GetTagAddressDao().Save(tag.Id, newAddress);
+                        _mailDaoFactory.GetTagAddressDao().Save(tag.Id, newAddress);
                     }
                 }
             }
@@ -249,11 +250,11 @@ namespace ASC.Mail.Core.Engine
         {
             //Begin transaction
 
-            MailDaoFactory.GetTagDao().DeleteTag(id);
+            _mailDaoFactory.GetTagDao().DeleteTag(id);
 
-            MailDaoFactory.GetTagAddressDao().Delete(id);
+            _mailDaoFactory.GetTagAddressDao().Delete(id);
 
-            MailDaoFactory.GetTagMailDao().DeleteByTagId(id);
+            _mailDaoFactory.GetTagMailDao().DeleteByTagId(id);
 
             //Commit transaction
 
@@ -268,7 +269,7 @@ namespace ASC.Mail.Core.Engine
                 return tagIds;
 
 
-            var tags = MailDaoFactory.GetTagDao().GetTags();
+            var tags = _mailDaoFactory.GetTagDao().GetTags();
 
             foreach (var name in names)
             {
@@ -293,11 +294,11 @@ namespace ASC.Mail.Core.Engine
                     User = user
                 };
 
-                var id = MailDaoFactory.GetTagDao().SaveTag(tag);
+                var id = _mailDaoFactory.GetTagDao().SaveTag(tag);
 
                 if (id > 0)
                 {
-                    Log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
+                    _log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
                         name, id);
 
                     tagIds.Add(id);
@@ -309,9 +310,9 @@ namespace ASC.Mail.Core.Engine
 
         public void SetMessagesTag(List<int> messageIds, int tagId)
         {
-            using (var tx = MailDaoFactory.BeginTransaction())
+            using (var tx = _mailDaoFactory.BeginTransaction())
             {
-                if (!SetMessagesTag(MailDaoFactory, messageIds, tagId))
+                if (!SetMessagesTag(_mailDaoFactory, messageIds, tagId))
                 {
                     tx.Rollback();
                     return;
@@ -322,13 +323,13 @@ namespace ASC.Mail.Core.Engine
 
             UpdateIndexerTags(messageIds, UpdateAction.Add, tagId);
 
-            Log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
+            _log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
                 string.Join(",", messageIds));
         }
 
         public bool SetMessagesTag(IMailDaoFactory daoFactory, List<int> messageIds, int tagId)
         {
-            var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
+            var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
             if (tag == null)
             {
@@ -337,7 +338,7 @@ namespace ASC.Mail.Core.Engine
 
             GetValidForUserMessages(messageIds, out List<int> validIds, out List<ChainInfo> chains);
 
-            MailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
+            _mailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
 
             UpdateTagsCount(tag);
 
@@ -347,14 +348,14 @@ namespace ASC.Mail.Core.Engine
             }
 
             // Change time_modified for index
-            MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+            _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
             return true;
         }
 
         public void UpdateChainTags(string chainId, FolderType folder, int mailboxId)
         {
-            var tags = MailDaoFactory.GetTagMailDao().GetChainTags(chainId, folder, mailboxId);
+            var tags = _mailDaoFactory.GetTagMailDao().GetChainTags(chainId, folder, mailboxId);
 
             var updateQuery = SimpleConversationsExp.CreateBuilder(Tenant, UserId)
                     .SetChainId(chainId)
@@ -362,7 +363,7 @@ namespace ASC.Mail.Core.Engine
                     .SetFolder((int)folder)
                     .Build();
 
-            MailDaoFactory.GetChainDao().SetFieldValue(
+            _mailDaoFactory.GetChainDao().SetFieldValue(
                 updateQuery,
                 "Tags",
                 tags);
@@ -372,13 +373,13 @@ namespace ASC.Mail.Core.Engine
         {
             List<int> validIds;
 
-            using (var tx = MailDaoFactory.BeginTransaction())
+            using (var tx = _mailDaoFactory.BeginTransaction())
             {
                 GetValidForUserMessages(messageIds, out validIds, out List<ChainInfo> chains);
 
-                MailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
+                _mailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
 
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
+                var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
                 if (tag != null)
                     UpdateTagsCount(tag);
@@ -389,7 +390,7 @@ namespace ASC.Mail.Core.Engine
                 }
 
                 // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+                _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
                 tx.Commit();
             }
@@ -405,9 +406,9 @@ namespace ASC.Mail.Core.Engine
 
             List<int> validIds;
 
-            using (var tx = MailDaoFactory.BeginTransaction())
+            using (var tx = _mailDaoFactory.BeginTransaction())
             {
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
+                var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
                 if (tag == null)
                 {
@@ -415,7 +416,7 @@ namespace ASC.Mail.Core.Engine
                     return;
                 }
 
-                var foundedChains = MailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
+                var foundedChains = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
 
                 if (!foundedChains.Any())
                 {
@@ -435,7 +436,7 @@ namespace ASC.Mail.Core.Engine
                                     MailboxId = r.Key.MailboxId
                                 });
 
-                MailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
+                _mailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
 
                 UpdateTagsCount(tag);
 
@@ -445,7 +446,7 @@ namespace ASC.Mail.Core.Engine
                 }
 
                 // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+                _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
                 tx.Commit();
             }
@@ -461,9 +462,9 @@ namespace ASC.Mail.Core.Engine
 
             List<int> validIds;
 
-            using (var tx = MailDaoFactory.BeginTransaction())
+            using (var tx = _mailDaoFactory.BeginTransaction())
             {
-                var foundedChains = MailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
+                var foundedChains = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
 
                 if (!foundedChains.Any())
                 {
@@ -484,9 +485,9 @@ namespace ASC.Mail.Core.Engine
                                     MailboxId = r.Key.MailboxId
                                 });
 
-                MailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
+                _mailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
 
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
+                var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
                 if (tag != null)
                     UpdateTagsCount(tag);
@@ -497,7 +498,7 @@ namespace ASC.Mail.Core.Engine
                 }
 
                 // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+                _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
                 tx.Commit();
             }
@@ -541,17 +542,17 @@ namespace ASC.Mail.Core.Engine
 
         private void UpdateTagsCount(Tag tag)
         {
-            var count = MailDaoFactory.GetTagMailDao().CalculateTagCount(tag.Id);
+            var count = _mailDaoFactory.GetTagMailDao().CalculateTagCount(tag.Id);
 
             tag.Count = count;
 
-            MailDaoFactory.GetTagDao().SaveTag(tag);
+            _mailDaoFactory.GetTagDao().SaveTag(tag);
         }
 
         private void GetValidForUserMessages(List<int> messagesIds, out List<int> validIds,
             out List<ChainInfo> chains)
         {
-            var mailInfoList = MailDaoFactory.GetMailInfoDao().GetMailInfoList(
+            var mailInfoList = _mailDaoFactory.GetMailInfoDao().GetMailInfoList(
                 SimpleMessagesExp.CreateBuilder(Tenant, UserId)
                     .SetMessageIds(messagesIds)
                     .Build());

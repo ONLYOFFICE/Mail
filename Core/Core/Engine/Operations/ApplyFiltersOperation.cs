@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Dao.Expressions.Mailbox;
@@ -38,14 +34,18 @@ using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ASC.Mail.Core.Engine.Operations
 {
     public class ApplyFiltersOperation : MailOperation
     {
-        public FilterEngine FilterEngine { get; }
-        public MessageEngine MessageEngine { get; }
-        public MailboxEngine MailboxEngine { get; }
-        public List<int> Ids { get; private set; }
+        private readonly FilterEngine _filterEngine;
+        private readonly MessageEngine _messageEngine;
+        private readonly MailboxEngine _mailboxEngine;
+        private readonly List<int> _ids;
 
         public override MailOperationType OperationType
         {
@@ -65,10 +65,10 @@ namespace ASC.Mail.Core.Engine.Operations
             List<int> ids)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
         {
-            FilterEngine = filterEngine;
-            MessageEngine = messageEngine;
-            MailboxEngine = mailboxEngine;
-            Ids = ids;
+            _filterEngine = filterEngine;
+            _messageEngine = messageEngine;
+            _mailboxEngine = mailboxEngine;
+            _ids = ids;
 
             if (ids == null || !ids.Any())
                 throw new ArgumentException("No ids");
@@ -86,7 +86,7 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 SetProgress((int?)MailOperationApplyFilterProgress.Filtering, "Filtering");
 
-                var filters = FilterEngine.GetList();
+                var filters = _filterEngine.GetList();
 
                 if (!filters.Any())
                 {
@@ -100,9 +100,9 @@ namespace ASC.Mail.Core.Engine.Operations
                 var mailboxes = new List<MailBoxData>();
 
                 var index = 0;
-                var max = Ids.Count;
+                var max = _ids.Count;
 
-                foreach (var id in Ids)
+                foreach (var id in _ids)
                 {
                     var progressState = string.Format("Message id = {0} ({1}/{2})", id, ++index, max);
 
@@ -110,7 +110,7 @@ namespace ASC.Mail.Core.Engine.Operations
                     {
                         SetSource(progressState);
 
-                        var message = MessageEngine.GetMessage(id, new MailMessageData.Options());
+                        var message = _messageEngine.GetMessage(id, new MailMessageData.Options());
 
                         if (message.Folder != FolderType.Spam && message.Folder != FolderType.Sent && message.Folder != FolderType.Inbox)
                             continue;
@@ -120,7 +120,7 @@ namespace ASC.Mail.Core.Engine.Operations
                         if (mailbox == null)
                         {
                             mailbox =
-                                MailboxEngine.GetMailboxData(new ConcreteSimpleMailboxExp(message.MailboxId));
+                                _mailboxEngine.GetMailboxData(new ConcreteSimpleMailboxExp(message.MailboxId));
 
                             if (mailbox == null)
                                 continue;
@@ -128,7 +128,7 @@ namespace ASC.Mail.Core.Engine.Operations
                             mailboxes.Add(mailbox);
                         }
 
-                        FilterEngine.ApplyFilters(message, mailbox, new MailFolder(message.Folder, ""), filters);
+                        _filterEngine.ApplyFilters(message, mailbox, new MailFolder(message.Folder, ""), filters);
 
                     }
                     catch (Exception ex)

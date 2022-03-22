@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.ElasticSearch;
@@ -41,28 +36,30 @@ using ASC.Mail.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+
 namespace ASC.Mail.Core.Engine.Operations
 {
     public class MailRemoveUserFolderOperation : MailOperation
     {
-        private readonly int _userFolderId;
-
         public override MailOperationType OperationType
         {
             get { return MailOperationType.RemoveUserFolder; }
         }
 
-        public UserFolderEngine UserFolderEngine { get; }
-        public MessageEngine MessageEngine { get; }
-        public IndexEngine IndexEngine { get; }
-        public FactoryIndexer<MailMail> FactoryIndexer { get; }
-        public IServiceProvider ServiceProvider { get; }
+        private readonly int _userFolderId;
+        private readonly MessageEngine _messageEngine;
+        private readonly IndexEngine _indexEngine;
+        private readonly FactoryIndexer<MailMail> _factoryIndexer;
+        private readonly IServiceProvider _serviceProvider;
 
         public MailRemoveUserFolderOperation(
             TenantManager tenantManager,
             SecurityContext securityContext,
             IMailDaoFactory mailDaoFactory,
-            UserFolderEngine userFolderEngine,
             MessageEngine messageEngine,
             IndexEngine indexEngine,
             CoreSettings coreSettings,
@@ -73,11 +70,10 @@ namespace ASC.Mail.Core.Engine.Operations
             int userFolderId)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
         {
-            UserFolderEngine = userFolderEngine;
-            MessageEngine = messageEngine;
-            IndexEngine = indexEngine;
-            FactoryIndexer = factoryIndexer;
-            ServiceProvider = serviceProvider;
+            _messageEngine = messageEngine;
+            _indexEngine = indexEngine;
+            _factoryIndexer = factoryIndexer;
+            _serviceProvider = serviceProvider;
             _userFolderId = userFolderId;
 
             SetSource(userFolderId.ToString());
@@ -154,7 +150,7 @@ namespace ASC.Mail.Core.Engine.Operations
                     affectedIds.AddRange(listMailIds);
 
                     //Move mails to trash
-                    MessageEngine.SetFolder(MailDaoFactory, listMailIds, FolderType.Trash);
+                    _messageEngine.SetFolder(MailDaoFactory, listMailIds, FolderType.Trash);
 
                     //Remove listMailIds from 'mail_user_folder_x_mail'
                     MailDaoFactory.GetUserFolderXMailDao().Remove(listMailIds);
@@ -165,8 +161,8 @@ namespace ASC.Mail.Core.Engine.Operations
 
             MailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(folder.ParentId);
 
-            var t = ServiceProvider.GetService<MailMail>();
-            if (!FactoryIndexer.Support(t) || !affectedIds.Any())
+            var t = _serviceProvider.GetService<MailMail>();
+            if (!_factoryIndexer.Support(t) || !affectedIds.Any())
                 return;
 
             var data = new MailMail
@@ -174,7 +170,7 @@ namespace ASC.Mail.Core.Engine.Operations
                 Folder = (byte)FolderType.Trash
             };
 
-            IndexEngine.Update(data, s => s.In(m => m.Id, affectedIds.ToArray()), wrapper => wrapper.Unread);
+            _indexEngine.Update(data, s => s.In(m => m.Id, affectedIds.ToArray()), wrapper => wrapper.Unread);
         }
     }
 }

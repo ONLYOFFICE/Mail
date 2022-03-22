@@ -3,18 +3,18 @@
 [Scope]
 public class MailClientScope
 {
-    private RedisFactory RedisFactory { get; }
-    private TenantManager TenantManager { get; }
-    private CoreBaseSettings CoreBaseSettings { get; }
-    private StorageFactory StorageFactory { get; }
-    private MailEnginesFactory MailEnginesFactory { get; }
-    private SecurityContext SecurityContext { get; }
-    private ApiHelper ApiHelper { get; }
-    private IMailDaoFactory MailDaoFactory { get; }
+    private readonly RedisFactory _redisFactory;
+    private readonly TenantManager _tenantManager;
+    private readonly CoreBaseSettings _coreBaseSettings;
+    private readonly StorageFactory _storageFactory;
+    private readonly MailEnginesFactory _mailEnginesFactory;
+    private readonly SecurityContext _securityContext;
+    private readonly ApiHelper _apiHelper;
+    private readonly IMailDaoFactory _mailDaoFactory;
 
-    private MailboxEngine MailboxEngine { get; }
-    private FolderEngine FolderEngine { get; }
-    private ServiceProvider ServiceProvider { get; }
+    private readonly MailboxEngine _mailboxEngine;
+    private readonly FolderEngine _folderEngine;
+    private readonly ServiceProvider _serviceProvider;
 
     public MailClientScope(
         RedisFactory redisFactory,
@@ -29,16 +29,16 @@ public class MailClientScope
         MailboxEngine mailboxEngine,
         FolderEngine folderEngine)
     {
-        ServiceProvider = serviceProvider;
-        CoreBaseSettings = coreBaseSettings;
-        TenantManager = tenantManager;
-        StorageFactory = storageFactory;
-        MailEnginesFactory = mailEnginesFactory;
-        SecurityContext = securityContext;
-        ApiHelper = apiHelper;
-        MailDaoFactory = mailDaoFactory;
-        MailboxEngine = mailboxEngine;
-        FolderEngine = folderEngine;
-        RedisFactory = redisFactory;
+        _serviceProvider = serviceProvider;
+        _coreBaseSettings = coreBaseSettings;
+        _tenantManager = tenantManager;
+        _storageFactory = storageFactory;
+        _mailEnginesFactory = mailEnginesFactory;
+        _securityContext = securityContext;
+        _apiHelper = apiHelper;
+        _mailDaoFactory = mailDaoFactory;
+        _mailboxEngine = mailboxEngine;
+        _folderEngine = folderEngine;
+        _redisFactory = redisFactory;
     }
 }

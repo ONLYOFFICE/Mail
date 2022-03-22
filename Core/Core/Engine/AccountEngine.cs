@@ -49,22 +49,22 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class AccountEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private SecurityContext SecurityContext { get; }
-        private ILog Log { get; }
-        private MailboxEngine MailboxEngine { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private TenantManager TenantManager { get; }
-        private CacheEngine CacheEngine { get; }
-        private ServerEngine ServerEngine { get; }
-        private MailBoxSettingEngine MailBoxSettingEngine { get; }
-        private CoreBaseSettings CoreBaseSettings { get; }
-        private SettingsManager SettingsManager { get; }
-        private MailSettings MailSettings { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly ILog _log;
+        private readonly MailboxEngine _mailboxEngine;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly TenantManager _tenantManager;
+        private readonly CacheEngine _cacheEngine;
+        private readonly ServerEngine _serverEngine;
+        private readonly MailBoxSettingEngine _mailBoxSettingEngine;
+        private readonly CoreBaseSettings _coreBaseSettings;
+        private readonly SettingsManager _settingsManager;
+        private readonly MailSettings _mailSettings;
 
-        public List<ServerFolderAccessInfo> ServerFolderAccessInfos { get; set; }
+        private List<ServerFolderAccessInfo> _serverFolderAccessInfos;
 
         public AccountEngine(
             TenantManager tenantManager,
@@ -79,33 +79,33 @@ namespace ASC.Mail.Core.Engine
             MailSettings mailSettings,
             IOptionsMonitor<ILog> option)
         {
-            SecurityContext = securityContext;
+            _securityContext = securityContext;
 
-            MailboxEngine = mailboxEngine;
+            _mailboxEngine = mailboxEngine;
 
-            MailSettings = mailSettings;
+            _mailSettings = mailSettings;
 
-            MailDaoFactory = daoFactory;
-            TenantManager = tenantManager;
-            CacheEngine = cacheEngine;
-            ServerEngine = serverEngine;
-            MailBoxSettingEngine = mailBoxSettingEngine;
-            CoreBaseSettings = coreBaseSettings;
-            SettingsManager = settingsManager;
+            _mailDaoFactory = daoFactory;
+            _tenantManager = tenantManager;
+            _cacheEngine = cacheEngine;
+            _serverEngine = serverEngine;
+            _mailBoxSettingEngine = mailBoxSettingEngine;
+            _coreBaseSettings = coreBaseSettings;
+            _settingsManager = settingsManager;
 
-            Log = option.Get("ASC.Mail.AccountEngine");
+            _log = option.Get("ASC.Mail.AccountEngine");
         }
 
         public List<AccountInfo> GetAccountInfoList()
         {
-            var accountInfoList = CacheEngine.Get(UserId);
+            var accountInfoList = _cacheEngine.Get(UserId);
 
             if (accountInfoList != null && accountInfoList.Any())
                 return accountInfoList;
 
             accountInfoList = new List<AccountInfo>();
 
-            var accounts = MailDaoFactory.GetAccountDao().GetAccounts();
+            var accounts = _mailDaoFactory.GetAccountDao().GetAccounts();
 
             foreach (var account in accounts)
             {
@@ -134,9 +134,9 @@ namespace ASC.Mail.Core.Engine
                         {
                             var authErrorDate = account.MailboxDateAuthError.Value;
 
-                            if (DateTime.UtcNow - authErrorDate > MailSettings.Defines.AuthErrorDisableMailboxTimeout)
+                            if (DateTime.UtcNow - authErrorDate > _mailSettings.Defines.AuthErrorDisableMailboxTimeout)
                                 authErrorType = MailBoxData.AuthProblemType.TooManyErrors;
-                            else if (DateTime.UtcNow - authErrorDate > MailSettings.Defines.AuthErrorWarningTimeout)
+                            else if (DateTime.UtcNow - authErrorDate > _mailSettings.Defines.AuthErrorWarningTimeout)
                                 authErrorType = MailBoxData.AuthProblemType.ConnectError;
                         }
 
@@ -173,7 +173,7 @@ namespace ASC.Mail.Core.Engine
                 }
             }
 
-            CacheEngine.Set(UserId, accountInfoList);
+            _cacheEngine.Set(UserId, accountInfoList);
 
             return accountInfoList;
         }
@@ -184,7 +184,7 @@ namespace ASC.Mail.Core.Engine
                 throw new ArgumentException(@"Email empty", "email");
 
             var mailbox =
-                MailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), Tenant,
+                _mailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), Tenant,
                     UserId));
 
             if (mailbox == null)
@@ -192,18 +192,18 @@ namespace ASC.Mail.Core.Engine
 
             if (mailbox.IsTeamlab)
             {
-                if (!CoreBaseSettings.Standalone)
+                if (!_coreBaseSettings.Standalone)
                     throw new ArgumentException("Access to this account restricted");
 
                 string mxHost = null;
 
                 try
                 {
-                    mxHost = ServerEngine.GetMailServerMxDomain();
+                    mxHost = _serverEngine.GetMailServerMxDomain();
                 }
                 catch (Exception ex)
                 {
-                    Log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
+                    _log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
                 }
 
                 if (!string.IsNullOrEmpty(mxHost))
@@ -225,21 +225,21 @@ namespace ASC.Mail.Core.Engine
             {
                 case DefineConstants.GET_IMAP_POP_SETTINGS:
                     return
-                        MailboxEngine.GetDefaultMailboxData(email, "",
+                        _mailboxEngine.GetDefaultMailboxData(email, "",
                             AuthorizationServiceType.None, true, true) ??
-                        MailboxEngine.GetDefaultMailboxData(email, "",
+                        _mailboxEngine.GetDefaultMailboxData(email, "",
                             AuthorizationServiceType.None, false, false);
                 case DefineConstants.GET_IMAP_SERVER:
                 case DefineConstants.GET_IMAP_SERVER_FULL:
-                    return MailboxEngine.GetDefaultMailboxData(email, "",
+                    return _mailboxEngine.GetDefaultMailboxData(email, "",
                         AuthorizationServiceType.None, true, false);
                 case DefineConstants.GET_POP_SERVER:
                 case DefineConstants.GET_POP_SERVER_FULL:
-                    return MailboxEngine.GetDefaultMailboxData(email, "",
+                    return _mailboxEngine.GetDefaultMailboxData(email, "",
                         AuthorizationServiceType.None, false, false);
             }
 
-            return MailboxEngine.GetDefaultMailboxData(email, "",
+            return _mailboxEngine.GetDefaultMailboxData(email, "",
                 AuthorizationServiceType.None, null, false);
         }
 
@@ -273,10 +273,10 @@ namespace ASC.Mail.Core.Engine
                 Enabled = true
             };
 
-            ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+            _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-            using (var client = new MailClient(mbox, CancellationToken.None, ServerFolderAccessInfos,
-                    certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
+            using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
+                    certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, log: _log))
             {
                 loginResult = client.TestLogin();
             }
@@ -284,10 +284,10 @@ namespace ASC.Mail.Core.Engine
             if (!loginResult.IngoingSuccess || !loginResult.OutgoingSuccess)
                 return null;
 
-            if (!MailboxEngine.SaveMailBox(mbox))
+            if (!_mailboxEngine.SaveMailBox(mbox))
                 throw new Exception(string.Format("SaveMailBox {0} failed", mbox.EMail));
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             var account = new AccountInfo(mbox.MailBoxId, mbox.EMailView, mbox.Name, mbox.Enabled, mbox.QuotaError,
                 MailBoxData.AuthProblemType.NoProblems, new MailSignatureData(mbox.MailBoxId, Tenant, "", false),
@@ -302,10 +302,10 @@ namespace ASC.Mail.Core.Engine
             if (mbox == null)
                 throw new NullReferenceException("mbox");
 
-            ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+            _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-            using (var client = new MailClient(mbox, CancellationToken.None, ServerFolderAccessInfos,
-                    certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
+            using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
+                    certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, log: _log))
             {
                 loginResult = client.TestLogin();
             }
@@ -313,10 +313,10 @@ namespace ASC.Mail.Core.Engine
             if (!loginResult.IngoingSuccess || !loginResult.OutgoingSuccess)
                 return null;
 
-            if (!MailboxEngine.SaveMailBox(mbox))
+            if (!_mailboxEngine.SaveMailBox(mbox))
                 throw new Exception(string.Format("SaveMailBox {0} failed", mbox.EMail));
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             var account = new AccountInfo(mbox.MailBoxId, mbox.EMailView, mbox.Name, mbox.Enabled, mbox.QuotaError,
                 MailBoxData.AuthProblemType.NoProblems, new MailSignatureData(mbox.MailBoxId, Tenant, "", false),
@@ -332,7 +332,7 @@ namespace ASC.Mail.Core.Engine
 
             var domain = email.Substring(email.IndexOf('@') + 1);
 
-            var mailboxSettings = MailBoxSettingEngine.GetMailBoxSettings(domain);
+            var mailboxSettings = _mailBoxSettingEngine.GetMailBoxSettings(domain);
 
             if (mailboxSettings == null)
             {
@@ -347,10 +347,10 @@ namespace ASC.Mail.Core.Engine
             {
                 LoginResult loginResult;
 
-                ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+                _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-                using (var client = new MailClient(mb, CancellationToken.None, ServerFolderAccessInfos,
-                    MailSettings.Aggregator.TcpTimeout, MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
+                using (var client = new MailClient(mb, CancellationToken.None, _serverFolderAccessInfos,
+                    _mailSettings.Aggregator.TcpTimeout, _mailSettings.Defines.SslCertificatesErrorsPermit, log: _log))
                 {
                     loginResult = client.TestLogin();
                 }
@@ -367,10 +367,10 @@ namespace ASC.Mail.Core.Engine
             if (mbox == null)
                 return null;
 
-            if (!MailboxEngine.SaveMailBox(mbox))
+            if (!_mailboxEngine.SaveMailBox(mbox))
                 throw new Exception(string.Format("SaveMailBox {0} failed", email));
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             var account = new AccountInfo(mbox.MailBoxId, mbox.EMailView, mbox.Name, mbox.Enabled, mbox.QuotaError,
                 MailBoxData.AuthProblemType.NoProblems, new MailSignatureData(mbox.MailBoxId, Tenant, "", false),
@@ -429,7 +429,7 @@ namespace ASC.Mail.Core.Engine
                 throw new NullReferenceException("mbox");
 
             var mbox =
-                MailDaoFactory.GetMailboxDao().GetMailBox(
+                _mailDaoFactory.GetMailboxDao().GetMailBox(
                     new СoncreteUserMailboxExp(
                         newMailBoxData.EMail,
                         Tenant, UserId));
@@ -459,9 +459,9 @@ namespace ASC.Mail.Core.Engine
 
                 if (needSave)
                 {
-                    MailDaoFactory.GetMailboxDao().SaveMailBox(mbox);
+                    _mailDaoFactory.GetMailboxDao().SaveMailBox(mbox);
 
-                    CacheEngine.Clear(UserId);
+                    _cacheEngine.Clear(UserId);
                 }
 
                 var accountInfo = new AccountInfo(mbox.Id, mbox.Address, mbox.Name, mbox.Enabled, mbox.QuotaError,
@@ -561,18 +561,18 @@ namespace ASC.Mail.Core.Engine
                 throw new ArgumentNullException("address");
 
 
-            var tuple = MailboxEngine.GetMailboxFullInfo(new СoncreteUserMailboxExp(address, Tenant, UserId));
+            var tuple = _mailboxEngine.GetMailboxFullInfo(new СoncreteUserMailboxExp(address, Tenant, UserId));
 
             if (tuple == null)
                 throw new NullReferenceException(string.Format("Account wasn't found by email: {0}", address.Address));
 
             if (enabled)
             {
-                ServerFolderAccessInfos = MailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+                _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
                 // Check account connection setting on activation
-                using (var client = new MailClient(tuple.Item1, CancellationToken.None, ServerFolderAccessInfos,
-                        certificatePermit: MailSettings.Defines.SslCertificatesErrorsPermit, log: Log))
+                using (var client = new MailClient(tuple.Item1, CancellationToken.None, _serverFolderAccessInfos,
+                        certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, log: _log))
                 {
                     loginResult = client.TestLogin();
                 }
@@ -585,7 +585,7 @@ namespace ASC.Mail.Core.Engine
 
             loginResult = null;
             var mailboxId =
-                MailDaoFactory.GetMailboxDao().Enable(
+                _mailDaoFactory.GetMailboxDao().Enable(
                     new СoncreteUserMailboxExp(tuple.Item2.Id, tuple.Item2.Tenant, tuple.Item2.User),
                     enabled)
                     ? tuple.Item2.Id
@@ -594,7 +594,7 @@ namespace ASC.Mail.Core.Engine
             if (mailboxId == -1)
                 return mailboxId;
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             return mailboxId;
         }
@@ -606,7 +606,7 @@ namespace ASC.Mail.Core.Engine
 
             bool saved;
 
-            var mailbox = MailDaoFactory.GetMailboxDao().GetMailBox(
+            var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
                 new СoncreteUserMailboxExp(
                     mailboxId,
                     Tenant, UserId)
@@ -615,19 +615,19 @@ namespace ASC.Mail.Core.Engine
             if (mailbox == null)
                 return false;
 
-            saved = MailDaoFactory.GetMailboxDao().SetMailboxEmailIn(mailbox, emailInFolder);
+            saved = _mailDaoFactory.GetMailboxDao().SetMailboxEmailIn(mailbox, emailInFolder);
 
             if (!saved)
                 return saved;
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             return saved;
         }
 
         public bool SetAccountsActivity(bool userOnline = true)
         {
-            return MailDaoFactory.GetMailboxDao().SetMailboxesActivity(Tenant, UserId, userOnline);
+            return _mailDaoFactory.GetMailboxDao().SetMailboxesActivity(Tenant, UserId, userOnline);
         }
 
         public List<string> SearchAccountEmails(string searchText)
@@ -691,7 +691,7 @@ namespace ASC.Mail.Core.Engine
 
             var settings = new MailBoxAccountSettings { DefaultEmail = isDefault ? email : string.Empty };
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
 
             return email;
         }

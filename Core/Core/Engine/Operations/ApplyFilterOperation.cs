@@ -24,9 +24,6 @@
 */
 
 
-using System;
-using System.Linq;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Data.Storage;
@@ -37,19 +34,21 @@ using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Linq;
+
 namespace ASC.Mail.Core.Engine.Operations
 {
     public class ApplyFilterOperation : MailOperation
     {
-        public MailSieveFilterData Filter { get; set; }
-
         public override MailOperationType OperationType
         {
             get { return MailOperationType.ApplyFilter; }
         }
 
-        public FilterEngine FilterEngine { get; }
-        public MessageEngine MessageEngine { get; }
+        private readonly FilterEngine _filterEngine;
+        private readonly MessageEngine _messageEngine;
+        private readonly MailSieveFilterData _filter;
 
         public ApplyFilterOperation(
             TenantManager tenantManager,
@@ -64,11 +63,11 @@ namespace ASC.Mail.Core.Engine.Operations
             int filterId)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
         {
-            FilterEngine = filterEngine;
-            MessageEngine = messageEngine;
-            var filter = FilterEngine.Get(filterId);
+            _filterEngine = filterEngine;
+            _messageEngine = messageEngine;
+            var filter = _filterEngine.Get(filterId);
 
-            Filter = filter ?? throw new ArgumentException("Filter not found");
+            _filter = filter ?? throw new ArgumentException("Filter not found");
 
             SetSource(filter.Id.ToString());
         }
@@ -88,7 +87,7 @@ namespace ASC.Mail.Core.Engine.Operations
                 const int size = 100;
                 var page = 0;
 
-                var messages = MessageEngine.GetFilteredMessages(Filter, page, size, out long total);
+                var messages = _messageEngine.GetFilteredMessages(_filter, page, size, out long total);
 
                 while (messages.Any())
                 {
@@ -96,20 +95,20 @@ namespace ASC.Mail.Core.Engine.Operations
 
                     var ids = messages.Select(m => m.Id).ToList();
 
-                    foreach (var action in Filter.Actions)
+                    foreach (var action in _filter.Actions)
                     {
-                        FilterEngine.ApplyAction(ids, action);
+                        _filterEngine.ApplyAction(ids, action);
                     }
 
                     if (messages.Count < size)
                         break;
 
-                    if (!Filter.Actions.Exists(a => a.Action == ActionType.DeleteForever || a.Action == ActionType.MoveTo))
+                    if (!_filter.Actions.Exists(a => a.Action == ActionType.DeleteForever || a.Action == ActionType.MoveTo))
                     {
                         page++;
                     }
 
-                    messages = MessageEngine.GetFilteredMessages(Filter, page, size, out total);
+                    messages = _messageEngine.GetFilteredMessages(_filter, page, size, out total);
                 }
 
                 SetProgress((int?)MailOperationApplyFilterProgress.Finished);

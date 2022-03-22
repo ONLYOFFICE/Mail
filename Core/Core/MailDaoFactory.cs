@@ -1,6 +1,4 @@
 ﻿
-using System;
-
 using ASC.Common;
 using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao;
@@ -10,205 +8,207 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
+using System;
+
 namespace ASC.Mail.Core
 {
     [Scope]
     public class MailDaoFactory : IMailDaoFactory
     {
-        private IServiceProvider ServiceProvider { get; }
-        private MailDbContext MailDbContext { get; }
+        private readonly IServiceProvider _serviceProvider;
+        private readonly MailDbContext _mailDbContext;
 
         public MailDaoFactory(
             IServiceProvider serviceProvider,
             DbContextManager<MailDbContext> dbContextManager)
         {
-            ServiceProvider = serviceProvider;
-            MailDbContext = dbContextManager.Get("mail");
+            _serviceProvider = serviceProvider;
+            _mailDbContext = dbContextManager.Get("mail");
         }
 
         public MailDbContext GetContext()
         {
-            return MailDbContext;
+            return _mailDbContext;
         }
 
         public IAccountDao GetAccountDao()
         {
-            return ServiceProvider.GetService<IAccountDao>();
+            return _serviceProvider.GetService<IAccountDao>();
         }
 
         public IAlertDao GetAlertDao()
         {
-            return ServiceProvider.GetService<IAlertDao>();
+            return _serviceProvider.GetService<IAlertDao>();
         }
 
         public IAttachmentDao GetAttachmentDao()
         {
-            return ServiceProvider.GetService<IAttachmentDao>();
+            return _serviceProvider.GetService<IAttachmentDao>();
         }
 
         public IChainDao GetChainDao()
         {
-            return ServiceProvider.GetService<IChainDao>();
+            return _serviceProvider.GetService<IChainDao>();
         }
 
         public IContactCardDao GetContactCardDao()
         {
-            return ServiceProvider.GetService<IContactCardDao>();
+            return _serviceProvider.GetService<IContactCardDao>();
         }
 
         public IContactDao GetContactDao()
         {
-            return ServiceProvider.GetService<IContactDao>();
+            return _serviceProvider.GetService<IContactDao>();
         }
 
         public IContactInfoDao GetContactInfoDao()
         {
-            return ServiceProvider.GetService<IContactInfoDao>();
+            return _serviceProvider.GetService<IContactInfoDao>();
         }
 
         public ICrmContactDao GetCrmContactDao()
         {
-            return ServiceProvider.GetService<ICrmContactDao>();
+            return _serviceProvider.GetService<ICrmContactDao>();
         }
 
         public ICrmLinkDao GetCrmLinkDao()
         {
-            return ServiceProvider.GetService<ICrmLinkDao>();
+            return _serviceProvider.GetService<ICrmLinkDao>();
         }
 
         public IDisplayImagesAddressDao GetDisplayImagesAddressDao()
         {
-            return ServiceProvider.GetService<IDisplayImagesAddressDao>();
+            return _serviceProvider.GetService<IDisplayImagesAddressDao>();
         }
 
         public IFilterDao GetFilterDao()
         {
-            return ServiceProvider.GetService<IFilterDao>();
+            return _serviceProvider.GetService<IFilterDao>();
         }
 
         public IFolderDao GetFolderDao()
         {
-            return ServiceProvider.GetService<IFolderDao>();
+            return _serviceProvider.GetService<IFolderDao>();
         }
 
         public IImapFlagsDao GetImapFlagsDao()
         {
-            return ServiceProvider.GetService<IImapFlagsDao>();
+            return _serviceProvider.GetService<IImapFlagsDao>();
         }
 
         public IImapSpecialMailboxDao GetImapSpecialMailboxDao()
         {
-            return ServiceProvider.GetService<IImapSpecialMailboxDao>();
+            return _serviceProvider.GetService<IImapSpecialMailboxDao>();
         }
 
         public IMailboxAutoreplyDao GetMailboxAutoreplyDao()
         {
-            return ServiceProvider.GetService<IMailboxAutoreplyDao>();
+            return _serviceProvider.GetService<IMailboxAutoreplyDao>();
         }
 
         public IMailboxAutoreplyHistoryDao GetMailboxAutoreplyHistoryDao()
         {
-            return ServiceProvider.GetService<IMailboxAutoreplyHistoryDao>();
+            return _serviceProvider.GetService<IMailboxAutoreplyHistoryDao>();
         }
 
         public IMailboxDao GetMailboxDao()
         {
-            return ServiceProvider.GetService<IMailboxDao>();
+            return _serviceProvider.GetService<IMailboxDao>();
         }
 
         public IMailboxDomainDao GetMailboxDomainDao()
         {
-            return ServiceProvider.GetService<IMailboxDomainDao>();
+            return _serviceProvider.GetService<IMailboxDomainDao>();
         }
 
         public IMailboxProviderDao GetMailboxProviderDao()
         {
-            return ServiceProvider.GetService<IMailboxProviderDao>();
+            return _serviceProvider.GetService<IMailboxProviderDao>();
         }
 
         public IMailboxServerDao GetMailboxServerDao()
         {
-            return ServiceProvider.GetService<IMailboxServerDao>();
+            return _serviceProvider.GetService<IMailboxServerDao>();
         }
 
         public IMailboxSignatureDao GetMailboxSignatureDao()
         {
-            return ServiceProvider.GetService<IMailboxSignatureDao>();
+            return _serviceProvider.GetService<IMailboxSignatureDao>();
         }
 
         public IMailDao GetMailDao()
         {
-            return ServiceProvider.GetService<IMailDao>();
+            return _serviceProvider.GetService<IMailDao>();
         }
 
         public IMailGarbageDao GetMailGarbageDao()
         {
-            return ServiceProvider.GetService<IMailGarbageDao>();
+            return _serviceProvider.GetService<IMailGarbageDao>();
         }
 
         public IMailInfoDao GetMailInfoDao()
         {
-            return ServiceProvider.GetService<IMailInfoDao>();
+            return _serviceProvider.GetService<IMailInfoDao>();
         }
 
         public IServerAddressDao GetServerAddressDao()
         {
-            return ServiceProvider.GetService<IServerAddressDao>();
+            return _serviceProvider.GetService<IServerAddressDao>();
         }
 
         public IServerDao GetServerDao()
         {
-            return ServiceProvider.GetService<IServerDao>();
+            return _serviceProvider.GetService<IServerDao>();
         }
 
         public IServerDnsDao GetServerDnsDao()
         {
-            return ServiceProvider.GetService<IServerDnsDao>();
+            return _serviceProvider.GetService<IServerDnsDao>();
         }
 
         public IServerDomainDao GetServerDomainDao()
         {
-            return ServiceProvider.GetService<IServerDomainDao>();
+            return _serviceProvider.GetService<IServerDomainDao>();
         }
 
         public IServerGroupDao GetServerGroupDao()
         {
-            return ServiceProvider.GetService<IServerGroupDao>();
+            return _serviceProvider.GetService<IServerGroupDao>();
         }
 
         public ITagAddressDao GetTagAddressDao()
         {
-            return ServiceProvider.GetService<ITagAddressDao>();
+            return _serviceProvider.GetService<ITagAddressDao>();
         }
 
         public ITagDao GetTagDao()
         {
-            return ServiceProvider.GetService<ITagDao>();
+            return _serviceProvider.GetService<ITagDao>();
         }
 
         public ITagMailDao GetTagMailDao()
         {
-            return ServiceProvider.GetService<ITagMailDao>();
+            return _serviceProvider.GetService<ITagMailDao>();
         }
 
         public IUserFolderDao GetUserFolderDao()
         {
-            return ServiceProvider.GetService<IUserFolderDao>();
+            return _serviceProvider.GetService<IUserFolderDao>();
         }
 
         public IUserFolderTreeDao GetUserFolderTreeDao()
         {
-            return ServiceProvider.GetService<IUserFolderTreeDao>();
+            return _serviceProvider.GetService<IUserFolderTreeDao>();
         }
 
         public IUserFolderXMailDao GetUserFolderXMailDao()
         {
-            return ServiceProvider.GetService<IUserFolderXMailDao>();
+            return _serviceProvider.GetService<IUserFolderXMailDao>();
         }
 
         public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null)
         {
-            return level.HasValue ? MailDbContext.Database.BeginTransaction(level.Value) : MailDbContext.Database.BeginTransaction();
+            return level.HasValue ? _mailDbContext.Database.BeginTransaction(level.Value) : _mailDbContext.Database.BeginTransaction();
         }
     }
     public class MailDaoFactoryExtension

@@ -43,8 +43,8 @@ namespace ASC.Mail.Core.Search
     [Scope(Additional = typeof(FactoryIndexerMailMailExtension))]
     public sealed class FactoryIndexerMailMail : FactoryIndexer<MailMail>
     {
-        private Lazy<MailDbContext> LazyMailDbContext { get; }
-        private MailDbContext MailDbContext { get => LazyMailDbContext.Value; }
+        private readonly Lazy<MailDbContext> _lazyMailDbContext;
+        private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
 
         public FactoryIndexerMailMail(
             IOptionsMonitor<ILog> options,
@@ -57,7 +57,7 @@ namespace ASC.Mail.Core.Search
             ICache cache)
             : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
         {
-            LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
+            _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
         }
 
         /*public override void IndexAll()

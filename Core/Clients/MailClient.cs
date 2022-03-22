@@ -76,8 +76,8 @@ namespace ASC.Mail.Clients
         public bool IsDisposed { get; private set; }
         public bool IsCanceled { get; private set; }
 
-        private CancellationToken CancelToken { get; set; }
-        private CancellationTokenSource StopTokenSource { get; set; }
+        private readonly CancellationToken _cancelToken;
+        private readonly CancellationTokenSource _stopTokenSource;
 
         private const int CONNECT_TIMEOUT = 15000;
         private const int ENABLE_UTF8_TIMEOUT = 10000;
@@ -153,9 +153,9 @@ namespace ASC.Mail.Clients
             CertificatePermit = certificatePermit;
             Log = log ?? new NullLog();
 
-            StopTokenSource = new CancellationTokenSource();
+            _stopTokenSource = new CancellationTokenSource();
 
-            CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, StopTokenSource.Token).Token;
+            _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, _stopTokenSource.Token).Token;
 
             Log.Debug($"MailClient: Constructor -> CertificatePermit: {CertificatePermit}.");
 
@@ -245,15 +245,15 @@ namespace ASC.Mail.Clients
                 inbox.Open(FolderAccess.ReadOnly);
 
                 var allUids = (Imap.Capabilities & ImapCapabilities.ESearch) != 0
-                    ? inbox.Search(SearchOptions.All, SearchQuery.All, CancelToken).UniqueIds
-                    : inbox.Fetch(0, -1, MessageSummaryItems.UniqueId, CancelToken).Select(r => r.UniqueId).ToList();
+                    ? inbox.Search(SearchOptions.All, SearchQuery.All, _cancelToken).UniqueIds
+                    : inbox.Fetch(0, -1, MessageSummaryItems.UniqueId, _cancelToken).Select(r => r.UniqueId).ToList();
 
                 var uid = allUids.FirstOrDefault(u => u.Id == index);
 
                 if (!uid.IsValid)
                     throw new Exception("IMAP4 uidl not found");
 
-                var message = Imap.Inbox.GetMessageAsync(uid, CancelToken).Result;
+                var message = Imap.Inbox.GetMessageAsync(uid, _cancelToken).Result;
 
                 return message;
             }
@@ -264,7 +264,7 @@ namespace ASC.Mail.Clients
 
                 var i = 0;
                 var uidls =
-                    Pop.GetMessageUids(CancelToken)
+                    Pop.GetMessageUids(_cancelToken)
                         .Select(u => new KeyValuePair<int, string>(i++, u))
                         .ToDictionary(t => t.Key, t => t.Value);
 
@@ -273,7 +273,7 @@ namespace ASC.Mail.Clients
                 if (uid.Value == null)
                     throw new Exception("POP3 uidl not found");
 
-                return Pop.GetMessage(uid.Key, CancelToken);
+                return Pop.GetMessage(uid.Key, _cancelToken);
             }
         }
 
@@ -290,7 +290,7 @@ namespace ASC.Mail.Clients
             if (!Smtp.IsConnected)
                 LoginSmtp();
 
-            Smtp.Send(message, CancelToken);
+            Smtp.Send(message, _cancelToken);
 
             if (!Account.Imap || !needCopyToSentFolder)
                 return;
@@ -302,7 +302,7 @@ namespace ASC.Mail.Clients
         {
             if (IsCanceled) return;
             Log.Info("MailClient -> Cancel()");
-            StopTokenSource.Cancel();
+            _stopTokenSource.Cancel();
             IsCanceled = true;
         }
 
@@ -321,7 +321,7 @@ namespace ASC.Mail.Clients
                         if (Imap.IsConnected)
                         {
                             Log.Debug("Imap -> Disconnect()");
-                            Imap.Disconnect(true, CancelToken);
+                            Imap.Disconnect(true, _cancelToken);
                         }
 
                         Imap.Dispose();
@@ -336,7 +336,7 @@ namespace ASC.Mail.Clients
                         if (Pop.IsConnected)
                         {
                             Log.Debug("Pop -> Disconnect()");
-                            Pop.Disconnect(true, CancelToken);
+                            Pop.Disconnect(true, _cancelToken);
                         }
 
                         Pop.Dispose();
@@ -350,7 +350,7 @@ namespace ASC.Mail.Clients
                         if (Smtp.IsConnected)
                         {
                             Log.Debug("Smtp -> Disconnect()");
-                            Smtp.Disconnect(true, CancelToken);
+                            Smtp.Disconnect(true, _cancelToken);
                         }
 
                         Smtp.Dispose();
@@ -361,7 +361,7 @@ namespace ASC.Mail.Clients
                 SendMessage = null;
                 GetMessage = null;
 
-                StopTokenSource.Dispose();
+                _stopTokenSource.Dispose();
 
                 if (Log != null)
                     Log = null;
@@ -493,9 +493,9 @@ namespace ASC.Mail.Clients
 
                 Log.InfoFormat("Try connect... to ({1}:{2}) timeout {0} miliseconds", CONNECT_TIMEOUT, Account.Server, Account.Port);
 
-                var t = Imap.ConnectAsync(Account.Server, Account.Port, secureSocketOptions, CancelToken);
+                var t = Imap.ConnectAsync(Account.Server, Account.Port, secureSocketOptions, _cancelToken);
 
-                if (!t.Wait(CONNECT_TIMEOUT, CancelToken))
+                if (!t.Wait(CONNECT_TIMEOUT, _cancelToken))
                 {
                     Log.Debug("Imap: Failed connect: Timeout.");
                     throw new TimeoutException("Imap: ConnectAsync() timeout.");
@@ -510,9 +510,9 @@ namespace ASC.Mail.Clients
                 {
                     Log.Debug("Imap: EnableUTF8().");
 
-                    t = Imap.EnableUTF8Async(CancelToken);
+                    t = Imap.EnableUTF8Async(_cancelToken);
 
-                    if (!t.Wait(ENABLE_UTF8_TIMEOUT, CancelToken))
+                    if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
                         throw new TimeoutException("Imap: EnableUTF8Async() timeout.");
                 }
 
@@ -521,7 +521,7 @@ namespace ASC.Mail.Clients
                 if (string.IsNullOrEmpty(Account.OAuthToken))
                 {
                     Log.Debug($"Imap: Authentication({Account.Account}).");
-                    t = Imap.AuthenticateAsync(Account.Account, Account.Password, CancelToken);
+                    t = Imap.AuthenticateAsync(Account.Account, Account.Password, _cancelToken);
                 }
                 else
                 {
@@ -529,10 +529,10 @@ namespace ASC.Mail.Clients
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
-                    t = Imap.AuthenticateAsync(oauth2, CancelToken);
+                    t = Imap.AuthenticateAsync(oauth2, _cancelToken);
                 }
 
-                if (!t.Wait(LOGIN_TIMEOUT, CancelToken))
+                if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
                 {
                     Imap.Authenticated -= ImapOnAuthenticated;
                     Log.Debug("Imap: Failed authentication: Timeout.");
@@ -582,7 +582,7 @@ namespace ASC.Mail.Clients
 
                 foreach (var folder in folders)
                 {
-                    if (!Imap.IsConnected || CancelToken.IsCancellationRequested)
+                    if (!Imap.IsConnected || _cancelToken.IsCancellationRequested)
                         return;
 
                     var mailFolder = DetectFolder(mailSettings, folder);
@@ -598,7 +598,7 @@ namespace ASC.Mail.Clients
 
                     try
                     {
-                        folder.Open(FolderAccess.ReadOnly, CancelToken);
+                        folder.Open(FolderAccess.ReadOnly, _cancelToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -657,7 +657,7 @@ namespace ASC.Mail.Clients
         {
             Log.Debug("GetImapFoldersAsync()");
 
-            var personal = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], true, CancelToken).Result.ToList();
+            var personal = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], true, _cancelToken).Result.ToList();
 
             if (!personal.Any(mb => mb.Name.Equals("inbox", StringComparison.InvariantCultureIgnoreCase)))
                 personal.Add(Imap.Inbox);
@@ -691,7 +691,7 @@ namespace ASC.Mail.Clients
         {
             try
             {
-                var subfolders = folder.GetSubfolders(true, CancelToken).ToList();
+                var subfolders = folder.GetSubfolders(true, _cancelToken).ToList();
 
                 if (!subfolders.Any())
                 {
@@ -795,7 +795,7 @@ namespace ASC.Mail.Clients
                 {
                     try
                     {
-                        if (!Imap.IsConnected || CancelToken.IsCancellationRequested)
+                        if (!Imap.IsConnected || _cancelToken.IsCancellationRequested)
                         {
                             break;
                         }
@@ -807,7 +807,7 @@ namespace ASC.Mail.Clients
                         else
                             Log.Debug($"Try get message {uid}. Size: {messInfo.Size}");
 
-                        using var message = folder.GetMessageAsync(uid, CancelToken).GetAwaiter().GetResult();
+                        using var message = folder.GetMessageAsync(uid, _cancelToken).GetAwaiter().GetResult();
 
                         Log.Debug($"BytesTransferred = {messInfo.Size}");
 
@@ -903,7 +903,7 @@ namespace ASC.Mail.Clients
                     }
                 }
 
-                if (CancelToken.IsCancellationRequested || limitMessages > 0 && loaded >= limitMessages)
+                if (_cancelToken.IsCancellationRequested || limitMessages > 0 && loaded >= limitMessages)
                 {
                     break;
                 }
@@ -931,7 +931,7 @@ namespace ASC.Mail.Clients
 
             try
             {
-                allUids = folder.Fetch(0, -1, MessageSummaryItems.UniqueId, CancelToken).Select(r => r.UniqueId).ToList();
+                allUids = folder.Fetch(0, -1, MessageSummaryItems.UniqueId, _cancelToken).Select(r => r.UniqueId).ToList();
             }
             catch (ImapCommandException ex)
             {
@@ -960,7 +960,7 @@ namespace ASC.Mail.Clients
                 infoList =
                     folder.Fetch(uids,
                         MessageSummaryItems.Flags | MessageSummaryItems.GMailLabels |
-                        MessageSummaryItems.InternalDate, CancelToken).ToList();
+                        MessageSummaryItems.InternalDate, _cancelToken).ToList();
 
             }
             catch (ImapCommandException ex)
@@ -1038,7 +1038,7 @@ namespace ASC.Mail.Clients
 
         private IMailFolder GetSentFolder()
         {
-            var folders = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], false, CancelToken).Result.ToList();
+            var folders = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], false, _cancelToken).Result.ToList();
 
             if (!folders.Any())
                 return null;
@@ -1094,7 +1094,7 @@ namespace ASC.Mail.Clients
                 if (sendFolder != null)
                 {
                     sendFolder.Open(FolderAccess.ReadWrite);
-                    var uid = sendFolder.Append(FormatOptions.Default, message, MessageFlags.Seen, CancelToken);
+                    var uid = sendFolder.Append(FormatOptions.Default, message, MessageFlags.Seen, _cancelToken);
 
                     if (uid.HasValue)
                     {
@@ -1150,9 +1150,9 @@ namespace ASC.Mail.Clients
             {
                 Pop.SslProtocols = sslProtocols;
 
-                var t = Pop.ConnectAsync(Account.Server, Account.Port, secureSocketOptions, CancelToken);
+                var t = Pop.ConnectAsync(Account.Server, Account.Port, secureSocketOptions, _cancelToken);
 
-                if (!t.Wait(CONNECT_TIMEOUT, CancelToken))
+                if (!t.Wait(CONNECT_TIMEOUT, _cancelToken))
                 {
                     Log.InfoFormat("Pop3: Failed connect: Timeout.");
                     throw new TimeoutException("Pop.ConnectAsync timeout");
@@ -1167,9 +1167,9 @@ namespace ASC.Mail.Clients
                 {
                     Log.Debug("Pop.EnableUTF8");
 
-                    t = Pop.EnableUTF8Async(CancelToken);
+                    t = Pop.EnableUTF8Async(_cancelToken);
 
-                    if (!t.Wait(ENABLE_UTF8_TIMEOUT, CancelToken))
+                    if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
                         throw new TimeoutException("Pop.EnableUTF8Async timeout");
                 }
 
@@ -1179,7 +1179,7 @@ namespace ASC.Mail.Clients
                 {
                     Log.Debug($"Pop.Authentication({Account.Account})");
 
-                    t = Pop.AuthenticateAsync(Account.Account, Account.Password, CancelToken);
+                    t = Pop.AuthenticateAsync(Account.Account, Account.Password, _cancelToken);
                 }
                 else
                 {
@@ -1187,10 +1187,10 @@ namespace ASC.Mail.Clients
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
-                    t = Pop.AuthenticateAsync(oauth2, CancelToken);
+                    t = Pop.AuthenticateAsync(oauth2, _cancelToken);
                 }
 
-                if (!t.Wait(LOGIN_TIMEOUT, CancelToken))
+                if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
                 {
                     Pop.Authenticated -= PopOnAuthenticated;
                     Log.InfoFormat("Pop: Authentication failed.");
@@ -1232,7 +1232,7 @@ namespace ASC.Mail.Clients
             {
                 var loaded = 0;
                 var i = 0;
-                var uidls = Pop.GetMessageUids(CancelToken)
+                var uidls = Pop.GetMessageUids(_cancelToken)
                     .Select(uidl => new KeyValuePair<int, string>(i++, uidl))
                     .ToDictionary(t => t.Key, t => t.Value);
 
@@ -1262,14 +1262,14 @@ namespace ASC.Mail.Clients
 
                 foreach (var newMessage in newMessages)
                 {
-                    if (!Pop.IsConnected || CancelToken.IsCancellationRequested)
+                    if (!Pop.IsConnected || _cancelToken.IsCancellationRequested)
                         break;
 
                     Log.Debug($"Processing new message\tUID: {newMessage.Key}\tUIDL: {newMessage.Value}\t");
 
                     try
                     {
-                        var message = Pop.GetMessageAsync(newMessage.Key, CancelToken).Result;
+                        var message = Pop.GetMessageAsync(newMessage.Key, _cancelToken).Result;
 
                         message.FixDateIssues(logger: Log);
 
@@ -1338,8 +1338,8 @@ namespace ASC.Mail.Clients
                 var fstIndex = newMessages.First().Key;
                 var lstIndex = newMessages.Last().Key;
 
-                var fstMailHeaders = Pop.GetMessageHeaders(fstIndex, CancelToken).ToList();
-                var lstMailHeaders = Pop.GetMessageHeaders(lstIndex, CancelToken).ToList();
+                var fstMailHeaders = Pop.GetMessageHeaders(fstIndex, _cancelToken).ToList();
+                var lstMailHeaders = Pop.GetMessageHeaders(lstIndex, _cancelToken).ToList();
 
                 var fstDateHeader =
                     fstMailHeaders.FirstOrDefault(
@@ -1412,9 +1412,9 @@ namespace ASC.Mail.Clients
             {
                 Smtp.SslProtocols = sslProtocols;
 
-                var t = Smtp.ConnectAsync(Account.SmtpServer, Account.SmtpPort, secureSocketOptions, CancelToken);
+                var t = Smtp.ConnectAsync(Account.SmtpServer, Account.SmtpPort, secureSocketOptions, _cancelToken);
 
-                if (!t.Wait(CONNECT_TIMEOUT, CancelToken))
+                if (!t.Wait(CONNECT_TIMEOUT, _cancelToken))
                     throw new TimeoutException("Smtp.ConnectAsync timeout");
 
                 if (!Account.SmtpAuth)
@@ -1431,7 +1431,7 @@ namespace ASC.Mail.Clients
                 {
                     Log.Debug($"Smtp.Authentication({Account.SmtpAccount})");
 
-                    t = Smtp.AuthenticateAsync(Account.SmtpAccount, Account.SmtpPassword, CancelToken);
+                    t = Smtp.AuthenticateAsync(Account.SmtpAccount, Account.SmtpPassword, _cancelToken);
                 }
                 else
                 {
@@ -1439,10 +1439,10 @@ namespace ASC.Mail.Clients
 
                     var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
-                    t = Smtp.AuthenticateAsync(oauth2, CancelToken);
+                    t = Smtp.AuthenticateAsync(oauth2, _cancelToken);
                 }
 
-                if (!t.Wait(LOGIN_TIMEOUT, CancelToken))
+                if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
                 {
                     Smtp.Authenticated -= SmtpOnAuthenticated;
                     throw new TimeoutException("Smtp.AuthenticateAsync timeout");

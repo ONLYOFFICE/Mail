@@ -24,14 +24,14 @@
 */
 
 
-using System;
-using System.Linq;
-using System.Linq.Expressions;
-
 using ASC.Mail.Configuration;
 using ASC.Mail.Core.Dao.Entities;
 
 using Microsoft.EntityFrameworkCore;
+
+using System;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox
 {
@@ -44,16 +44,16 @@ namespace ASC.Mail.Core.Dao.Expressions.Mailbox
         public bool? OrderAsc { get; private set; }
         public int? Limit { get; private set; }
 
-        private MailSettings MailSettings { get; set; }
-        private bool OnlyActive { get; set; }
+        private readonly MailSettings _mailSettings;
+        private readonly bool _onlyActive;
 
         public MailboxesForProcessingExp(MailSettings mailSettings, int tasksLimit, bool active)
         {
-            MailSettings = mailSettings;
+            _mailSettings = mailSettings;
 
             Limit = tasksLimit > 0 ? tasksLimit : null;
 
-            OnlyActive = active;
+            _onlyActive = active;
 
             OrderAsc = true;
         }
@@ -68,25 +68,25 @@ namespace ASC.Mail.Core.Dao.Expressions.Mailbox
             && mb.IsRemoved == false
             && mb.Enabled == true;
 
-            if (MailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.All)
+            if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.All)
             {
-                exp = exp.And(mb => mb.IsServerMailbox == (MailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
+                exp = exp.And(mb => mb.IsServerMailbox == (_mailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
             }
 
-            if (MailSettings.Aggregator.EnableSignalr)
+            if (_mailSettings.Aggregator.EnableSignalr)
             {
-                exp = exp.And(mb => mb.UserOnline == OnlyActive);
+                exp = exp.And(mb => mb.UserOnline == _onlyActive);
             }
             else
             {
-                exp = exp.And(mb => mb.DateUserChecked == null || OnlyActive
-                ? EF.Functions.DateDiffSecond(mb.DateUserChecked, now) < MailSettings.Defines.ActiveInterval.TotalSeconds
-                : EF.Functions.DateDiffSecond(mb.DateUserChecked, now) >= MailSettings.Defines.ActiveInterval.TotalSeconds);
+                exp = exp.And(mb => mb.DateUserChecked == null || _onlyActive
+                ? EF.Functions.DateDiffSecond(mb.DateUserChecked, now) < _mailSettings.Defines.ActiveInterval.TotalSeconds
+                : EF.Functions.DateDiffSecond(mb.DateUserChecked, now) >= _mailSettings.Defines.ActiveInterval.TotalSeconds);
             }
 
-            if (MailSettings.Defines.WorkOnUsersOnlyList.Any())
+            if (_mailSettings.Defines.WorkOnUsersOnlyList.Any())
             {
-                exp = exp.And(mb => MailSettings.Defines.WorkOnUsersOnlyList.Contains(mb.IdUser));
+                exp = exp.And(mb => _mailSettings.Defines.WorkOnUsersOnlyList.Contains(mb.IdUser));
             }
 
             return exp;

@@ -24,8 +24,6 @@
 */
 
 
-using System;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Engine.Operations.Base;
@@ -34,21 +32,22 @@ using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
 
+using System;
+
 namespace ASC.Mail.Core.Engine.Operations
 {
     public class MailRemoveMailserverMailboxOperation : MailOperation
     {
-        private readonly MailBoxData _mailBox;
-
         public override MailOperationType OperationType
         {
             get { return MailOperationType.RemoveMailbox; }
         }
 
-        public ServerMailboxEngine ServerMailboxEngine { get; }
-        public OperationEngine OperationEngine { get; }
-        public CacheEngine CacheEngine { get; }
-        public IndexEngine IndexEngine { get; }
+        private readonly MailBoxData _mailBox;
+        private readonly ServerMailboxEngine _serverMailboxEngine;
+        private readonly OperationEngine _operationEngine;
+        private readonly CacheEngine _cacheEngine;
+        private readonly IndexEngine _indexEngine;
 
         public MailRemoveMailserverMailboxOperation(
             TenantManager tenantManager,
@@ -64,10 +63,10 @@ namespace ASC.Mail.Core.Engine.Operations
             MailBoxData mailBox)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
         {
-            ServerMailboxEngine = serverMailboxEngine;
-            OperationEngine = operationEngine;
-            CacheEngine = cacheEngine;
-            IndexEngine = indexEngine;
+            _serverMailboxEngine = serverMailboxEngine;
+            _operationEngine = operationEngine;
+            _cacheEngine = cacheEngine;
+            _indexEngine = indexEngine;
             _mailBox = mailBox;
             SetSource(_mailBox.MailBoxId.ToString());
         }
@@ -95,19 +94,19 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveFromDb, "Remove mailbox from Db");
 
-                ServerMailboxEngine.RemoveMailbox(_mailBox);
+                _serverMailboxEngine.RemoveMailbox(_mailBox);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RecalculateFolder, "Recalculate folders counters");
 
-                OperationEngine.RecalculateFolders();
+                _operationEngine.RecalculateFolders();
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.ClearCache, "Clear accounts cache");
 
-                CacheEngine.Clear(user);
+                _cacheEngine.Clear(user);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveIndex, "Remove Elastic Search index by messages");
 
-                IndexEngine.Remove(_mailBox);
+                _indexEngine.Remove(_mailBox);
             }
             catch (Exception e)
             {

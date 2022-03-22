@@ -24,8 +24,6 @@
 */
 
 
-using System;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Engine.Operations.Base;
@@ -34,24 +32,23 @@ using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
 
+using System;
+
 namespace ASC.Mail.Core.Engine.Operations
 {
     public class MailRemoveMailboxOperation : MailOperation
     {
-        private readonly MailBoxData _mailBoxData;
-
-        public ILog Log { get; set; }
-
         public override MailOperationType OperationType
         {
             get { return MailOperationType.RemoveMailbox; }
         }
 
-        public MailboxEngine MailboxEngine { get; }
-        public QuotaEngine QuotaEngine { get; }
-        public FolderEngine FolderEngine { get; }
-        public CacheEngine CacheEngine { get; }
-        public IndexEngine IndexEngine { get; }
+        private readonly MailBoxData _mailBoxData;
+        private readonly MailboxEngine _mailboxEngine;
+        private readonly QuotaEngine _quotaEngine;
+        private readonly FolderEngine _folderEngine;
+        private readonly CacheEngine _cacheEngine;
+        private readonly IndexEngine _indexEngine;
 
         public MailRemoveMailboxOperation(
             TenantManager tenantManager,
@@ -68,11 +65,11 @@ namespace ASC.Mail.Core.Engine.Operations
             MailBoxData mailBoxData)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
         {
-            MailboxEngine = mailboxEngine;
-            QuotaEngine = quotaEngine;
-            FolderEngine = folderEngine;
-            CacheEngine = cacheEngine;
-            IndexEngine = indexEngine;
+            _mailboxEngine = mailboxEngine;
+            _quotaEngine = quotaEngine;
+            _folderEngine = folderEngine;
+            _cacheEngine = cacheEngine;
+            _indexEngine = indexEngine;
             _mailBoxData = mailBoxData;
 
             SetSource(_mailBoxData.MailBoxId.ToString());
@@ -90,29 +87,29 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveFromDb, "Remove mailbox from Db");
 
-                var freedQuotaSize = MailboxEngine.RemoveMailBoxInfo(_mailBoxData);
+                var freedQuotaSize = _mailboxEngine.RemoveMailBoxInfo(_mailBoxData);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.FreeQuota, "Decrease newly freed quota space");
 
-                QuotaEngine.QuotaUsedDelete(freedQuotaSize);
+                _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RecalculateFolder, "Recalculate folders counters");
 
-                FolderEngine.RecalculateFolders();
+                _folderEngine.RecalculateFolders();
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.ClearCache, "Clear accounts cache");
 
-                CacheEngine.Clear(_mailBoxData.UserId);
+                _cacheEngine.Clear(_mailBoxData.UserId);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveIndex, "Remove Elastic Search index by messages");
 
-                IndexEngine.Remove(_mailBoxData);
+                _indexEngine.Remove(_mailBoxData);
 
                 SetProgress((int?)MailOperationRemoveMailboxProgress.Finished);
             }
             catch (Exception e)
             {
-                Logger.ErrorFormat("Mail operation error -> Remove mailbox: {0}", e.ToString());
+                base.Logger.ErrorFormat("Mail operation error -> Remove mailbox: {0}", e.ToString());
                 Error = "InternalServerError";
             }
         }

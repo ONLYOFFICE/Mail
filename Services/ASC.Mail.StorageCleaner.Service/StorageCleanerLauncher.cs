@@ -3,42 +3,44 @@
 [Singletone]
 class StorageCleanerLauncher : IHostedService
 {
-    private ILog Log { get; }
-    private StorageCleanerService StorageCleanerService { get; }
-    private Task CleanerTask { get; set; }
-    private CancellationTokenSource Cts { get; set; }
-    private ConsoleParameters ConsoleParameters { get; }
-    private ManualResetEvent MreStop { get; set; }
+    private Task _cleanerTask;
+    private CancellationTokenSource Cts;
+    private ManualResetEvent MreStop;
+
+    private readonly ILog _log;
+    private readonly StorageCleanerService _storageCleanerService;
+    private readonly ConsoleParameters _consoleParameters;
+
     public StorageCleanerLauncher(
         IOptionsMonitor<ILog> options,
         StorageCleanerService cleanerService,
         ConsoleParser consoleParser)
     {
-        Log = options.Get("ASC.Mail.Cleaner");
-        StorageCleanerService = cleanerService;
-        ConsoleParameters = consoleParser.GetParsedParameters();
+        _log = options.Get("ASC.Mail.Cleaner");
+        _storageCleanerService = cleanerService;
+        _consoleParameters = consoleParser.GetParsedParameters();
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        Log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
+        _log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Log.Info("Start service\r\n");
+        _log.Info("Start service\r\n");
 
         try
         {
             Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            if (ConsoleParameters.IsConsole)
+            if (_consoleParameters.IsConsole)
             {
-                Log.Info("Service Start in console-daemon mode");
+                _log.Info("Service Start in console-daemon mode");
 
-                CleanerTask = StorageCleanerService.StartTimer(Cts.Token, true);
+                _cleanerTask = _storageCleanerService.StartTimer(Cts.Token, true);
 
                 MreStop = new ManualResetEvent(false);
                 Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
@@ -46,10 +48,10 @@ class StorageCleanerLauncher : IHostedService
             }
             else
             {
-                CleanerTask = StorageCleanerService.StartTimer(Cts.Token, true);
+                _cleanerTask = _storageCleanerService.StartTimer(Cts.Token, true);
             }
 
-            return CleanerTask.IsCompleted ? CleanerTask : Task.CompletedTask;
+            return _cleanerTask.IsCompleted ? _cleanerTask : Task.CompletedTask;
         }
         catch (Exception)
         {
@@ -61,13 +63,13 @@ class StorageCleanerLauncher : IHostedService
     {
         try
         {
-            Log.Info("Stop service\r\n");
-            StorageCleanerService.StopService(Cts, MreStop);
-            await Task.WhenAny(CleanerTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+            _log.Info("Stop service\r\n");
+            _storageCleanerService.StopService(Cts, MreStop);
+            await Task.WhenAny(_cleanerTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
         }
         catch (Exception ex)
         {
-            Log.Error($"Failed to terminate the service correctly. The details:\r\n{ex}\r\n");
+            _log.Error($"Failed to terminate the service correctly. The details:\r\n{ex}\r\n");
         }
     }
 }

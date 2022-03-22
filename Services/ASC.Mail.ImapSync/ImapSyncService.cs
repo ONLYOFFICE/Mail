@@ -29,7 +29,7 @@ public class ImapSyncService : IHostedService
     private readonly MailSettings _mailSettings;
     private readonly RedisClient _redisClient;
 
-    private SignalrServiceClient _signalrServiceClient { get; }
+    private readonly SignalrServiceClient _signalrServiceClient;
 
     private readonly IServiceProvider _serviceProvider;
 

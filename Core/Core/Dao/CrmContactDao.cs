@@ -45,9 +45,9 @@ namespace ASC.Mail.Core.Dao
     [Scope]
     public class CrmContactDao : BaseMailDao, ICrmContactDao
     {
-        private ILog Log { get; }
+        private readonly ILog _log;
 
-        private CrmSecurity CrmSecurity { get; }
+        private readonly CrmSecurity _crmSecurity;
 
         public CrmContactDao(
              TenantManager tenantManager,
@@ -57,8 +57,8 @@ namespace ASC.Mail.Core.Dao
              CrmSecurity crmSecurity)
             : base(tenantManager, securityContext, dbContext)
         {
-            Log = option.Get("ASC.Mail.TagEngine");
-            CrmSecurity = crmSecurity;
+            _log = option.Get("ASC.Mail.TagEngine");
+            _crmSecurity = crmSecurity;
         }
 
         public List<int> GetCrmContactIds(string email)
@@ -100,7 +100,7 @@ namespace ASC.Mail.Core.Dao
                     contact.ID = info.Id;
                     contact.ShareType = (CRM.Core.Enums.ShareType)info.ShareType;
 
-                    if (CrmSecurity.CanAccessTo(contact))
+                    if (_crmSecurity.CanAccessTo(contact))
                     {
                         ids.Add(info.Id);
                     }
@@ -108,7 +108,7 @@ namespace ASC.Mail.Core.Dao
             }
             catch (Exception e)
             {
-                Log.WarnFormat("GetCrmContactsId(tenandId='{0}', userId='{1}', email='{2}') Exception:\r\n{3}\r\n",
+                _log.WarnFormat("GetCrmContactsId(tenandId='{0}', userId='{1}', email='{2}') Exception:\r\n{3}\r\n",
                     Tenant, UserId, email, e.ToString());
             }
 

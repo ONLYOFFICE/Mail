@@ -46,7 +46,7 @@ namespace ASC.Mail.Core.Dao
     [Scope]
     public class MailboxDao : BaseMailDao, IMailboxDao
     {
-        private InstanceCrypto InstanceCrypto { get; }
+        private readonly InstanceCrypto _instanceCrypto;
 
         private const int DELAY_AFTER_ERROR = 60;
         private readonly int delayAfterError = 0;
@@ -60,7 +60,7 @@ namespace ASC.Mail.Core.Dao
              MailSettings mailSettings)
             : base(tenantManager, securityContext, dbContext)
         {
-            InstanceCrypto = instanceCrypto;
+            _instanceCrypto = instanceCrypto;
             delayAfterError = mailSettings.Defines.DefaultServerLoginDelayAfterError;
             delay = mailSettings.Defines.DefaultServerLoginDelay;
         }
@@ -196,12 +196,12 @@ namespace ASC.Mail.Core.Dao
                 ImapIntervals = mailbox.ImapIntervals,
                 BeginDate = mailbox.BeginDate,
                 EmailInFolder = mailbox.EmailInFolder,
-                Pop3Password = InstanceCrypto.Encrypt(mailbox.Password),
+                Pop3Password = _instanceCrypto.Encrypt(mailbox.Password),
                 SmtpPassword = !string.IsNullOrEmpty(mailbox.SmtpPassword)
-                        ? InstanceCrypto.Encrypt(mailbox.SmtpPassword)
+                        ? _instanceCrypto.Encrypt(mailbox.SmtpPassword)
                         : "",
                 Token = !string.IsNullOrEmpty(mailbox.OAuthToken)
-                        ? InstanceCrypto.Encrypt(mailbox.OAuthToken)
+                        ? _instanceCrypto.Encrypt(mailbox.OAuthToken)
                         : "",
                 TokenType = mailbox.OAuthType,
                 IdSmtpServer = mailbox.SmtpServerId,
@@ -374,7 +374,7 @@ namespace ASC.Mail.Core.Dao
             if (rOptions.MessageCount.HasValue) rBox.MsgCountLast = rOptions.MessageCount.Value;
             if (rOptions.Size.HasValue) rBox.SizeLast = rOptions.Size.Value;
             if (rOptions.QuotaError.HasValue) rBox.QuotaError = rOptions.QuotaError.Value;
-            if (!string.IsNullOrEmpty(rOptions.OAuthToken)) rBox.Token = InstanceCrypto.Encrypt(rOptions.OAuthToken);
+            if (!string.IsNullOrEmpty(rOptions.OAuthToken)) rBox.Token = _instanceCrypto.Encrypt(rOptions.OAuthToken);
             if (rOptions.ResetImapIntervals.HasValue)
             {
                 rBox.ImapIntervals = null;
@@ -535,7 +535,7 @@ namespace ASC.Mail.Core.Dao
                 if (string.IsNullOrEmpty(encryptedPassword))
                     return false;
 
-                password = InstanceCrypto.Decrypt(encryptedPassword);
+                password = _instanceCrypto.Decrypt(encryptedPassword);
                 return true;
             }
             catch (Exception)

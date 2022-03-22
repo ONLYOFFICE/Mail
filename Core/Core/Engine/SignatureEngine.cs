@@ -24,60 +24,56 @@
 */
 
 
-using System;
-
 using ASC.Common;
-using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Entities;
 using ASC.Mail.Models;
 using ASC.Mail.Storage;
 
-using Microsoft.Extensions.Options;
+using System;
 
 namespace ASC.Mail.Core.Engine
 {
     [Scope]
     public class SignatureEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private TenantManager TenantManager { get; }
-        private SecurityContext SecurityContext { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private CacheEngine CacheEngine { get; }
-        private StorageManager StorageManager { get; }
+        private readonly TenantManager _tenantManager;
+        private readonly SecurityContext _securityContext;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly CacheEngine _cacheEngine;
+        private readonly StorageManager _storageManager;
 
         public SignatureEngine(
             TenantManager tenantManager,
             SecurityContext securityContext,
             IMailDaoFactory mailDaoFactory,
             CacheEngine cacheEngine,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> option)
+            StorageManager storageManager)
         {
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
+            _tenantManager = tenantManager;
+            _securityContext = securityContext;
 
-            MailDaoFactory = mailDaoFactory;
-            CacheEngine = cacheEngine;
-            StorageManager = storageManager;
+            _mailDaoFactory = mailDaoFactory;
+            _cacheEngine = cacheEngine;
+            _storageManager = storageManager;
         }
 
         public MailSignatureData GetSignature(int mailboxId)
         {
-            return ToMailMailSignature(MailDaoFactory.GetMailboxSignatureDao().GetSignature(mailboxId));
+            return ToMailMailSignature(_mailDaoFactory.GetMailboxSignatureDao().GetSignature(mailboxId));
         }
 
         public MailSignatureData SaveSignature(int mailboxId, string html, bool isActive)
         {
             if (!string.IsNullOrEmpty(html))
             {
-                html = StorageManager.ChangeEditorImagesLinks(html, mailboxId);
+                html = _storageManager.ChangeEditorImagesLinks(html, mailboxId);
             }
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             var signature = new MailboxSignature
             {
@@ -87,7 +83,7 @@ namespace ASC.Mail.Core.Engine
                 IsActive = isActive
             };
 
-            var result = MailDaoFactory.GetMailboxSignatureDao().SaveSignature(signature);
+            var result = _mailDaoFactory.GetMailboxSignatureDao().SaveSignature(signature);
 
             if (result <= 0)
                 throw new Exception("Save failed");

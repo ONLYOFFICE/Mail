@@ -46,14 +46,14 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class FolderEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private UserFolderEngine UserFolderEngine { get; }
-        private ILog Log { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly UserFolderEngine _userFolderEngine;
+        private readonly ILog _log;
 
         public class MailFolderInfo
         {
@@ -72,11 +72,11 @@ namespace ASC.Mail.Core.Engine
             IOptionsMonitor<ILog> option,
             IMailDaoFactory mailDaoFactory)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            MailDaoFactory = mailDaoFactory;
-            UserFolderEngine = userFolderEngine;
-            Log = option.Get("ASC.Mail.FolderEngine");
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _mailDaoFactory = mailDaoFactory;
+            _userFolderEngine = userFolderEngine;
+            _log = option.Get("ASC.Mail.FolderEngine");
         }
 
         public List<MailFolderInfo> GetFolders(string userId = null)
@@ -85,9 +85,9 @@ namespace ASC.Mail.Core.Engine
 
             var needRecalculation = false;
 
-            var folderList = userId == null 
-                ? MailDaoFactory.GetFolderDao().GetFolders() 
-                : MailDaoFactory.GetFolderDao().GetFolders(userId);
+            var folderList = userId == null
+                ? _mailDaoFactory.GetFolderDao().GetFolders()
+                : _mailDaoFactory.GetFolderDao().GetFolders(userId);
 
             foreach (var folder in DefaultFolders)
             {
@@ -108,7 +108,7 @@ namespace ASC.Mail.Core.Engine
                     TimeModified = DateTime.UtcNow
                 };
 
-                MailDaoFactory.GetFolderDao().Save(newFolder);
+                _mailDaoFactory.GetFolderDao().Save(newFolder);
 
                 folderList.Add(newFolder);
             }
@@ -145,7 +145,7 @@ namespace ASC.Mail.Core.Engine
 
             try
             {
-                var res = MailDaoFactory.GetFolderDao()
+                var res = _mailDaoFactory.GetFolderDao()
                     .ChangeFolderCounters(folder, unreadMessDiff, totalMessDiff, unreadConvDiff, totalConvDiff);
 
                 if (res == 0)
@@ -158,13 +158,13 @@ namespace ASC.Mail.Core.Engine
                     if (totalCount < 0 || unreadCount < 0 || unreadChainCount < 0 || totalChainCount < 0)
                         throw new Exception("Need recalculation");
 
-                    var f = MailDaoFactory.GetFolderDao().GetFolder(folder);
+                    var f = _mailDaoFactory.GetFolderDao().GetFolder(folder);
 
                     if (f == null)
                     {
                         // Folder is not found
 
-                        res = MailDaoFactory.GetFolderDao().Save(new Folder
+                        res = _mailDaoFactory.GetFolderDao().Save(new Folder
                         {
                             FolderType = folder,
                             Tenant = Tenant,
@@ -188,40 +188,40 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("ChangeFolderCounters() Exception: {0}", ex.ToString());
+                _log.ErrorFormat("ChangeFolderCounters() Exception: {0}", ex.ToString());
                 //TODO: Fix OperationEngine.RecalculateFolders();
             }
 
             if (!userFolder.HasValue)
                 return;
 
-            UserFolderEngine.ChangeFolderCounters(userFolder.Value, unreadMessDiff, totalMessDiff, unreadConvDiff, totalConvDiff);
+            _userFolderEngine.ChangeFolderCounters(userFolder.Value, unreadMessDiff, totalMessDiff, unreadConvDiff, totalConvDiff);
         }
 
         public void RecalculateFolders(Action<MailOperationRecalculateMailboxProgress> callback = null)
         {
-            using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
             var folderTypes = Enum.GetValues(typeof(FolderType)).Cast<int>();
 
             callback?.Invoke(MailOperationRecalculateMailboxProgress.CountUnreadMessages);
 
             var unreadMessagesCountByFolder =
-                    MailDaoFactory.GetMailInfoDao().GetMailCount(
+                    _mailDaoFactory.GetMailInfoDao().GetMailCount(
                         SimpleMessagesExp.CreateBuilder(Tenant, User)
                             .SetUnread(true)
                             .Build());
 
             callback?.Invoke(MailOperationRecalculateMailboxProgress.CountTotalMessages);
 
-            var totalMessagesCountByFolder = MailDaoFactory.GetMailInfoDao().GetMailCount(
+            var totalMessagesCountByFolder = _mailDaoFactory.GetMailInfoDao().GetMailCount(
                     SimpleMessagesExp.CreateBuilder(Tenant, User)
                         .Build());
 
             callback?.Invoke(MailOperationRecalculateMailboxProgress.CountUreadConversation);
 
             var unreadConversationsCountByFolder =
-                MailDaoFactory.GetChainDao().GetChainCount(
+                _mailDaoFactory.GetChainDao().GetChainCount(
                     SimpleConversationsExp.CreateBuilder(Tenant, User)
                         .SetUnread(true)
                         .Build());
@@ -230,7 +230,7 @@ namespace ASC.Mail.Core.Engine
                 callback(MailOperationRecalculateMailboxProgress.CountTotalConversation);
 
             var totalConversationsCountByFolder =
-            MailDaoFactory.GetChainDao().GetChainCount(
+            _mailDaoFactory.GetChainDao().GetChainCount(
                 SimpleConversationsExp.CreateBuilder(Tenant, User)
                     .Build());
 
@@ -270,7 +270,7 @@ namespace ASC.Mail.Core.Engine
 
             foreach (var folder in folders)
             {
-                MailDaoFactory.GetFolderDao().Save(folder);
+                _mailDaoFactory.GetFolderDao().Save(folder);
             }
 
             var userFolder = folders.FirstOrDefault(f => f.FolderType == FolderType.UserFolder);
@@ -278,25 +278,25 @@ namespace ASC.Mail.Core.Engine
             if (userFolder != null)
             {
                 var userFolders =
-                    MailDaoFactory.GetUserFolderDao().GetList(
+                    _mailDaoFactory.GetUserFolderDao().GetList(
                         SimpleUserFoldersExp.CreateBuilder(Tenant, User)
                             .Build());
 
                 if (userFolders.Any())
                 {
-                    var totalMessagesCountByUserFolder = MailDaoFactory.GetMailInfoDao().GetMailUserFolderCount();
+                    var totalMessagesCountByUserFolder = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount();
 
                     callback?.Invoke(MailOperationRecalculateMailboxProgress.CountTotalUserFolderMessages);
 
-                    var unreadMessagesCountByUserFolder = MailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(true);
+                    var unreadMessagesCountByUserFolder = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(true);
 
                     callback?.Invoke(MailOperationRecalculateMailboxProgress.CountUnreadUserFolderMessages);
 
-                    var totalConversationsCountByUserFolder = MailDaoFactory.GetChainDao().GetChainUserFolderCount();
+                    var totalConversationsCountByUserFolder = _mailDaoFactory.GetChainDao().GetChainUserFolderCount();
 
                     callback?.Invoke(MailOperationRecalculateMailboxProgress.CountTotalUserFolderConversation);
 
-                    var unreadConversationsCountByUserFolder = MailDaoFactory.GetChainDao().GetChainUserFolderCount(true);
+                    var unreadConversationsCountByUserFolder = _mailDaoFactory.GetChainDao().GetChainUserFolderCount(true);
 
                     callback?.Invoke(MailOperationRecalculateMailboxProgress.CountUreadUserFolderConversation);
 
@@ -337,7 +337,7 @@ namespace ASC.Mail.Core.Engine
 
                     foreach (var folder in newUserFolders)
                     {
-                        MailDaoFactory.GetUserFolderDao().Save(folder);
+                        _mailDaoFactory.GetUserFolderDao().Save(folder);
                     }
                 }
             }

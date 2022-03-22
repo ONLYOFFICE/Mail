@@ -24,11 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Utils;
@@ -38,26 +33,29 @@ using ASC.Mail.Models;
 
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+
 namespace ASC.Mail.Core.Engine
 {
     [Scope]
     public class MailBoxSettingEngine
     {
-        private MailDbContext MailDbContext { get; }
-
-        private IMailDaoFactory MailDaoFactory { get; }
-
-        private ILog Log { get; }
+        private readonly MailDbContext _mailDbContext;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly ILog _log;
 
         public MailBoxSettingEngine(
             IMailDaoFactory mailDaoFactory,
             IOptionsMonitor<ILog> option)
         {
-            MailDbContext = mailDaoFactory.GetContext();
+            _mailDbContext = mailDaoFactory.GetContext();
 
-            MailDaoFactory = mailDaoFactory;
+            _mailDaoFactory = mailDaoFactory;
 
-            Log = option.Get("ASC.Mail.MailBoxSettingEngine");
+            _log = option.Get("ASC.Mail.MailBoxSettingEngine");
         }
 
         public Dictionary<string, string> MxToDomainBusinessVendorsList
@@ -86,7 +84,7 @@ namespace ASC.Mail.Core.Engine
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("MxToDomainBusinessVendorsList failed", ex);
+                    _log.Error("MxToDomainBusinessVendorsList failed", ex);
                 }
 
                 return list;
@@ -108,9 +106,9 @@ namespace ASC.Mail.Core.Engine
                     throw new Exception("Incorrect config");
                 }
 
-                using var tx = MailDbContext.Database.BeginTransaction();
+                using var tx = _mailDbContext.Database.BeginTransaction();
 
-                var provider = MailDaoFactory.GetMailboxProviderDao().GetProvider(config.EmailProvider.Id);
+                var provider = _mailDaoFactory.GetMailboxProviderDao().GetProvider(config.EmailProvider.Id);
 
                 if (provider == null)
                 {
@@ -123,7 +121,7 @@ namespace ASC.Mail.Core.Engine
                         Url = config.EmailProvider.Documentation.Url
                     };
 
-                    provider.Id = MailDaoFactory.GetMailboxProviderDao().SaveProvider(provider);
+                    provider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(provider);
 
                     if (provider.Id < 0)
                     {
@@ -134,7 +132,7 @@ namespace ASC.Mail.Core.Engine
 
                 foreach (var domainName in config.EmailProvider.Domain)
                 {
-                    var domain = MailDaoFactory.GetMailboxDomainDao().GetDomain(domainName);
+                    var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(domainName);
 
                     if (domain != null)
                         continue;
@@ -146,7 +144,7 @@ namespace ASC.Mail.Core.Engine
                         Name = domainName
                     };
 
-                    domain.Id = MailDaoFactory.GetMailboxDomainDao().SaveDomain(domain);
+                    domain.Id = _mailDaoFactory.GetMailboxDomainDao().SaveDomain(domain);
 
                     if (domain.Id < 0)
                     {
@@ -155,7 +153,7 @@ namespace ASC.Mail.Core.Engine
                     }
                 }
 
-                var existingServers = MailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
+                var existingServers = _mailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
 
                 var newServers = config.EmailProvider
                     .IncomingServer
@@ -203,7 +201,7 @@ namespace ASC.Mail.Core.Engine
                         s.Id = existing.Id;
                     }
 
-                    s.Id = MailDaoFactory.GetMailboxServerDao().SaveServer(s);
+                    s.Id = _mailDaoFactory.GetMailboxServerDao().SaveServer(s);
 
                     if (s.Id < 0)
                     {
@@ -217,7 +215,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error("SetMailBoxSettings failed", ex);
+                _log.Error("SetMailBoxSettings failed", ex);
 
                 return false;
             }
@@ -233,17 +231,17 @@ namespace ASC.Mail.Core.Engine
 
         private ClientConfig GetStoredMailBoxSettings(string host)
         {
-            var domain = MailDaoFactory.GetMailboxDomainDao().GetDomain(host);
+            var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
 
             if (domain == null)
                 return null;
 
-            var provider = MailDaoFactory.GetMailboxProviderDao().GetProvider(domain.ProviderId);
+            var provider = _mailDaoFactory.GetMailboxProviderDao().GetProvider(domain.ProviderId);
 
             if (provider == null)
                 return null;
 
-            var existingServers = MailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
+            var existingServers = _mailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
 
             if (!existingServers.Any())
                 return null;
@@ -325,7 +323,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error("SearchBusinessVendorsSettings failed", ex);
+                _log.Error("SearchBusinessVendorsSettings failed", ex);
             }
 
             return settingsFromDb;

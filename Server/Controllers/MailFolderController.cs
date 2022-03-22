@@ -27,10 +27,10 @@ namespace ASC.Mail.Controllers
         [Read(@"folders")]
         public IEnumerable<MailFolderData> GetFolders()
         {
-            if (!MailSettings.Defines.IsSignalRAvailable)
-                AccountEngine.SetAccountsActivity();
+            if (!_mailSettings.Defines.IsSignalRAvailable)
+                _accountEngine.SetAccountsActivity();
 
-            return FolderEngine.GetFolders()
+            return _folderEngine.GetFolders()
                                  .Where(f => f.id != FolderType.Sending)
                                  .ToList()
                                  .ToFolderData();
@@ -49,7 +49,7 @@ namespace ASC.Mail.Controllers
 
             if (folderType == FolderType.Trash || folderType == FolderType.Spam)
             {
-                MessageEngine.SetRemoved(folderType);
+                _messageEngine.SetRemoved(folderType);
             }
 
             return folderid;
@@ -66,7 +66,7 @@ namespace ASC.Mail.Controllers
         [Read(@"folders/recalculate")]
         public MailOperationStatus RecalculateFolders()
         {
-            OperationEngine.RecalculateFolders(TranslateMailOperationStatus);
+            _operationEngine.RecalculateFolders(TranslateMailOperationStatus);
             throw new NotImplementedException();
         }
 
@@ -81,7 +81,7 @@ namespace ASC.Mail.Controllers
         [Read(@"userfolders")]
         public IEnumerable<MailUserFolderData> GetUserFolders(List<int> ids, int? parentId)
         {
-            var list = UserFolderEngine.GetList(ids, parentId);
+            var list = _userFolderEngine.GetList(ids, parentId);
             return list;
         }
 
@@ -102,7 +102,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var userFolder = UserFolderEngine.Create(name, parentId);
+                var userFolder = _userFolderEngine.Create(name, parentId);
                 return userFolder;
             }
             catch (AlreadyExistsFolderException)
@@ -138,7 +138,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var userFolder = UserFolderEngine.Update(id, name, parentId);
+                var userFolder = _userFolderEngine.Update(id, name, parentId);
                 return userFolder;
             }
             catch (AlreadyExistsFolderException)
@@ -172,7 +172,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                return OperationEngine.RemoveUserFolder(id, TranslateMailOperationStatus);
+                return _operationEngine.RemoveUserFolder(id, TranslateMailOperationStatus);
             }
             catch (Exception)
             {
@@ -190,7 +190,7 @@ namespace ASC.Mail.Controllers
         [Read(@"userfolders/bymail")]
         public MailUserFolderData GetUserFolderByMailId(uint mailId)
         {
-            var folder = UserFolderEngine.GetByMail(mailId);
+            var folder = _userFolderEngine.GetByMail(mailId);
             return folder;
         }
     }

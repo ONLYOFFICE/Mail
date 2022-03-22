@@ -55,42 +55,42 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class MailGarbageEngine : BaseEngine, IDisposable
     {
-        private static MemoryCache TenantMemCache { get; set; }
-        private static TaskFactory TaskFactory { get; set; }
-        private static object Locker { get; set; }
-        private ILog Log { get; }
-        private IServiceProvider ServiceProvider { get; set; }
+        private static MemoryCache _tenantMemCache;
+        private static TaskFactory _taskFactory;
+        private static object _locker;
+        private readonly ILog _log;
+        private readonly IServiceProvider _serviceProvider;
 
         public MailGarbageEngine(
             MailSettings mailSettings,
             IOptionsMonitor<ILog> option,
             IServiceProvider serviceProvider) : base(mailSettings)
         {
-            ServiceProvider = serviceProvider;
+            _serviceProvider = serviceProvider;
 
-            Log = option.Get("ASC.Mail.GarbageEngine");
+            _log = option.Get("ASC.Mail.GarbageEngine");
 
-            TenantMemCache = new MemoryCache("GarbageEraserTenantCache");
+            _tenantMemCache = new MemoryCache("GarbageEraserTenantCache");
 
             var scheduler = new ConcurrentExclusiveSchedulerPair(TaskScheduler.Default, MailSettings.Aggregator.MaxTasksAtOnce).ConcurrentScheduler;
 
-            TaskFactory = new TaskFactory(scheduler);
+            _taskFactory = new TaskFactory(scheduler);
 
-            Locker = new object();
+            _locker = new object();
         }
 
         #region - Public methods -
 
         public void ClearMailGarbage(CancellationToken cancelToken)
         {
-            Log.Debug("Begin ClearMailGarbage()");
+            _log.Debug("Begin ClearMailGarbage()");
 
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
             var tasks = new List<Task>();
 
-            var mailboxIterator = new MailboxIterator(mailboxEngine, isRemoved: null, log: Log);
+            var mailboxIterator = new MailboxIterator(mailboxEngine, isRemoved: null, log: _log);
 
             var mailbox = mailboxIterator.First();
 
@@ -113,7 +113,7 @@ namespace ASC.Mail.Core.Engine
 
                     if (tasks.Count == MailSettings.Cleaner.MaxTasksAtOnce)
                     {
-                        Log.Info("Wait all tasks to complete");
+                        _log.Info("Wait all tasks to complete");
 
                         Task.WaitAll(tasks.ToArray());
 
@@ -122,7 +122,7 @@ namespace ASC.Mail.Core.Engine
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(ex.ToString());
+                    _log.Error(ex.ToString());
                 }
 
                 if (!cancelToken.IsCancellationRequested)
@@ -131,22 +131,22 @@ namespace ASC.Mail.Core.Engine
                     continue;
                 }
 
-                Log.Debug("ClearMailGarbage: IsCancellationRequested. Quit.");
+                _log.Debug("ClearMailGarbage: IsCancellationRequested. Quit.");
                 break;
             }
 
             RemoveUselessMsDomains();
 
-            Log.Debug("End ClearMailGarbage()\r\n");
+            _log.Debug("End ClearMailGarbage()\r\n");
         }
 
         public void RemoveUselessMsDomains()
         {
-            Log.Debug("Start RemoveUselessMsDomains()\r\n");
+            _log.Debug("Start RemoveUselessMsDomains()\r\n");
 
             try
             {
-                using var scope = ServiceProvider.CreateScope();
+                using var scope = _serviceProvider.CreateScope();
 
                 var serverDomainEngine = scope.ServiceProvider.GetService<ServerDomainEngine>();
                 var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
@@ -169,13 +169,13 @@ namespace ASC.Mail.Core.Engine
 
                     if (mailboxes.Any())
                     {
-                        Log.WarnFormat("Domain's '{0}' Tenant={1} is removed, but it has unremoved server mailboxes (count={2}). Skip it.",
+                        _log.WarnFormat("Domain's '{0}' Tenant={1} is removed, but it has unremoved server mailboxes (count={2}). Skip it.",
                             domain.Name, domain.Tenant, mailboxes.Count);
 
                         continue;
                     }
 
-                    Log.InfoFormat("Domain's '{0}' Tenant = {1} is removed. Lets remove domain.", domain.Name, domain.Tenant);
+                    _log.InfoFormat("Domain's '{0}' Tenant = {1} is removed. Lets remove domain.", domain.Name, domain.Tenant);
 
                     var count = domains.Count(d => d.Name.Equals(domain.Name, StringComparison.InvariantCultureIgnoreCase));
 
@@ -183,7 +183,7 @@ namespace ASC.Mail.Core.Engine
 
                     if (skipMS)
                     {
-                        Log.InfoFormat("Domain's '{0}' has duplicated entry for another tenant. Remove only current entry.", domain.Name);
+                        _log.InfoFormat("Domain's '{0}' has duplicated entry for another tenant. Remove only current entry.", domain.Name);
                     }
 
                     RemoveDomain(domain, skipMS);
@@ -192,15 +192,15 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error(string.Format("RemoveUselessMsDomains failed. Exception: {0}", ex.ToString()));
+                _log.Error(string.Format("RemoveUselessMsDomains failed. Exception: {0}", ex.ToString()));
             }
 
-            Log.Debug("End RemoveUselessMsDomains()\r\n");
+            _log.Debug("End RemoveUselessMsDomains()\r\n");
         }
 
         public TenantStatus GetTenantStatus(int tenant)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             try
@@ -213,7 +213,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error($"GetTenantStatus(tenant='{tenant}') failed. Exception: {ex}");
+                _log.Error($"GetTenantStatus(tenant='{tenant}') failed. Exception: {ex}");
             }
 
             return TenantStatus.Active;
@@ -221,11 +221,11 @@ namespace ASC.Mail.Core.Engine
 
         public void RemoveDomain(Entities.ServerDomain domain, bool skipMS = false)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             tenantManager.SetCurrentTenant(domain.Tenant);
-            Log.Debug($"RemoveDomain. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+            _log.Debug($"RemoveDomain. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
             var daoFactory = scope.ServiceProvider.GetService<MailDaoFactory>();
             var context = daoFactory.GetContext();
@@ -236,13 +236,13 @@ namespace ASC.Mail.Core.Engine
                 {
                     var serverEngine = scope.ServiceProvider.GetService<Server.Core.ServerEngine>();
 
-                    Log.Debug($"MailGarbageEngine -> RemoveDomain: 1) Delete domain by id {domain.Id}...");
+                    _log.Debug($"MailGarbageEngine -> RemoveDomain: 1) Delete domain by id {domain.Id}...");
 
                     daoFactory.GetServerDomainDao().Delete(domain.Id);
 
                     if (!skipMS)
                     {
-                        Log.Debug($"MailGarbageEngine -> RemoveDomain: 2) Try get server by tenant {domain.Tenant}...");
+                        _log.Debug($"MailGarbageEngine -> RemoveDomain: 2) Try get server by tenant {domain.Tenant}...");
 
                         var server = daoFactory.GetServerDao().Get(domain.Tenant);
 
@@ -251,7 +251,7 @@ namespace ASC.Mail.Core.Engine
 
                         serverEngine.InitServer(server.Id, server.ConnectionString);
 
-                        Log.Debug($"MailGarbageEngine -> RemoveDomain: 3) Successfull init server. " +
+                        _log.Debug($"MailGarbageEngine -> RemoveDomain: 3) Successfull init server. " +
                             $"\nServer Api | " +
                             $"\nPort: {serverEngine.ServerApi.port} " +
                             $"\nProtocol: {serverEngine.ServerApi.protocol}" +
@@ -267,23 +267,23 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error(string.Format("RemoveDomainIfUseless(Domain: '{0}', ID='{1}') failed. Exception: {2}", domain.Name, domain.Id, ex.ToString()));
+                _log.Error(string.Format("RemoveDomainIfUseless(Domain: '{0}', ID='{1}') failed. Exception: {2}", domain.Name, domain.Id, ex.ToString()));
             }
         }
 
         public void ClearUserMail(Guid userId, Tenant tenantId = null)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             var tenant = tenantId != null ? tenantId.TenantId : tenantManager.GetCurrentTenant().TenantId;
 
-            Log.InfoFormat("ClearUserMail(userId: '{0}' tenant: {1})", userId, tenant);
+            _log.InfoFormat("ClearUserMail(userId: '{0}' tenant: {1})", userId, tenant);
 
             var user = userId.ToString();
 
-            RemoveUserFolders(Log);
+            RemoveUserFolders(_log);
 
             //RemoveUserMailboxes(tenant, user, Log);
 
@@ -304,13 +304,13 @@ namespace ASC.Mail.Core.Engine
 
         private Task Queue(Action action, CancellationToken cancelToken)
         {
-            var task = TaskFactory.StartNew(action, cancelToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+            var task = _taskFactory.StartNew(action, cancelToken, TaskCreationOptions.LongRunning, TaskScheduler.Current);
 
             task.ConfigureAwait(false)
                 .GetAwaiter()
                 .OnCompleted(() =>
                 {
-                    Log.Debug($"End Task {task.Id} with status = '{task.Status}'.");
+                    _log.Debug($"End Task {task.Id} with status = '{task.Status}'.");
                 });
 
             return task;
@@ -320,9 +320,9 @@ namespace ASC.Mail.Core.Engine
         {
             var needRemove = false;
 
-            lock (Locker)
+            lock (_locker)
             {
-                using var scope = ServiceProvider.CreateScope();
+                using var scope = _serviceProvider.CreateScope();
 
                 var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
                 var userManager = scope.ServiceProvider.GetService<UserManager>();
@@ -331,7 +331,7 @@ namespace ASC.Mail.Core.Engine
 
                 DefineConstants.TariffType type;
 
-                var memTenantItem = TenantMemCache.Get(mailbox.TenantId.ToString(CultureInfo.InvariantCulture));
+                var memTenantItem = _tenantMemCache.Get(mailbox.TenantId.ToString(CultureInfo.InvariantCulture));
 
                 if (memTenantItem == null)
                 {
@@ -339,7 +339,7 @@ namespace ASC.Mail.Core.Engine
 
                     taskLog.Debug($"GetTenantStatus(OverdueDays={MailSettings.Cleaner.TenantOverdueDays})");
 
-                    type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, Log);
+                    type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, _log);
 
                     var cacheItem = new CacheItem(mailbox.TenantId.ToString(CultureInfo.InvariantCulture), type);
 
@@ -349,7 +349,7 @@ namespace ASC.Mail.Core.Engine
                             DateTimeOffset.UtcNow.AddDays((int)MailSettings.Cleaner.TenantCacheDays)
                     };
 
-                    TenantMemCache.Add(cacheItem, cacheItemPolicy);
+                    _tenantMemCache.Add(cacheItem, cacheItemPolicy);
                 }
                 else
                 {
@@ -384,31 +384,31 @@ namespace ASC.Mail.Core.Engine
 
         private void ClearGarbage(MailBoxData mailbox)
         {
-            Log.InfoFormat("Processing MailboxId = {0}, email = '{1}', tenant = '{2}', user = '{3}'",
+            _log.InfoFormat("Processing MailboxId = {0}, email = '{1}', tenant = '{2}', user = '{3}'",
                 mailbox.MailBoxId, mailbox.EMail.Address, mailbox.TenantId, mailbox.UserId);
 
             try
             {
-                if (NeedRemove(mailbox, Log))
+                if (NeedRemove(mailbox, _log))
                 {
-                    Log.Debug($"Mailbox {mailbox.MailBoxId} need remove. Removal started...");
-                    RemoveMailboxData(mailbox, true, Log);
+                    _log.Debug($"Mailbox {mailbox.MailBoxId} need remove. Removal started...");
+                    RemoveMailboxData(mailbox, true, _log);
                 }
                 else if (mailbox.IsRemoved)
                 {
-                    Log.Info($"Mailbox {mailbox.MailBoxId} has been marked for deletion. Removal started...");
-                    RemoveMailboxData(mailbox, false, Log);
+                    _log.Info($"Mailbox {mailbox.MailBoxId} has been marked for deletion. Removal started...");
+                    RemoveMailboxData(mailbox, false, _log);
                 }
                 else
                 {
-                    RemoveGarbageMailData(mailbox, (int)MailSettings.Cleaner.GarbageOverdueDays, Log);
+                    RemoveGarbageMailData(mailbox, (int)MailSettings.Cleaner.GarbageOverdueDays, _log);
                 }
 
-                Log.InfoFormat("Mailbox {0} processing complete.", mailbox.MailBoxId);
+                _log.InfoFormat("Mailbox {0} processing complete.", mailbox.MailBoxId);
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("Mailbox {0} processed with error : {1}", mailbox.MailBoxId, ex.ToString());
+                _log.ErrorFormat("Mailbox {0} processed with error : {1}", mailbox.MailBoxId, ex.ToString());
             }
         }
 
@@ -418,7 +418,7 @@ namespace ASC.Mail.Core.Engine
 
             try
             {
-                using var scope = ServiceProvider.CreateScope();
+                using var scope = _serviceProvider.CreateScope();
 
                 var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
@@ -640,7 +640,7 @@ namespace ASC.Mail.Core.Engine
         {
             log.Debug($"MailDataStore.GetDataStore(Tenant = {tenant})");
 
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
 
@@ -677,7 +677,7 @@ namespace ASC.Mail.Core.Engine
             if (!mailbox.IsTeamlab)
                 return;
 
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var serverMailboxEngine = scope.ServiceProvider.GetService<ServerMailboxEngine>();
 
@@ -694,7 +694,7 @@ namespace ASC.Mail.Core.Engine
 
         private void RemoveUserFolders(ILog log)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var userFolderEngine = scope.ServiceProvider.GetService<UserFolderEngine>();
             var operationEngine = scope.ServiceProvider.GetService<OperationEngine>();
@@ -716,7 +716,7 @@ namespace ASC.Mail.Core.Engine
 
         private void RemoveUserMailboxes(int tenant, string user, ILog log)
         {
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
@@ -756,9 +756,9 @@ namespace ASC.Mail.Core.Engine
 
         public void Dispose()
         {
-            if (TenantMemCache != null)
+            if (_tenantMemCache != null)
             {
-                TenantMemCache.Dispose();
+                _tenantMemCache.Dispose();
             }
         }
     }

@@ -46,19 +46,18 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class AutoreplyEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private ServerEngine ServerEngine { get; }
-        private CacheEngine CacheEngine { get; }
-        private ApiHelper ApiHelper { get; }
-        private StorageManager StorageManager { get; }
-
-        public int AutoreplyDaysInterval { get; set; }
-        private MailSettings MailSettings { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly ServerEngine _serverEngine;
+        private readonly CacheEngine _cacheEngine;
+        private readonly ApiHelper _apiHelper;
+        private readonly StorageManager _storageManager;
+        private readonly MailSettings _mailSettings;
+        private readonly int _autoreplyDaysInterval;
 
         public AutoreplyEngine(
             SecurityContext securityContext,
@@ -70,16 +69,16 @@ namespace ASC.Mail.Core.Engine
             StorageManager storageManager,
             MailSettings mailSettings)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            MailDaoFactory = mailDaoFactory;
-            ServerEngine = serverEngine;
-            CacheEngine = cacheEngine;
-            ApiHelper = apiHelper;
-            StorageManager = storageManager;
-            MailSettings = mailSettings;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _mailDaoFactory = mailDaoFactory;
+            _serverEngine = serverEngine;
+            _cacheEngine = cacheEngine;
+            _apiHelper = apiHelper;
+            _storageManager = storageManager;
+            _mailSettings = mailSettings;
 
-            AutoreplyDaysInterval = MailSettings.Defines.AutoreplyDaysInterval;
+            _autoreplyDaysInterval = _mailSettings.Defines.AutoreplyDaysInterval;
         }
 
         public MailAutoreplyData SaveAutoreply(int mailboxId, bool turnOn, bool onlyContacts,
@@ -97,7 +96,7 @@ namespace ASC.Mail.Core.Engine
             if (string.IsNullOrEmpty(html))
                 throw new ArgumentException(@"Invalid parameter", "html");
 
-            html = StorageManager.ChangeEditorImagesLinks(html, mailboxId);
+            html = _storageManager.ChangeEditorImagesLinks(html, mailboxId);
 
             var autoreply = new MailboxAutoreply
             {
@@ -112,18 +111,18 @@ namespace ASC.Mail.Core.Engine
                 TurnOn = turnOn
             };
 
-            if (!MailDaoFactory.GetMailboxDao().CanAccessTo(
+            if (!_mailDaoFactory.GetMailboxDao().CanAccessTo(
                 new СoncreteUserMailboxExp(mailboxId, Tenant, UserId)))
             {
                 throw new AccessViolationException("Mailbox is not owned by user.");
             }
 
-            var result = MailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
+            var result = _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
 
             if (result <= 0)
                 throw new InvalidOperationException();
 
-            CacheEngine.Clear(UserId);
+            _cacheEngine.Clear(UserId);
 
             var resp = new MailAutoreplyData(autoreply.MailboxId, autoreply.Tenant, autoreply.TurnOn, autoreply.OnlyContacts,
                 autoreply.TurnOnToDate, autoreply.FromDate, autoreply.ToDate, autoreply.Subject, autoreply.Html);
@@ -148,12 +147,12 @@ namespace ASC.Mail.Core.Engine
                 TurnOn = account.MailAutoreply.TurnOn
             };
 
-            var result = MailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
+            var result = _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
 
             if (result <= 0)
                 throw new InvalidOperationException();
 
-            result = MailDaoFactory.GetMailboxAutoreplyHistoryDao().DeleteAutoreplyHistory(account.MailBoxId);
+            result = _mailDaoFactory.GetMailboxAutoreplyHistoryDao().DeleteAutoreplyHistory(account.MailBoxId);
 
             if (result <= 0)
                 throw new InvalidOperationException();
@@ -227,13 +226,13 @@ namespace ASC.Mail.Core.Engine
                     return;
                 }
 
-                if (account.MailAutoreply.OnlyContacts && !ApiHelper.SearchEmails(message.FromEmail).Any())
+                if (account.MailAutoreply.OnlyContacts && !_apiHelper.SearchEmails(message.FromEmail).Any())
                 {
                     log.Info("Skip MailAutoreply: message From address is not a part of user's contacts");
                     return;
                 }
 
-                ApiHelper.SendMessage(CreateAutoreply(account, message, autoreplyEmail), true);
+                _apiHelper.SendMessage(CreateAutoreply(account, message, autoreplyEmail), true);
                 account.MailAutoreplyHistory.Add(message.FromEmail);
 
                 log.InfoFormat("AutoreplyEngine->SendAutoreply: auto-reply message has been sent to '{0}' email", autoreplyEmail);
@@ -258,7 +257,7 @@ namespace ASC.Mail.Core.Engine
                 Tenant = account.TenantId
             };
 
-            MailDaoFactory.GetMailboxAutoreplyHistoryDao().SaveAutoreplyHistory(autoReplyHistory);
+            _mailDaoFactory.GetMailboxAutoreplyHistoryDao().SaveAutoreplyHistory(autoReplyHistory);
         }
 
         #region .Private
@@ -279,7 +278,7 @@ namespace ASC.Mail.Core.Engine
 
             if (account.MailSignature == null)
             {
-                var signature = MailDaoFactory.GetMailboxSignatureDao().GetSignature(account.MailBoxId);
+                var signature = _mailDaoFactory.GetMailboxSignatureDao().GetSignature(account.MailBoxId);
 
                 if (signature != null)
                 {
@@ -312,8 +311,8 @@ namespace ASC.Mail.Core.Engine
             if (account.MailAutoreplyHistory.Contains(email))
                 return true;
 
-            var emails = MailDaoFactory.GetMailboxAutoreplyHistoryDao()
-                .GetAutoreplyHistorySentEmails(account.MailBoxId, email, AutoreplyDaysInterval);
+            var emails = _mailDaoFactory.GetMailboxAutoreplyHistoryDao()
+                .GetAutoreplyHistorySentEmails(account.MailBoxId, email, _autoreplyDaysInterval);
 
             if (!emails.Any())
                 return false;
@@ -330,7 +329,7 @@ namespace ASC.Mail.Core.Engine
 
             if (account.Groups == null)
             {
-                account.Groups = ServerEngine.GetGroups(account.MailBoxId);
+                account.Groups = _serverEngine.GetGroups(account.MailBoxId);
             }
 
             foreach (var group in account.Groups)
@@ -373,7 +372,7 @@ namespace ASC.Mail.Core.Engine
 
             if (account.Aliases == null)
             {
-                account.Aliases = ServerEngine.GetAliases(account.MailBoxId);
+                account.Aliases = _serverEngine.GetAliases(account.MailBoxId);
             }
 
             var result = (from address in list
@@ -395,7 +394,7 @@ namespace ASC.Mail.Core.Engine
 
             if (account.Aliases == null)
             {
-                account.Aliases = ServerEngine.GetAliases(account.MailBoxId);
+                account.Aliases = _serverEngine.GetAliases(account.MailBoxId);
             }
 
             return

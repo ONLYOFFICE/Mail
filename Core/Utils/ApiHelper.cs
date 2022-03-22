@@ -40,7 +40,6 @@ using ASC.Web.Core;
 using DotNetOpenAuth.Messaging;
 
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 using Newtonsoft.Json;
@@ -64,25 +63,20 @@ namespace ASC.Mail.Utils
     {
         private const int MAIL_CRM_HISTORY_CATEGORY = -3;
         private const string ERR_MESSAGE = "Error retrieving response. Check inner details for more info.";
-        //private Cookie _cookie;
 
-        private IConfiguration Configuration { get; }
-        private ILog Log { get; set; }
+        private UriBuilder _baseUrl;
+        private string _token;
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private CoreSettings CoreSettings { get; }
-        private ApiDateTimeHelper ApiDateTimeHelper { get; }
-        private string Scheme { get; }
-        private MailSettings MailSettings { get; }
+        private readonly ILog _log;
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly CoreSettings _coreSettings;
+        private readonly ApiDateTimeHelper _apiDateTimeHelper;
+        private readonly string _scheme;
+        private readonly MailSettings _mailSettings;
+        private readonly HttpContext _httpContext;
 
-        protected UriBuilder BaseUrl { get; private set; }
-
-        private HttpContext HttpContext { get; set; }
-
-        private Tenant Tenant => TenantManager.GetCurrentTenant(HttpContext);
-
-        public string Token { get; set; }
+        private Tenant Tenant => _tenantManager.GetCurrentTenant(_httpContext);
 
         /// <summary>
         /// Constructor of class ApiHelper
@@ -95,13 +89,12 @@ namespace ASC.Mail.Utils
             CoreSettings coreSettings,
             ApiDateTimeHelper apiDateTimeHelper,
             MailSettings mailSettings,
-            IConfiguration configuration,
             IOptionsMonitor<ILog> option)
-            : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, configuration, option)
+            : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, option)
         {
             if (httpContextAccessor != null || httpContextAccessor.HttpContext != null)
             {
-                HttpContext = httpContextAccessor.HttpContext;
+                _httpContext = httpContextAccessor.HttpContext;
             }
         }
 
@@ -111,22 +104,20 @@ namespace ASC.Mail.Utils
             CoreSettings coreSettings,
             ApiDateTimeHelper apiDateTimeHelper,
             MailSettings mailSettings,
-            IConfiguration configuration,
             IOptionsMonitor<ILog> option)
         {
-            MailSettings = mailSettings;
-            Configuration = configuration;
-            Log = option.Get("ASC.Mail.ApiHelper");
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            CoreSettings = coreSettings;
-            ApiDateTimeHelper = apiDateTimeHelper;
-            Scheme = mailSettings.Defines.DefaultApiSchema ?? Uri.UriSchemeHttp;
+            _mailSettings = mailSettings;
+            _log = option.Get("ASC.Mail.ApiHelper");
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _coreSettings = coreSettings;
+            _apiDateTimeHelper = apiDateTimeHelper;
+            _scheme = mailSettings.Defines.DefaultApiSchema ?? Uri.UriSchemeHttp;
 
-            if (!Scheme.Equals(Uri.UriSchemeHttps) && !Scheme.Equals(Uri.UriSchemeHttp))
+            if (!_scheme.Equals(Uri.UriSchemeHttps) && !_scheme.Equals(Uri.UriSchemeHttp))
                 throw new ApiHelperException("ApiHelper: url scheme not setup", HttpStatusCode.InternalServerError, "");
 
-            if (!Scheme.Equals(Uri.UriSchemeHttps) || !MailSettings.Defines.SslCertificatesErrorsPermit)
+            if (!_scheme.Equals(Uri.UriSchemeHttps) || !_mailSettings.Defines.SslCertificatesErrorsPermit)
                 return;
 
             ServicePointManager.ServerCertificateValidationCallback =
@@ -135,56 +126,56 @@ namespace ASC.Mail.Utils
 
         private void Setup()
         {
-            var user = SecurityContext.CurrentAccount;
+            var user = _securityContext.CurrentAccount;
 
-            var httpCon = HttpContext != null
+            var httpCon = _httpContext != null
                           ? string.Format("not null and UrlRewriter = {0}, RequestUrl = {1}",
-                            HttpContext.Request.GetUrlRewriter().ToString(),
-                            HttpContext.Request.Url().ToString())
+                            _httpContext.Request.GetUrlRewriter().ToString(),
+                            _httpContext.Request.Url().ToString())
                           : "null";
 
-            Log.Debug($"ApiHelper->Setup: Tenant={Tenant.TenantId} User='{user.ID}' IsAuthenticated={user.IsAuthenticated} Scheme='{Scheme}' HttpContext is {httpCon}");
+            _log.Debug($"ApiHelper->Setup: Tenant={Tenant.TenantId} User='{user.ID}' IsAuthenticated={user.IsAuthenticated} Scheme='{_scheme}' HttpContext is {httpCon}");
 
             if (!user.IsAuthenticated)
                 throw new AuthenticationException("User not authenticated");
 
-            var tempUrl = MailSettings.Aggregator.ApiPrefix;
+            var tempUrl = _mailSettings.Aggregator.ApiPrefix;
 
             var ubBase = new UriBuilder
             {
-                Scheme = Scheme,
-                Host = Tenant.GetTenantDomain(CoreSettings, false)
+                Scheme = _scheme,
+                Host = Tenant.GetTenantDomain(_coreSettings, false)
             };
 
-            if (!string.IsNullOrEmpty(MailSettings.Aggregator.ApiVirtualDirPrefix))
-                tempUrl = string.Format("{0}/{1}", MailSettings.Aggregator.ApiVirtualDirPrefix.Trim('/'), tempUrl);
+            if (!string.IsNullOrEmpty(_mailSettings.Aggregator.ApiVirtualDirPrefix))
+                tempUrl = string.Format("{0}/{1}", _mailSettings.Aggregator.ApiVirtualDirPrefix.Trim('/'), tempUrl);
 
-            if (!string.IsNullOrEmpty(MailSettings.Aggregator.ApiHost))
-                ubBase.Host = MailSettings.Aggregator.ApiHost;
+            if (!string.IsNullOrEmpty(_mailSettings.Aggregator.ApiHost))
+                ubBase.Host = _mailSettings.Aggregator.ApiHost;
 
-            if (!string.IsNullOrEmpty(MailSettings.Aggregator.ApiPort))
-                ubBase.Port = int.Parse(MailSettings.Aggregator.ApiPort);
+            if (!string.IsNullOrEmpty(_mailSettings.Aggregator.ApiPort))
+                ubBase.Port = int.Parse(_mailSettings.Aggregator.ApiPort);
 
             ubBase.Path = tempUrl;
 
-            BaseUrl = ubBase;
+            _baseUrl = ubBase;
 
-            Token = SecurityContext.AuthenticateMe(SecurityContext.CurrentAccount.ID);
+            _token = _securityContext.AuthenticateMe(_securityContext.CurrentAccount.ID);
 
-            var tokenIsEmpty = !string.IsNullOrEmpty(Token) ? "not empty" : "empty";
+            var tokenIsEmpty = !string.IsNullOrEmpty(_token) ? "not empty" : "empty";
 
-            Log.Debug($"ApiHelper->Setup: Token is {tokenIsEmpty}");
+            _log.Debug($"ApiHelper->Setup: Token is {tokenIsEmpty}");
         }
 
         public IRestResponse Execute(RestRequest request)
         {
             Setup();
 
-            Log.Debug($"ApiHelper->Execute: request url: {BaseUrl.Uri}/{request.Resource}");
+            _log.Debug($"ApiHelper->Execute: request url: {_baseUrl.Uri}/{request.Resource}");
 
-            var client = new RestClient { BaseUrl = BaseUrl.Uri };
+            var client = new RestClient { BaseUrl = _baseUrl.Uri };
 
-            request.AddHeader("Authorization", Token);
+            request.AddHeader("Authorization", _token);
 
             var response = client.ExecuteSafe(request);
 
@@ -201,11 +192,11 @@ namespace ASC.Mail.Utils
         {
             Setup();
 
-            log.Debug($"ApiHelper -> Execute: request url: {BaseUrl.Uri}/{request.Resource}");
+            log.Debug($"ApiHelper -> Execute: request url: {_baseUrl.Uri}/{request.Resource}");
 
-            var client = new RestClient { BaseUrl = BaseUrl.Uri };
+            var client = new RestClient { BaseUrl = _baseUrl.Uri };
 
-            request.AddHeader("Authorization", Token);
+            request.AddHeader("Authorization", _token);
 
             var response = client.ExecuteSafe(request);
 
@@ -476,7 +467,7 @@ namespace ASC.Mail.Utils
 
             request.AddParameter("content", contentJson)
                    .AddParameter("categoryId", MAIL_CRM_HISTORY_CATEGORY)
-                   .AddParameter("created", ApiDateTimeHelper.Get(message.Date));
+                   .AddParameter("created", _apiDateTimeHelper.Get(message.Date));
 
             var crmEntityType = entity.EntityTypeName;
 
@@ -622,7 +613,7 @@ namespace ASC.Mail.Utils
 
             if (!int.TryParse(json["response"].ToString(), out count))
             {
-                Log.WarnFormat("Upload ics-file to calendar failed. No count number.", BaseUrl.ToString(), response.StatusCode, response.Content);
+                _log.WarnFormat("Upload ics-file to calendar failed. No count number.", _baseUrl.ToString(), response.StatusCode, response.Content);
             }
         }
 
@@ -647,7 +638,7 @@ namespace ASC.Mail.Utils
 
             var json = JObject.Parse(response.Content);
 
-            Log.Debug(json["response"].ToString());
+            _log.Debug(json["response"].ToString());
 
             var userInfo = new UserInfo
             {

@@ -51,9 +51,9 @@ namespace ASC.Mail.Core.Engine.Operations
 {
     public class MailDownloadAllAttachmentsOperation : MailOperation
     {
-        private MessageEngine MessageEngine { get; }
-        private TempStream TempStream { get; }
-        public int MessageId { get; set; }
+        private readonly MessageEngine _messageEngine;
+        private readonly TempStream _tempStream;
+        private readonly int _messageId;
 
         public ILog Log { get; set; }
 
@@ -75,9 +75,9 @@ namespace ASC.Mail.Core.Engine.Operations
             int messageId)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
         {
-            MessageEngine = messageEngine;
-            MessageId = messageId;
-            TempStream = tempStream;
+            _messageEngine = messageEngine;
+            _messageId = messageId;
+            _tempStream = tempStream;
         }
 
         protected override void Do()
@@ -95,13 +95,13 @@ namespace ASC.Mail.Core.Engine.Operations
                 catch
                 {
                     Error = "Error";//Resource.SsoSettingsNotValidToken;
-                    Logger.Error(Error);
+                    base.Logger.Error(Error);
                 }
 
                 SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.GetAttachments);
 
                 var attachments =
-                    MessageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(MessageId,
+                    _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
                         CurrentTenant.TenantId, CurrentUser.ID.ToString()));
 
                 if (!attachments.Any())
@@ -117,7 +117,7 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
 
-                using (var stream = TempStream.Create())
+                using (var stream = _tempStream.Create())
                 {
                     using (var zip = new ZipOutputStream(stream))
                     {
@@ -143,7 +143,7 @@ namespace ASC.Mail.Core.Engine.Operations
                             }
                             catch (Exception ex)
                             {
-                                Logger.Error(ex);
+                                base.Logger.Error(ex);
 
                                 Error = string.Format(MailCoreResource.FileNotFoundOrDamaged, attachment.fileName);
 
@@ -194,7 +194,7 @@ namespace ASC.Mail.Core.Engine.Operations
             }
             catch (Exception ex)
             {
-                Logger.ErrorFormat("Mail operation error -> Download all attachments: {0}", ex.ToString());
+                base.Logger.ErrorFormat("Mail operation error -> Download all attachments: {0}", ex.ToString());
                 Error = string.IsNullOrEmpty(Error)
                     ? "InternalServerError"
                     : Error;

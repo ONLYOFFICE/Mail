@@ -8,21 +8,22 @@ public class AggregatorService
     private const string S_OK = "success";
     private const int SIGNALR_WAIT_SECONDS = 30;
 
-    private readonly TimeSpan TaskStateCheck;
-    private readonly TimeSpan TaskSecondsLifetime;
+    private readonly TimeSpan _taskStateCheck;
+    private readonly TimeSpan _taskSecondsLifetime;
 
-    private bool IsFirstTime = true;
-    private Timer AggregatorTimer;
+    private bool _isFirstTime = true;
+    private Timer _aggregatorTimer;
 
-    private ILog Log { get; }
-    internal static ILog LogStat { get; private set; }
-    private List<ServerFolderAccessInfo> ServerFolderAccessInfo { get; }
-    private IOptionsMonitor<ILog> LogOptions { get; }
-    private MailSettings Settings { get; }
-    private ConsoleParameters ConsoleParameters { get; }
-    private IServiceProvider ServiceProvider { get; }
-    private QueueManager QueueManager { get; }
+    private readonly ILog _log;
+    private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfo;
+    private readonly IOptionsMonitor<ILog> _logOptions;
+    private readonly MailSettings _settings;
+    private readonly ConsoleParameters _consoleParameters;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly QueueManager _queueManager;
+
     internal static SocketIoNotifier SignalrWorker { get; private set; }
+    private static ILog _logStat;
 
     public static ConcurrentDictionary<string, bool> UserCrmAvailabeDictionary { get; set; } = new ConcurrentDictionary<string, bool>();
     public static ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; } = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
@@ -43,38 +44,38 @@ public class AggregatorService
     {
         mailLogCongigure.Configure();
 
-        ServiceProvider = serviceProvider;
-        ConsoleParameters = consoleParser.GetParsedParameters();
-        QueueManager = queueManager;
+        _serviceProvider = serviceProvider;
+        _consoleParameters = consoleParser.GetParsedParameters();
+        _queueManager = queueManager;
 
-        LogOptions = optionsMonitor;
+        _logOptions = optionsMonitor;
 
-        Log = optionsMonitor.Get("ASC.Mail.MainThread");
-        LogStat = optionsMonitor.Get("ASC.Mail.Stat");
+        _log = optionsMonitor.Get("ASC.Mail.MainThread");
+        _logStat = optionsMonitor.Get("ASC.Mail.Stat");
 
-        Settings = mailSettings;
+        _settings = mailSettings;
 
-        Settings.DefaultFolders = mailQueueItemSettings.DefaultFolders;
-        Settings.ImapFlags = mailQueueItemSettings.ImapFlags;
-        Settings.SkipImapFlags = mailQueueItemSettings.SkipImapFlags;
-        Settings.SpecialDomainFolders = mailQueueItemSettings.SpecialDomainFolders;
+        _settings.DefaultFolders = mailQueueItemSettings.DefaultFolders;
+        _settings.ImapFlags = mailQueueItemSettings.ImapFlags;
+        _settings.SkipImapFlags = mailQueueItemSettings.SkipImapFlags;
+        _settings.SpecialDomainFolders = mailQueueItemSettings.SpecialDomainFolders;
 
-        TaskStateCheck = Settings.Aggregator.TaskCheckState;
+        _taskStateCheck = _settings.Aggregator.TaskCheckState;
 
-        if (ConsoleParameters.OnlyUsers != null) Settings.Defines.WorkOnUsersOnlyList.AddRange(ConsoleParameters.OnlyUsers.ToList());
+        if (_consoleParameters.OnlyUsers != null) _settings.Defines.WorkOnUsersOnlyList.AddRange(_consoleParameters.OnlyUsers.ToList());
 
-        if (ConsoleParameters.NoMessagesLimit) Settings.Aggregator.MaxMessagesPerSession = -1;
+        if (_consoleParameters.NoMessagesLimit) _settings.Aggregator.MaxMessagesPerSession = -1;
 
-        TaskSecondsLifetime = Settings.Aggregator.TaskLifetime;
+        _taskSecondsLifetime = _settings.Aggregator.TaskLifetime;
 
-        if (Settings.Aggregator.EnableSignalr)
+        if (_settings.Aggregator.EnableSignalr)
             SignalrWorker = signalrWorker;
 
-        ServerFolderAccessInfo = mailDaoFactory
+        _serverFolderAccessInfo = mailDaoFactory
                 .GetImapSpecialMailboxDao()
                 .GetServerFolderAccessInfoList();
 
-        Log.Info("Service is ready.");
+        _log.Info("Service is ready.");
     }
 
     #region methods
@@ -85,35 +86,35 @@ public class AggregatorService
 
         try
         {
-            if (IsFirstTime)
+            if (_isFirstTime)
             {
-                QueueManager.LoadMailboxesFromDump();
+                _queueManager.LoadMailboxesFromDump();
 
-                if (QueueManager.ProcessingCount > 0)
+                if (_queueManager.ProcessingCount > 0)
                 {
-                    Log.InfoFormat("Found {0} tasks to release", QueueManager.ProcessingCount);
+                    _log.InfoFormat("Found {0} tasks to release", _queueManager.ProcessingCount);
 
-                    QueueManager.ReleaseAllProcessingMailboxes(true);
+                    _queueManager.ReleaseAllProcessingMailboxes(true);
                 }
 
-                QueueManager.LoadTenantsFromDump();
+                _queueManager.LoadTenantsFromDump();
 
-                IsFirstTime = false;
+                _isFirstTime = false;
             }
 
             if (cancelToken.IsCancellationRequested)
             {
-                Log.Debug("Aggregator work: IsCancellationRequested. Quit.");
+                _log.Debug("Aggregator work: IsCancellationRequested. Quit.");
                 return;
             }
 
             StopTimer();
 
-            var tasks = CreateTasks(Settings.Aggregator.MaxTasksAtOnce, cancelToken);
+            var tasks = CreateTasks(_settings.Aggregator.MaxTasksAtOnce, cancelToken);
 
             while (tasks.Any())
             {
-                var indexTask = Task.WaitAny(tasks.Select(t => t.Task).ToArray(), (int)TaskStateCheck.TotalMilliseconds, cancelToken);
+                var indexTask = Task.WaitAny(tasks.Select(t => t.Task).ToArray(), (int)_taskStateCheck.TotalMilliseconds, cancelToken);
 
                 if (indexTask > -1)
                 {
@@ -122,7 +123,7 @@ public class AggregatorService
                 }
                 else
                 {
-                    Log.InfoFormat("Task.WaitAny timeout. Tasks count = {0}\r\nTasks:\r\n{1}", tasks.Count,
+                    _log.InfoFormat("Task.WaitAny timeout. Tasks count = {0}\r\nTasks:\r\n{1}", tasks.Count,
                         string.Join("\r\n", tasks.Select(t =>
                                     $"Id: {t.Task.Id} Status: {t.Task.Status}, MailboxId: {t.Mailbox.MailBoxId} Address: '{t.Mailbox.EMail}'")));
                 }
@@ -136,14 +137,14 @@ public class AggregatorService
 
                 if (tasks2Free.Any())
                 {
-                    Log.InfoFormat("Need free next tasks = {0}: ({1})", tasks2Free.Count,
+                    _log.InfoFormat("Need free next tasks = {0}: ({1})", tasks2Free.Count,
                               string.Join(",",
                                           tasks2Free.Select(t => t.Task.Id.ToString(CultureInfo.InvariantCulture))));
 
                     tasks2Free.ForEach(task => FreeTask(task, tasks));
                 }
 
-                var difference = Settings.Aggregator.MaxTasksAtOnce - tasks.Count;
+                var difference = _settings.Aggregator.MaxTasksAtOnce - tasks.Count;
 
                 if (difference <= 0) continue;
 
@@ -151,11 +152,11 @@ public class AggregatorService
 
                 tasks.AddRange(newTasks);
 
-                Log.InfoFormat("Total tasks count = {0} ({1}).", tasks.Count,
+                _log.InfoFormat("Total tasks count = {0} ({1}).", tasks.Count,
                           string.Join(",", tasks.Select(t => t.Task.Id)));
             }
 
-            Log.Info("All mailboxes were processed. Go back to timer.");
+            _log.Info("All mailboxes were processed. Go back to timer.");
         }
         catch (Exception ex) //Exceptions while boxes in process
         {
@@ -166,42 +167,42 @@ public class AggregatorService
 
             if (ex is TaskCanceledException || ex is OperationCanceledException)
             {
-                Log.Info("Execution was canceled.");
+                _log.Info("Execution was canceled.");
 
-                QueueManager.ReleaseAllProcessingMailboxes();
+                _queueManager.ReleaseAllProcessingMailboxes();
 
-                QueueManager.CancelHandler.Set();
+                _queueManager.CancelHandler.Set();
 
                 return;
             }
 
-            Log.ErrorFormat("Aggregator work exception:\r\n{0}\r\n", ex.ToString());
+            _log.ErrorFormat("Aggregator work exception:\r\n{0}\r\n", ex.ToString());
 
-            if (QueueManager.ProcessingCount != 0)
+            if (_queueManager.ProcessingCount != 0)
             {
-                QueueManager.ReleaseAllProcessingMailboxes();
+                _queueManager.ReleaseAllProcessingMailboxes();
             }
         }
 
-        QueueManager.CancelHandler.Set();
+        _queueManager.CancelHandler.Set();
 
         StartTimer(cancelToken);
     }
 
     internal Task StartTimer(CancellationToken token, bool immediately = false)
     {
-        if (AggregatorTimer == null)
-            AggregatorTimer = new Timer(AggregatorWork, token, Timeout.Infinite, Timeout.Infinite);
+        if (_aggregatorTimer == null)
+            _aggregatorTimer = new Timer(AggregatorWork, token, Timeout.Infinite, Timeout.Infinite);
 
-        Log.Debug($"Setup Work timer to {Settings.Defines.CheckTimerInterval.TotalSeconds} seconds");
+        _log.Debug($"Setup Work timer to {_settings.Defines.CheckTimerInterval.TotalSeconds} seconds");
 
         if (immediately)
         {
-            AggregatorTimer.Change(0, Timeout.Infinite);
+            _aggregatorTimer.Change(0, Timeout.Infinite);
         }
         else
         {
-            AggregatorTimer.Change(Settings.Defines.CheckTimerInterval, Settings.Defines.CheckTimerInterval);
+            _aggregatorTimer.Change(_settings.Defines.CheckTimerInterval, _settings.Defines.CheckTimerInterval);
         }
 
         return Task.CompletedTask;
@@ -209,11 +210,11 @@ public class AggregatorService
 
     private void StopTimer()
     {
-        if (AggregatorTimer == null)
+        if (_aggregatorTimer == null)
             return;
 
-        Log.Debug("Setup Work timer to Timeout.Infinite");
-        AggregatorTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        _log.Debug("Setup Work timer to Timeout.Infinite");
+        _aggregatorTimer.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
     internal void StopService(CancellationTokenSource tokenSource)
@@ -221,9 +222,9 @@ public class AggregatorService
         if (tokenSource != null)
             tokenSource.Cancel();
 
-        if (QueueManager != null)
+        if (_queueManager != null)
         {
-            QueueManager.CancelHandler.WaitOne();
+            _queueManager.CancelHandler.WaitOne();
         }
 
         StopTimer();
@@ -232,14 +233,14 @@ public class AggregatorService
 
     private void DisposeWorkers()
     {
-        if (AggregatorTimer != null)
+        if (_aggregatorTimer != null)
         {
-            AggregatorTimer.Dispose();
-            AggregatorTimer = null;
+            _aggregatorTimer.Dispose();
+            _aggregatorTimer = null;
         }
 
-        if (QueueManager != null)
-            QueueManager.Dispose();
+        if (_queueManager != null)
+            _queueManager.Dispose();
 
         if (SignalrWorker != null)
             SignalrWorker.Dispose();
@@ -247,33 +248,33 @@ public class AggregatorService
 
     public List<TaskData> CreateTasks(int needCount, CancellationToken cancelToken)
     {
-        Log.InfoFormat($"Create tasks (need {needCount}).");
+        _log.InfoFormat($"Create tasks (need {needCount}).");
 
-        var mailboxes = QueueManager.GetLockedMailboxes(needCount).ToList();
+        var mailboxes = _queueManager.GetLockedMailboxes(needCount).ToList();
 
         var tasks = new List<TaskData>();
 
         foreach (var mailbox in mailboxes)
         {
             var linkedTokenSource =
-                CancellationTokenSource.CreateLinkedTokenSource(cancelToken, new CancellationTokenSource(TaskSecondsLifetime).Token);
+                CancellationTokenSource.CreateLinkedTokenSource(cancelToken, new CancellationTokenSource(_taskSecondsLifetime).Token);
 
-            var log = LogOptions.Get($"ASC.Mail Mbox_{mailbox.MailBoxId}");
+            var log = _logOptions.Get($"ASC.Mail Mbox_{mailbox.MailBoxId}");
 
             var task = Task.Run(() => ProcessMailbox(mailbox, log, linkedTokenSource), linkedTokenSource.Token);
 
             tasks.Add(new TaskData(mailbox, task));
         }
 
-        if (tasks.Any()) Log.InfoFormat("Created {0} tasks.", tasks.Count);
-        else Log.Info("No more mailboxes for processing.");
+        if (tasks.Any()) _log.InfoFormat("Created {0} tasks.", tasks.Count);
+        else _log.Info("No more mailboxes for processing.");
 
         return tasks;
     }
 
     private void ProcessMailbox(MailBoxData mailBox, ILog log, CancellationTokenSource cTSource)
     {
-        using var handler = new MailboxHandler(ServiceProvider, mailBox, Settings, log, cTSource, ServerFolderAccessInfo);
+        using var handler = new MailboxHandler(_serviceProvider, mailBox, _settings, log, cTSource, _serverFolderAccessInfo);
 
         handler.DoProcess();
     }
@@ -314,10 +315,10 @@ public class AggregatorService
     {
         try
         {
-            Log.Debug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
+            _log.Debug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
 
             if (!tasks.Remove(taskData))
-                Log.Error("Task not exists in tasks array.");
+                _log.Error("Task not exists in tasks array.");
 
             ReleaseMailbox(taskData.Mailbox);
 
@@ -325,7 +326,7 @@ public class AggregatorService
         }
         catch (Exception ex)
         {
-            Log.Error($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
+            _log.Error($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
         }
     }
 
@@ -334,10 +335,10 @@ public class AggregatorService
         if (mailbox == null)
             return;
 
-        if (mailbox.LastSignalrNotifySkipped && Settings.Aggregator.EnableSignalr)
-            NotifySocketIO(mailbox, Log);
+        if (mailbox.LastSignalrNotifySkipped && _settings.Aggregator.EnableSignalr)
+            NotifySocketIO(mailbox, _log);
 
-        QueueManager.ReleaseMailbox(mailbox);
+        _queueManager.ReleaseMailbox(mailbox);
 
         if (!Filters.ContainsKey(mailbox.UserId))
             return;
@@ -345,7 +346,7 @@ public class AggregatorService
         List<MailSieveFilterData> filters;
         if (!Filters.TryRemove(mailbox.UserId, out filters))
         {
-            Log.Error("Try forget Filters for user failed");
+            _log.Error("Try forget Filters for user failed");
         }
     }
 
@@ -359,7 +360,7 @@ public class AggregatorService
             new KeyValuePair<string, object>("status", failed ? S_FAIL : S_OK)
         };
 
-        LogStat.DebugWithProps(method, pairs);
+        _logStat.DebugWithProps(method, pairs);
     }
     #endregion
 }

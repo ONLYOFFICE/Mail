@@ -1,7 +1,4 @@
-﻿using System;
-using System.Data;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Core.Common.EF;
 using ASC.Mail.Server.Core.Dao;
 using ASC.Mail.Server.Core.Dao.Interfaces;
@@ -10,57 +7,60 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 
+using System;
+using System.Data;
+
 namespace ASC.Mail.Core.MailServer.Core.Dao
 {
     [Scope]
     public class MailServerDaoFactory : IMailServerDaoFactory
     {
-        private IServiceProvider ServiceProvider { get; }
-        private MailServerDbContext MailServerDbContext { get; }
+        private readonly IServiceProvider _serviceProvider;
+        private readonly MailServerDbContext _mailServerDbContext;
 
         public MailServerDaoFactory(
             IServiceProvider serviceProvider,
             DbContextManager<MailServerDbContext> dbContextManager)
         {
-            ServiceProvider = serviceProvider;
-            MailServerDbContext = dbContextManager.Get("mailServer");
+            _serviceProvider = serviceProvider;
+            _mailServerDbContext = dbContextManager.Get("mailServer");
         }
 
         public IDbContextTransaction BeginTransaction(IsolationLevel? level = null)
         {
             return level.HasValue
-                ? MailServerDbContext.Database.BeginTransaction(level.Value)
-                : MailServerDbContext.Database.BeginTransaction();
+                ? _mailServerDbContext.Database.BeginTransaction(level.Value)
+                : _mailServerDbContext.Database.BeginTransaction();
         }
 
         public void SetServerDbConnectionString(string serverCs)
         {
-            MailServerDbContext.Database.SetConnectionString(serverCs);
+            _mailServerDbContext.Database.SetConnectionString(serverCs);
         }
 
         public MailServerDbContext GetContext()
         {
-            return MailServerDbContext;
+            return _mailServerDbContext;
         }
 
         public IAliasDao GetAliasDao()
         {
-            return ServiceProvider.GetService<IAliasDao>();
+            return _serviceProvider.GetService<IAliasDao>();
         }
 
         public IDkimDao GetDkimDao()
         {
-            return ServiceProvider.GetService<IDkimDao>();
+            return _serviceProvider.GetService<IDkimDao>();
         }
 
         public IDomainDao GetDomainDao()
         {
-            return ServiceProvider.GetService<IDomainDao>();
+            return _serviceProvider.GetService<IDomainDao>();
         }
 
         public IMailboxDao GetMailboxDao()
         {
-            return ServiceProvider.GetService<IMailboxDao>();
+            return _serviceProvider.GetService<IMailboxDao>();
         }
     }
     public class MailServerDaoFactoryExtension

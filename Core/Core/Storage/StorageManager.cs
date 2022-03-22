@@ -51,13 +51,13 @@ namespace ASC.Mail.Storage
     {
         public const string CKEDITOR_IMAGES_DOMAIN = "mail";
 
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private StorageFactory StorageFactory { get; }
-        private TenantManager TenantManager { get; }
+        private readonly ILog _log;
+        private readonly SecurityContext _securityContext;
+        private readonly StorageFactory _storageFactory;
+        private readonly TenantManager _tenantManager;
 
         public StorageManager(
             SecurityContext securityContext,
@@ -65,20 +65,20 @@ namespace ASC.Mail.Storage
             TenantManager tenantManager,
             IOptionsMonitor<ILog> options)
         {
-            SecurityContext = securityContext;
-            StorageFactory = storageFactory;
-            TenantManager = tenantManager;
-            Log = options.Get("ASC.Mail.StorageManager");
+            _securityContext = securityContext;
+            _storageFactory = storageFactory;
+            _tenantManager = tenantManager;
+            _log = options.Get("ASC.Mail.StorageManager");
         }
 
         public IDataStore GetDataStoreForCkImages(int tenant)
         {
-            return StorageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "fckuploaders", null);
+            return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "fckuploaders", null);
         }
 
         public IDataStore GetDataStoreForAttachments(int tenant)
         {
-            return StorageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
+            return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
         }
 
         public static byte[] LoadLinkData(string link, ILog log = null)
@@ -136,7 +136,7 @@ namespace ASC.Mail.Storage
                     {
                         var link = linkNode.Attributes["src"].Value;
 
-                        Log.InfoFormat("ChangeSignatureEditorImagesLinks() Original image link: {0}", link);
+                        _log.InfoFormat("ChangeSignatureEditorImagesLinks() Original image link: {0}", link);
 
                         var fileLink = HttpUtility.UrlDecode(link.Substring(currentMailCkeditorUrl.Length));
 
@@ -151,7 +151,7 @@ namespace ASC.Mail.Storage
                     }
                     catch (Exception ex)
                     {
-                        Log.ErrorFormat("ChangeSignatureEditorImagesLinks() failed with exception: {0}", ex.ToString());
+                        _log.ErrorFormat("ChangeSignatureEditorImagesLinks() failed with exception: {0}", ex.ToString());
                     }
                 }
 
@@ -189,7 +189,7 @@ namespace ASC.Mail.Storage
             }
             catch (Exception e)
             {
-                Log.ErrorFormat("StoreCKeditorImageWithoutQuota(). filename: {0} Exception:\r\n{1}\r\n", fileName,
+                _log.ErrorFormat("StoreCKeditorImageWithoutQuota(). filename: {0} Exception:\r\n{1}\r\n", fileName,
                            e.ToString());
 
                 throw;
@@ -209,7 +209,7 @@ namespace ASC.Mail.Storage
                 if (string.IsNullOrEmpty(mailAttachmentData.fileName))
                     mailAttachmentData.fileName = "attachment.ext";
 
-                var storage = StorageFactory.GetMailStorage(Tenant);
+                var storage = _storageFactory.GetMailStorage(Tenant);
 
                 storage.QuotaController = null;
 
@@ -257,7 +257,7 @@ namespace ASC.Mail.Storage
             }
             catch (Exception e)
             {
-                Log.ErrorFormat("StoreAttachmentWithoutQuota(). filename: {0}, ctype: {1} Exception:\r\n{2}\r\n",
+                _log.ErrorFormat("StoreAttachmentWithoutQuota(). filename: {0}, ctype: {1} Exception:\r\n{2}\r\n",
                     mailAttachmentData.fileName,
                     mailAttachmentData.contentType,
                     e.ToString());

@@ -24,10 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Web;
@@ -44,6 +40,10 @@ using ASC.Mail.Utils;
 
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 using MailMessage = ASC.Mail.Models.MailMessageData;
 
 namespace ASC.Mail.Core.Engine
@@ -51,18 +51,18 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class TestEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private CoreSettings CoreSettings { get; }
-        private AccountEngine AccountEngine { get; }
-        private MailboxEngine MailboxEngine { get; }
-        private MessageEngine MessageEngine { get; }
-        private IndexEngine IndexEngine { get; }
-        private StorageFactory StorageFactory { get; }
+        private readonly ILog _log;
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly CoreSettings _coreSettings;
+        private readonly AccountEngine _accountEngine;
+        private readonly MailboxEngine _mailboxEngine;
+        private readonly MessageEngine _messageEngine;
+        private readonly IndexEngine _indexEngine;
+        private readonly StorageFactory _storageFactory;
 
         private const string SAMPLE_UIDL = "api sample";
         private const string SAMPLE_REPLY_UIDL = "api sample reply";
@@ -90,16 +90,16 @@ namespace ASC.Mail.Core.Engine
             StorageFactory storageFactory,
             IOptionsMonitor<ILog> option)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            CoreSettings = coreSettings;
-            AccountEngine = accountEngine;
-            MailboxEngine = mailboxEngine;
-            MessageEngine = messageEngine;
-            IndexEngine = indexEngine;
-            StorageFactory = storageFactory;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _coreSettings = coreSettings;
+            _accountEngine = accountEngine;
+            _mailboxEngine = mailboxEngine;
+            _messageEngine = messageEngine;
+            _indexEngine = indexEngine;
+            _storageFactory = storageFactory;
 
-            Log = option.Get("ASC.Mail.TestEngine");
+            _log = option.Get("ASC.Mail.TestEngine");
         }
 
         public int CreateSampleMessage(TestMessageModel model, bool add2Index = false)
@@ -112,7 +112,7 @@ namespace ASC.Mail.Core.Engine
             if (!model.MailboxId.HasValue)
                 throw new ArgumentException(@"Invalid mailbox id", "mailboxId");
 
-            var accounts = AccountEngine.GetAccountInfoList().ToAccountData().ToList();
+            var accounts = _accountEngine.GetAccountInfoList().ToAccountData().ToList();
 
             var account = model.MailboxId.HasValue
                 ? accounts.FirstOrDefault(a => a.MailboxId == model.MailboxId)
@@ -121,14 +121,14 @@ namespace ASC.Mail.Core.Engine
             if (account == null)
                 throw new ArgumentException("Mailbox not found");
 
-            var mbox = MailboxEngine.GetMailboxData(
+            var mbox = _mailboxEngine.GetMailboxData(
                 new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
 
             if (mbox == null)
                 throw new ArgumentException("no such mailbox");
 
             var internalId = string.IsNullOrEmpty(model.MimeMessageId)
-                ? MailUtil.CreateMessageId(TenantManager, CoreSettings, Log)
+                ? MailUtil.CreateMessageId(_tenantManager, _coreSettings, _log)
                 : model.MimeMessageId;
 
             var restoreFolder = folder == FolderType.Spam || folder == FolderType.Trash
@@ -197,39 +197,39 @@ namespace ASC.Mail.Core.Engine
                 sampleMessage.TagIds = model.TagIds;
             }
 
-            MessageEngine.StoreMailBody(mbox, sampleMessage, Log);
+            _messageEngine.StoreMailBody(mbox, sampleMessage, _log);
 
-            var id = MessageEngine.MailSave(mbox, sampleMessage, 0, folder, restoreFolder, model.UserFolderId,
+            var id = _messageEngine.MailSave(mbox, sampleMessage, 0, folder, restoreFolder, model.UserFolderId,
                 SAMPLE_UIDL, "", false);
 
             if (!add2Index)
                 return id;
 
-            var message = MessageEngine.GetMessage(id, new MailMessageData.Options());
+            var message = _messageEngine.GetMessage(id, new MailMessageData.Options());
 
             message.IsNew = model.Unread;
 
             var wrapper = message.ToMailMail(mbox.TenantId, new Guid(mbox.UserId));
 
-            IndexEngine.Add(wrapper);
+            _indexEngine.Add(wrapper);
 
             return id;
         }
 
         public int CreateReplyToSampleMessage(int id, string body, bool add2Index = false)
         {
-            var message = MessageEngine.GetMessage(id, new MailMessage.Options());
+            var message = _messageEngine.GetMessage(id, new MailMessage.Options());
 
             if (message == null)
                 throw new ArgumentException("Message with id not found");
 
-            var mbox = MailboxEngine.GetMailboxData(
+            var mbox = _mailboxEngine.GetMailboxData(
                 new СoncreteUserMailboxExp(message.MailboxId, Tenant, User));
 
             if (mbox == null)
                 throw new ArgumentException("Mailbox not found");
 
-            var mimeMessageId = MailUtil.CreateMessageId(TenantManager, CoreSettings, Log);
+            var mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings, _log);
 
             var sampleMessage = new MailMessage
             {
@@ -257,19 +257,19 @@ namespace ASC.Mail.Core.Engine
                 FromEmail = mbox.EMail.Address
             };
 
-            MessageEngine.StoreMailBody(mbox, sampleMessage, Log);
+            _messageEngine.StoreMailBody(mbox, sampleMessage, _log);
 
-            var replyId = MessageEngine.MailSave(mbox, sampleMessage, 0, FolderType.Sent, FolderType.Sent, null,
+            var replyId = _messageEngine.MailSave(mbox, sampleMessage, 0, FolderType.Sent, FolderType.Sent, null,
                 SAMPLE_REPLY_UIDL, "", false);
 
             if (!add2Index)
                 return replyId;
 
-            var replyMessage = MessageEngine.GetMessage(replyId, new MailMessageData.Options());
+            var replyMessage = _messageEngine.GetMessage(replyId, new MailMessageData.Options());
 
             var wrapper = replyMessage.ToMailMail(mbox.TenantId, new Guid(mbox.UserId));
 
-            IndexEngine.Add(wrapper);
+            _indexEngine.Add(wrapper);
 
             return replyId;
         }
@@ -279,7 +279,7 @@ namespace ASC.Mail.Core.Engine
             if (!messageId.HasValue || messageId.Value <= 0)
                 throw new ArgumentException(@"Invalid message id", "messageId");
 
-            var message = MessageEngine.GetMessage(messageId.Value, new MailMessage.Options());
+            var message = _messageEngine.GetMessage(messageId.Value, new MailMessage.Options());
 
             if (message == null)
                 throw new AttachmentsException(AttachmentsException.Types.MessageNotFound, "Message not found.");
@@ -295,7 +295,7 @@ namespace ASC.Mail.Core.Engine
 
             model.ContentType = string.IsNullOrEmpty(model.ContentType) ? MimeMapping.GetMimeMapping(model.Filename) : model.ContentType;
 
-            return MessageEngine.AttachFile(Tenant, User, message, model.Filename, model.Stream, model.Stream.Length, model.ContentType);
+            return _messageEngine.AttachFile(Tenant, User, message, model.Filename, model.Stream, model.Stream.Length, model.ContentType);
         }
 
         public int LoadSampleMessage(TestMessageModel model, bool add2Index = false)
@@ -311,7 +311,7 @@ namespace ASC.Mail.Core.Engine
             if (model.EmlStream == null)
                 throw new ArgumentException(@"Invalid eml stream", "emlStream");
 
-            var accounts = AccountEngine.GetAccountInfoList().ToAccountData().ToList();
+            var accounts = _accountEngine.GetAccountInfoList().ToAccountData().ToList();
 
             var account = model.MailboxId.HasValue
                 ? accounts.FirstOrDefault(a => a.MailboxId == model.MailboxId)
@@ -320,7 +320,7 @@ namespace ASC.Mail.Core.Engine
             if (account == null)
                 throw new ArgumentException("Mailbox not found");
 
-            var mbox = MailboxEngine.GetMailboxData(
+            var mbox = _mailboxEngine.GetMailboxData(
                 new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
 
             if (mbox == null)
@@ -328,10 +328,10 @@ namespace ASC.Mail.Core.Engine
 
             var mimeMessage = MailClient.ParseMimeMessage(model.EmlStream);
 
-            var storage = StorageFactory.GetMailStorage(mbox.TenantId);
+            var storage = _storageFactory.GetMailStorage(mbox.TenantId);
 
-            var message = MessageEngine.Save(mbox, mimeMessage, SAMPLE_UIDL,
-                new MailFolder(folder, ""), model.UserFolderId, model.Unread, Log);
+            var message = _messageEngine.Save(mbox, mimeMessage, SAMPLE_UIDL,
+                new MailFolder(folder, ""), model.UserFolderId, model.Unread, _log);
 
             if (message == null)
                 return -1;
@@ -339,7 +339,7 @@ namespace ASC.Mail.Core.Engine
             if (!add2Index)
                 return message.Id;
 
-            IndexEngine.Add(message.ToMailMail(mbox.TenantId, new Guid(mbox.UserId)));
+            _indexEngine.Add(message.ToMailMail(mbox.TenantId, new Guid(mbox.UserId)));
 
             return message.Id;
         }

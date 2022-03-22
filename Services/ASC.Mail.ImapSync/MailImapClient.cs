@@ -49,7 +49,7 @@ public class MailImapClient : IDisposable
     private bool needUserMailBoxUpdate;
     private bool userActivityDetected;
 
-    private CancellationTokenSource CancelToken { get; set; }
+    private readonly CancellationTokenSource _cancelToken;
 
     public EventHandler OnCriticalError;
 
@@ -129,7 +129,7 @@ public class MailImapClient : IDisposable
 
         _log.Name = $"ASC.Mail.MailUser_{userName}";
 
-        CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
+        _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
         simpleImapClients = new List<SimpleImapClient>();
         imapActionsQueue = new ConcurrentQueue<ImapAction>();
@@ -223,7 +223,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var rootSimpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+            var rootSimpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
 
             if (!SetEvents(rootSimpleImapClient)) return;
 
@@ -233,7 +233,7 @@ public class MailImapClient : IDisposable
 
             foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
             {
-                var simpleImapClient = new SimpleImapClient(mailbox, CancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+                var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
 
                 if (!SetEvents(simpleImapClient)) continue;
 
@@ -472,7 +472,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            CancelToken?.Cancel();
+            _cancelToken?.Cancel();
 
             aliveTimer.Dispose();
             processActionFromImapTimer.Dispose();
@@ -916,7 +916,7 @@ public class MailImapClient : IDisposable
         processActionFromImapTimer.Stop();
         processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
 
-        CancelToken?.Cancel();
+        _cancelToken?.Cancel();
 
         allAccounts.ForEach(x => DeleteSimpleImapClients(x));
     }

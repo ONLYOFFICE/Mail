@@ -19,7 +19,7 @@ namespace ASC.Mail.Controllers
         [Create(@"messages/sample/create")]
         public int CreateSampleMessage(TestMessageModel model)
         {
-            var id = TestEngine
+            var id = _testEngine
                 .CreateSampleMessage(model, add2Index: true);
 
             return id;
@@ -38,7 +38,7 @@ namespace ASC.Mail.Controllers
         [Create(@"messages/sample/attachments/append")]
         public MailAttachmentData AppendAttachmentsToSampleMessage(int? messageId, TestAttachmentModel model)
         {
-            var data = TestEngine
+            var data = _testEngine
                 .AppendAttachmentsToSampleMessage(messageId, model);
 
             return data;
@@ -54,7 +54,7 @@ namespace ASC.Mail.Controllers
         [Create(@"messages/sample/eml/load")]
         public int LoadSampleMessage(TestMessageModel model)
         {
-            var id = TestEngine
+            var id = _testEngine
                 .LoadSampleMessage(model, true);
 
             return id;

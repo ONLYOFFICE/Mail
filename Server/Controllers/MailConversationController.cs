@@ -84,15 +84,15 @@ namespace ASC.Mail.Controllers
                 PrevFlag = prev_flag.GetValueOrDefault(false)
             };
 
-            var conversations = MessageEngine.GetConversations(filter, out bool hasMore);
+            var conversations = _messageEngine.GetConversations(filter, out bool hasMore);
 
             if (hasMore)
             {
-                ApiContext.SetTotalCount(page_size.GetValueOrDefault(25) + 1);
+                _apiContext.SetTotalCount(page_size.GetValueOrDefault(25) + 1);
             }
             else
             {
-                ApiContext.SetTotalCount(conversations.Count);
+                _apiContext.SetTotalCount(conversations.Count);
             }
 
             return conversations;
@@ -111,7 +111,7 @@ namespace ASC.Mail.Controllers
         [Read(@"conversation/{id}")]
         public IEnumerable<MailMessageData> GetConversation(int id, bool? loadAll, bool? markRead, bool? needSanitize)
         {
-            var list = MessageEngine.GetConversation(id, loadAll, markRead, needSanitize);
+            var list = _messageEngine.GetConversation(id, loadAll, markRead, needSanitize);
 
             return list;
         }
@@ -183,7 +183,7 @@ namespace ASC.Mail.Controllers
                 UserFolderId = user_folder_id
             };
 
-            return MessageEngine.GetNextConversationId(id, filter);
+            return _messageEngine.GetNextConversationId(id, filter);
         }
 
         /// <summary>
@@ -206,7 +206,7 @@ namespace ASC.Mail.Controllers
             if (!MailFolder.IsIdOk(toFolder))
                 throw new ArgumentException(@"Invalid folder id", "folder");
 
-            MessageEngine.SetConversationsFolder(ids, toFolder, userFolderId);
+            _messageEngine.SetConversationsFolder(ids, toFolder, userFolderId);
 
             if (toFolder != FolderType.Spam)
                 return ids;
@@ -214,7 +214,7 @@ namespace ASC.Mail.Controllers
             //TODO: Try to move message (IMAP only) to spam folder on original server (need new separated operation)
 
             var scheme = HttpContext == null ? Uri.UriSchemeHttp : HttpContext.Request.GetUrlRewriter().Scheme;
-            SpamEngine.SendConversationsToSpamTrainer(TenantId, UserId, ids, true, scheme);
+            _spamEngine.SendConversationsToSpamTrainer(TenantId, UserId, ids, true, scheme);
 
             return ids;
         }
@@ -233,12 +233,12 @@ namespace ASC.Mail.Controllers
             if (!ids.Any())
                 throw new ArgumentException(@"Empty ids collection", "ids");
 
-            MessageEngine.RestoreConversations(TenantId, UserId, ids);
+            _messageEngine.RestoreConversations(TenantId, UserId, ids);
 
             if (learnSpamTrainer)
             {
                 var scheme = HttpContext == null ? Uri.UriSchemeHttp : HttpContext.Request.GetUrlRewriter().Scheme;
-                SpamEngine.SendConversationsToSpamTrainer(TenantId, UserId, ids, false, scheme);
+                _spamEngine.SendConversationsToSpamTrainer(TenantId, UserId, ids, false, scheme);
             }
 
             return ids;
@@ -257,7 +257,7 @@ namespace ASC.Mail.Controllers
             if (!ids.Any())
                 throw new ArgumentException(@"Empty ids collection", "ids");
 
-            MessageEngine.DeleteConversations(TenantId, UserId, ids);
+            _messageEngine.DeleteConversations(TenantId, UserId, ids);
 
             return ids;
         }
@@ -279,19 +279,19 @@ namespace ASC.Mail.Controllers
             switch (status)
             {
                 case "read":
-                    MessageEngine.SetUnread(ids, false, true);
+                    _messageEngine.SetUnread(ids, false, true);
                     break;
 
                 case "unread":
-                    MessageEngine.SetUnread(ids, true, true);
+                    _messageEngine.SetUnread(ids, true, true);
                     break;
 
                 case "important":
-                    MessageEngine.SetConversationsImportanceFlags(TenantId, UserId, true, ids);
+                    _messageEngine.SetConversationsImportanceFlags(TenantId, UserId, true, ids);
                     break;
 
                 case "normal":
-                    MessageEngine.SetConversationsImportanceFlags(TenantId, UserId, false, ids);
+                    _messageEngine.SetConversationsImportanceFlags(TenantId, UserId, false, ids);
                     break;
             }
             return ids;
@@ -312,7 +312,7 @@ namespace ASC.Mail.Controllers
             if (!messages.Any())
                 throw new ArgumentException(@"Message ids are empty", "messages");
 
-            TagEngine.SetConversationsTag(messages, tag_id);
+            _tagEngine.SetConversationsTag(messages, tag_id);
 
             return tag_id;
         }
@@ -332,7 +332,7 @@ namespace ASC.Mail.Controllers
             if (!messages.Any())
                 throw new ArgumentException(@"Message ids are empty", "messages");
 
-            TagEngine.UnsetConversationsTag(messages, tag_id);
+            _tagEngine.UnsetConversationsTag(messages, tag_id);
 
             return tag_id;
         }
@@ -359,7 +359,7 @@ namespace ASC.Mail.Controllers
                 ? Uri.UriSchemeHttp
                 : HttpContext.Request.GetUrlRewriter().Scheme;
 
-            CrmLinkEngine.LinkChainToCrm(id_message, crm_contact_ids.ToList(), scheme);
+            _crmLinkEngine.LinkChainToCrm(id_message, crm_contact_ids.ToList(), scheme);
         }
 
         /// <summary>
@@ -380,7 +380,7 @@ namespace ASC.Mail.Controllers
             if (crm_contact_ids == null)
                 throw new ArgumentException(@"Invalid contact ids list", "crm_contact_ids");
 
-            CrmLinkEngine.MarkChainAsCrmLinked(id_message, crm_contact_ids.ToList());
+            _crmLinkEngine.MarkChainAsCrmLinked(id_message, crm_contact_ids.ToList());
         }
 
         /// <summary>
@@ -401,7 +401,7 @@ namespace ASC.Mail.Controllers
             if (crm_contact_ids == null)
                 throw new ArgumentException(@"Invalid contact ids list", "crm_contact_ids");
 
-            CrmLinkEngine.UnmarkChainAsCrmLinked(id_message, crm_contact_ids);
+            _crmLinkEngine.UnmarkChainAsCrmLinked(id_message, crm_contact_ids);
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace ASC.Mail.Controllers
         [Read("display_images/addresses")]
         public IEnumerable<string> GetDisplayImagesAddresses()
         {
-            return DisplayImagesAddressEngine.Get();
+            return _displayImagesAddressEngine.Get();
         }
 
         /// <summary>
@@ -30,7 +30,7 @@ namespace ASC.Mail.Controllers
         [Create("display_images/address")]
         public string AddDisplayImagesAddress(string address)
         {
-            DisplayImagesAddressEngine.Add(address);
+            _displayImagesAddressEngine.Add(address);
 
             return address;
         }
@@ -46,7 +46,7 @@ namespace ASC.Mail.Controllers
         [Delete("display_images/address")]
         public string RemovevDisplayImagesAddress(string address)
         {
-            DisplayImagesAddressEngine.Remove(address);
+            _displayImagesAddressEngine.Remove(address);
 
             return address;
         }

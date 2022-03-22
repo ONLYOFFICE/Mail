@@ -24,9 +24,6 @@
 */
 
 
-using System.Collections.Generic;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Data.Storage;
@@ -36,6 +33,9 @@ using ASC.Mail.Models;
 using ASC.Mail.Storage;
 using ASC.Mail.Utils;
 
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ASC.Mail.Core.Engine
 {
     [Scope]
@@ -43,14 +43,14 @@ namespace ASC.Mail.Core.Engine
     {
         public const string MY_DOCS_FOLDER_ID = "@my";
 
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private ApiHelper ApiHelper { get; }
-        private MessageEngine MessageEngine { get; }
-        private StorageFactory StorageFactory { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly ApiHelper _apiHelper;
+        private readonly MessageEngine _messageEngine;
+        private readonly StorageFactory _storageFactory;
 
         public DocumentsEngine(
             SecurityContext securityContext,
@@ -59,11 +59,11 @@ namespace ASC.Mail.Core.Engine
             MessageEngine messageEngine,
             StorageFactory storageFactory)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            ApiHelper = apiHelper;
-            MessageEngine = messageEngine;
-            StorageFactory = storageFactory;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _apiHelper = apiHelper;
+            _messageEngine = messageEngine;
+            _storageFactory = storageFactory;
         }
 
         public List<object> StoreAttachmentsToMyDocuments(int messageId)
@@ -79,7 +79,7 @@ namespace ASC.Mail.Core.Engine
         public List<object> StoreAttachmentsToDocuments(int messageId, string folderId)
         {
             var attachments =
-                MessageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(messageId, Tenant, User));
+                _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(messageId, Tenant, User));
 
             return
                 attachments.Select(attachment => StoreAttachmentToDocuments(attachment, folderId))
@@ -89,7 +89,7 @@ namespace ASC.Mail.Core.Engine
 
         public object StoreAttachmentToDocuments(int attachmentId, string folderId)
         {
-            var attachment = MessageEngine.GetAttachment(
+            var attachment = _messageEngine.GetAttachment(
                 new ConcreteUserAttachmentExp(attachmentId, Tenant, User));
 
             if (attachment == null)
@@ -103,11 +103,11 @@ namespace ASC.Mail.Core.Engine
             if (mailAttachmentData == null)
                 return -1;
 
-            var dataStore = StorageFactory.GetMailStorage(Tenant);
+            var dataStore = _storageFactory.GetMailStorage(Tenant);
 
             using var file = mailAttachmentData.ToAttachmentStream(dataStore);
 
-            var uploadedFileId = ApiHelper.UploadToDocuments(file.FileStream, file.FileName,
+            var uploadedFileId = _apiHelper.UploadToDocuments(file.FileStream, file.FileName,
                 mailAttachmentData.contentType, folderId, true);
 
             return uploadedFileId;

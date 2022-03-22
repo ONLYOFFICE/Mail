@@ -5,32 +5,32 @@ public class AggregatorServiceScope
 {
     #region AggSrv
 
-    private TenantManager TenantManager { get; }
-    private CoreBaseSettings CoreBaseSettings { get; }
-    private MailQueueItemSettings MailQueueItemSettings { get; }
-    private StorageFactory StorageFactory { get; }
-    private MailEnginesFactory MailEnginesFactory { get; }
-    private SecurityContext SecurityContext { get; }
-    private ApiHelper ApiHelper { get; }
-    private IMailDaoFactory MailDaoFactory { get; }
+    private readonly TenantManager _tenantManager;
+    private readonly CoreBaseSettings _coreBaseSettings;
+    private readonly MailQueueItemSettings _mailQueueItemSettings;
+    private readonly StorageFactory _storageFactory;
+    private readonly MailEnginesFactory _mailEnginesFactory;
+    private readonly SecurityContext _securityContext;
+    private readonly ApiHelper _apiHelper;
+    private readonly IMailDaoFactory _mailDaoFactory;
 
     #endregion
 
     #region QueueManagerScope
 
-    private UserManager UserManager { get; }
-    private MailboxEngine MailboxEngine { get; }
-    private AlertEngine AlertEngine { get; }
+    private readonly UserManager _userManager;
+    private readonly MailboxEngine _mailboxEngine;
+    private readonly AlertEngine _alertEngine;
 
     #endregion
 
     #region SignalrWorkerScope
 
-    private FolderEngine FolderEngine { get; }
+    private readonly FolderEngine _folderEngine;
 
     #endregion
 
-    private ServiceProvider ServiceProvider { get; }
+    private readonly ServiceProvider _serviceProvider;
 
     public AggregatorServiceScope(
         ServiceProvider serviceProvider,
@@ -47,21 +47,21 @@ public class AggregatorServiceScope
         AlertEngine alertEngine,
         FolderEngine folderEngine)
     {
-        ServiceProvider = serviceProvider;
+        _serviceProvider = serviceProvider;
 
-        TenantManager = tenantManager;
-        MailQueueItemSettings = mailQueueItemSettings;
-        CoreBaseSettings = coreBaseSettings;
-        StorageFactory = storageFactory;
-        MailEnginesFactory = mailEnginesFactory;
-        SecurityContext = securityContext;
-        ApiHelper = apiHelper;
-        MailDaoFactory = mailDaoFactory;
-        UserManager = userManager;
-        MailboxEngine = mailboxEngine;
-        AlertEngine = alertEngine;
-        FolderEngine = folderEngine;
+        _tenantManager = tenantManager;
+        _mailQueueItemSettings = mailQueueItemSettings;
+        _coreBaseSettings = coreBaseSettings;
+        _storageFactory = storageFactory;
+        _mailEnginesFactory = mailEnginesFactory;
+        _securityContext = securityContext;
+        _apiHelper = apiHelper;
+        _mailDaoFactory = mailDaoFactory;
+        _userManager = userManager;
+        _mailboxEngine = mailboxEngine;
+        _alertEngine = alertEngine;
+        _folderEngine = folderEngine;
     }
 
-    public TenantManager GetTenantManager() => TenantManager;
+    public TenantManager GetTenantManager() => _tenantManager;
 }

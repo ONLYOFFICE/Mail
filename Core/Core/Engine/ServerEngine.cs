@@ -52,18 +52,18 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class ServerEngine : BaseEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private bool IsAdmin => WebItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, SecurityContext.CurrentAccount.ID);
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private ServerDomainEngine ServerDomainEngine { get; }
-        private CoreBaseSettings CoreBaseSettings { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        private SettingsManager SettingsManager { get; }
-        private UserManagerWrapper UserManagerWrapper { get; }
-        private IServiceProvider ServiceProvider { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly ServerDomainEngine _serverDomainEngine;
+        private readonly CoreBaseSettings _coreBaseSettings;
+        private readonly WebItemSecurity _webItemSecurity;
+        private readonly SettingsManager _settingsManager;
+        private readonly UserManagerWrapper _userManagerWrapper;
+        private readonly IServiceProvider _serviceProvider;
 
         public ServerEngine(
             SecurityContext securityContext,
@@ -77,20 +77,20 @@ namespace ASC.Mail.Core.Engine
             MailSettings mailSettings,
             IServiceProvider serviceProvider) : base(mailSettings)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            MailDaoFactory = mailDaoFactory;
-            ServerDomainEngine = serverDomainEngine;
-            CoreBaseSettings = coreBaseSettings;
-            WebItemSecurity = webItemSecurity;
-            SettingsManager = settingsManager;
-            UserManagerWrapper = userManagerWrapper;
-            ServiceProvider = serviceProvider;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _mailDaoFactory = mailDaoFactory;
+            _serverDomainEngine = serverDomainEngine;
+            _coreBaseSettings = coreBaseSettings;
+            _webItemSecurity = webItemSecurity;
+            _settingsManager = settingsManager;
+            _userManagerWrapper = userManagerWrapper;
+            _serviceProvider = serviceProvider;
         }
 
         public List<MailAddressInfo> GetAliases(int mailboxId)
         {
-            var MailDbContext = MailDaoFactory.GetContext();
+            var MailDbContext = _mailDaoFactory.GetContext();
 
             var list = MailDbContext.MailServerAddress
                 .AsNoTracking()
@@ -109,7 +109,7 @@ namespace ASC.Mail.Core.Engine
 
         public List<MailAddressInfo> GetGroups(int mailboxId)
         {
-            var MailDbContext = MailDaoFactory.GetContext();
+            var MailDbContext = _mailDaoFactory.GetContext();
 
             var list = MailDbContext.MailServerAddress
                 .AsNoTracking()
@@ -143,14 +143,14 @@ namespace ASC.Mail.Core.Engine
 
         public Entities.Server GetLinkedServer()
         {
-            var linkedServer = MailDaoFactory.GetServerDao().Get(Tenant);
+            var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             return linkedServer;
         }
 
         private List<Entities.Server> GetAllServers()
         {
-            var servers = MailDaoFactory.GetServerDao().GetList();
+            var servers = _mailDaoFactory.GetServerDao().GetList();
 
             return servers;
         }
@@ -160,7 +160,7 @@ namespace ASC.Mail.Core.Engine
             if (server == null)
                 return;
 
-            var result = MailDaoFactory.GetServerDao().Link(server, Tenant);
+            var result = _mailDaoFactory.GetServerDao().Link(server, Tenant);
 
             if (result <= 0)
                 throw new Exception("Invalid insert operation");
@@ -171,7 +171,7 @@ namespace ASC.Mail.Core.Engine
             if (server == null)
                 return;
 
-            MailDaoFactory.GetServerDao().UnLink(server, Tenant);
+            _mailDaoFactory.GetServerDao().UnLink(server, Tenant);
         }
 
         public int Save(Entities.Server server)
@@ -179,7 +179,7 @@ namespace ASC.Mail.Core.Engine
             if (server == null)
                 throw new ArgumentNullException("server");
 
-            var id = MailDaoFactory.GetServerDao().Save(server);
+            var id = _mailDaoFactory.GetServerDao().Save(server);
 
             return id;
         }
@@ -189,12 +189,12 @@ namespace ASC.Mail.Core.Engine
             if (serverId <= 0)
                 throw new ArgumentOutOfRangeException("serverId");
 
-            MailDaoFactory.GetServerDao().Delete(serverId);
+            _mailDaoFactory.GetServerDao().Delete(serverId);
         }
 
         public Entities.Server GetOrCreate()
         {
-            var linkedServer = MailDaoFactory.GetServerDao().Get(Tenant);
+            var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             if (linkedServer != null)
                 return linkedServer;
@@ -227,10 +227,10 @@ namespace ASC.Mail.Core.Engine
 
             var linkedServer = GetOrCreate();
 
-            var dns = ServerDomainEngine.GetOrCreateUnusedDnsData(linkedServer);
+            var dns = _serverDomainEngine.GetOrCreateUnusedDnsData(linkedServer);
 
-            var inServer = MailDaoFactory.GetMailboxServerDao().GetServer(linkedServer.ImapSettingsId);
-            var outServer = MailDaoFactory.GetMailboxServerDao().GetServer(linkedServer.SmtpSettingsId);
+            var inServer = _mailDaoFactory.GetMailboxServerDao().GetServer(linkedServer.ImapSettingsId);
+            var outServer = _mailDaoFactory.GetMailboxServerDao().GetServer(linkedServer.SmtpSettingsId);
 
             return new ServerData
             {
@@ -251,7 +251,7 @@ namespace ASC.Mail.Core.Engine
                 throw new SecurityException("Need admin privileges.");
 
             var server = GetOrCreate();
-            return ServerDomainEngine.GetOrCreateUnusedDnsData(server);
+            return _serverDomainEngine.GetOrCreateUnusedDnsData(server);
         }
 
         public bool CheckDomainOwnership(string domain)
@@ -279,7 +279,7 @@ namespace ASC.Mail.Core.Engine
 
         public ServerNotificationAddressData CreateNotificationAddress(string localPart, string password, int domainId)
         {
-            if (!CoreBaseSettings.Standalone)
+            if (!_coreBaseSettings.Standalone)
                 throw new SecurityException("Only for standalone");
 
             if (!IsAdmin)
@@ -296,12 +296,12 @@ namespace ASC.Mail.Core.Engine
             if (!Parser.IsEmailLocalPartValid(localPart))
                 throw new ArgumentException(@"Incorrect address username.", "localPart");
 
-            var trimPwd = Parser.GetValidPassword(password, SettingsManager, UserManagerWrapper);
+            var trimPwd = Parser.GetValidPassword(password, _settingsManager, _userManagerWrapper);
 
             if (domainId < 0)
                 throw new ArgumentException(@"Invalid domain id.", "domainId");
 
-            var notificationAddressSettings = SettingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
+            var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
 
             if (!string.IsNullOrEmpty(notificationAddressSettings.NotificationAddress))
             {
@@ -310,14 +310,14 @@ namespace ASC.Mail.Core.Engine
 
             var utcNow = DateTime.UtcNow;
 
-            var serverDomain = MailDaoFactory.GetServerDomainDao().GetDomain(domainId);
+            var serverDomain = _mailDaoFactory.GetServerDomainDao().GetDomain(domainId);
 
             if (localPart.Length + serverDomain.Name.Length > 318) // 318 because of @ sign
                 throw new ArgumentException(@"Address of mailbox exceed limitation of 319 characters.", "localPart");
 
             var login = string.Format("{0}@{1}", localPart, serverDomain.Name);
 
-            var server = MailDaoFactory.GetServerDao().Get(Tenant);
+            var server = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             if (server == null)
                 throw new ArgumentException("Server not configured");
@@ -356,9 +356,9 @@ namespace ASC.Mail.Core.Engine
 
             notificationAddressSettings = new ServerNotificationAddressSettings { NotificationAddress = login };
 
-            SettingsManager.SaveSettings(notificationAddressSettings, Tenant);
+            _settingsManager.SaveSettings(notificationAddressSettings, Tenant);
 
-            var smtpSettings = MailDaoFactory.GetMailboxServerDao()
+            var smtpSettings = _mailDaoFactory.GetMailboxServerDao()
                 .GetServer(server.SmtpSettingsId);
 
             var address = new MailAddress(login);
@@ -379,7 +379,7 @@ namespace ASC.Mail.Core.Engine
 
         public void RemoveNotificationAddress(string address)
         {
-            if (!CoreBaseSettings.Standalone)
+            if (!_coreBaseSettings.Standalone)
                 throw new SecurityException("Only for standalone");
 
             if (!IsAdmin)
@@ -389,21 +389,21 @@ namespace ASC.Mail.Core.Engine
                 throw new ArgumentNullException("address");
 
             var deleteAddress = address.ToLowerInvariant().Trim();
-            var notificationAddressSettings = SettingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
+            var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
 
             if (notificationAddressSettings.NotificationAddress != deleteAddress)
                 throw new ArgumentException("Mailbox not exists");
 
             var mailAddress = new MailAddress(deleteAddress);
 
-            var serverDomain = MailDaoFactory.GetServerDomainDao()
+            var serverDomain = _mailDaoFactory.GetServerDomainDao()
                 .GetDomains()
                 .FirstOrDefault(d => d.Name == mailAddress.Host);
 
             if (serverDomain == null)
                 throw new ArgumentException("Domain not exists");
 
-            var server = MailDaoFactory.GetServerDao().Get(Tenant);
+            var server = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             if (server == null)
                 throw new ArgumentException("Server not configured");
@@ -412,8 +412,8 @@ namespace ASC.Mail.Core.Engine
 
             engine.RemoveMailbox(deleteAddress);
 
-            var addressSettings = notificationAddressSettings.GetDefault(ServiceProvider) as ServerNotificationAddressSettings;
-            if (addressSettings != null && !SettingsManager.SaveSettings(addressSettings, Tenant))
+            var addressSettings = notificationAddressSettings.GetDefault(_serviceProvider) as ServerNotificationAddressSettings;
+            if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
             {
                 throw new Exception("Could not delete notification address setting.");
             }
@@ -430,11 +430,11 @@ namespace ASC.Mail.Core.Engine
 
             var server = GetMailServer();
 
-            var domains = ServerDomainEngine.GetDomains();
+            var domains = _serverDomainEngine.GetDomains();
 
-            var mailboxes = MailDaoFactory.GetMailboxDao().GetMailBoxes(new TenantServerMailboxesExp(Tenant));
+            var mailboxes = _mailDaoFactory.GetMailboxDao().GetMailBoxes(new TenantServerMailboxesExp(Tenant));
 
-            var addresses = MailDaoFactory.GetServerAddressDao().GetList();
+            var addresses = _mailDaoFactory.GetServerAddressDao().GetList();
 
             foreach (var mailbox in mailboxes)
             {
@@ -460,7 +460,7 @@ namespace ASC.Mail.Core.Engine
                 mailboxDataList.Add(ServerMailboxEngine.ToMailboxData(mailbox, serverAddressData, aliases));
             }
 
-            var groups = MailDaoFactory.GetServerGroupDao().GetList();
+            var groups = _mailDaoFactory.GetServerGroupDao().GetList();
 
             foreach (var serverGroup in groups)
             {
@@ -481,7 +481,7 @@ namespace ASC.Mail.Core.Engine
                 var serverGroupAddress = ServerMailboxEngine.ToServerDomainAddressData(address, email);
 
                 var serverGroupAddresses =
-                    MailDaoFactory.GetServerAddressDao().GetGroupAddresses(serverGroup.Id)
+                    _mailDaoFactory.GetServerAddressDao().GetGroupAddresses(serverGroup.Id)
                         .ConvertAll(a => ServerMailboxEngine.ToServerDomainAddressData(a,
                             string.Format("{0}@{1}", a.AddressName, domain.Name)));
 
@@ -498,7 +498,7 @@ namespace ASC.Mail.Core.Engine
 
         public string GetServerVersion()
         {
-            var server = MailDaoFactory.GetServerDao().Get(Tenant);
+            var server = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             if (server == null)
                 return null;

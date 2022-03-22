@@ -41,20 +41,20 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class CalendarEngine
     {
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private ApiHelper ApiHelper { get; }
+        private readonly ILog _log;
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly ApiHelper _apiHelper;
 
         public CalendarEngine(SecurityContext securityContext,
             TenantManager tenantManager,
             ApiHelper apiHelper,
             IOptionsMonitor<ILog> option)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            ApiHelper = apiHelper;
-            Log = option.Get("ASC.Mail.CalendarEngine");
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _apiHelper = apiHelper;
+            _log = option.Get("ASC.Mail.CalendarEngine");
         }
 
         public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
@@ -67,7 +67,7 @@ namespace ASC.Mail.Core.Engine
                     calendarContentType != "text/calendar")
                     return;
 
-                var calendar = MailUtil.ParseValidCalendar(calendarIcs, Log);
+                var calendar = MailUtil.ParseValidCalendar(calendarIcs, _log);
 
                 if (calendar == null)
                     return;
@@ -106,19 +106,19 @@ namespace ASC.Mail.Core.Engine
                 if (alienEvent)
                     return;
 
-                TenantManager.SetCurrentTenant(mailBoxData.TenantId);
-                SecurityContext.AuthenticateMe(new Guid(mailBoxData.UserId));
+                _tenantManager.SetCurrentTenant(mailBoxData.TenantId);
+                _securityContext.AuthenticateMe(new Guid(mailBoxData.UserId));
 
                 using (var ms = new MemoryStream(EncodingTools.GetEncodingByCodepageName(calendarCharset).GetBytes(calendarIcs)))
                 {
-                    ApiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
+                    _apiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
                 }
 
-                Log.Info("CalendarEngine->UploadIcsToCalendar() has been succeeded");
+                _log.Info("CalendarEngine->UploadIcsToCalendar() has been succeeded");
             }
             catch (Exception ex)
             {
-                Log.ErrorFormat("CalendarEngine->UploadIcsToCalendar with \r\n" +
+                _log.ErrorFormat("CalendarEngine->UploadIcsToCalendar with \r\n" +
                           "calendarId: {0}\r\n" +
                           "calendarEventUid: '{1}'\r\n" +
                           "calendarIcs: '{2}'\r\n" +

@@ -47,7 +47,7 @@ namespace ASC.Mail.Core.Dao
     [Scope]
     public class MailDao : BaseMailDao, IMailDao
     {
-        private MessageEngine MessageEngine { get; }
+        private readonly MessageEngine _messageEngine;
         public MailDao(
              TenantManager tenantManager,
              SecurityContext securityContext,
@@ -55,7 +55,7 @@ namespace ASC.Mail.Core.Dao
              DbContextManager<MailDbContext> dbContext)
             : base(tenantManager, securityContext, dbContext)
         {
-            MessageEngine = messageEngine;
+            _messageEngine = messageEngine;
         }
 
         public int Save(Core.Entities.Mail mail)
@@ -221,7 +221,7 @@ namespace ASC.Mail.Core.Dao
 
         public Stream GetDocumentStream(MailMail mail)
         {
-            return MessageEngine.GetMessageStream(mail.Id);
+            return _messageEngine.GetMessageStream(mail.Id);
         }
     }
 }

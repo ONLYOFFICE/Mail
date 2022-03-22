@@ -3,19 +3,19 @@
 [Singletone]
 class AggregatorServiceLauncher : IHostedService
 {
-    private AggregatorService AggregatorService { get; }
-    private ConsoleParameters ConsoleParameters { get; }
-    private ManualResetEvent ResetEvent;
+    private readonly AggregatorService _aggregatorService;
+    private readonly ConsoleParameters _consoleParameters;
+    private ManualResetEvent _resetEvent;
 
-    private Task AggregatorServiceTask;
-    private CancellationTokenSource Cts;
+    private Task _aggregatorServiceTask;
+    private CancellationTokenSource _cts;
 
     public AggregatorServiceLauncher(
         AggregatorService aggregatorService,
         ConsoleParser consoleParser)
     {
-        AggregatorService = aggregatorService;
-        ConsoleParameters = consoleParser.GetParsedParameters();
+        _aggregatorService = aggregatorService;
+        _consoleParameters = consoleParser.GetParsedParameters();
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
     }
@@ -26,29 +26,29 @@ class AggregatorServiceLauncher : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        if (ConsoleParameters.IsConsole)
+        if (_consoleParameters.IsConsole)
         {
-            AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
-            ResetEvent = new ManualResetEvent(false);
+            _aggregatorServiceTask = _aggregatorService.StartTimer(_cts.Token, true);
+            _resetEvent = new ManualResetEvent(false);
             System.Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
-            ResetEvent.WaitOne();
+            _resetEvent.WaitOne();
         }
         else
         {
-            AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
+            _aggregatorServiceTask = _aggregatorService.StartTimer(_cts.Token, true);
         }
 
-        return AggregatorServiceTask.IsCompleted ? AggregatorServiceTask : Task.CompletedTask;
+        return _aggregatorServiceTask.IsCompleted ? _aggregatorServiceTask : Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         try
         {
-            AggregatorService.StopService(Cts);
-            await Task.WhenAll(AggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+            _aggregatorService.StopService(_cts);
+            await Task.WhenAll(_aggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
         }
         catch (TaskCanceledException)
         {

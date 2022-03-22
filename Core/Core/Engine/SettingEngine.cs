@@ -1,5 +1,4 @@
 ﻿using ASC.Common;
-using ASC.Core;
 using ASC.Core.Common.Settings;
 using ASC.Mail.Models;
 
@@ -8,16 +7,16 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class SettingEngine
     {
-        private SettingsManager SettingsManager { get; }
+        private readonly SettingsManager _settingsManager;
 
         public SettingEngine(SettingsManager settingsManager)
         {
-            SettingsManager = settingsManager;
+            _settingsManager = settingsManager;
         }
 
         public MailCommonSettings GetCommonSettings()
         {
-            var commonSettings = SettingsManager.LoadForCurrentUser<MailCommonSettings>();
+            var commonSettings = _settingsManager.LoadForCurrentUser<MailCommonSettings>();
 
             return commonSettings;
         }
@@ -37,7 +36,7 @@ namespace ASC.Mail.Core.Engine
 
             settings.EnableConversationsSetting = enabled;
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
         }
 
         public bool GetAlwaysDisplayImagesFlag()
@@ -55,7 +54,7 @@ namespace ASC.Mail.Core.Engine
 
             settings.AlwaysDisplayImagesSetting = enabled;
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
         }
 
         public bool GetCacheUnreadMessagesFlag()
@@ -76,7 +75,7 @@ namespace ASC.Mail.Core.Engine
 
             settings.CacheUnreadMessagesSetting = enabled;
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
         }
 
         public bool GetEnableGoNextAfterMoveFlag()
@@ -94,7 +93,7 @@ namespace ASC.Mail.Core.Engine
 
             settings.EnableGoNextAfterMoveSetting = enabled;
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
         }
 
         public bool GetEnableReplaceMessageBodyFlag()
@@ -112,7 +111,7 @@ namespace ASC.Mail.Core.Engine
 
             settings.ReplaceMessageBodySetting = enabled;
 
-            SettingsManager.SaveForCurrentUser(settings);
+            _settingsManager.SaveForCurrentUser(settings);
         }
     }
 }

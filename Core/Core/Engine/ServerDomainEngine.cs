@@ -24,13 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Security;
-
 using ASC.Common;
 using ASC.Common.Utils;
 using ASC.Core;
@@ -43,6 +36,13 @@ using ASC.Mail.Server.Utils;
 using ASC.Mail.Utils;
 using ASC.Web.Core;
 
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.IO;
+using System.Linq;
+using System.Security;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine
@@ -50,17 +50,17 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class ServerDomainEngine : BaseEngine
     {
-        public int Tenant => TenantManager.GetCurrentTenant().TenantId;
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
 
-        public string User => SecurityContext.CurrentAccount.ID.ToString();
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private bool IsAdmin => WebItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, SecurityContext.CurrentAccount.ID);
+        private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private CoreBaseSettings CoreBaseSettings { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly CoreBaseSettings _coreBaseSettings;
+        private readonly WebItemSecurity _webItemSecurity;
+        private readonly IMailDaoFactory _mailDaoFactory;
 
         public ServerDomainEngine(
             SecurityContext securityContext,
@@ -70,16 +70,16 @@ namespace ASC.Mail.Core.Engine
             WebItemSecurity webItemSecurity,
             MailSettings mailSettings) : base(mailSettings)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            CoreBaseSettings = coreBaseSettings;
-            WebItemSecurity = webItemSecurity;
-            MailDaoFactory = mailDaoFactory;
+            _securityContext = securityContext;
+            _tenantManager = tenantManager;
+            _coreBaseSettings = coreBaseSettings;
+            _webItemSecurity = webItemSecurity;
+            _mailDaoFactory = mailDaoFactory;
         }
 
         public ServerDomainData GetDomain(int id)
         {
-            var serverDomain = MailDaoFactory.GetServerDomainDao().GetDomain(id);
+            var serverDomain = _mailDaoFactory.GetServerDomainDao().GetDomain(id);
 
             if (serverDomain == null)
                 throw new Exception("Domain not found");
@@ -94,7 +94,7 @@ namespace ASC.Mail.Core.Engine
             if (!IsAdmin)
                 throw new SecurityException("Need admin privileges.");
 
-            var listDomains = MailDaoFactory.GetServerDomainDao().GetDomains();
+            var listDomains = _mailDaoFactory.GetServerDomainDao().GetDomains();
 
             if (!listDomains.Any())
                 return new List<ServerDomainData>();
@@ -115,14 +115,14 @@ namespace ASC.Mail.Core.Engine
 
         public List<ServerDomain> GetAllDomains()
         {
-            var domains = MailDaoFactory.GetServerDomainDao().GetAllDomains();
+            var domains = _mailDaoFactory.GetServerDomainDao().GetAllDomains();
 
             return domains;
         }
 
         public ServerDomainData GetCommonDomain()
         {
-            var domainCommon = MailDaoFactory.GetServerDomainDao().GetDomains()
+            var domainCommon = _mailDaoFactory.GetServerDomainDao().GetDomains()
                 .SingleOrDefault(x => x.Tenant == DefineConstants.SHARED_TENANT_ID);
 
             if (domainCommon == null)
@@ -141,7 +141,7 @@ namespace ASC.Mail.Core.Engine
             if (domainId < 0)
                 throw new ArgumentException(@"Invalid domain id.", "domainId");
 
-            var domain = MailDaoFactory.GetServerDomainDao().GetDomain(domainId);
+            var domain = _mailDaoFactory.GetServerDomainDao().GetDomain(domainId);
 
             if (domain == null)
                 return null;
@@ -167,12 +167,12 @@ namespace ASC.Mail.Core.Engine
 
             var domainName = name.ToLowerInvariant();
 
-            return MailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
+            return _mailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
         }
 
         public ServerDomainDnsData GetOrCreateUnusedDnsData(Entities.Server server)
         {
-            var dnsSettings = MailDaoFactory.GetServerDnsDao().GetFree();
+            var dnsSettings = _mailDaoFactory.GetServerDnsDao().GetFree();
 
             if (dnsSettings == null)
             {
@@ -206,7 +206,7 @@ namespace ASC.Mail.Core.Engine
                     TimeModified = DateTime.UtcNow
                 };
 
-                serverDns.Id = MailDaoFactory.GetServerDnsDao().Save(serverDns);
+                serverDns.Id = _mailDaoFactory.GetServerDnsDao().Save(serverDns);
 
                 dnsSettings = serverDns;
             }
@@ -261,14 +261,14 @@ namespace ASC.Mail.Core.Engine
 
             var dnsLookup = new DnsLookup();
 
-            var server = MailDaoFactory.GetServerDao().Get(Tenant);
+            var server = _mailDaoFactory.GetServerDao().Get(Tenant);
 
             var freeDns = GetOrCreateUnusedDnsData(server);
 
             if (freeDns.Id != dnsId)
                 throw new InvalidDataException("This dkim public key is already in use. Please reopen wizard again.");
 
-            if (!CoreBaseSettings.Standalone &&
+            if (!_coreBaseSettings.Standalone &&
                 !dnsLookup.IsDomainTxtRecordExists(domainName, freeDns.DomainCheckRecord.Value))
             {
                 throw new InvalidOperationException("txt record is not correct.");
@@ -276,7 +276,7 @@ namespace ASC.Mail.Core.Engine
 
             var isVerified = freeDns.CheckDnsStatus(domainName);
 
-            using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
             var utcNow = DateTime.UtcNow;
 
@@ -303,10 +303,10 @@ namespace ASC.Mail.Core.Engine
                 DateChecked = utcNow
             };
 
-            serverDomain.Id = MailDaoFactory.GetServerDomainDao()
+            serverDomain.Id = _mailDaoFactory.GetServerDomainDao()
                 .Save(serverDomain);
 
-            var serverDns = MailDaoFactory.GetServerDnsDao()
+            var serverDns = _mailDaoFactory.GetServerDnsDao()
                 .GetById(freeDns.Id);
 
             var mailServerDkim = new Server.Core.Entities.Dkim
@@ -322,7 +322,7 @@ namespace ASC.Mail.Core.Engine
             serverDns.DomainId = serverDomain.Id;
             serverDns.TimeModified = utcNow;
 
-            MailDaoFactory.GetServerDnsDao().Save(serverDns);
+            _mailDaoFactory.GetServerDnsDao().Save(serverDns);
 
             tx.Commit();
 
@@ -349,7 +349,7 @@ namespace ASC.Mail.Core.Engine
 
         private ServerDomainDnsData UpdateDnsStatus(ServerDomain domain, bool force = false)
         {
-            var serverDns = MailDaoFactory.GetServerDnsDao().Get(domain.Id);
+            var serverDns = _mailDaoFactory.GetServerDnsDao().Get(domain.Id);
 
             //TODO fix
             /*if (serverDns.UpdateRecords(OperationEngine, domain.Name, force))
@@ -361,7 +361,7 @@ namespace ASC.Mail.Core.Engine
 
             if (dnsData != null && domain.IsVerified != dnsData.IsVerified)
             {
-                MailDaoFactory.GetServerDomainDao().SetVerified(domain.Id, dnsData.IsVerified);
+                _mailDaoFactory.GetServerDomainDao().SetVerified(domain.Id, dnsData.IsVerified);
             }
 
             return dnsData;

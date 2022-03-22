@@ -54,22 +54,20 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class MailboxEngine : BaseEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private TenantManager TenantManager { get; }
-        private SecurityContext SecurityContext { get; }
-        private ILog Log { get; }
-
-        private MailDbContext MailDbContext { get; }
-
-        private IMailDaoFactory MailDaoFactory { get; }
-        private AlertEngine AlertEngine { get; }
-        private MailBoxSettingEngine MailBoxSettingEngine { get; }
-        private QuotaEngine QuotaEngine { get; }
-        private CacheEngine CacheEngine { get; }
-        private IndexEngine IndexEngine { get; }
-        private IServiceProvider ServiceProvider { get; }
+        private readonly TenantManager _tenantManager;
+        private readonly SecurityContext _securityContext;
+        private readonly ILog _log;
+        private readonly MailDbContext _mailDbContext;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly AlertEngine _alertEngine;
+        private readonly MailBoxSettingEngine _mailBoxSettingEngine;
+        private readonly QuotaEngine _quotaEngine;
+        private readonly CacheEngine _cacheEngine;
+        private readonly IndexEngine _indexEngine;
+        private readonly IServiceProvider _serviceProvider;
 
         public MailboxEngine(
             TenantManager tenantManager,
@@ -84,21 +82,21 @@ namespace ASC.Mail.Core.Engine
             IServiceProvider serviceProvider,
             MailSettings mailSettings) : base(mailSettings)
         {
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
-            MailDaoFactory = mailDaoFactory;
+            _tenantManager = tenantManager;
+            _securityContext = securityContext;
+            _mailDaoFactory = mailDaoFactory;
 
-            MailDbContext = MailDaoFactory.GetContext();
+            _mailDbContext = _mailDaoFactory.GetContext();
 
-            AlertEngine = alertEngine;
-            MailBoxSettingEngine = mailBoxSettingEngine;
-            QuotaEngine = quotaEngine;
-            CacheEngine = cacheEngine;
-            IndexEngine = indexEngine;
+            _alertEngine = alertEngine;
+            _mailBoxSettingEngine = mailBoxSettingEngine;
+            _quotaEngine = quotaEngine;
+            _cacheEngine = cacheEngine;
+            _indexEngine = indexEngine;
 
-            Log = option.Get("ASC.Mail.MailboxEngine");
+            _log = option.Get("ASC.Mail.MailboxEngine");
 
-            ServiceProvider = serviceProvider;
+            _serviceProvider = serviceProvider;
         }
 
         public MailBoxData GetMailboxData(IMailboxExp exp)
@@ -123,7 +121,7 @@ namespace ASC.Mail.Core.Engine
         {
             var list = new List<Tuple<MailBoxData, Mailbox>>();
 
-            var mailboxes = MailDaoFactory.GetMailboxDao().GetMailBoxes(exp);
+            var mailboxes = _mailDaoFactory.GetMailboxDao().GetMailBoxes(exp);
 
             list.AddRange(mailboxes.Select(GetMailbox).Where(tuple => tuple != null));
 
@@ -132,7 +130,7 @@ namespace ASC.Mail.Core.Engine
 
         public Tuple<MailBoxData, Mailbox> GetMailboxFullInfo(IMailboxExp exp)
         {
-            var mailbox = MailDaoFactory.GetMailboxDao().GetMailBox(exp);
+            var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
             if (mailbox == null)
                 return null;
@@ -144,7 +142,7 @@ namespace ASC.Mail.Core.Engine
 
         public Tuple<int, int> GetRangeMailboxes(IMailboxExp exp)
         {
-            return MailDaoFactory.GetMailboxDao().GetRangeMailboxes(exp);
+            return _mailDaoFactory.GetMailboxDao().GetRangeMailboxes(exp);
         }
 
         public bool TryGetNextMailboxData(IMailboxExp exp, out MailBoxData mailBoxData, out int failedId)
@@ -153,7 +151,7 @@ namespace ASC.Mail.Core.Engine
 
             try
             {
-                var mailbox = MailDaoFactory.GetMailboxDao().GetNextMailBox(exp);
+                var mailbox = _mailDaoFactory.GetMailboxDao().GetNextMailBox(exp);
 
                 if (mailbox == null)
                 {
@@ -165,7 +163,7 @@ namespace ASC.Mail.Core.Engine
 
                 if (tuple == null)
                 {
-                    Log.WarnFormat("Mailbox id = {0} is not well-formated.", mailbox.Id);
+                    _log.WarnFormat("Mailbox id = {0} is not well-formated.", mailbox.Id);
 
                     mailBoxData = null;
                     failedId = mailbox.Id;
@@ -177,7 +175,7 @@ namespace ASC.Mail.Core.Engine
             }
             catch (Exception ex)
             {
-                Log.Error("TryGetNextMailboxData failed", ex);
+                _log.Error("TryGetNextMailboxData failed", ex);
             }
 
             mailBoxData = null;
@@ -199,7 +197,7 @@ namespace ASC.Mail.Core.Engine
             {
                 try
                 {
-                    var settings = MailBoxSettingEngine.GetMailBoxSettings(host);
+                    var settings = _mailBoxSettingEngine.GetMailBoxSettings(host);
 
                     if (settings != null)
                     {
@@ -291,7 +289,7 @@ namespace ASC.Mail.Core.Engine
 
         public MailboxStatus GetMailboxStatus(IMailboxExp exp)
         {
-            var status = MailDaoFactory.GetMailboxDao().GetMailBoxStatus(exp);
+            var status = _mailDaoFactory.GetMailboxDao().GetMailBoxStatus(exp);
 
             return status;
         }
@@ -304,9 +302,9 @@ namespace ASC.Mail.Core.Engine
             if (mailbox.IsTeamlab)
                 throw new ArgumentException("Mailbox with specified email can't be updated");
 
-            using var tx = MailDbContext.Database.BeginTransaction();
+            using var tx = _mailDbContext.Database.BeginTransaction();
 
-            var existingMailbox = MailDaoFactory.GetMailboxDao().GetMailBox(
+            var existingMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
                 new СoncreteUserMailboxExp(
                     mailbox.EMail,
                     mailbox.TenantId, mailbox.UserId));
@@ -350,17 +348,17 @@ namespace ASC.Mail.Core.Engine
                 dateCreated = existingMailbox.DateCreated;
 
                 // Get existing settings by existing ids
-                var dbInServer = MailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.ServerId);
-                var dbOutServer = MailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.SmtpServerId);
+                var dbInServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.ServerId);
+                var dbOutServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.SmtpServerId);
 
                 // Compare existing settings with new
                 if (!dbInServer.Equals(newInServer) || !dbOutServer.Equals(newOutServer))
                 {
-                    var domain = MailDaoFactory.GetMailboxDomainDao().GetDomain(host);
+                    var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
 
                     List<MailboxServer> trustedServers = null;
                     if (domain != null)
-                        trustedServers = MailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
+                        trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
 
                     newInServerId = GetMailboxServerId(dbInServer, newInServer, trustedServers);
                     newOutServerId = GetMailboxServerId(dbOutServer, newOutServer,
@@ -376,12 +374,12 @@ namespace ASC.Mail.Core.Engine
             {
                 //Find settings by host
 
-                var domain = MailDaoFactory.GetMailboxDomainDao().GetDomain(host);
+                var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
 
                 if (domain != null)
                 {
                     //Get existing servers with isUserData = 0
-                    var trustedServers = MailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
+                    var trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
 
                     //Compare existing settings with new
 
@@ -409,7 +407,7 @@ namespace ASC.Mail.Core.Engine
                         Url = ""
                     };
 
-                    newProvider.Id = MailDaoFactory.GetMailboxProviderDao().SaveProvider(newProvider);
+                    newProvider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(newProvider);
 
                     var newDomain = new MailboxDomain
                     {
@@ -418,7 +416,7 @@ namespace ASC.Mail.Core.Engine
                         ProviderId = newProvider.Id
                     };
 
-                    MailDaoFactory.GetMailboxDomainDao().SaveDomain(newDomain);
+                    _mailDaoFactory.GetMailboxDomainDao().SaveDomain(newDomain);
 
                     newInServerId = SaveMailboxServer(newInServer, newProvider.Id);
                     newOutServerId = SaveMailboxServer(newOutServer, newProvider.Id);
@@ -450,7 +448,7 @@ namespace ASC.Mail.Core.Engine
                 DateCreated = dateCreated
             };
 
-            var mailBoxId = MailDaoFactory.GetMailboxDao().SaveMailBox(mb);
+            var mailBoxId = _mailDaoFactory.GetMailboxDao().SaveMailBox(mb);
 
             mailbox.MailBoxId = mailBoxId;
 
@@ -507,7 +505,7 @@ namespace ASC.Mail.Core.Engine
 
             foreach (var box in mailboxes)
             {
-                Log.Debug($"Address: {box.EMail.Address} | Id: {box.MailBoxId} | IsEnabled: {box.Enabled} | IsRemoved: {box.IsRemoved} | Tenant: {box.TenantId} | Id: {box.UserId}");
+                _log.Debug($"Address: {box.EMail.Address} | Id: {box.MailBoxId} | IsEnabled: {box.Enabled} | IsRemoved: {box.IsRemoved} | Tenant: {box.TenantId} | Id: {box.UserId}");
             }
 
             return mailboxes;
@@ -515,7 +513,7 @@ namespace ASC.Mail.Core.Engine
 
         public bool LockMaibox(int id)
         {
-            return MailDaoFactory.GetMailboxDao().SetMailboxInProcess(id);
+            return _mailDaoFactory.GetMailboxDao().SetMailboxInProcess(id);
         }
 
         public bool ReleaseMailbox(MailBoxData account, MailSettings mailSettings)
@@ -530,12 +528,12 @@ namespace ASC.Mail.Core.Engine
                 {
                     disableMailbox = true;
 
-                    AlertEngine.CreateAuthErrorDisableAlert(account.TenantId, account.UserId,
+                    _alertEngine.CreateAuthErrorDisableAlert(account.TenantId, account.UserId,
                         account.MailBoxId);
                 }
                 else if (difference > mailSettings.Defines.AuthErrorWarningTimeout)
                 {
-                    AlertEngine.CreateAuthErrorWarningAlert(account.TenantId, account.UserId,
+                    _alertEngine.CreateAuthErrorWarningAlert(account.TenantId, account.UserId,
                         account.MailBoxId);
                 }
             }
@@ -544,17 +542,17 @@ namespace ASC.Mail.Core.Engine
             {
                 if (account.QuotaError)
                 {
-                    AlertEngine.CreateQuotaErrorWarningAlert(account.TenantId, account.UserId);
+                    _alertEngine.CreateQuotaErrorWarningAlert(account.TenantId, account.UserId);
                 }
                 else
                 {
-                    AlertEngine.DeleteAlert(MailAlertTypes.QuotaError);
+                    _alertEngine.DeleteAlert(MailAlertTypes.QuotaError);
                 }
             }
 
             var exp = new СoncreteUserMailboxExp(account.MailBoxId, account.TenantId, account.UserId);
 
-            var mailbox = MailDaoFactory.GetMailboxDao().GetMailBox(exp);
+            var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
             if (mailbox == null) return true;
 
@@ -600,32 +598,32 @@ namespace ASC.Mail.Core.Engine
                 }
             }
 
-            return MailDaoFactory.GetMailboxDao().ReleaseMailbox(mailbox, rOptions);
+            return _mailDaoFactory.GetMailboxDao().ReleaseMailbox(mailbox, rOptions);
         }
 
         public bool SetMaiboxAuthError(int id, DateTime? authErroDate)
         {
-            return MailDaoFactory.GetMailboxDao().SetMailboxAuthError(id, authErroDate);
+            return _mailDaoFactory.GetMailboxDao().SetMailboxAuthError(id, authErroDate);
         }
 
         public List<int> ReleaseMailboxes(int timeoutInMinutes)
         {
-            return MailDaoFactory.GetMailboxDao().SetMailboxesProcessed(timeoutInMinutes);
+            return _mailDaoFactory.GetMailboxDao().SetMailboxesProcessed(timeoutInMinutes);
         }
 
         public List<Tuple<int, string>> GetMailUsers(IMailboxExp exp)
         {
-            return MailDaoFactory.GetMailboxDao().GetMailUsers(exp);
+            return _mailDaoFactory.GetMailboxDao().GetMailUsers(exp);
         }
 
         public bool DisableMailboxes(IMailboxExp exp)
         {
-            return MailDaoFactory.GetMailboxDao().Enable(exp, false);
+            return _mailDaoFactory.GetMailboxDao().Enable(exp, false);
         }
 
         public bool SetNextLoginDelay(IMailboxExp exp, TimeSpan delay)
         {
-            return MailDaoFactory.GetMailboxDao().SetNextLoginDelay(exp, delay);
+            return _mailDaoFactory.GetMailboxDao().SetNextLoginDelay(exp, delay);
         }
 
         public void RemoveMailBox(MailBoxData mailbox, bool needRecalculateFolders = true)
@@ -635,7 +633,7 @@ namespace ASC.Mail.Core.Engine
 
             long freedQuotaSize;
 
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
 
@@ -646,9 +644,9 @@ namespace ASC.Mail.Core.Engine
 
                 freedQuotaSize = RemoveMailBoxInfo(mailbox);
 
-                Log.Debug($"Free quota size: {freedQuotaSize}");
+                _log.Debug($"Free quota size: {freedQuotaSize}");
 
-                QuotaEngine.QuotaUsedDelete(freedQuotaSize);
+                _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
                 if (!needRecalculateFolders)
                     return;
@@ -658,11 +656,11 @@ namespace ASC.Mail.Core.Engine
                 tx.Commit();
             }
 
-            QuotaEngine.QuotaUsedDelete(freedQuotaSize);
+            _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
-            CacheEngine.Clear(mailbox.UserId);
+            _cacheEngine.Clear(mailbox.UserId);
 
-            IndexEngine.Remove(mailbox);
+            _indexEngine.Remove(mailbox);
 
             if (!needRecalculateFolders)
                 return;
@@ -677,20 +675,20 @@ namespace ASC.Mail.Core.Engine
             //TODO: Check timeout on big mailboxes
             //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RemoveMailboxTimeout))
 
-            using var scope = ServiceProvider.CreateScope();
+            using var scope = _serviceProvider.CreateScope();
 
             var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             tenantManager.SetCurrentTenant(mailBoxData.TenantId);
-            Log.Debug($"RemoveMailboxInfo. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+            _log.Debug($"RemoveMailboxInfo. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
             using (var tx = factory.BeginTransaction())
             {
                 if (mailBoxData.MailBoxId <= 0)
                     throw new Exception("MailBox id is 0");
 
-                var mailbox = MailDaoFactory.GetMailboxDao().GetMailBox(
+                var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
                     new СoncreteUserMailboxExp(mailBoxData.MailBoxId, mailBoxData.TenantId, mailBoxData.UserId, null));
 
                 if (mailbox == null)
@@ -771,11 +769,11 @@ namespace ASC.Mail.Core.Engine
             if (tasksLimit <= 0)
                 return new List<MailBoxData>();
 
-            Log.Debug("GetActiveMailboxForProcessing()");
+            _log.Debug("GetActiveMailboxForProcessing()");
 
             var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, true));
 
-            Log.Debug($"Found {mailboxes.Count} active tasks");
+            _log.Debug($"Found {mailboxes.Count} active tasks");
 
             return mailboxes;
         }
@@ -785,11 +783,11 @@ namespace ASC.Mail.Core.Engine
             if (tasksLimit <= 0)
                 return new List<MailBoxData>();
 
-            Log.Debug("GetInactiveMailboxForProcessing()");
+            _log.Debug("GetInactiveMailboxForProcessing()");
 
             var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, false));
 
-            Log.Debug($"Found {mailboxes.Count} inactive tasks");
+            _log.Debug($"Found {mailboxes.Count} inactive tasks");
 
             return mailboxes;
         }
@@ -809,7 +807,7 @@ namespace ASC.Mail.Core.Engine
                         var foundInServer = trustedServers.FirstOrDefault(ts => ts.Equals(newServer));
                         if (foundInServer != null)
                         {
-                            MailDaoFactory.GetMailboxServerDao().DeleteServer(dbServer.Id);
+                            _mailDaoFactory.GetMailboxServerDao().DeleteServer(dbServer.Id);
                             newServer.Id = foundInServer.Id;
                             newServer.IsUserData = false;
                         }
@@ -862,7 +860,7 @@ namespace ASC.Mail.Core.Engine
         {
             server.IsUserData = true;
             server.ProviderId = providerId;
-            return MailDaoFactory.GetMailboxServerDao().SaveServer(server);
+            return _mailDaoFactory.GetMailboxServerDao().SaveServer(server);
         }
 
         private static int GetLoginDelayTime(MailBoxData mailbox)
@@ -887,17 +885,17 @@ namespace ASC.Mail.Core.Engine
 
         private Tuple<MailBoxData, Mailbox> GetMailbox(Mailbox mailbox)
         {
-            var inServer = MailDaoFactory.GetMailboxServerDao().GetServer(mailbox.ServerId);
+            var inServer = _mailDaoFactory.GetMailboxServerDao().GetServer(mailbox.ServerId);
 
             if (inServer == null)
                 return null;
 
-            var outServer = MailDaoFactory.GetMailboxServerDao().GetServer(mailbox.SmtpServerId);
+            var outServer = _mailDaoFactory.GetMailboxServerDao().GetServer(mailbox.SmtpServerId);
 
             if (outServer == null)
                 return null;
 
-            var autoreply = MailDaoFactory.GetMailboxAutoreplyDao().GetAutoreply(mailbox);
+            var autoreply = _mailDaoFactory.GetMailboxAutoreplyDao().GetAutoreply(mailbox);
 
             return new Tuple<MailBoxData, Mailbox>(ToMailBoxData(mailbox, inServer, outServer, autoreply), mailbox);
         }
@@ -934,7 +932,7 @@ namespace ASC.Mail.Core.Engine
                 EMailInFolder = mailbox.EmailInFolder,
                 MailAutoreply = mailAutoReply,
                 AccessTokenRefreshed = false, //TODO: ???
-                Active= mailbox.UserOnline,
+                Active = mailbox.UserOnline,
                 Enabled = mailbox.Enabled,
                 IsRemoved = mailbox.IsRemoved,
                 IsTeamlab = mailbox.IsTeamlabMailbox

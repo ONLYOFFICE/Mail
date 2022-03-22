@@ -24,14 +24,14 @@
 */
 
 
-using System;
-
 using ASC.Common.Logging;
 using ASC.Core;
 using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
+
+using System;
 
 namespace ASC.Mail.Core.Engine.Operations
 {
@@ -42,7 +42,7 @@ namespace ASC.Mail.Core.Engine.Operations
             get { return MailOperationType.RecalculateFolders; }
         }
 
-        public FolderEngine FolderEngine { get; }
+        private FolderEngine _folderEngine;
 
         public MailRecalculateFoldersOperation(TenantManager tenantManager,
             SecurityContext securityContext,
@@ -53,7 +53,7 @@ namespace ASC.Mail.Core.Engine.Operations
             IOptionsMonitor<ILog> optionsMonitor)
             : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
         {
-            FolderEngine = folderEngine;
+            _folderEngine = folderEngine;
         }
 
         protected override void Do()
@@ -66,7 +66,7 @@ namespace ASC.Mail.Core.Engine.Operations
 
                 SecurityContext.AuthenticateMe(CurrentUser);
 
-                FolderEngine.RecalculateFolders(progress =>
+                _folderEngine.RecalculateFolders(progress =>
                 {
                     SetProgress((int?)progress);
                 });

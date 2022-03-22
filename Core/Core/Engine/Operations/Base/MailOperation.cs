@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Globalization;
-using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
-
 using ASC.Common.Logging;
 using ASC.Common.Security.Authentication;
 using ASC.Common.Security.Authorizing;
@@ -40,6 +34,12 @@ using ASC.Data.Storage;
 using ASC.Mail.Storage;
 
 using Microsoft.Extensions.Options;
+
+using System;
+using System.Globalization;
+using System.Security;
+using System.Threading;
+using System.Threading.Tasks;
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -77,6 +77,7 @@ namespace ASC.Mail.Core.Engine.Operations.Base
         protected CancellationToken CancellationToken { get; private set; }
 
         public abstract MailOperationType OperationType { get; }
+
         public TenantManager TenantManager { get; }
         public SecurityContext SecurityContext { get; }
         public IMailDaoFactory MailDaoFactory { get; }

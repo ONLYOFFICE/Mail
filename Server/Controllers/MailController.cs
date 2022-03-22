@@ -1,8 +1,4 @@
-﻿using System;
-using System.Configuration;
-using System.Globalization;
-
-using ASC.Api.Core;
+﻿using ASC.Api.Core;
 using ASC.Common;
 using ASC.Common.Logging;
 using ASC.Common.Threading;
@@ -17,6 +13,10 @@ using ASC.Web.Core.Users;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
+using System;
+using System.Configuration;
+using System.Globalization;
+
 namespace ASC.Mail.Controllers
 {
     [DefaultRoute]
@@ -24,59 +24,58 @@ namespace ASC.Mail.Controllers
     [Scope]
     public partial class MailController : ControllerBase
     {
-        private int TenantId => TenantManager.GetCurrentTenant().TenantId;
+        private int TenantId => _tenantManager.GetCurrentTenant().TenantId;
 
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-        private TenantManager TenantManager { get; }
-        private SecurityContext SecurityContext { get; }
-        private UserManager UserManager { get; }
-        private DisplayUserSettingsHelper DisplayUserSettingsHelper { get; }
-        private ApiContext ApiContext { get; }
-        private AccountEngine AccountEngine { get; }
-        private AlertEngine AlertEngine { get; }
-        private DisplayImagesAddressEngine DisplayImagesAddressEngine { get; }
-        private SignatureEngine SignatureEngine { get; }
-        private TagEngine TagEngine { get; }
-        private MailboxEngine MailboxEngine { get; }
-        private DocumentsEngine DocumentsEngine { get; }
-        private AutoreplyEngine AutoreplyEngine { get; }
-        private ContactEngine ContactEngine { get; }
-        private MessageEngine MessageEngine { get; }
-        private CrmLinkEngine CrmLinkEngine { get; }
-        private SpamEngine SpamEngine { get; }
-        private FilterEngine FilterEngine { get; }
-        private UserFolderEngine UserFolderEngine { get; }
-        private FolderEngine FolderEngine { get; }
-        private DraftEngine DraftEngine { get; }
-        private TemplateEngine TemplateEngine { get; }
-        private SettingEngine SettingEngine { get; }
-        private ServerEngine ServerEngine { get; }
-        private ServerDomainEngine ServerDomainEngine { get; }
-        private ServerMailboxEngine ServerMailboxEngine { get; }
-        private ServerMailgroupEngine ServerMailgroupEngine { get; }
-        private OperationEngine OperationEngine { get; }
-        private TestEngine TestEngine { get; }
-        private CoreBaseSettings CoreBaseSettings { get; }
-        private IServiceProvider ServiceProvider { get; }
-        private ILog Log { get; }
-
-        private MailSettings MailSettings { get; }
+        private readonly TenantManager _tenantManager;
+        private readonly SecurityContext _securityContext;
+        private readonly UserManager _userManager;
+        private readonly DisplayUserSettingsHelper _displayUserSettingsHelper;
+        private readonly ApiContext _apiContext;
+        private readonly AccountEngine _accountEngine;
+        private readonly AlertEngine _alertEngine;
+        private readonly DisplayImagesAddressEngine _displayImagesAddressEngine;
+        private readonly SignatureEngine _signatureEngine;
+        private readonly TagEngine _tagEngine;
+        private readonly MailboxEngine _mailboxEngine;
+        private readonly DocumentsEngine _documentsEngine;
+        private readonly AutoreplyEngine _autoreplyEngine;
+        private readonly ContactEngine _contactEngine;
+        private readonly MessageEngine _messageEngine;
+        private readonly CrmLinkEngine _crmLinkEngine;
+        private readonly SpamEngine _spamEngine;
+        private readonly FilterEngine _filterEngine;
+        private readonly UserFolderEngine _userFolderEngine;
+        private readonly FolderEngine _folderEngine;
+        private readonly DraftEngine _draftEngine;
+        private readonly TemplateEngine _templateEngine;
+        private readonly SettingEngine _settingEngine;
+        private readonly ServerEngine _serverEngine;
+        private readonly ServerDomainEngine _serverDomainEngine;
+        private readonly ServerMailboxEngine _serverMailboxEngine;
+        private readonly ServerMailgroupEngine _serverMailgroupEngine;
+        private readonly OperationEngine _operationEngine;
+        private readonly TestEngine _testEngine;
+        private readonly CoreBaseSettings _coreBaseSettings;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILog _log;
+        private readonly MailSettings _mailSettings;
 
         private string Username
         {
-            get { return SecurityContext.CurrentAccount.ID.ToString(); }
+            get { return _securityContext.CurrentAccount.ID.ToString(); }
         }
 
         private CultureInfo CurrentCulture
         {
             get
             {
-                var u = UserManager.GetUsers(new Guid(Username));
+                var u = _userManager.GetUsers(new Guid(Username));
 
                 var culture = !string.IsNullOrEmpty(u.CultureName)
                     ? u.GetCulture()
-                    : TenantManager.GetCurrentTenant().GetCulture();
+                    : _tenantManager.GetCurrentTenant().GetCulture();
 
                 return culture;
             }
@@ -117,39 +116,39 @@ namespace ASC.Mail.Controllers
             IServiceProvider serviceProvider,
             IOptionsMonitor<ILog> option)
         {
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
-            MailSettings = mailSettings;
-            UserManager = userManager;
-            DisplayUserSettingsHelper = displayUserSettingsHelper;
-            ApiContext = apiContext;
-            AccountEngine = accountEngine;
-            AlertEngine = alertEngine;
-            DisplayImagesAddressEngine = displayImagesAddressEngine;
-            SignatureEngine = signatureEngine;
-            TagEngine = tagEngine;
-            MailboxEngine = mailboxEngine;
-            DocumentsEngine = documentsEngine;
-            AutoreplyEngine = autoreplyEngine;
-            ContactEngine = contactEngine;
-            MessageEngine = messageEngine;
-            CrmLinkEngine = crmLinkEngine;
-            SpamEngine = spamEngine;
-            FilterEngine = filterEngine;
-            UserFolderEngine = userFolderEngine;
-            FolderEngine = folderEngine;
-            DraftEngine = draftEngine;
-            TemplateEngine = templateEngine;
-            SettingEngine = settingEngine;
-            ServerEngine = serverEngine;
-            ServerDomainEngine = serverDomainEngine;
-            ServerMailboxEngine = serverMailboxEngine;
-            ServerMailgroupEngine = serverMailgroupEngine;
-            OperationEngine = operationEngine;
-            TestEngine = testEngine;
-            CoreBaseSettings = coreBaseSettings;
-            ServiceProvider = serviceProvider;
-            Log = option.Get("ASC.Api.Mail");
+            _tenantManager = tenantManager;
+            _securityContext = securityContext;
+            _mailSettings = mailSettings;
+            _userManager = userManager;
+            _displayUserSettingsHelper = displayUserSettingsHelper;
+            _apiContext = apiContext;
+            _accountEngine = accountEngine;
+            _alertEngine = alertEngine;
+            _displayImagesAddressEngine = displayImagesAddressEngine;
+            _signatureEngine = signatureEngine;
+            _tagEngine = tagEngine;
+            _mailboxEngine = mailboxEngine;
+            _documentsEngine = documentsEngine;
+            _autoreplyEngine = autoreplyEngine;
+            _contactEngine = contactEngine;
+            _messageEngine = messageEngine;
+            _crmLinkEngine = crmLinkEngine;
+            _spamEngine = spamEngine;
+            _filterEngine = filterEngine;
+            _userFolderEngine = userFolderEngine;
+            _folderEngine = folderEngine;
+            _draftEngine = draftEngine;
+            _templateEngine = templateEngine;
+            _settingEngine = settingEngine;
+            _serverEngine = serverEngine;
+            _serverDomainEngine = serverDomainEngine;
+            _serverMailboxEngine = serverMailboxEngine;
+            _serverMailgroupEngine = serverMailgroupEngine;
+            _operationEngine = operationEngine;
+            _testEngine = testEngine;
+            _coreBaseSettings = coreBaseSettings;
+            _serviceProvider = serviceProvider;
+            _log = option.Get("ASC.Api.Mail");
         }
 
         [Read("info")]
@@ -174,97 +173,97 @@ namespace ASC.Mail.Controllers
             switch (type)
             {
                 case MailOperationType.DownloadAllAttachments:
-                {
-                    var progress = op.GetProperty<MailOperationDownloadAllAttachmentsProgress>(MailOperation.PROGRESS);
-                    switch (progress)
                     {
-                        case MailOperationDownloadAllAttachmentsProgress.Init:
-                            return MailApiResource.SetupTenantAndUserHeader;
-                        case MailOperationDownloadAllAttachmentsProgress.GetAttachments:
-                            return MailApiResource.GetAttachmentsHeader;
-                        case MailOperationDownloadAllAttachmentsProgress.Zipping:
-                            return MailApiResource.ZippingAttachmentsHeader;
-                        case MailOperationDownloadAllAttachmentsProgress.ArchivePreparation:
-                            return MailApiResource.PreparationArchiveHeader;
-                        case MailOperationDownloadAllAttachmentsProgress.CreateLink:
-                            return MailApiResource.CreatingLinkHeader;
-                        case MailOperationDownloadAllAttachmentsProgress.Finished:
-                            return MailApiResource.FinishedHeader;
-                        default:
-                            return status;
+                        var progress = op.GetProperty<MailOperationDownloadAllAttachmentsProgress>(MailOperation.PROGRESS);
+                        switch (progress)
+                        {
+                            case MailOperationDownloadAllAttachmentsProgress.Init:
+                                return MailApiResource.SetupTenantAndUserHeader;
+                            case MailOperationDownloadAllAttachmentsProgress.GetAttachments:
+                                return MailApiResource.GetAttachmentsHeader;
+                            case MailOperationDownloadAllAttachmentsProgress.Zipping:
+                                return MailApiResource.ZippingAttachmentsHeader;
+                            case MailOperationDownloadAllAttachmentsProgress.ArchivePreparation:
+                                return MailApiResource.PreparationArchiveHeader;
+                            case MailOperationDownloadAllAttachmentsProgress.CreateLink:
+                                return MailApiResource.CreatingLinkHeader;
+                            case MailOperationDownloadAllAttachmentsProgress.Finished:
+                                return MailApiResource.FinishedHeader;
+                            default:
+                                return status;
+                        }
                     }
-                }
                 case MailOperationType.RemoveMailbox:
-                {
-                    var progress = op.GetProperty<MailOperationRemoveMailboxProgress>(MailOperation.PROGRESS);
-                    switch (progress)
                     {
-                        case MailOperationRemoveMailboxProgress.Init:
-                            return "Setup tenant and user";
-                        case MailOperationRemoveMailboxProgress.RemoveFromDb:
-                            return "Remove mailbox from Db";
-                        case MailOperationRemoveMailboxProgress.FreeQuota:
-                            return "Decrease newly freed quota space";
-                        case MailOperationRemoveMailboxProgress.RecalculateFolder:
-                            return "Recalculate folders counters";
-                        case MailOperationRemoveMailboxProgress.ClearCache:
-                            return "Clear accounts cache";
-                        case MailOperationRemoveMailboxProgress.Finished:
-                            return "Finished";
-                        default:
-                            return status;
+                        var progress = op.GetProperty<MailOperationRemoveMailboxProgress>(MailOperation.PROGRESS);
+                        switch (progress)
+                        {
+                            case MailOperationRemoveMailboxProgress.Init:
+                                return "Setup tenant and user";
+                            case MailOperationRemoveMailboxProgress.RemoveFromDb:
+                                return "Remove mailbox from Db";
+                            case MailOperationRemoveMailboxProgress.FreeQuota:
+                                return "Decrease newly freed quota space";
+                            case MailOperationRemoveMailboxProgress.RecalculateFolder:
+                                return "Recalculate folders counters";
+                            case MailOperationRemoveMailboxProgress.ClearCache:
+                                return "Clear accounts cache";
+                            case MailOperationRemoveMailboxProgress.Finished:
+                                return "Finished";
+                            default:
+                                return status;
+                        }
                     }
-                }
                 case MailOperationType.RecalculateFolders:
-                {
-                    var progress = op.GetProperty<MailOperationRecalculateMailboxProgress>(MailOperation.PROGRESS);
-                    switch (progress)
                     {
-                        case MailOperationRecalculateMailboxProgress.Init:
-                            return "Setup tenant and user";
-                        case MailOperationRecalculateMailboxProgress.CountUnreadMessages:
-                            return "Calculate unread messages";
-                        case MailOperationRecalculateMailboxProgress.CountTotalMessages:
-                            return "Calculate total messages";
-                        case MailOperationRecalculateMailboxProgress.CountUreadConversation:
-                            return "Calculate unread conversations";
-                        case MailOperationRecalculateMailboxProgress.CountTotalConversation:
-                            return "Calculate total conversations";
-                        case MailOperationRecalculateMailboxProgress.UpdateFoldersCounters:
-                            return "Update folders counters";
-                        case MailOperationRecalculateMailboxProgress.CountUnreadUserFolderMessages:
-                            return "Calculate unread messages in user folders";
-                        case MailOperationRecalculateMailboxProgress.CountTotalUserFolderMessages:
-                            return "Calculate total messages in user folders";
-                        case MailOperationRecalculateMailboxProgress.CountUreadUserFolderConversation:
-                            return "Calculate unread conversations in user folders";
-                        case MailOperationRecalculateMailboxProgress.CountTotalUserFolderConversation:
-                            return "Calculate total conversations in user folders";
-                        case MailOperationRecalculateMailboxProgress.UpdateUserFoldersCounters:
-                            return "Update user folders counters";
-                        case MailOperationRecalculateMailboxProgress.Finished:
-                            return "Finished";
-                        default:
-                            return status;
+                        var progress = op.GetProperty<MailOperationRecalculateMailboxProgress>(MailOperation.PROGRESS);
+                        switch (progress)
+                        {
+                            case MailOperationRecalculateMailboxProgress.Init:
+                                return "Setup tenant and user";
+                            case MailOperationRecalculateMailboxProgress.CountUnreadMessages:
+                                return "Calculate unread messages";
+                            case MailOperationRecalculateMailboxProgress.CountTotalMessages:
+                                return "Calculate total messages";
+                            case MailOperationRecalculateMailboxProgress.CountUreadConversation:
+                                return "Calculate unread conversations";
+                            case MailOperationRecalculateMailboxProgress.CountTotalConversation:
+                                return "Calculate total conversations";
+                            case MailOperationRecalculateMailboxProgress.UpdateFoldersCounters:
+                                return "Update folders counters";
+                            case MailOperationRecalculateMailboxProgress.CountUnreadUserFolderMessages:
+                                return "Calculate unread messages in user folders";
+                            case MailOperationRecalculateMailboxProgress.CountTotalUserFolderMessages:
+                                return "Calculate total messages in user folders";
+                            case MailOperationRecalculateMailboxProgress.CountUreadUserFolderConversation:
+                                return "Calculate unread conversations in user folders";
+                            case MailOperationRecalculateMailboxProgress.CountTotalUserFolderConversation:
+                                return "Calculate total conversations in user folders";
+                            case MailOperationRecalculateMailboxProgress.UpdateUserFoldersCounters:
+                                return "Update user folders counters";
+                            case MailOperationRecalculateMailboxProgress.Finished:
+                                return "Finished";
+                            default:
+                                return status;
+                        }
                     }
-                }
                 case MailOperationType.RemoveUserFolder:
-                {
-                    var progress = op.GetProperty<MailOperationRemoveUserFolderProgress>(MailOperation.PROGRESS);
-                    switch (progress)
                     {
-                        case MailOperationRemoveUserFolderProgress.Init:
-                            return "Setup tenant and user";
-                        case MailOperationRemoveUserFolderProgress.MoveMailsToTrash:
-                            return "Move mails into Trash folder";
-                        case MailOperationRemoveUserFolderProgress.DeleteFolders:
-                            return "Delete folder";
-                        case MailOperationRemoveUserFolderProgress.Finished:
-                            return "Finished";
-                        default:
-                            return status;
+                        var progress = op.GetProperty<MailOperationRemoveUserFolderProgress>(MailOperation.PROGRESS);
+                        switch (progress)
+                        {
+                            case MailOperationRemoveUserFolderProgress.Init:
+                                return "Setup tenant and user";
+                            case MailOperationRemoveUserFolderProgress.MoveMailsToTrash:
+                                return "Move mails into Trash folder";
+                            case MailOperationRemoveUserFolderProgress.DeleteFolders:
+                                return "Delete folder";
+                            case MailOperationRemoveUserFolderProgress.Finished:
+                                return "Finished";
+                            default:
+                                return status;
+                        }
                     }
-                }
                 default:
                     return status;
             }

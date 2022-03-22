@@ -55,22 +55,22 @@ namespace ASC.Mail.Core.Engine
     [Scope]
     public class ContactEngine
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+        private string User => _securityContext.CurrentAccount.ID.ToString();
 
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private IndexEngine IndexEngine { get; }
-        private AccountEngine AccountEngine { get; }
-        private ApiHelper ApiHelper { get; }
-        private FactoryIndexer<MailContact> FactoryIndexer { get; }
-        private FactoryIndexer FactoryIndexerCommon { get; }
-        private IServiceProvider ServiceProvider { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        private CommonLinkUtility CommonLinkUtility { get; }
-        private MailDbContext MailDbContext { get; }
+        private readonly ILog _log;
+        private readonly SecurityContext _securityContext;
+        private readonly TenantManager _tenantManager;
+        private readonly IMailDaoFactory _mailDaoFactory;
+        private readonly IndexEngine _indexEngine;
+        private readonly AccountEngine _accountEngine;
+        private readonly ApiHelper _apiHelper;
+        private readonly FactoryIndexer<MailContact> _factoryIndexer;
+        private readonly FactoryIndexer _factoryIndexerCommon;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly WebItemSecurity _webItemSecurity;
+        private readonly CommonLinkUtility _commonLinkUtility;
+        private readonly MailDbContext _mailDbContext;
 
         public ContactEngine(
             SecurityContext securityContext,
@@ -87,19 +87,19 @@ namespace ASC.Mail.Core.Engine
             IServiceProvider serviceProvider,
             IOptionsMonitor<ILog> option)
         {
-            SecurityContext = securityContext;
-            MailDbContext = dbContextManager.Get("mail");
-            TenantManager = tenantManager;
-            MailDaoFactory = mailDaoFactory;
-            IndexEngine = indexEngine;
-            AccountEngine = accountEngine;
-            ApiHelper = apiHelper;
-            FactoryIndexer = factoryIndexer;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
-            WebItemSecurity = webItemSecurity;
-            CommonLinkUtility = commonLinkUtility;
-            Log = option.Get("ASC.Mail.ContactEngine");
+            _securityContext = securityContext;
+            _mailDbContext = dbContextManager.Get("mail");
+            _tenantManager = tenantManager;
+            _mailDaoFactory = mailDaoFactory;
+            _indexEngine = indexEngine;
+            _accountEngine = accountEngine;
+            _apiHelper = apiHelper;
+            _factoryIndexer = factoryIndexer;
+            _factoryIndexerCommon = factoryIndexerCommon;
+            _serviceProvider = serviceProvider;
+            _webItemSecurity = webItemSecurity;
+            _commonLinkUtility = commonLinkUtility;
+            _log = option.Get("ASC.Mail.ContactEngine");
         }
 
         public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
@@ -107,7 +107,7 @@ namespace ASC.Mail.Core.Engine
         {
             var exp = string.IsNullOrEmpty(search) && !contactType.HasValue
                 ? new SimpleFilterContactsExp(Tenant, User, sortorder == DefineConstants.ASCENDING, fromIndex, pageSize)
-                : new FullFilterContactsExp(Tenant, User, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider, search, contactType,
+                : new FullFilterContactsExp(Tenant, User, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider, search, contactType,
                     orderAsc: sortorder == DefineConstants.ASCENDING,
                     startIndex: fromIndex, limit: pageSize);
 
@@ -122,17 +122,17 @@ namespace ASC.Mail.Core.Engine
                 totalCount = GetContactCardsCount(exp);
             }
 
-            return contacts.ToMailContactDataList(CommonLinkUtility);
+            return contacts.ToMailContactDataList(_commonLinkUtility);
         }
 
         public List<MailContactData> GetContactsByContactInfo(ContactInfoType infoType, string data, bool? isPrimary)
         {
-            var exp = new FullFilterContactsExp(Tenant, User, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider,
+            var exp = new FullFilterContactsExp(Tenant, User, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider,
                 data, infoType: infoType, isPrimary: isPrimary);
 
             var contacts = GetContactCards(exp);
 
-            return contacts.ToMailContactDataList(CommonLinkUtility);
+            return contacts.ToMailContactDataList(_commonLinkUtility);
         }
 
         public MailContactData CreateContact(ContactModel model)
@@ -145,7 +145,7 @@ namespace ASC.Mail.Core.Engine
 
             var newContact = SaveContactCard(contactCard);
 
-            return newContact.ToMailContactData(CommonLinkUtility);
+            return newContact.ToMailContactData(_commonLinkUtility);
         }
 
         public List<ContactCard> GetContactCards(IContactsExp exp)
@@ -153,7 +153,7 @@ namespace ASC.Mail.Core.Engine
             if (exp == null)
                 throw new ArgumentNullException("exp");
 
-            var list = MailDaoFactory.GetContactCardDao().GetContactCards(exp);
+            var list = _mailDaoFactory.GetContactCardDao().GetContactCards(exp);
 
             return list;
         }
@@ -163,23 +163,23 @@ namespace ASC.Mail.Core.Engine
             if (exp == null)
                 throw new ArgumentNullException("exp");
 
-            var count = MailDaoFactory.GetContactCardDao().GetContactCardsCount(exp);
+            var count = _mailDaoFactory.GetContactCardDao().GetContactCardsCount(exp);
 
             return count;
         }
 
         public ContactCard GetContactCard(int id)
         {
-            var contactCard = MailDaoFactory.GetContactCardDao().GetContactCard(id);
+            var contactCard = _mailDaoFactory.GetContactCardDao().GetContactCard(id);
 
             return contactCard;
         }
 
         public ContactCard SaveContactCard(ContactCard contactCard)
         {
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
             {
-                var contactId = MailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
+                var contactId = _mailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
 
                 contactCard.ContactInfo.Id = contactId;
 
@@ -187,7 +187,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     contactItem.ContactId = contactId;
 
-                    var contactItemId = MailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
+                    var contactItemId = _mailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
 
                     contactItem.Id = contactItemId;
                 }
@@ -195,9 +195,9 @@ namespace ASC.Mail.Core.Engine
                 tx.Commit();
             }
 
-            Log.Debug("IndexEngine->SaveContactCard()");
+            _log.Debug("IndexEngine->SaveContactCard()");
 
-            IndexEngine.Add(contactCard.ToMailContactWrapper());
+            _indexEngine.Add(contactCard.ToMailContactWrapper());
 
             return contactCard;
         }
@@ -215,7 +215,7 @@ namespace ASC.Mail.Core.Engine
 
             var contact = UpdateContactCard(contactCard);
 
-            return contact.ToMailContactData(CommonLinkUtility);
+            return contact.ToMailContactData(_commonLinkUtility);
         }
 
         public ContactCard UpdateContactCard(ContactCard newContactCard)
@@ -239,11 +239,11 @@ namespace ASC.Mail.Core.Engine
             if (!contactChanged && !newContactItems.Any() && !removedContactItems.Any())
                 return contactCard;
 
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
             {
                 if (contactChanged)
                 {
-                    MailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
+                    _mailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
 
                     contactCard.ContactInfo = newContactCard.ContactInfo;
                 }
@@ -254,7 +254,7 @@ namespace ASC.Mail.Core.Engine
                     {
                         contactItem.ContactId = contactId;
 
-                        var contactItemId = MailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
+                        var contactItemId = _mailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
 
                         contactItem.Id = contactItemId;
 
@@ -266,7 +266,7 @@ namespace ASC.Mail.Core.Engine
                 {
                     foreach (var contactItem in removedContactItems)
                     {
-                        MailDaoFactory.GetContactInfoDao().RemoveContactInfo(contactItem.Id);
+                        _mailDaoFactory.GetContactInfoDao().RemoveContactInfo(contactItem.Id);
 
                         contactCard.ContactItems.Remove(contactItem);
                     }
@@ -275,9 +275,9 @@ namespace ASC.Mail.Core.Engine
                 tx.Commit();
             }
 
-            Log.Debug("IndexEngine->UpdateContactCard()");
+            _log.Debug("IndexEngine->UpdateContactCard()");
 
-            IndexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
+            _indexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
 
             return contactCard;
         }
@@ -287,18 +287,18 @@ namespace ASC.Mail.Core.Engine
             if (!ids.Any())
                 throw new ArgumentException(@"Empty ids collection", "ids");
 
-            using (var tx = MailDaoFactory.BeginTransaction())
+            using (var tx = _mailDaoFactory.BeginTransaction())
             {
-                MailDaoFactory.GetContactDao().RemoveContacts(ids);
+                _mailDaoFactory.GetContactDao().RemoveContacts(ids);
 
-                MailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
+                _mailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
 
                 tx.Commit();
             }
 
-            Log.Debug("IndexEngine->RemoveContacts()");
+            _log.Debug("IndexEngine->RemoveContacts()");
 
-            IndexEngine.RemoveContacts(ids, Tenant, new Guid(User));
+            _indexEngine.RemoveContacts(ids, Tenant, new Guid(User));
         }
 
         /// <summary>
@@ -325,10 +325,10 @@ namespace ASC.Mail.Core.Engine
             {
                 Task.Run(() =>
                 {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
+                    _tenantManager.SetCurrentTenant(tenant);
+                    _securityContext.AuthenticateMe(userGuid);
 
-                    var exp = new FullFilterContactsExp(tenant, userName, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider,
+                    var exp = new FullFilterContactsExp(tenant, userName, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider,
                         term, infoType: ContactInfoType.Email, orderAsc: true, limit: maxCountPerSystem);
 
                     var contactCards = GetContactCards(exp);
@@ -344,29 +344,29 @@ namespace ASC.Mail.Core.Engine
 
                 Task.Run(() =>
                 {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
+                    _tenantManager.SetCurrentTenant(tenant);
+                    _securityContext.AuthenticateMe(userGuid);
 
-                    return AccountEngine.SearchAccountEmails(term);
+                    return _accountEngine.SearchAccountEmails(term);
                 }),
 
                 Task.Run(() =>
                 {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
+                    _tenantManager.SetCurrentTenant(tenant);
+                    _securityContext.AuthenticateMe(userGuid);
 
-                    return WebItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID)
-                        ? ApiHelper.SearchCrmEmails(term, maxCountPerSystem)
+                    return _webItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID)
+                        ? _apiHelper.SearchCrmEmails(term, maxCountPerSystem)
                         : new List<string>();
                 }),
 
                 Task.Run(() =>
                 {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
+                    _tenantManager.SetCurrentTenant(tenant);
+                    _securityContext.AuthenticateMe(userGuid);
 
-                    return WebItemSecurity.IsAvailableForMe(WebItemManager.PeopleProductID)
-                        ? ApiHelper.SearchPeopleEmails(term, 0, maxCountPerSystem)
+                    return _webItemSecurity.IsAvailableForMe(WebItemManager.PeopleProductID)
+                        ? _apiHelper.SearchPeopleEmails(term, 0, maxCountPerSystem)
                         : new List<string>();
                 })
             };
@@ -392,7 +392,7 @@ namespace ASC.Mail.Core.Engine
                         .AppendFormat("\n-------------------------------------------------\n{0}", t);
                 }
 
-                Log.Error(errorText.ToString());
+                _log.Error(errorText.ToString());
             }
 
             contacts =
@@ -405,7 +405,7 @@ namespace ASC.Mail.Core.Engine
                     .Distinct(equality)
                     .ToList();
 
-            Log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
+            _log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
 
             return contacts;
         }

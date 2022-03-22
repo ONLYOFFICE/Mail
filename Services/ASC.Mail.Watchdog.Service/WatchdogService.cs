@@ -3,13 +3,12 @@
 [Singletone]
 public class WatchdogService
 {
-    private ILog Log { get; }
+    private readonly ILog _log;
+    private readonly MailboxEngine _mailboxEngine;
+    private readonly TimeSpan _interval;
+    private readonly TimeSpan _tasksTimeoutInterval;
 
     private Timer WorkTimer;
-    private MailboxEngine MailboxEngine { get; }
-
-    readonly TimeSpan Interval;
-    readonly TimeSpan TasksTimeoutInterval;
 
     public WatchdogService(
         IOptionsMonitor<ILog> options,
@@ -19,17 +18,17 @@ public class WatchdogService
     {
         mailLogCongigure.Configure();
 
-        Log = options.Get("ASC.Mail.WatchdogService");
-        MailboxEngine = mailboxEngine;
+        _log = options.Get("ASC.Mail.WatchdogService");
+        _mailboxEngine = mailboxEngine;
 
-        Interval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TimerIntervalInMinutes));
-        TasksTimeoutInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TasksTimeoutInMinutes));
+        _interval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TimerIntervalInMinutes));
+        _tasksTimeoutInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Watchdog.TasksTimeoutInMinutes));
 
-        Log.InfoFormat("\r\nConfiguration:\r\n" +
+        _log.InfoFormat("\r\nConfiguration:\r\n" +
                   "\t- check locked mailboxes in every {0} minutes;\r\n" +
                   "\t- locked mailboxes timeout {1} minutes;\r\n",
-                  Interval.TotalMinutes,
-                  TasksTimeoutInterval.TotalMinutes);
+                  _interval.TotalMinutes,
+                  _tasksTimeoutInterval.TotalMinutes);
     }
 
     internal Task StarService(CancellationToken token)
@@ -44,7 +43,7 @@ public class WatchdogService
     {
         if (tokenSource != null) tokenSource.Cancel();
 
-        Log.Info("Try stop service...");
+        _log.Info("Try stop service...");
 
         if (WorkTimer == null) return;
 
@@ -59,24 +58,24 @@ public class WatchdogService
         {
             WorkTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
-            Log.Info($"ReleaseLockedMailboxes(timeout is {TasksTimeoutInterval.TotalMinutes} minutes)");
+            _log.Info($"ReleaseLockedMailboxes(timeout is {_tasksTimeoutInterval.TotalMinutes} minutes)");
 
-            var freeMailboxIds = MailboxEngine.ReleaseMailboxes((int)TasksTimeoutInterval.TotalMinutes);
+            var freeMailboxIds = _mailboxEngine.ReleaseMailboxes((int)_tasksTimeoutInterval.TotalMinutes);
 
             if (freeMailboxIds.Any())
-                Log.Info($"Released next locked mailbox's ids: {string.Join(",", freeMailboxIds)}");
+                _log.Info($"Released next locked mailbox's ids: {string.Join(",", freeMailboxIds)}");
             else
-                Log.Info("Nothing to do!");
+                _log.Info("Nothing to do!");
 
         }
         catch (Exception ex)
         {
-            Log.Error($"IntervalTimer_Elapsed() Exception:\r\n{ex}");
+            _log.Error($"IntervalTimer_Elapsed() Exception:\r\n{ex}");
         }
         finally
         {
-            Log.Info($"Waiting for {Interval.TotalMinutes} minutes for next check...");
-            WorkTimer.Change(Interval, Interval);
+            _log.Info($"Waiting for {_interval.TotalMinutes} minutes for next check...");
+            WorkTimer.Change(_interval, _interval);
         }
     }
 }
