@@ -20,6 +20,7 @@ global using ASC.Mail.Core.Search;
 global using ASC.Mail.Core.Utils;
 global using ASC.Mail.Enums;
 global using ASC.Mail.Extensions;
+global using ASC.Mail.ImapSync;
 global using ASC.Mail.Models;
 global using ASC.Mail.Storage;
 global using ASC.Mail.Utils;
@@ -31,6 +32,7 @@ global using MailKit;
 global using MailKit.Net.Imap;
 global using MailKit.Security;
 
+global using Microsoft.AspNetCore.Builder;
 global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;

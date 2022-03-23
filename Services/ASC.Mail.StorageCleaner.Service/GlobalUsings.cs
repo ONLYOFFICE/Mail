@@ -10,6 +10,7 @@ global using ASC.Mail.Configuration;
 global using ASC.Mail.Core;
 global using ASC.Mail.Core.Engine;
 global using ASC.Mail.Core.Utils;
+global using ASC.Mail.StorageCleaner.Service;
 global using ASC.Mail.Utils;
 
 global using Autofac;
@@ -17,6 +18,7 @@ global using Autofac.Extensions.DependencyInjection;
 
 global using CommandLine;
 
+global using Microsoft.AspNetCore.Builder;
 global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;

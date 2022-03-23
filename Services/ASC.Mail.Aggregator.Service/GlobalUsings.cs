@@ -9,6 +9,7 @@ global using ASC.Core;
 global using ASC.Core.Notify.Signalr;
 global using ASC.Core.Users;
 global using ASC.Data.Storage;
+global using ASC.Mail.Aggregator.Service;
 global using ASC.Mail.Aggregator.Service.Console;
 global using ASC.Mail.Aggregator.Service.Queue;
 global using ASC.Mail.Aggregator.Service.Queue.Data;
@@ -36,6 +37,7 @@ global using LiteDB;
 global using MailKit.Net.Imap;
 global using MailKit.Net.Pop3;
 
+global using Microsoft.AspNetCore.Builder;
 global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
