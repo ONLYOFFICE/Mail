@@ -23,8 +23,6 @@
  *
 */
 
-
-// ReSharper disable InconsistentNaming
 namespace ASC.Mail.Enums
 {
     public enum EncryptionType

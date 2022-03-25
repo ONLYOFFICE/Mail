@@ -45,10 +45,7 @@ namespace ASC.Mail.Models
     #region Base entity class
     public class EntityBase<T>
     {
-
-// ReSharper disable StaticFieldInGenericType
         private static XmlSerializer _serializer;
-// ReSharper restore StaticFieldInGenericType
 
         private static XmlSerializer Serializer
         {

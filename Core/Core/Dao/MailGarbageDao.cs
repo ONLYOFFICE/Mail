@@ -62,6 +62,7 @@ namespace ASC.Mail.Core.Dao
                         Mail = m,
                         Attachment = a
                     })
+                .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
                 .Count();
 
             return count;
@@ -80,6 +81,7 @@ namespace ASC.Mail.Core.Dao
                         Mail = m,
                         Attachment = a
                     })
+                .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
                 .Select(r => new MailAttachGarbage(mailBoxData.UserId, r.Attachment.Id,
                     r.Mail.Stream, r.Attachment.FileNumber, r.Attachment.StoredName)
                 )

@@ -296,6 +296,8 @@ internal class MailboxHandler : IDisposable
             _log.Info($"Found message uidl: {uidl}, {_boxInfo}");
 
             if (!SaveAndOptional(box, boxSaveInfo, uidl)) return;
+
+            boxSaveInfo.MimeMessage.Dispose();
         }
         catch (Exception ex)
         {
@@ -304,6 +306,7 @@ internal class MailboxHandler : IDisposable
         }
         finally
         {
+
             if (watch != null)
             {
                 watch.Stop();

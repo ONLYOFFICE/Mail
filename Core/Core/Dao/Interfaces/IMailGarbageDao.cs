@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-
-using ASC.Common;
+﻿using ASC.Common;
 using ASC.Mail.Models;
+
+using System.Collections.Generic;
 
 namespace ASC.Mail.Core.Dao.Interfaces
 {

@@ -322,7 +322,7 @@ public class AggregatorService
 
             ReleaseMailbox(taskData.Mailbox);
 
-            taskData.Dispose(); GC.Collect();
+            taskData.Dispose();
         }
         catch (Exception ex)
         {

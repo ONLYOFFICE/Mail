@@ -27,7 +27,6 @@
 using System;
 using System.IO;
 using System.Runtime.Serialization;
-//using AjaxPro;
 
 namespace ASC.Mail.Models
 {
@@ -47,8 +46,6 @@ namespace ASC.Mail.Models
                 dataStream.Dispose();
         }
 
-        //DO NOT RENAME field's lower case, for AjaxPro.JavaScriptSerializer (Upload handler) and Api.Serializer (Mail.Api) equal result;
-        // ReSharper disable InconsistentNaming
         [DataMember(Name = "fileId", EmitDefaultValue = false)]
         public int fileId { get; set; }
 
@@ -87,47 +84,37 @@ namespace ASC.Mail.Models
         public string tempStoredUrl { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public bool isTemp
         {
             get { return !string.IsNullOrEmpty(tempStoredUrl); }
         }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public string storedFileUrl { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public byte[] data { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public Stream dataStream { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public string user { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public int tenant { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public bool isEmbedded
         {
             get { return !string.IsNullOrEmpty(contentId) || !string.IsNullOrEmpty(contentLocation); }
         }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public string contentLocation { get; set; }
 
         [IgnoreDataMember]
-        //[AjaxNonSerializable]
         public int mailboxId { get; set; }
-        // ReSharper restore InconsistentNaming
 
         public override int GetHashCode()
         {

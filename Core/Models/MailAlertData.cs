@@ -24,11 +24,10 @@
 */
 
 
-using System;
-using System.Runtime.Serialization;
 using ASC.Mail.Enums;
 
-// ReSharper disable InconsistentNaming
+using System;
+using System.Runtime.Serialization;
 
 namespace ASC.Mail.Models
 {

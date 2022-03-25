@@ -24,12 +24,6 @@
 */
 
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Net.Mail;
-using System.Runtime.Serialization;
-
 using ASC.FederatedLogin;
 using ASC.FederatedLogin.Helpers;
 using ASC.Mail.Authorization;
@@ -38,6 +32,12 @@ using ASC.Mail.Enums;
 using ASC.Mail.Utils;
 
 using Newtonsoft.Json;
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Mail;
+using System.Runtime.Serialization;
 
 namespace ASC.Mail.Models
 {
@@ -186,23 +186,17 @@ namespace ASC.Mail.Models
         /// <summary>
         /// This default value is assumed based on experiments on the following mail servers: qip.ru, 
         /// </summary>
-// ReSharper disable InconsistentNaming
         public const int DefaultServerLoginDelay = 30;
-        // ReSharper restore InconsistentNaming
 
         /// <summary>
         /// Limiting the period of time when limiting download emails
         /// </summary>
-        // ReSharper disable InconsistentNaming
         public const Int64 DefaultMailLimitedTimeDelta = 25920000000000; // 30 days;
-                                                                         // ReSharper restore InconsistentNaming
 
         /// <summary>
         /// Default begin timestamp loading emails
         /// </summary>
-        // ReSharper disable InconsistentNaming
         public const Int64 DefaultMailBeginTimestamp = 622933632000000000; // 01/01/1975 00:00:00
-                                                                           // ReSharper restore InconsistentNaming
 
         public int AuthorizeTimeoutInMilliseconds
         {

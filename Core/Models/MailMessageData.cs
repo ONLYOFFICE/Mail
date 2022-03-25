@@ -190,7 +190,6 @@ namespace ASC.Mail.Models
         public long Size { get; set; }
 
         [DataMember]
-        // ReSharper disable once InconsistentNaming
         public string EMLLink { get; set; }
 
         [DataMember]
