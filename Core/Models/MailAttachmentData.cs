@@ -23,114 +23,108 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.IO;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[DataContract(Name = "attachment", Namespace = "")]
+public class MailAttachmentData : ICloneable
 {
-    [DataContract(Name = "attachment", Namespace = "")]
-    public class MailAttachmentData : ICloneable
+    private string _contentId;
+    public MailAttachmentData()
     {
-        private string _contentId;
-        public MailAttachmentData()
-        {
-            data = null;
-            dataStream = null;
-        }
+        data = null;
+        dataStream = null;
+    }
 
-        ~MailAttachmentData()
-        {
-            if (dataStream != null)
-                dataStream.Dispose();
-        }
+    ~MailAttachmentData()
+    {
+        if (dataStream != null)
+            dataStream.Dispose();
+    }
 
-        [DataMember(Name = "fileId", EmitDefaultValue = false)]
-        public int fileId { get; set; }
+    [DataMember(Name = "fileId", EmitDefaultValue = false)]
+    public int fileId { get; set; }
 
-        [DataMember(Name = "fileName", EmitDefaultValue = false)]
-        public string fileName { get; set; }
+    [DataMember(Name = "fileName", EmitDefaultValue = false)]
+    public string fileName { get; set; }
 
-        [DataMember(Name = "size", EmitDefaultValue = false)]
-        public long size { get; set; }
+    [DataMember(Name = "size", EmitDefaultValue = false)]
+    public long size { get; set; }
 
-        [DataMember(Name = "contentType", EmitDefaultValue = false)]
-        public string contentType { get; set; }
+    [DataMember(Name = "contentType", EmitDefaultValue = false)]
+    public string contentType { get; set; }
 
-        [DataMember(Name = "needSaveToTemp", EmitDefaultValue = false)]
-        public bool needSaveToTemp { get; set; }
+    [DataMember(Name = "needSaveToTemp", EmitDefaultValue = false)]
+    public bool needSaveToTemp { get; set; }
 
-        [DataMember(Name = "contentId", EmitDefaultValue = false)]
-        public string contentId
-        {
-            get { return string.IsNullOrEmpty(_contentId) ? null : _contentId; }
-            set { _contentId = value; }
-        }
+    [DataMember(Name = "contentId", EmitDefaultValue = false)]
+    public string contentId
+    {
+        get { return string.IsNullOrEmpty(_contentId) ? null : _contentId; }
+        set { _contentId = value; }
+    }
 
-        [DataMember(Name = "fileNumber", EmitDefaultValue = false)]
-        public int fileNumber { get; set; }
+    [DataMember(Name = "fileNumber", EmitDefaultValue = false)]
+    public int fileNumber { get; set; }
 
-        [DataMember(Name = "storedName", EmitDefaultValue = false)]
-        public string storedName { get; set; }
+    [DataMember(Name = "storedName", EmitDefaultValue = false)]
+    public string storedName { get; set; }
 
-        [DataMember(Name = "streamId", EmitDefaultValue = false)]
-        public string streamId { get; set; }
+    [DataMember(Name = "streamId", EmitDefaultValue = false)]
+    public string streamId { get; set; }
 
-        [DataMember(Name = "savedToMyDocuments", EmitDefaultValue = false)]
-        public bool attachedAsLink { get; set; }
+    [DataMember(Name = "savedToMyDocuments", EmitDefaultValue = false)]
+    public bool attachedAsLink { get; set; }
 
-        [DataMember(Name = "tempStoredUrl", EmitDefaultValue = false)]
-        public string tempStoredUrl { get; set; }
+    [DataMember(Name = "tempStoredUrl", EmitDefaultValue = false)]
+    public string tempStoredUrl { get; set; }
 
-        [IgnoreDataMember]
-        public bool isTemp
-        {
-            get { return !string.IsNullOrEmpty(tempStoredUrl); }
-        }
+    [IgnoreDataMember]
+    public bool isTemp
+    {
+        get { return !string.IsNullOrEmpty(tempStoredUrl); }
+    }
 
-        [IgnoreDataMember]
-        public string storedFileUrl { get; set; }
+    [IgnoreDataMember]
+    public string storedFileUrl { get; set; }
 
-        [IgnoreDataMember]
-        public byte[] data { get; set; }
+    [IgnoreDataMember]
+    public byte[] data { get; set; }
 
-        [IgnoreDataMember]
-        public Stream dataStream { get; set; }
+    [IgnoreDataMember]
+    public Stream dataStream { get; set; }
 
-        [IgnoreDataMember]
-        public string user { get; set; }
+    [IgnoreDataMember]
+    public string user { get; set; }
 
-        [IgnoreDataMember]
-        public int tenant { get; set; }
+    [IgnoreDataMember]
+    public int tenant { get; set; }
 
-        [IgnoreDataMember]
-        public bool isEmbedded
-        {
-            get { return !string.IsNullOrEmpty(contentId) || !string.IsNullOrEmpty(contentLocation); }
-        }
+    [IgnoreDataMember]
+    public bool isEmbedded
+    {
+        get { return !string.IsNullOrEmpty(contentId) || !string.IsNullOrEmpty(contentLocation); }
+    }
 
-        [IgnoreDataMember]
-        public string contentLocation { get; set; }
+    [IgnoreDataMember]
+    public string contentLocation { get; set; }
 
-        [IgnoreDataMember]
-        public int mailboxId { get; set; }
+    [IgnoreDataMember]
+    public int mailboxId { get; set; }
 
-        public override int GetHashCode()
-        {
-            return fileId.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return fileId.GetHashCode();
+    }
 
-        public override bool Equals(object obj)
-        {
-            var a = obj as MailAttachmentData;
-            return a != null && a.fileId == fileId && a.fileName == fileName && a.storedName == storedName &&
-                   a.mailboxId == mailboxId && a.tenant == tenant && a.user == user;
-        }
+    public override bool Equals(object obj)
+    {
+        var a = obj as MailAttachmentData;
+        return a != null && a.fileId == fileId && a.fileName == fileName && a.storedName == storedName &&
+               a.mailboxId == mailboxId && a.tenant == tenant && a.user == user;
+    }
 
-        public object Clone()
-        {
-            return MemberwiseClone();
-        }
+    public object Clone()
+    {
+        return MemberwiseClone();
     }
 }

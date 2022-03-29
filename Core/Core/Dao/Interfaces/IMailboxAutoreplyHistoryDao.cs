@@ -23,38 +23,31 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxAutoreplyHistoryDao))]
+public interface IMailboxAutoreplyHistoryDao
 {
-    [Scope(typeof(MailboxAutoreplyHistoryDao))]
-    public interface IMailboxAutoreplyHistoryDao
-    {
-        /// <summary>
-        ///     Get autoreplyHistory emails by mailbox id.
-        /// </summary>
-        /// <param name="mailboxId"></param>
-        /// <param name="email"></param>
-        /// <param name="autoreplyDaysInterval"></param>
-        /// <returns>list of emails</returns>
-        List<string> GetAutoreplyHistorySentEmails(int mailboxId, string email, int autoreplyDaysInterval);
+    /// <summary>
+    ///     Get autoreplyHistory emails by mailbox id.
+    /// </summary>
+    /// <param name="mailboxId"></param>
+    /// <param name="email"></param>
+    /// <param name="autoreplyDaysInterval"></param>
+    /// <returns>list of emails</returns>
+    List<string> GetAutoreplyHistorySentEmails(int mailboxId, string email, int autoreplyDaysInterval);
 
-        /// <summary>
-        ///     Save or update autoreplyHistory
-        /// </summary>
-        /// <param name="autoreplyHistory"></param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int SaveAutoreplyHistory(MailboxAutoreplyHistory autoreplyHistory);
+    /// <summary>
+    ///     Save or update autoreplyHistory
+    /// </summary>
+    /// <param name="autoreplyHistory"></param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int SaveAutoreplyHistory(MailboxAutoreplyHistory autoreplyHistory);
 
-        /// <summary>
-        ///     Delete autoreplyHistory
-        /// </summary>
-        /// <param name="mailboxId">id</param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int DeleteAutoreplyHistory(int mailboxId);
-    }
+    /// <summary>
+    ///     Delete autoreplyHistory
+    /// </summary>
+    /// <param name="mailboxId">id</param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int DeleteAutoreplyHistory(int mailboxId);
 }

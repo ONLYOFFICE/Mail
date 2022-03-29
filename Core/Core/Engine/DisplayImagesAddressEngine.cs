@@ -23,37 +23,31 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class DisplayImagesAddressEngine
 {
-    [Scope]
-    public class DisplayImagesAddressEngine
+    private readonly IMailDaoFactory _mailDaoFactory;
+
+    public DisplayImagesAddressEngine(IMailDaoFactory mailDaoFactory)
     {
-        private readonly IMailDaoFactory _mailDaoFactory;
+        _mailDaoFactory = mailDaoFactory;
+    }
 
-        public DisplayImagesAddressEngine(IMailDaoFactory mailDaoFactory)
-        {
-            _mailDaoFactory = mailDaoFactory;
-        }
+    public IEnumerable<string> Get()
+    {
+        return _mailDaoFactory.GetDisplayImagesAddressDao().GetDisplayImagesAddresses();
+    }
 
-        public IEnumerable<string> Get()
-        {
-            return _mailDaoFactory.GetDisplayImagesAddressDao().GetDisplayImagesAddresses();
-        }
+    public void Add(string address)
+    {
+        _mailDaoFactory.GetDisplayImagesAddressDao().AddDisplayImagesAddress(address);
 
-        public void Add(string address)
-        {
-            _mailDaoFactory.GetDisplayImagesAddressDao().AddDisplayImagesAddress(address);
+    }
 
-        }
-
-        public void Remove(string address)
-        {
-            _mailDaoFactory.GetDisplayImagesAddressDao().RemovevDisplayImagesAddress(address);
-        }
+    public void Remove(string address)
+    {
+        _mailDaoFactory.GetDisplayImagesAddressDao().RemovevDisplayImagesAddress(address);
     }
 }

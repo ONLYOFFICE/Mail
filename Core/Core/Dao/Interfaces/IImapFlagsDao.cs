@@ -23,20 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ImapFlagsDao))]
+public interface IImapFlagsDao
 {
-    [Scope(typeof(ImapFlagsDao))]
-    public interface IImapFlagsDao
-    {
-        /// <summary>
-        ///     Get a list of defined IMAP flags.
-        /// </summary>
-        List<ImapFlag> GetImapFlags();
-    }
+    /// <summary>
+    ///     Get a list of defined IMAP flags.
+    /// </summary>
+    List<ImapFlag> GetImapFlags();
 }

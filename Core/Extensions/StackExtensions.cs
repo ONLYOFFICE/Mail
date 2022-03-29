@@ -23,17 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Extensions
+public static class StackExtensions
 {
-    public static class StackExtensions
+    public static void PushRange<T>(this Stack<T> source, IEnumerable<T> collection)
     {
-        public static void PushRange<T>(this Stack<T> source, IEnumerable<T> collection)
-        {
-            foreach (var item in collection)
-                source.Push(item);
-        }
+        foreach (var item in collection)
+            source.Push(item);
     }
 }

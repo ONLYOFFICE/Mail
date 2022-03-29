@@ -23,17 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class UserFolderXMail
 {
-    public class UserFolderXMail
-    {
-        public int Tenant { get; set; }
-        public string User { get; set; }
-        public int MailId { get; set; }
-        public int FolderId { get; set; }
-        public DateTime TimeModified { get; set; }
-    }
+    public int Tenant { get; set; }
+    public string User { get; set; }
+    public int MailId { get; set; }
+    public int FolderId { get; set; }
+    public DateTime TimeModified { get; set; }
 }

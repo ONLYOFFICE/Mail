@@ -23,31 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Mail.Core.Dao.Expressions.Conversation;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ChainDao))]
+public interface IChainDao
 {
-    [Scope(typeof(ChainDao))]
-    public interface IChainDao
-    {
-        List<Chain> GetChains(IConversationsExp exp, ILog log = null);
+    List<Chain> GetChains(IConversationsExp exp, ILog log = null);
 
-        Dictionary<int, int> GetChainCount(IConversationsExp exp);
+    Dictionary<int, int> GetChainCount(IConversationsExp exp);
 
-        Dictionary<int, int> GetChainUserFolderCount(bool? unread = null);
+    Dictionary<int, int> GetChainUserFolderCount(bool? unread = null);
 
-        Dictionary<int, int> GetChainUserFolderCount(List<int> userFolderIds, bool? unread = null);
+    Dictionary<int, int> GetChainUserFolderCount(List<int> userFolderIds, bool? unread = null);
 
-        int SaveChain(Chain chain);
+    int SaveChain(Chain chain);
 
-        int Delete(IConversationsExp exp);
+    int Delete(IConversationsExp exp);
 
-        int SetFieldValue<T>(IConversationsExp exp, string field, T value);
-    }
+    int SetFieldValue<T>(IConversationsExp exp, string field, T value);
 }

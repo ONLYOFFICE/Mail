@@ -23,53 +23,50 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+public class MailFolder : IEquatable<MailFolder>
 {
-    public class MailFolder : IEquatable<MailFolder>
+    public static bool IsIdOk(FolderType folderType)
     {
-        public static bool IsIdOk(FolderType folderType)
-        {
-            return folderType >= FolderType.Inbox && folderType <= FolderType.Templates;
-        }
+        return folderType >= FolderType.Inbox && folderType <= FolderType.Templates;
+    }
 
-        public FolderType Folder { get; private set; }
-        public string Name { get; private set; }
-        public string[] Tags { get; private set; }
+    public FolderType Folder { get; private set; }
+    public string Name { get; private set; }
+    public string[] Tags { get; private set; }
 
-        public MailFolder(FolderType folder, string name, string[] tags = null)
-        {
-            if (!IsIdOk(folder))
-                throw new ArgumentException(@"Incorrect folder id", "folder");
+    public MailFolder(FolderType folder, string name, string[] tags = null)
+    {
+        if (!IsIdOk(folder))
+            throw new ArgumentException(@"Incorrect folder id", "folder");
 
-            Folder = folder;
-            Name = name;
-            Tags = tags ?? new string[] {};
-        }
+        Folder = folder;
+        Name = name;
+        Tags = tags ?? new string[] { };
+    }
 
-        public bool Equals(MailFolder other)
-        {
-            if (other == null) return false;
+    public bool Equals(MailFolder other)
+    {
+        if (other == null) return false;
 
-            return Folder == other.Folder
-                   && string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase)
-                   && Tags == other.Tags;
-        }
+        return Folder == other.Folder
+               && string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase)
+               && Tags == other.Tags;
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals(obj as ContactInfo);
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals(obj as ContactInfo);
+    }
 
-        public override int GetHashCode()
-        {
-            return Folder.GetHashCode() ^ Name.GetHashCode() ^ Tags.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Folder.GetHashCode() ^ Name.GetHashCode() ^ Tags.GetHashCode();
     }
 }

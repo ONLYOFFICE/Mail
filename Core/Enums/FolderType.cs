@@ -23,18 +23,16 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum FolderType
 {
-    public enum FolderType
-    {
-        Sending = 0,
-        Inbox = 1,
-        Sent = 2,
-        Draft = 3,
-        Trash = 4,
-        Spam = 5,
-        UserFolder = 6,
-        Templates = 7
-    }
+    Sending = 0,
+    Inbox = 1,
+    Sent = 2,
+    Draft = 3,
+    Trash = 4,
+    Spam = 5,
+    UserFolder = 6,
+    Templates = 7
 }

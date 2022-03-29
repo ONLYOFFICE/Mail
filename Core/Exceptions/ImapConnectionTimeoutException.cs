@@ -23,11 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-namespace ASC.Mail.Exceptions
+public class ImapConnectionTimeoutException : ImapConnectionException
 {
-    public class ImapConnectionTimeoutException : ImapConnectionException
-    {
-        public ImapConnectionTimeoutException() : base("imap connection timeout exceeded") { }
-    }
+    public ImapConnectionTimeoutException() : base("imap connection timeout exceeded") { }
 }

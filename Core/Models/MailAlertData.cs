@@ -23,24 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using ASC.Mail.Enums;
-
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[DataContract]
+public class MailAlertData
 {
-    [DataContract]
-    public class MailAlertData
-    {
-        [DataMember]
-        public Int64 id;
-        [DataMember]
-        public MailAlertTypes type;
-        [DataMember]
-        public int id_mailbox;
-        [DataMember]
-        public string data;
-    }
+    [DataMember]
+    public Int64 id;
+    [DataMember]
+    public MailAlertTypes type;
+    [DataMember]
+    public int id_mailbox;
+    [DataMember]
+    public string data;
 }

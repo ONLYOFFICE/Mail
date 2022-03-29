@@ -23,80 +23,68 @@
  *
 */
 
+using Account = ASC.Mail.Core.Entities.Account;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Models;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class AccountDao : BaseMailDao, IAccountDao
 {
-    [Scope]
-    public class AccountDao : BaseMailDao, IAccountDao
+    public AccountDao(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        DbContextManager<MailDbContext> dbContext)
+       : base(tenantManager, securityContext, dbContext)
     {
-        public AccountDao(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            DbContextManager<MailDbContext> dbContext)
-           : base(tenantManager, securityContext, dbContext)
-        {
-        }
+    }
 
-        public List<Account> GetAccounts()
-        {
-            var accounts = (from mb in MailDbContext.MailMailbox
-                            join signature in MailDbContext.MailMailboxSignature.DefaultIfEmpty() on mb.Id equals (uint)signature.IdMailbox into Signature
-                            from sig in Signature.DefaultIfEmpty()
-                            join autoreply in MailDbContext.MailMailboxAutoreply.DefaultIfEmpty() on mb.Id equals (uint)autoreply.IdMailbox into Autoreply
-                            from reply in Autoreply.DefaultIfEmpty()
-                            join address in MailDbContext.MailServerAddress.DefaultIfEmpty() on mb.Id equals (uint)address.IdMailbox into Address
-                            from sa in Address.DefaultIfEmpty()
-                            join domain in MailDbContext.MailServerDomain.DefaultIfEmpty() on sa.IdDomain equals domain.Id into Domain
-                            from sd in Domain.DefaultIfEmpty()
-                            join groupXaddress in MailDbContext.MailServerMailGroupXMailServerAddress.DefaultIfEmpty() on sa.Id equals groupXaddress.IdAddress into GroupXaddress
-                            from sgxa in GroupXaddress.DefaultIfEmpty()
-                            join servergroup in MailDbContext.MailServerMailGroup.DefaultIfEmpty() on sgxa.IdMailGroup equals servergroup.Id into ServerGroup
-                            from sg in ServerGroup.DefaultIfEmpty()
-                            where mb.Tenant == Tenant && mb.IsRemoved == false && mb.IdUser == UserId
-                            orderby sa.IsAlias
-                            select new Account
-                            {
-                                MailboxId = (int)mb.Id,
-                                MailboxAddress = mb.Address,
-                                MailboxEnabled = mb.Enabled,
-                                MailboxAddressName = mb.Name,
-                                MailboxQuotaError = mb.QuotaError,
-                                MailboxDateAuthError = mb.DateAuthError,
-                                MailboxOAuthToken = mb.Token,
-                                MailboxIsServerMailbox = mb.IsServerMailbox,
-                                MailboxEmailInFolder = mb.EmailInFolder,
-                                ServerAddressIsAlias = sa.IsAlias != null ? sa.IsAlias : false,
-                                ServerAddressId = sa.Id != null ? sa.Id : 0,
-                                ServerDomainId = sd.Id != null ? sd.Id : 0,
-                                ServerMailGroupId = sg.Id != null ? sg.Id : 0,
-                                ServerDomainTenant = sd.Tenant != null ? sd.Tenant : 0,
-                                ServerAddressName = sa.Name,
-                                ServerDomainName = sd.Name,
-                                ServerMailGroupAddress = sg.Address,
-                                MailboxSignature = sig != null
-                                 ? new MailSignatureData((int)mb.Id, mb.Tenant, sig.Html, sig.IsActive)
-                                 : new MailSignatureData((int)mb.Id, mb.Tenant, string.Empty, false),
-                                MailboxAutoreply = reply != null
-                                 ? new MailAutoreplyData((int)mb.Id, mb.Tenant, reply.TurnOn, reply.OnlyContacts,
-                                     reply.TurnOnToDate, reply.FromDate, reply.ToDate, reply.Subject, reply.Html)
-                                 : new MailAutoreplyData((int)mb.Id, mb.Tenant, false, false,
-                                     false, DateTime.MinValue, DateTime.MinValue, string.Empty, string.Empty)
-                            }).AsNoTracking().ToList();
+    public List<Account> GetAccounts()
+    {
+        var accounts = (from mb in MailDbContext.MailMailbox
+                        join signature in MailDbContext.MailMailboxSignature.DefaultIfEmpty() on mb.Id equals (uint)signature.IdMailbox into Signature
+                        from sig in Signature.DefaultIfEmpty()
+                        join autoreply in MailDbContext.MailMailboxAutoreply.DefaultIfEmpty() on mb.Id equals (uint)autoreply.IdMailbox into Autoreply
+                        from reply in Autoreply.DefaultIfEmpty()
+                        join address in MailDbContext.MailServerAddress.DefaultIfEmpty() on mb.Id equals (uint)address.IdMailbox into Address
+                        from sa in Address.DefaultIfEmpty()
+                        join domain in MailDbContext.MailServerDomain.DefaultIfEmpty() on sa.IdDomain equals domain.Id into Domain
+                        from sd in Domain.DefaultIfEmpty()
+                        join groupXaddress in MailDbContext.MailServerMailGroupXMailServerAddress.DefaultIfEmpty() on sa.Id equals groupXaddress.IdAddress into GroupXaddress
+                        from sgxa in GroupXaddress.DefaultIfEmpty()
+                        join servergroup in MailDbContext.MailServerMailGroup.DefaultIfEmpty() on sgxa.IdMailGroup equals servergroup.Id into ServerGroup
+                        from sg in ServerGroup.DefaultIfEmpty()
+                        where mb.Tenant == Tenant && mb.IsRemoved == false && mb.IdUser == UserId
+                        orderby sa.IsAlias
+                        select new Account
+                        {
+                            MailboxId = (int)mb.Id,
+                            MailboxAddress = mb.Address,
+                            MailboxEnabled = mb.Enabled,
+                            MailboxAddressName = mb.Name,
+                            MailboxQuotaError = mb.QuotaError,
+                            MailboxDateAuthError = mb.DateAuthError,
+                            MailboxOAuthToken = mb.Token,
+                            MailboxIsServerMailbox = mb.IsServerMailbox,
+                            MailboxEmailInFolder = mb.EmailInFolder,
+                            ServerAddressIsAlias = sa.IsAlias != null ? sa.IsAlias : false,
+                            ServerAddressId = sa.Id != null ? sa.Id : 0,
+                            ServerDomainId = sd.Id != null ? sd.Id : 0,
+                            ServerMailGroupId = sg.Id != null ? sg.Id : 0,
+                            ServerDomainTenant = sd.Tenant != null ? sd.Tenant : 0,
+                            ServerAddressName = sa.Name,
+                            ServerDomainName = sd.Name,
+                            ServerMailGroupAddress = sg.Address,
+                            MailboxSignature = sig != null
+                             ? new MailSignatureData((int)mb.Id, mb.Tenant, sig.Html, sig.IsActive)
+                             : new MailSignatureData((int)mb.Id, mb.Tenant, string.Empty, false),
+                            MailboxAutoreply = reply != null
+                             ? new MailAutoreplyData((int)mb.Id, mb.Tenant, reply.TurnOn, reply.OnlyContacts,
+                                 reply.TurnOnToDate, reply.FromDate, reply.ToDate, reply.Subject, reply.Html)
+                             : new MailAutoreplyData((int)mb.Id, mb.Tenant, false, false,
+                                 false, DateTime.MinValue, DateTime.MinValue, string.Empty, string.Empty)
+                        }).AsNoTracking().ToList();
 
-            return accounts;
-        }
+        return accounts;
     }
 }

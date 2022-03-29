@@ -23,78 +23,66 @@
  *
 */
 
+namespace ASC.Mail.Authorization;
 
-//using System;
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core.Common.Configuration;
-using ASC.FederatedLogin;
-using ASC.FederatedLogin.Helpers;
-using ASC.FederatedLogin.LoginProviders;
-
-using System;
-
-namespace ASC.Mail.Authorization
+[Scope]
+public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new()
 {
-    [Scope]
-    public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new()
+    private readonly ILog log;
+
+    private readonly T loginProvider;
+    private ConsumerFactory ConsumerFactory;
+
+    public string ClientId => loginProvider.ClientID;
+
+    public string ClientSecret => loginProvider.ClientSecret;
+
+    public string RedirectUrl => loginProvider.RedirectUri;
+
+    public string RefreshUrl => loginProvider.AccessTokenUrl;
+
+    public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory)
     {
-        private readonly ILog log;
+        ConsumerFactory = consumerFactory;
 
-        private readonly T loginProvider;
-        private ConsumerFactory ConsumerFactory;
+        this.log = log;
+        loginProvider = ConsumerFactory.Get<T>();
 
-        public string ClientId => loginProvider.ClientID;
-
-        public string ClientSecret => loginProvider.ClientSecret;
-
-        public string RedirectUrl => loginProvider.RedirectUri;
-
-        public string RefreshUrl => loginProvider.AccessTokenUrl;
-
-        public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory)
+        try
         {
-            ConsumerFactory = consumerFactory;
+            if (String.IsNullOrEmpty(loginProvider.ClientID))
+                throw new ArgumentNullException("ClientId");
 
-            this.log = log;
-            loginProvider = ConsumerFactory.Get<T>();
+            if (String.IsNullOrEmpty(loginProvider.ClientSecret))
+                throw new ArgumentNullException("ClientSecret");
 
-            try
-            {
-                if (String.IsNullOrEmpty(loginProvider.ClientID))
-                    throw new ArgumentNullException("ClientId");
-
-                if (String.IsNullOrEmpty(loginProvider.ClientSecret))
-                    throw new ArgumentNullException("ClientSecret");
-
-                if (String.IsNullOrEmpty(loginProvider.RedirectUri))
-                    throw new ArgumentNullException("RedirectUrl");
-            }
-            catch (Exception ex)
-            {
-                log.Error($"GoogleOAuth2Authorization() Exception:\r\n{ex}\r\n");
-            }
+            if (String.IsNullOrEmpty(loginProvider.RedirectUri))
+                throw new ArgumentNullException("RedirectUrl");
         }
-
-        public OAuth20Token RequestAccessToken(string refreshToken)
+        catch (Exception ex)
         {
-            var token = new OAuth20Token
-            {
-                ClientID = ClientId,
-                ClientSecret = ClientSecret,
-                RedirectUri = RedirectUrl,
-                RefreshToken = refreshToken,
-            };
+            log.Error($"GoogleOAuth2Authorization() Exception:\r\n{ex}\r\n");
+        }
+    }
 
-            try
-            {
-                return OAuth20TokenHelper.RefreshToken<T>(ConsumerFactory, token);
-            }
-            catch (Exception ex)
-            {
-                log.Error($"RequestAccessToken() Exception:\r\n{ex}\r\n");
-                return null;
-            }
+    public OAuth20Token RequestAccessToken(string refreshToken)
+    {
+        var token = new OAuth20Token
+        {
+            ClientID = ClientId,
+            ClientSecret = ClientSecret,
+            RedirectUri = RedirectUrl,
+            RefreshToken = refreshToken,
+        };
+
+        try
+        {
+            return OAuth20TokenHelper.RefreshToken<T>(ConsumerFactory, token);
+        }
+        catch (Exception ex)
+        {
+            log.Error($"RequestAccessToken() Exception:\r\n{ex}\r\n");
+            return null;
         }
     }
 }

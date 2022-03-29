@@ -23,32 +23,25 @@
  *
 */
 
-
-using ASC.Core;
-using ASC.Core.Common.EF;
-
-using System;
-
-namespace ASC.Mail.Core.Dao
+namespace ASC.Mail.Core.Dao;
+using SecurityContext = ASC.Core.SecurityContext;
+public abstract class BaseMailDao
 {
-    public abstract class BaseMailDao
+    protected int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    protected string UserId => _securityContext.CurrentAccount.ID.ToString();
+    public Lazy<MailDbContext> LazyMailDbContext { get; }
+    public MailDbContext MailDbContext => LazyMailDbContext.Value;
+
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+
+    protected BaseMailDao(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        DbContextManager<MailDbContext> dbContext)
     {
-        protected int Tenant => _tenantManager.GetCurrentTenant().TenantId;
-        protected string UserId => _securityContext.CurrentAccount.ID.ToString();
-        public Lazy<MailDbContext> LazyMailDbContext { get; }
-        public MailDbContext MailDbContext => LazyMailDbContext.Value;
-
-        private readonly SecurityContext _securityContext;
-        private readonly TenantManager _tenantManager;
-
-        protected BaseMailDao(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            DbContextManager<MailDbContext> dbContext)
-        {
-            _tenantManager = tenantManager;
-            _securityContext = securityContext;
-            LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
-        }
+        _tenantManager = tenantManager;
+        _securityContext = securityContext;
+        LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
     }
 }

@@ -23,14 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum ConditionOperationType
 {
-    public enum ConditionOperationType
-    {
-        Matches = 0,
-        NotMatches = 1,
-        Contains = 2,
-        NotContains = 3
-    }
+    Matches = 0,
+    NotMatches = 1,
+    Contains = 2,
+    NotContains = 3
 }

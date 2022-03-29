@@ -23,385 +23,369 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Core.Dao.Expressions.UserFolder;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Exceptions;
-using ASC.Mail.Models;
+namespace ASC.Mail.Core.Engine;
 
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class UserFolderEngine
 {
-    [Scope]
-    public class UserFolderEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string UserId => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly ILog _log;
+    private readonly IMailDaoFactory _mailDaoFactory;
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+
+    public UserFolderEngine(
+        SecurityContext securityContext,
+        TenantManager tenantManager,
+        IMailDaoFactory mailDaoFactory,
+        IOptionsMonitor<ILog> option)
     {
-        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
-        private string UserId => _securityContext.CurrentAccount.ID.ToString();
+        _securityContext = securityContext;
+        _tenantManager = tenantManager;
+        _mailDaoFactory = mailDaoFactory;
+        _log = option.Get("ASC.Mail.UserFolderEngine");
+    }
 
-        private readonly ILog _log;
-        private readonly IMailDaoFactory _mailDaoFactory;
-        private readonly SecurityContext _securityContext;
-        private readonly TenantManager _tenantManager;
+    public MailUserFolderData Get(int id)
+    {
+        var userFolder = _mailDaoFactory.GetUserFolderDao().Get(id);
 
-        public UserFolderEngine(
-            SecurityContext securityContext,
-            TenantManager tenantManager,
-            IMailDaoFactory mailDaoFactory,
-            IOptionsMonitor<ILog> option)
+        return ToMailUserFolderData(userFolder);
+    }
+
+    public MailUserFolderData GetByMail(uint mailId)
+    {
+        var userFolder = _mailDaoFactory.GetUserFolderDao().GetByMail(mailId);
+
+        return ToMailUserFolderData(userFolder);
+    }
+
+    public List<MailUserFolderData> GetList(List<int> ids = null, int? parentId = null)
+    {
+        var builder = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId);
+
+        if (ids != null && ids.Any())
         {
-            _securityContext = securityContext;
-            _tenantManager = tenantManager;
-            _mailDaoFactory = mailDaoFactory;
-            _log = option.Get("ASC.Mail.UserFolderEngine");
+            builder.SetIds(ids);
         }
 
-        public MailUserFolderData Get(int id)
+        if (parentId.HasValue)
         {
-            var userFolder = _mailDaoFactory.GetUserFolderDao().Get(id);
-
-            return ToMailUserFolderData(userFolder);
+            builder.SetParent(parentId.Value);
         }
 
-        public MailUserFolderData GetByMail(uint mailId)
-        {
-            var userFolder = _mailDaoFactory.GetUserFolderDao().GetByMail(mailId);
+        var exp = builder.Build();
 
-            return ToMailUserFolderData(userFolder);
+        var userFolderDataList = _mailDaoFactory.GetUserFolderDao().GetList(exp)
+            .ConvertAll(ToMailUserFolderData);
+
+        return userFolderDataList;
+    }
+
+    public MailUserFolderData Create(string name, int parentId = 0)
+    {
+        if (string.IsNullOrEmpty(name))
+            throw new EmptyFolderException(@"Name is empty");
+
+        var utsNow = DateTime.UtcNow;
+
+        var newUserFolder = new UserFolder
+        {
+            Id = 0,
+            ParentId = parentId,
+            Name = name,
+            User = UserId,
+            Tenant = Tenant,
+            TimeModified = utsNow
+        };
+
+        if (parentId > 0)
+        {
+            var parentUserFolder = _mailDaoFactory.GetUserFolderDao().Get(parentId);
+
+            if (parentUserFolder == null)
+                throw new ArgumentException(@"Parent folder not found", "parentId");
         }
 
-        public List<MailUserFolderData> GetList(List<int> ids = null, int? parentId = null)
+        if (IsFolderNameAlreadyExists(newUserFolder))
         {
-            var builder = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId);
+            throw new AlreadyExistsFolderException(
+                string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
+        }
 
-            if (ids != null && ids.Any())
+        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        {
+            newUserFolder.Id = _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
+
+            if (newUserFolder.Id <= 0)
+                throw new Exception("Save user folder failed");
+
+            var userFolderTreeItem = new UserFolderTreeItem
             {
-                builder.SetIds(ids);
-            }
-
-            if (parentId.HasValue)
-            {
-                builder.SetParent(parentId.Value);
-            }
-
-            var exp = builder.Build();
-
-            var userFolderDataList = _mailDaoFactory.GetUserFolderDao().GetList(exp)
-                .ConvertAll(ToMailUserFolderData);
-
-            return userFolderDataList;
-        }
-
-        public MailUserFolderData Create(string name, int parentId = 0)
-        {
-            if (string.IsNullOrEmpty(name))
-                throw new EmptyFolderException(@"Name is empty");
-
-            var utsNow = DateTime.UtcNow;
-
-            var newUserFolder = new UserFolder
-            {
-                Id = 0,
-                ParentId = parentId,
-                Name = name,
-                User = UserId,
-                Tenant = Tenant,
-                TimeModified = utsNow
+                FolderId = newUserFolder.Id,
+                ParentId = newUserFolder.Id,
+                Level = 0
             };
 
-            if (parentId > 0)
-            {
-                var parentUserFolder = _mailDaoFactory.GetUserFolderDao().Get(parentId);
+            //itself link
+            _mailDaoFactory.GetUserFolderTreeDao().Save(userFolderTreeItem);
 
-                if (parentUserFolder == null)
-                    throw new ArgumentException(@"Parent folder not found", "parentId");
-            }
+            //full path to root
+            _mailDaoFactory.GetUserFolderTreeDao().InsertFullPathToRoot(newUserFolder.Id, newUserFolder.ParentId);
 
-            if (IsFolderNameAlreadyExists(newUserFolder))
-            {
-                throw new AlreadyExistsFolderException(
-                    string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
-            }
-
-            using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
-            {
-                newUserFolder.Id = _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
-
-                if (newUserFolder.Id <= 0)
-                    throw new Exception("Save user folder failed");
-
-                var userFolderTreeItem = new UserFolderTreeItem
-                {
-                    FolderId = newUserFolder.Id,
-                    ParentId = newUserFolder.Id,
-                    Level = 0
-                };
-
-                //itself link
-                _mailDaoFactory.GetUserFolderTreeDao().Save(userFolderTreeItem);
-
-                //full path to root
-                _mailDaoFactory.GetUserFolderTreeDao().InsertFullPathToRoot(newUserFolder.Id, newUserFolder.ParentId);
-
-                tx.Commit();
-            }
-
-            _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(newUserFolder.Id);
-
-            return ToMailUserFolderData(newUserFolder);
+            tx.Commit();
         }
 
-        public MailUserFolderData Update(int id, string name, int? parentId = null)
+        _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(newUserFolder.Id);
+
+        return ToMailUserFolderData(newUserFolder);
+    }
+
+    public MailUserFolderData Update(int id, string name, int? parentId = null)
+    {
+        if (id < 0)
+            throw new ArgumentException("id");
+
+        if (string.IsNullOrEmpty(name))
+            throw new EmptyFolderException(@"Name is empty");
+
+        if (parentId.HasValue && id == parentId.Value)
+            throw new ArgumentException(@"id equals to parentId", "parentId");
+
+        var oldUserFolder = _mailDaoFactory.GetUserFolderDao().Get(id);
+
+        if (oldUserFolder == null)
+            throw new ArgumentException("Folder not found");
+
+        var newUserFolder = new UserFolder
         {
-            if (id < 0)
-                throw new ArgumentException("id");
+            Id = id,
+            ParentId = parentId ?? oldUserFolder.ParentId,
+            Name = name,
+            User = UserId,
+            Tenant = Tenant,
+            FolderCount = oldUserFolder.FolderCount,
+            UnreadCount = oldUserFolder.UnreadCount,
+            TotalCount = oldUserFolder.TotalCount,
+            UnreadChainCount = oldUserFolder.UnreadChainCount,
+            TotalChainCount = oldUserFolder.TotalChainCount,
+            TimeModified = oldUserFolder.TimeModified
+        };
 
-            if (string.IsNullOrEmpty(name))
-                throw new EmptyFolderException(@"Name is empty");
+        if (newUserFolder.Equals(oldUserFolder))
+            return ToMailUserFolderData(oldUserFolder);
 
-            if (parentId.HasValue && id == parentId.Value)
-                throw new ArgumentException(@"id equals to parentId", "parentId");
+        if (IsFolderNameAlreadyExists(newUserFolder))
+        {
+            throw new AlreadyExistsFolderException(
+                string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
+        }
 
-            var oldUserFolder = _mailDaoFactory.GetUserFolderDao().Get(id);
+        var utsNow = DateTime.UtcNow;
 
-            if (oldUserFolder == null)
-                throw new ArgumentException("Folder not found");
-
-            var newUserFolder = new UserFolder
+        if (newUserFolder.ParentId != oldUserFolder.ParentId)
+        {
+            if (!CanMoveFolderTo(newUserFolder))
             {
-                Id = id,
-                ParentId = parentId ?? oldUserFolder.ParentId,
-                Name = name,
-                User = UserId,
-                Tenant = Tenant,
-                FolderCount = oldUserFolder.FolderCount,
-                UnreadCount = oldUserFolder.UnreadCount,
-                TotalCount = oldUserFolder.TotalCount,
-                UnreadChainCount = oldUserFolder.UnreadChainCount,
-                TotalChainCount = oldUserFolder.TotalChainCount,
-                TimeModified = oldUserFolder.TimeModified
-            };
-
-            if (newUserFolder.Equals(oldUserFolder))
-                return ToMailUserFolderData(oldUserFolder);
-
-            if (IsFolderNameAlreadyExists(newUserFolder))
-            {
-                throw new AlreadyExistsFolderException(
-                    string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
+                throw new MoveFolderException(
+                    string.Format("Can't move folder with id=\"{0}\" into the folder with id=\"{1}\"",
+                        newUserFolder.Id, newUserFolder.ParentId));
             }
+        }
 
-            var utsNow = DateTime.UtcNow;
+        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        {
+            newUserFolder.TimeModified = utsNow;
+            _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
 
             if (newUserFolder.ParentId != oldUserFolder.ParentId)
             {
-                if (!CanMoveFolderTo(newUserFolder))
-                {
-                    throw new MoveFolderException(
-                        string.Format("Can't move folder with id=\"{0}\" into the folder with id=\"{1}\"",
-                            newUserFolder.Id, newUserFolder.ParentId));
-                }
+                _mailDaoFactory.GetUserFolderTreeDao().Move(newUserFolder.Id, newUserFolder.ParentId);
             }
 
-            using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
-            {
-                newUserFolder.TimeModified = utsNow;
-                _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
-
-                if (newUserFolder.ParentId != oldUserFolder.ParentId)
-                {
-                    _mailDaoFactory.GetUserFolderTreeDao().Move(newUserFolder.Id, newUserFolder.ParentId);
-                }
-
-                tx.Commit();
-            }
-
-            var recalcFolders = new List<int> { newUserFolder.ParentId };
-
-            if (newUserFolder.ParentId > 0)
-            {
-                recalcFolders.Add(newUserFolder.Id);
-            }
-
-            if (oldUserFolder.ParentId != 0 && !recalcFolders.Contains(oldUserFolder.ParentId))
-            {
-                recalcFolders.Add(oldUserFolder.ParentId);
-            }
-
-            recalcFolders.ForEach(fid =>
-            {
-                _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(fid);
-            });
-
-            return ToMailUserFolderData(newUserFolder);
+            tx.Commit();
         }
 
-        public void SetFolderMessages(int userFolderId, List<int> ids)
+        var recalcFolders = new List<int> { newUserFolder.ParentId };
+
+        if (newUserFolder.ParentId > 0)
         {
-            _mailDaoFactory.GetUserFolderXMailDao().Remove(ids);
-
-            _mailDaoFactory.GetUserFolderXMailDao().SetMessagesFolder(ids, userFolderId);
+            recalcFolders.Add(newUserFolder.Id);
         }
 
-        public void DeleteFolderMessages(IMailDaoFactory daoFactory, List<int> ids)
+        if (oldUserFolder.ParentId != 0 && !recalcFolders.Contains(oldUserFolder.ParentId))
         {
-            _mailDaoFactory.GetUserFolderXMailDao().Remove(ids);
+            recalcFolders.Add(oldUserFolder.ParentId);
         }
 
-        public void RecalculateCounters(IMailDaoFactory mailDaoFactory, List<int> userFolderIds)
+        recalcFolders.ForEach(fid =>
         {
-            var totalUfMessList = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(userFolderIds);
-            var unreadUfMessUfList = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(userFolderIds, true);
-            var totalUfConvList = _mailDaoFactory.GetChainDao().GetChainUserFolderCount(userFolderIds);
-            var unreadUfConvUfList = _mailDaoFactory.GetChainDao().GetChainUserFolderCount(userFolderIds, true);
+            _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(fid);
+        });
 
-            foreach (var id in userFolderIds)
-            {
-                totalUfMessList.TryGetValue(id, out int totalMess);
+        return ToMailUserFolderData(newUserFolder);
+    }
 
-                unreadUfMessUfList.TryGetValue(id, out int unreadMess);
+    public void SetFolderMessages(int userFolderId, List<int> ids)
+    {
+        _mailDaoFactory.GetUserFolderXMailDao().Remove(ids);
 
-                totalUfConvList.TryGetValue(id, out int totalConv);
+        _mailDaoFactory.GetUserFolderXMailDao().SetMessagesFolder(ids, userFolderId);
+    }
 
-                unreadUfConvUfList.TryGetValue(id, out int unreadConv);
+    public void DeleteFolderMessages(IMailDaoFactory daoFactory, List<int> ids)
+    {
+        _mailDaoFactory.GetUserFolderXMailDao().Remove(ids);
+    }
 
-                SetFolderCounters(id,
-                    unreadMess, totalMess, unreadConv, totalConv);
-            }
-        }
+    public void RecalculateCounters(IMailDaoFactory mailDaoFactory, List<int> userFolderIds)
+    {
+        var totalUfMessList = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(userFolderIds);
+        var unreadUfMessUfList = _mailDaoFactory.GetMailInfoDao().GetMailUserFolderCount(userFolderIds, true);
+        var totalUfConvList = _mailDaoFactory.GetChainDao().GetChainUserFolderCount(userFolderIds);
+        var unreadUfConvUfList = _mailDaoFactory.GetChainDao().GetChainUserFolderCount(userFolderIds, true);
 
-        public void SetFolderCounters(
-            int userFolderId,
-            int? unreadMess = null,
-            int? totalMess = null,
-            int? unreadConv = null,
-            int? totalConv = null)
+        foreach (var id in userFolderIds)
         {
-            try
-            {
-                var res = _mailDaoFactory.GetUserFolderDao()
-                    .SetFolderCounters(userFolderId, unreadMess, totalMess, unreadConv,
-                        totalConv);
+            totalUfMessList.TryGetValue(id, out int totalMess);
 
-                //this action occurs during a transaction, therefore, saving changes is deferred until commit.
-                //the result will always be 0.
+            unreadUfMessUfList.TryGetValue(id, out int unreadMess);
 
-                //if (res == 0)
-                //throw new Exception("Need recalculation");
-            }
-            catch (Exception ex)
-            {
-                _log.ErrorFormat($"UserFolderEngine->SetFolderCounters() Exception: {ex}\nStack trace:\n{ex.StackTrace}");
-                throw new Exception($"SetFolderCounters exception: folder id {userFolderId}", ex);
-                //TODO: Think about recalculation
-                //var engine = new EngineFactory(Tenant, User);
-                //engine.OperationEngine.RecalculateFolders();
-            }
+            totalUfConvList.TryGetValue(id, out int totalConv);
+
+            unreadUfConvUfList.TryGetValue(id, out int unreadConv);
+
+            SetFolderCounters(id,
+                unreadMess, totalMess, unreadConv, totalConv);
         }
+    }
 
-        public void ChangeFolderCounters(
-            int userFolderId,
-            int? unreadMessDiff = null,
-            int? totalMessDiff = null,
-            int? unreadConvDiff = null,
-            int? totalConvDiff = null)
+    public void SetFolderCounters(
+        int userFolderId,
+        int? unreadMess = null,
+        int? totalMess = null,
+        int? unreadConv = null,
+        int? totalConv = null)
+    {
+        try
         {
-            try
-            {
-                var res = _mailDaoFactory.GetUserFolderDao()
-                    .ChangeFolderCounters(userFolderId, unreadMessDiff, totalMessDiff, unreadConvDiff,
-                        totalConvDiff);
+            var res = _mailDaoFactory.GetUserFolderDao()
+                .SetFolderCounters(userFolderId, unreadMess, totalMess, unreadConv,
+                    totalConv);
 
-                if (res == 0)
-                    throw new Exception("Need recalculation");
-            }
-            catch (Exception ex)
-            {
-                _log.ErrorFormat("UserFolderEngine->ChangeFolderCounters() Exception: {0}", ex.ToString());
-                //TODO: Think about recalculation
-                //var engine = new EngineFactory(Tenant, User);
-                //engine.OperationEngine.RecalculateFolders();
-            }
+            //this action occurs during a transaction, therefore, saving changes is deferred until commit.
+            //the result will always be 0.
+
+            //if (res == 0)
+            //throw new Exception("Need recalculation");
         }
-
-        private bool IsFolderNameAlreadyExists(UserFolder newUserFolder)
+        catch (Exception ex)
         {
-            //Find folder sub-folders
-            var exp = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId)
-                .SetParent(newUserFolder.ParentId)
-                .Build();
-
-            var listExistinFolders = _mailDaoFactory.GetUserFolderDao().GetList(exp);
-
-            return listExistinFolders.Any(existinFolder => existinFolder.Name.Equals(newUserFolder.Name,
-                StringComparison.InvariantCultureIgnoreCase));
+            _log.ErrorFormat($"UserFolderEngine->SetFolderCounters() Exception: {ex}\nStack trace:\n{ex.StackTrace}");
+            throw new Exception($"SetFolderCounters exception: folder id {userFolderId}", ex);
+            //TODO: Think about recalculation
+            //var engine = new EngineFactory(Tenant, User);
+            //engine.OperationEngine.RecalculateFolders();
         }
+    }
 
-        private bool CanMoveFolderTo(UserFolder newUserFolder)
+    public void ChangeFolderCounters(
+        int userFolderId,
+        int? unreadMessDiff = null,
+        int? totalMessDiff = null,
+        int? unreadConvDiff = null,
+        int? totalConvDiff = null)
+    {
+        try
         {
-            //Find folder sub-folders
-            var exp = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId)
-                .SetParent(newUserFolder.Id)
-                .SetIds(new List<int> { newUserFolder.ParentId })
-                .Build();
+            var res = _mailDaoFactory.GetUserFolderDao()
+                .ChangeFolderCounters(userFolderId, unreadMessDiff, totalMessDiff, unreadConvDiff,
+                    totalConvDiff);
 
-            var listExistinFolders = _mailDaoFactory.GetUserFolderDao().GetList(exp);
-
-            return !listExistinFolders.Any();
+            if (res == 0)
+                throw new Exception("Need recalculation");
         }
-
-        // ReSharper disable once UnusedMember.Local
-        private static UserFolder ToUserFolder(MailUserFolderData folder, int tenant, string user)
+        catch (Exception ex)
         {
-            if (folder == null)
-                return null;
-
-            var utcNow = DateTime.UtcNow;
-
-            var userFolder = new UserFolder
-            {
-                Tenant = tenant,
-                User = user,
-                Id = folder.Id,
-                ParentId = folder.ParentId,
-                Name = folder.Name,
-                FolderCount = folder.FolderCount,
-                UnreadCount = folder.UnreadCount,
-                TotalCount = folder.TotalCount,
-                UnreadChainCount = folder.UnreadChainCount,
-                TotalChainCount = folder.TotalChainCount,
-                TimeModified = utcNow
-            };
-
-            return userFolder;
+            _log.ErrorFormat("UserFolderEngine->ChangeFolderCounters() Exception: {0}", ex.ToString());
+            //TODO: Think about recalculation
+            //var engine = new EngineFactory(Tenant, User);
+            //engine.OperationEngine.RecalculateFolders();
         }
+    }
 
-        private static MailUserFolderData ToMailUserFolderData(UserFolder folder)
+    private bool IsFolderNameAlreadyExists(UserFolder newUserFolder)
+    {
+        //Find folder sub-folders
+        var exp = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId)
+            .SetParent(newUserFolder.ParentId)
+            .Build();
+
+        var listExistinFolders = _mailDaoFactory.GetUserFolderDao().GetList(exp);
+
+        return listExistinFolders.Any(existinFolder => existinFolder.Name.Equals(newUserFolder.Name,
+            StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private bool CanMoveFolderTo(UserFolder newUserFolder)
+    {
+        //Find folder sub-folders
+        var exp = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId)
+            .SetParent(newUserFolder.Id)
+            .SetIds(new List<int> { newUserFolder.ParentId })
+            .Build();
+
+        var listExistinFolders = _mailDaoFactory.GetUserFolderDao().GetList(exp);
+
+        return !listExistinFolders.Any();
+    }
+
+    private static UserFolder ToUserFolder(MailUserFolderData folder, int tenant, string user)
+    {
+        if (folder == null)
+            return null;
+
+        var utcNow = DateTime.UtcNow;
+
+        var userFolder = new UserFolder
         {
-            if (folder == null)
-                return null;
+            Tenant = tenant,
+            User = user,
+            Id = folder.Id,
+            ParentId = folder.ParentId,
+            Name = folder.Name,
+            FolderCount = folder.FolderCount,
+            UnreadCount = folder.UnreadCount,
+            TotalCount = folder.TotalCount,
+            UnreadChainCount = folder.UnreadChainCount,
+            TotalChainCount = folder.TotalChainCount,
+            TimeModified = utcNow
+        };
 
-            var userFolderData = new MailUserFolderData
-            {
-                Id = folder.Id,
-                ParentId = folder.ParentId,
-                Name = folder.Name,
-                FolderCount = folder.FolderCount,
-                UnreadCount = folder.UnreadCount,
-                TotalCount = folder.TotalCount,
-                UnreadChainCount = folder.UnreadChainCount,
-                TotalChainCount = folder.TotalChainCount
-            };
+        return userFolder;
+    }
 
-            return userFolderData;
-        }
+    private static MailUserFolderData ToMailUserFolderData(UserFolder folder)
+    {
+        if (folder == null)
+            return null;
+
+        var userFolderData = new MailUserFolderData
+        {
+            Id = folder.Id,
+            ParentId = folder.ParentId,
+            Name = folder.Name,
+            FolderCount = folder.FolderCount,
+            UnreadCount = folder.UnreadCount,
+            TotalCount = folder.TotalCount,
+            UnreadChainCount = folder.UnreadChainCount,
+            TotalChainCount = folder.TotalChainCount
+        };
+
+        return userFolderData;
     }
 }

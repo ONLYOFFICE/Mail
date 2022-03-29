@@ -23,15 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum ConditionKeyType
 {
-    public enum ConditionKeyType
-    {
-        From = 0,
-        ToOrCc = 1,
-        To = 2,
-        Cc = 3,
-        Subject = 4
-    }
+    From = 0,
+    ToOrCc = 1,
+    To = 2,
+    Cc = 3,
+    Subject = 4
 }

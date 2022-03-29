@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Server.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Server.Exceptions
+public class InvalidPostfixConnectionStringException : Exception
 {
-    public class InvalidPostfixConnectionStringException : Exception
+    public InvalidPostfixConnectionStringException(string message)
+        : base(message)
     {
-        public InvalidPostfixConnectionStringException(string message)
-            : base(message)
-        {
-        }
     }
 }

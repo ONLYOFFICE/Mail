@@ -23,200 +23,181 @@
  *
 */
 
-
-using ASC.Common.Logging;
-using ASC.Common.Security.Authentication;
-using ASC.Common.Security.Authorizing;
-using ASC.Common.Threading;
-using ASC.Core;
-using ASC.Core.Tenants;
-using ASC.Data.Storage;
-using ASC.Mail.Storage;
-
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Globalization;
-using System.Security;
-using System.Threading;
-using System.Threading.Tasks;
-
 using SecurityContext = ASC.Core.SecurityContext;
 
-namespace ASC.Mail.Core.Engine.Operations.Base
+namespace ASC.Mail.Core.Engine.Operations.Base;
+
+public abstract class MailOperation
 {
-    public abstract class MailOperation
+    public const string TENANT = "MailOperationOwnerTenant";
+    public const string OWNER = "MailOperationOwnerID";
+    public const string OPERATION_TYPE = "MailOperationType";
+    public const string SOURCE = "MailOperationSource";
+    public const string PROGRESS = "MailOperationProgress";
+    public const string STATUS = "MailOperationResult";
+    public const string ERROR = "MailOperationError";
+    public const string FINISHED = "MailOperationFinished";
+
+    private readonly string _culture;
+
+    protected DistributedTask TaskInfo { get; private set; }
+
+    protected int Progress { get; private set; }
+
+    protected string Source { get; private set; }
+
+    protected string Status { get; set; }
+
+    protected string Error { get; set; }
+
+    protected Tenant CurrentTenant { get; private set; }
+
+    protected IAccount CurrentUser { get; private set; }
+
+    protected ILog Logger { get; private set; }
+
+    protected CancellationToken CancellationToken { get; private set; }
+
+    public abstract MailOperationType OperationType { get; }
+
+    public TenantManager TenantManager { get; }
+    public SecurityContext SecurityContext { get; }
+    public IMailDaoFactory MailDaoFactory { get; }
+    public CoreSettings CoreSettings { get; }
+    public StorageManager StorageManager { get; }
+    public StorageFactory StorageFactory { get; }
+
+    protected MailOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        IOptionsMonitor<ILog> option, StorageFactory storageFactory = null)
     {
-        public const string TENANT = "MailOperationOwnerTenant";
-        public const string OWNER = "MailOperationOwnerID";
-        public const string OPERATION_TYPE = "MailOperationType";
-        public const string SOURCE = "MailOperationSource";
-        public const string PROGRESS = "MailOperationProgress";
-        public const string STATUS = "MailOperationResult";
-        public const string ERROR = "MailOperationError";
-        public const string FINISHED = "MailOperationFinished";
+        CurrentTenant = tenantManager.GetCurrentTenant();
+        CurrentUser = securityContext.CurrentAccount;
 
-        private readonly string _culture;
+        _culture = Thread.CurrentThread.CurrentCulture.Name;
 
-        protected DistributedTask TaskInfo { get; private set; }
+        Source = "";
+        Progress = 0;
+        Status = "";
+        Error = "";
+        Source = "";
 
-        protected int Progress { get; private set; }
+        TaskInfo = new DistributedTask();
+        TenantManager = tenantManager;
+        SecurityContext = securityContext;
+        MailDaoFactory = mailDaoFactory;
+        CoreSettings = coreSettings;
+        StorageManager = storageManager;
+        StorageFactory = storageFactory;
+        Logger = option.Get("ASC.Mail.Operation");
+    }
 
-        protected string Source { get; private set; }
-
-        protected string Status { get; set; }
-
-        protected string Error { get; set; }
-
-        protected Tenant CurrentTenant { get; private set; }
-
-        protected IAccount CurrentUser { get; private set; }
-
-        protected ILog Logger { get; private set; }
-
-        protected CancellationToken CancellationToken { get; private set; }
-
-        public abstract MailOperationType OperationType { get; }
-
-        public TenantManager TenantManager { get; }
-        public SecurityContext SecurityContext { get; }
-        public IMailDaoFactory MailDaoFactory { get; }
-        public CoreSettings CoreSettings { get; }
-        public StorageManager StorageManager { get; }
-        public StorageFactory StorageFactory { get; }
-
-        protected MailOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> option, StorageFactory storageFactory = null)
+    public void RunJob(DistributedTask _, CancellationToken cancellationToken)
+    {
+        try
         {
-            CurrentTenant = tenantManager.GetCurrentTenant();
-            CurrentUser = securityContext.CurrentAccount;
+            CancellationToken = cancellationToken;
 
-            _culture = Thread.CurrentThread.CurrentCulture.Name;
+            //TODO: Check and fix
+            //TenantManager.SetCurrentTenant(CurrentTenant);
+            //SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-            Source = "";
-            Progress = 0;
-            Status = "";
-            Error = "";
-            Source = "";
+            Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(_culture);
+            Thread.CurrentThread.CurrentUICulture = CultureInfo.GetCultureInfo(_culture);
 
-            TaskInfo = new DistributedTask();
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
-            MailDaoFactory = mailDaoFactory;
-            CoreSettings = coreSettings;
-            StorageManager = storageManager;
-            StorageFactory = storageFactory;
-            Logger = option.Get("ASC.Mail.Operation");
+            Do();
         }
-
-        public void RunJob(DistributedTask _, CancellationToken cancellationToken)
+        catch (AuthorizingException authError)
+        {
+            Error = "ErrorAccessDenied";
+            Logger.Error(Error, new SecurityException(Error, authError));
+        }
+        catch (AggregateException ae)
+        {
+            ae.Flatten().Handle(e => e is TaskCanceledException || e is OperationCanceledException);
+        }
+        catch (TenantQuotaException e)
+        {
+            Error = "TenantQuotaSettled";
+            Logger.Error("TenantQuotaException. {0}", e);
+        }
+        catch (FormatException e)
+        {
+            Error = "CantCreateUsers";
+            Logger.Error("FormatException error. {0}", e);
+        }
+        catch (Exception e)
+        {
+            Error = "InternalServerError";
+            Logger.Error("Internal server error. {0}", e);
+        }
+        finally
         {
             try
             {
-                CancellationToken = cancellationToken;
-
-                //TODO: Check and fix
-                //TenantManager.SetCurrentTenant(CurrentTenant);
-                //SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-
-                Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(_culture);
-                Thread.CurrentThread.CurrentUICulture = CultureInfo.GetCultureInfo(_culture);
-
-                Do();
+                TaskInfo.SetProperty(FINISHED, true);
+                PublishTaskInfo();
             }
-            catch (AuthorizingException authError)
+            catch
             {
-                Error = "ErrorAccessDenied";
-                Logger.Error(Error, new SecurityException(Error, authError));
-            }
-            catch (AggregateException ae)
-            {
-                ae.Flatten().Handle(e => e is TaskCanceledException || e is OperationCanceledException);
-            }
-            catch (TenantQuotaException e)
-            {
-                Error = "TenantQuotaSettled";
-                Logger.Error("TenantQuotaException. {0}", e);
-            }
-            catch (FormatException e)
-            {
-                Error = "CantCreateUsers";
-                Logger.Error("FormatException error. {0}", e);
-            }
-            catch (Exception e)
-            {
-                Error = "InternalServerError";
-                Logger.Error("Internal server error. {0}", e);
-            }
-            finally
-            {
-                try
-                {
-                    TaskInfo.SetProperty(FINISHED, true);
-                    PublishTaskInfo();
-                }
-                catch
-                {
-                    /* ignore */
-                }
+                /* ignore */
             }
         }
-
-        public virtual DistributedTask GetDistributedTask()
-        {
-            FillDistributedTask();
-            return TaskInfo;
-        }
-
-        protected virtual void FillDistributedTask()
-        {
-            TaskInfo.SetProperty(SOURCE, Source);
-            TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
-            TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
-            TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
-            TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
-            TaskInfo.SetProperty(STATUS, Status);
-            TaskInfo.SetProperty(ERROR, Error);
-        }
-
-        protected int GetProgress()
-        {
-            return Progress;
-        }
-
-        public void SetSource(string source)
-        {
-            Source = source;
-        }
-
-        public void SetProgress(int? currentPercent = null, string currentStatus = null, string currentSource = null)
-        {
-            if (!currentPercent.HasValue && currentStatus == null && currentSource == null)
-                return;
-
-            if (currentPercent.HasValue)
-                Progress = currentPercent.Value;
-
-            if (currentStatus != null)
-                Status = currentStatus;
-
-            if (currentSource != null)
-                Source = currentSource;
-
-            PublishTaskInfo();
-        }
-
-        protected void PublishTaskInfo()
-        {
-            FillDistributedTask();
-            TaskInfo.PublishChanges();
-        }
-
-        protected abstract void Do();
     }
+
+    public virtual DistributedTask GetDistributedTask()
+    {
+        FillDistributedTask();
+        return TaskInfo;
+    }
+
+    protected virtual void FillDistributedTask()
+    {
+        TaskInfo.SetProperty(SOURCE, Source);
+        TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
+        TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
+        TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
+        TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
+        TaskInfo.SetProperty(STATUS, Status);
+        TaskInfo.SetProperty(ERROR, Error);
+    }
+
+    protected int GetProgress()
+    {
+        return Progress;
+    }
+
+    public void SetSource(string source)
+    {
+        Source = source;
+    }
+
+    public void SetProgress(int? currentPercent = null, string currentStatus = null, string currentSource = null)
+    {
+        if (!currentPercent.HasValue && currentStatus == null && currentSource == null)
+            return;
+
+        if (currentPercent.HasValue)
+            Progress = currentPercent.Value;
+
+        if (currentStatus != null)
+            Status = currentStatus;
+
+        if (currentSource != null)
+            Source = currentSource;
+
+        PublishTaskInfo();
+    }
+
+    protected void PublishTaskInfo()
+    {
+        FillDistributedTask();
+        TaskInfo.PublishChanges();
+    }
+
+    protected abstract void Do();
 }

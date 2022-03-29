@@ -23,192 +23,169 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Common.Security.Authentication;
-using ASC.Core;
-using ASC.Data.Storage;
-using ASC.Files.Core;
-using ASC.Mail.Core.Dao.Expressions.Attachment;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Core.Resources;
-using ASC.Mail.Extensions;
-using ASC.Mail.Storage;
-using ASC.Web.Core.Files;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using ICSharpCode.SharpZipLib.Zip;
-
-using Microsoft.Extensions.Options;
-
-using System;
-using System.IO;
-using System.Linq;
-using System.Threading;
-//using Resources;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class MailDownloadAllAttachmentsOperation : MailOperation
 {
-    public class MailDownloadAllAttachmentsOperation : MailOperation
+    private readonly MessageEngine _messageEngine;
+    private readonly TempStream _tempStream;
+    private readonly int _messageId;
+
+    public ILog Log { get; set; }
+
+    public override MailOperationType OperationType
     {
-        private readonly MessageEngine _messageEngine;
-        private readonly TempStream _tempStream;
-        private readonly int _messageId;
+        get { return MailOperationType.DownloadAllAttachments; }
+    }
 
-        public ILog Log { get; set; }
+    public MailDownloadAllAttachmentsOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        MessageEngine messageEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        StorageFactory storageFactory,
+        IOptionsMonitor<ILog> optionsMonitor,
+        TempStream tempStream,
+        int messageId)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
+    {
+        _messageEngine = messageEngine;
+        _messageId = messageId;
+        _tempStream = tempStream;
+    }
 
-        public override MailOperationType OperationType
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.DownloadAllAttachments; }
-        }
+            SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Init);
 
-        public MailDownloadAllAttachmentsOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            MessageEngine messageEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            StorageFactory storageFactory,
-            IOptionsMonitor<ILog> optionsMonitor,
-            TempStream tempStream,
-            int messageId)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
-        {
-            _messageEngine = messageEngine;
-            _messageId = messageId;
-            _tempStream = tempStream;
-        }
+            TenantManager.SetCurrentTenant(CurrentTenant);
 
-        protected override void Do()
-        {
             try
             {
-                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Init);
+                SecurityContext.AuthenticateMe(CurrentUser);
+            }
+            catch
+            {
+                Error = "Error";//Resource.SsoSettingsNotValidToken;
+                base.Logger.Error(Error);
+            }
 
-                TenantManager.SetCurrentTenant(CurrentTenant);
+            SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.GetAttachments);
 
-                try
+            var attachments =
+                _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
+                    CurrentTenant.TenantId, CurrentUser.ID.ToString()));
+
+            if (!attachments.Any())
+            {
+                Error = MailCoreResource.NoAttachmentsInMessage;
+
+                throw new Exception(Error);
+            }
+
+            SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Zipping);
+
+            var damagedAttachments = 0;
+
+            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
+
+            using (var stream = _tempStream.Create())
+            {
+                using (var zip = new ZipOutputStream(stream))
                 {
-                    SecurityContext.AuthenticateMe(CurrentUser);
+                    zip.IsStreamOwner = false;
+                    zip.SetLevel(3);
+                    ZipStrings.UseUnicode = true;
+
+                    var attachmentsCount = attachments.Count;
+                    var progressMaxValue = (int)MailOperationDownloadAllAttachmentsProgress.ArchivePreparation;
+                    var progressMinValue = (int)MailOperationDownloadAllAttachmentsProgress.Zipping;
+                    var progresslength = progressMaxValue - progressMinValue;
+                    var progressStep = (double)progresslength / attachmentsCount;
+                    var zippingProgress = 0.0;
+
+                    foreach (var attachment in attachments)
+                    {
+                        try
+                        {
+                            using (var file = attachment.ToAttachmentStream(mailStorage))
+                            {
+                                ZipFile(zip, file.FileName, file.FileStream);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            base.Logger.Error(ex);
+
+                            Error = string.Format(MailCoreResource.FileNotFoundOrDamaged, attachment.fileName);
+
+                            damagedAttachments++;
+
+                            ZipFile(zip, attachment.fileName); // Zip empty file
+                        }
+
+                        zippingProgress += progressStep;
+
+                        SetProgress(progressMinValue + (int?)zippingProgress);
+                    }
                 }
-                catch
+
+                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.ArchivePreparation);
+
+                if (stream.Length == 0)
                 {
-                    Error = "Error";//Resource.SsoSettingsNotValidToken;
-                    base.Logger.Error(Error);
-                }
-
-                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.GetAttachments);
-
-                var attachments =
-                    _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
-                        CurrentTenant.TenantId, CurrentUser.ID.ToString()));
-
-                if (!attachments.Any())
-                {
-                    Error = MailCoreResource.NoAttachmentsInMessage;
+                    Error = "File stream is empty";
 
                     throw new Exception(Error);
                 }
 
-                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Zipping);
+                stream.Position = 0;
 
-                var damagedAttachments = 0;
+                var path = mailStorage.SaveAsync(
+                    FileConstant.StorageDomainTmp,
+                    string.Format(@"{0}\{1}", ((IAccount)Thread.CurrentPrincipal.Identity).ID, DefineConstants.ARCHIVE_NAME),
+                    stream,
+                    "application/zip",
+                    "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"").Result;
 
-                var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
-
-                using (var stream = _tempStream.Create())
-                {
-                    using (var zip = new ZipOutputStream(stream))
-                    {
-                        zip.IsStreamOwner = false;
-                        zip.SetLevel(3);
-                        ZipStrings.UseUnicode = true;
-
-                        var attachmentsCount = attachments.Count;
-                        var progressMaxValue = (int)MailOperationDownloadAllAttachmentsProgress.ArchivePreparation;
-                        var progressMinValue = (int)MailOperationDownloadAllAttachmentsProgress.Zipping;
-                        var progresslength = progressMaxValue - progressMinValue;
-                        var progressStep = (double)progresslength / attachmentsCount;
-                        var zippingProgress = 0.0;
-
-                        foreach (var attachment in attachments)
-                        {
-                            try
-                            {
-                                using (var file = attachment.ToAttachmentStream(mailStorage))
-                                {
-                                    ZipFile(zip, file.FileName, file.FileStream);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                base.Logger.Error(ex);
-
-                                Error = string.Format(MailCoreResource.FileNotFoundOrDamaged, attachment.fileName);
-
-                                damagedAttachments++;
-
-                                ZipFile(zip, attachment.fileName); // Zip empty file
-                            }
-
-                            zippingProgress += progressStep;
-
-                            SetProgress(progressMinValue + (int?)zippingProgress);
-                        }
-                    }
-
-                    SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.ArchivePreparation);
-
-                    if (stream.Length == 0)
-                    {
-                        Error = "File stream is empty";
-
-                        throw new Exception(Error);
-                    }
-
-                    stream.Position = 0;
-
-                    var path = mailStorage.SaveAsync(
-                        FileConstant.StorageDomainTmp,
-                        string.Format(@"{0}\{1}", ((IAccount)Thread.CurrentPrincipal.Identity).ID, DefineConstants.ARCHIVE_NAME),
-                        stream,
-                        "application/zip",
-                        "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"").Result;
-
-                    Log.Debug($"Zipped archive has been stored to {path}");
-                }
-
-                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.CreateLink);
-
-                var baseDomain = CoreSettings.BaseDomain;
-
-                var source = string.Format("{0}?{1}=bulk",
-                    "/products/files/httphandlers/filehandler.ashx",
-                    FilesLinkUtility.Action);
-
-                if (damagedAttachments > 1)
-                    Error = string.Format(MailCoreResource.FilesNotFound, damagedAttachments);
-
-                SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Finished, null, source);
+                Log.Debug($"Zipped archive has been stored to {path}");
             }
-            catch (Exception ex)
-            {
-                base.Logger.ErrorFormat("Mail operation error -> Download all attachments: {0}", ex.ToString());
-                Error = string.IsNullOrEmpty(Error)
-                    ? "InternalServerError"
-                    : Error;
-            }
+
+            SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.CreateLink);
+
+            var baseDomain = CoreSettings.BaseDomain;
+
+            var source = string.Format("{0}?{1}=bulk",
+                "/products/files/httphandlers/filehandler.ashx",
+                FilesLinkUtility.Action);
+
+            if (damagedAttachments > 1)
+                Error = string.Format(MailCoreResource.FilesNotFound, damagedAttachments);
+
+            SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.Finished, null, source);
         }
-
-        private static void ZipFile(ZipOutputStream zip, string filename, Stream fileStream = null)
+        catch (Exception ex)
         {
-            filename = filename ?? "file";
-            var entry = new ZipEntry(Path.GetFileName(filename));
-            entry.Size = fileStream.Length;
-            zip.PutNextEntry(entry);
-            fileStream.CopyTo(zip);
-            zip.CloseEntry();
+            base.Logger.ErrorFormat("Mail operation error -> Download all attachments: {0}", ex.ToString());
+            Error = string.IsNullOrEmpty(Error)
+                ? "InternalServerError"
+                : Error;
         }
+    }
+
+    private static void ZipFile(ZipOutputStream zip, string filename, Stream fileStream = null)
+    {
+        filename = filename ?? "file";
+        var entry = new ZipEntry(Path.GetFileName(filename));
+        entry.Size = fileStream.Length;
+        zip.PutNextEntry(entry);
+        fileStream.CopyTo(zip);
+        zip.CloseEntry();
     }
 }

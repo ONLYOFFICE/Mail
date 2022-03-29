@@ -23,142 +23,138 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using ASC.Mail.Utils;
-
-namespace ASC.Mail.Models
+public class Address
 {
-    public class Address
+    string _email, _name, _localPart, _domain;
+    /// <summary>
+    /// The default constructor. Set all properties to string.Empty.
+    /// </summary>
+    public Address()
     {
-        string _email, _name, _localPart, _domain;
-        /// <summary>
-        /// The default constructor. Set all properties to string.Empty.
-        /// </summary>
-        public Address()
-        {
-            Email = string.Empty;
-            Name = string.Empty;
-            LocalPart = string.Empty;
-            Domain = string.Empty;
-        }
-
-        /// <summary>
-        /// Creates the Address using the specified Internet email (RFC 2822 addr-spec).
-        /// </summary>
-        /// <param name="email">The email address to use.</param>
-        public Address(string email)
-        {
-            /*this.Email = 
-            this.Name = string.Empty;*/
-            var addr = Parser.ParseAddress(email);
-            Email = addr.Email;
-            Name = addr.Name;
-        }
-
-        /// <summary>
-        /// Creates the Address using the specified Internet email (RFC 2822 addr-spec) and fullname.
-        /// </summary>
-        /// <param name="email">The email address to use.</param>
-        /// <param name="name">The owner's name.</param>
-        public Address(string email, string name)
-        {
-            Email = email;
-            Name = name;
-        }
-
-        /// <summary>
-        /// The Internet email address (RFC 2822 addr-spec).
-        /// </summary>
-        public string Email
-        {
-            get
-            {
-                return _email;
-            }
-            set
-            {
-                _email = value.Trim();
-            }
-        }
-
-        /// <summary>
-        /// The Address owner's fullname.
-        /// </summary>
-        public string Name
-        {
-            get
-            {
-                return _name;
-            }
-            set
-            {
-                _name = value.Trim();
-            }
-        }
-
-        /// <summary>
-        /// The Address owner's localpart.
-        /// </summary>
-        public string LocalPart
-        {
-            get
-            {
-                return _localPart;
-            }
-            set
-            {
-                _localPart = value.Trim();
-            }
-        }
-
-        /// <summary>
-        /// The Address owner's domain.
-        /// </summary>
-        public string Domain
-        {
-            get
-            {
-                return _domain;
-            }
-            set
-            {
-                _domain = value.Trim();
-            }
-        }
-
-        /// <summary>
-        /// Gets a string compliant with RFC2822 address specification that represents the Address with the owner's fullname.
-        /// </summary>
-        public string Merged
-        {
-            get
-            {
-                var getString = string.Empty;
-
-                if (Name.Length > 0)
-                {
-                    getString += "\"" + Name + "\" ";
-                    getString += "<" + Email + ">";
-                }
-                else
-                {
-                    getString += Email;
-                }
-
-                return getString;
-            }
-        }
-
-        /// <summary>
-        /// Returns a <see cref="T:System.String"></see> that represents the current <see cref="T:System.Object"></see>.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="T:System.String"></see> that represents the current <see cref="T:System.Object"></see>.
-        /// </returns>
-        public override string ToString()
-        {
-            return Merged;
-        }
-
+        Email = string.Empty;
+        Name = string.Empty;
+        LocalPart = string.Empty;
+        Domain = string.Empty;
     }
+
+    /// <summary>
+    /// Creates the Address using the specified Internet email (RFC 2822 addr-spec).
+    /// </summary>
+    /// <param name="email">The email address to use.</param>
+    public Address(string email)
+    {
+        /*this.Email = 
+        this.Name = string.Empty;*/
+        var addr = Parser.ParseAddress(email);
+        Email = addr.Email;
+        Name = addr.Name;
+    }
+
+    /// <summary>
+    /// Creates the Address using the specified Internet email (RFC 2822 addr-spec) and fullname.
+    /// </summary>
+    /// <param name="email">The email address to use.</param>
+    /// <param name="name">The owner's name.</param>
+    public Address(string email, string name)
+    {
+        Email = email;
+        Name = name;
+    }
+
+    /// <summary>
+    /// The Internet email address (RFC 2822 addr-spec).
+    /// </summary>
+    public string Email
+    {
+        get
+        {
+            return _email;
+        }
+        set
+        {
+            _email = value.Trim();
+        }
+    }
+
+    /// <summary>
+    /// The Address owner's fullname.
+    /// </summary>
+    public string Name
+    {
+        get
+        {
+            return _name;
+        }
+        set
+        {
+            _name = value.Trim();
+        }
+    }
+
+    /// <summary>
+    /// The Address owner's localpart.
+    /// </summary>
+    public string LocalPart
+    {
+        get
+        {
+            return _localPart;
+        }
+        set
+        {
+            _localPart = value.Trim();
+        }
+    }
+
+    /// <summary>
+    /// The Address owner's domain.
+    /// </summary>
+    public string Domain
+    {
+        get
+        {
+            return _domain;
+        }
+        set
+        {
+            _domain = value.Trim();
+        }
+    }
+
+    /// <summary>
+    /// Gets a string compliant with RFC2822 address specification that represents the Address with the owner's fullname.
+    /// </summary>
+    public string Merged
+    {
+        get
+        {
+            var getString = string.Empty;
+
+            if (Name.Length > 0)
+            {
+                getString += "\"" + Name + "\" ";
+                getString += "<" + Email + ">";
+            }
+            else
+            {
+                getString += Email;
+            }
+
+            return getString;
+        }
+    }
+
+    /// <summary>
+    /// Returns a <see cref="T:System.String"></see> that represents the current <see cref="T:System.Object"></see>.
+    /// </summary>
+    /// <returns>
+    /// A <see cref="T:System.String"></see> that represents the current <see cref="T:System.Object"></see>.
+    /// </returns>
+    public override string ToString()
+    {
+        return Merged;
+    }
+
 }

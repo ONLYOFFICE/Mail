@@ -23,80 +23,68 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
 {
-    [Scope]
-    public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
+    public DisplayImagesAddressDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public DisplayImagesAddressDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public List<string> GetDisplayImagesAddresses()
+    {
+        var query = MailDbContext.MailDisplayImages
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
+            .Select(r => r.Address);
+
+        List<string> addresses = query.ToList();
+
+        return addresses;
+    }
+
+    public void AddDisplayImagesAddress(string address)
+    {
+        if (string.IsNullOrEmpty(address))
+            throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
+
+        using var tr = MailDbContext.Database.BeginTransaction();
+
+        var dbAddress = new MailDisplayImages
         {
-        }
+            Tenant = Tenant,
+            IdUser = UserId,
+            Address = address
+        };
 
-        public List<string> GetDisplayImagesAddresses()
-        {
-            var query = MailDbContext.MailDisplayImages
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
-                .Select(r => r.Address);
+        MailDbContext.MailDisplayImages.Add(dbAddress);
 
-            List<string> addresses = query.ToList();
+        MailDbContext.SaveChanges();
 
-            return addresses;
-        }
+        tr.Commit();
+    }
 
-        public void AddDisplayImagesAddress(string address)
-        {
-            if (string.IsNullOrEmpty(address))
-                throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
+    public void RemovevDisplayImagesAddress(string address)
+    {
+        if (string.IsNullOrEmpty(address))
+            throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
 
-            using var tr = MailDbContext.Database.BeginTransaction();
+        using var tr = MailDbContext.Database.BeginTransaction();
 
-            var dbAddress = new MailDisplayImages
-            {
-                Tenant = Tenant,
-                IdUser = UserId,
-                Address = address
-            };
+        var range = MailDbContext.MailDisplayImages
+            .Where(r => r.IdUser == UserId && r.Tenant == Tenant && r.Address == address);
 
-            MailDbContext.MailDisplayImages.Add(dbAddress);
+        MailDbContext.MailDisplayImages.RemoveRange(range);
 
-            MailDbContext.SaveChanges();
+        var count = MailDbContext.SaveChanges();
 
-            tr.Commit();
-        }
-
-        public void RemovevDisplayImagesAddress(string address)
-        {
-            if (string.IsNullOrEmpty(address))
-                throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
-
-            using var tr = MailDbContext.Database.BeginTransaction();
-
-            var range = MailDbContext.MailDisplayImages
-                .Where(r => r.IdUser == UserId && r.Tenant == Tenant && r.Address == address);
-
-            MailDbContext.MailDisplayImages.RemoveRange(range);
-
-            var count = MailDbContext.SaveChanges();
-
-            tr.Commit();
-        }
+        tr.Commit();
     }
 }

@@ -23,56 +23,48 @@
  *
 */
 
+using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 
-using ASC.Common;
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System;
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxDao))]
+public interface IMailboxDao
 {
-    [Scope(typeof(MailboxDao))]
-    public interface IMailboxDao
-    {
-        Mailbox GetMailBox(IMailboxExp exp);
+    Mailbox GetMailBox(IMailboxExp exp);
 
-        List<Mailbox> GetMailBoxes(IMailboxesExp exp);
+    List<Mailbox> GetMailBoxes(IMailboxesExp exp);
 
-        List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp);
+    List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp);
 
-        Mailbox GetNextMailBox(IMailboxExp exp);
+    Mailbox GetNextMailBox(IMailboxExp exp);
 
-        Tuple<int, int> GetRangeMailboxes(IMailboxExp exp);
+    Tuple<int, int> GetRangeMailboxes(IMailboxExp exp);
 
-        List<Tuple<int, string>> GetMailUsers(IMailboxExp exp);
+    List<Tuple<int, string>> GetMailUsers(IMailboxExp exp);
 
-        int SaveMailBox(Mailbox mailbox);
+    int SaveMailBox(Mailbox mailbox);
 
-        bool SetMailboxRemoved(Mailbox mailbox);
+    bool SetMailboxRemoved(Mailbox mailbox);
 
-        bool RemoveMailbox(Mailbox mailbox, MailDbContext context);
+    bool RemoveMailbox(Mailbox mailbox, MailDbContext context);
 
-        bool Enable(IMailboxExp exp, bool enabled);
+    bool Enable(IMailboxExp exp, bool enabled);
 
-        bool SetNextLoginDelay(IMailboxExp exp, TimeSpan delay);
+    bool SetNextLoginDelay(IMailboxExp exp, TimeSpan delay);
 
-        bool SetMailboxEmailIn(Mailbox mailbox, string emailInFolder);
+    bool SetMailboxEmailIn(Mailbox mailbox, string emailInFolder);
 
-        bool SetMailboxesActivity(int tenant, string user, bool userOnline = true);
+    bool SetMailboxesActivity(int tenant, string user, bool userOnline = true);
 
-        bool SetMailboxInProcess(int id);
+    bool SetMailboxInProcess(int id);
 
-        bool ReleaseMailbox(Mailbox mailbox, MailboxReleasedOptions releasedOptions);
+    bool ReleaseMailbox(Mailbox mailbox, MailboxReleasedOptions releasedOptions);
 
-        bool SetMailboxAuthError(int id, DateTime? authErroDate);
+    bool SetMailboxAuthError(int id, DateTime? authErroDate);
 
-        List<int> SetMailboxesProcessed(int timeoutInMinutes);
+    List<int> SetMailboxesProcessed(int timeoutInMinutes);
 
-        bool CanAccessTo(IMailboxExp exp);
+    bool CanAccessTo(IMailboxExp exp);
 
-        MailboxStatus GetMailBoxStatus(IMailboxExp exp);
-    }
+    MailboxStatus GetMailBoxStatus(IMailboxExp exp);
 }

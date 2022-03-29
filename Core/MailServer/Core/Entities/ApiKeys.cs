@@ -23,30 +23,24 @@
  *
 */
 
+namespace ASC.Mail.Server.Core.Entities;
 
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace ASC.Mail.Server.Core.Entities
+[Table("api_keys")]
+public partial class ApiKeys
 {
-    [Table("api_keys")]
-    public partial class ApiKeys
-    {
-        [Key]
-        [Column("id", TypeName = "int(11)")]
-        public int Id { get; set; }
-        [Required]
-        [Column("access_token", TypeName = "varchar(255)")]
-        public string AccessToken { get; set; }
-        [Required]
-        [Column("active")]
-        public bool? Active { get; set; }
-        [Column("expires_at", TypeName = "datetime")]
-        public DateTime? ExpiresAt { get; set; }
-        [Column("created_at", TypeName = "datetime")]
-        public DateTime CreatedAt { get; set; }
-        [Column("updated_at", TypeName = "datetime")]
-        public DateTime UpdatedAt { get; set; }
-    }
+    [Key]
+    [Column("id", TypeName = "int(11)")]
+    public int Id { get; set; }
+    [Required]
+    [Column("access_token", TypeName = "varchar(255)")]
+    public string AccessToken { get; set; }
+    [Required]
+    [Column("active")]
+    public bool? Active { get; set; }
+    [Column("expires_at", TypeName = "datetime")]
+    public DateTime? ExpiresAt { get; set; }
+    [Column("created_at", TypeName = "datetime")]
+    public DateTime CreatedAt { get; set; }
+    [Column("updated_at", TypeName = "datetime")]
+    public DateTime UpdatedAt { get; set; }
 }

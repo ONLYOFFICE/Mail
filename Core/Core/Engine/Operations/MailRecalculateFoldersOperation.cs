@@ -23,59 +23,50 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Storage;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using Microsoft.Extensions.Options;
-
-using System;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class MailRecalculateFoldersOperation : MailOperation
 {
-    public class MailRecalculateFoldersOperation : MailOperation
+    public override MailOperationType OperationType
     {
-        public override MailOperationType OperationType
-        {
-            get { return MailOperationType.RecalculateFolders; }
-        }
+        get { return MailOperationType.RecalculateFolders; }
+    }
 
-        private FolderEngine _folderEngine;
+    private FolderEngine _folderEngine;
 
-        public MailRecalculateFoldersOperation(TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            FolderEngine folderEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> optionsMonitor)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
-        {
-            _folderEngine = folderEngine;
-        }
+    public MailRecalculateFoldersOperation(TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        FolderEngine folderEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        IOptionsMonitor<ILog> optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+    {
+        _folderEngine = folderEngine;
+    }
 
-        protected override void Do()
+    protected override void Do()
+    {
+        try
         {
-            try
+            SetProgress((int?)MailOperationRecalculateMailboxProgress.Init, "Setup tenant and user");
+
+            TenantManager.SetCurrentTenant(CurrentTenant);
+
+            SecurityContext.AuthenticateMe(CurrentUser);
+
+            _folderEngine.RecalculateFolders(progress =>
             {
-                SetProgress((int?)MailOperationRecalculateMailboxProgress.Init, "Setup tenant and user");
-
-                TenantManager.SetCurrentTenant(CurrentTenant);
-
-                SecurityContext.AuthenticateMe(CurrentUser);
-
-                _folderEngine.RecalculateFolders(progress =>
-                {
-                    SetProgress((int?)progress);
-                });
-            }
-            catch (Exception e)
-            {
-                Logger.ErrorFormat("Mail operation error -> Recalculate folders: {0}", e.ToString());
-                Error = "InternalServerError";
-            }
+                SetProgress((int?)progress);
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.ErrorFormat("Mail operation error -> Recalculate folders: {0}", e.ToString());
+            Error = "InternalServerError";
         }
     }
 }

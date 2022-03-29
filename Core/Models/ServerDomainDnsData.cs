@@ -23,40 +23,35 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "DNSInfo")]
+public class ServerDomainDnsData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "DNSInfo")]
-    public class ServerDomainDnsData
+    [DataMember(IsRequired = true)]
+    public int Id { get; set; }
+
+    [DataMember(IsRequired = true)]
+    public ServerDomainMxRecordData MxRecord { get; set; }
+
+    [DataMember(IsRequired = true)]
+    public ServerDomainDnsRecordData SpfRecord { get; set; }
+
+    [DataMember(IsRequired = true)]
+    public ServerDomainDkimRecordData DkimRecord { get; set; }
+
+    [DataMember(IsRequired = true)]
+    public ServerDomainDnsRecordData DomainCheckRecord { get; set; }
+
+    [DataMember(IsRequired = true)]
+    public bool IsVerified
     {
-        [DataMember(IsRequired = true)]
-        public int Id { get; set; }
-
-        [DataMember(IsRequired = true)]
-        public ServerDomainMxRecordData MxRecord { get; set; }
-
-        [DataMember(IsRequired = true)]
-        public ServerDomainDnsRecordData SpfRecord { get; set; }
-
-        [DataMember(IsRequired = true)]
-        public ServerDomainDkimRecordData DkimRecord { get; set; }
-
-        [DataMember(IsRequired = true)]
-        public ServerDomainDnsRecordData DomainCheckRecord { get; set; }
-
-        [DataMember(IsRequired = true)]
-        public bool IsVerified
+        get
         {
-            get
-            {
-                return MxRecord.IsVerified &&
-                       SpfRecord.IsVerified &&
-                       DkimRecord.IsVerified;
-            }
+            return MxRecord.IsVerified &&
+                   SpfRecord.IsVerified &&
+                   DkimRecord.IsVerified;
         }
     }
 }

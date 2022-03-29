@@ -23,21 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class MailboxAutoreply
 {
-    public class MailboxAutoreply
-    {
-        public int MailboxId { get; set; }
-        public int Tenant { get; set; }
-        public bool TurnOn { get; set; }
-        public bool OnlyContacts { get; set; }
-        public bool TurnOnToDate { get; set; }
-        public DateTime FromDate { get; set; }
-        public DateTime ToDate { get; set; }
-        public string Subject { get; set; }
-        public string Html { get; set; }
-    }
+    public int MailboxId { get; set; }
+    public int Tenant { get; set; }
+    public bool TurnOn { get; set; }
+    public bool OnlyContacts { get; set; }
+    public bool TurnOnToDate { get; set; }
+    public DateTime FromDate { get; set; }
+    public DateTime ToDate { get; set; }
+    public string Subject { get; set; }
+    public string Html { get; set; }
 }

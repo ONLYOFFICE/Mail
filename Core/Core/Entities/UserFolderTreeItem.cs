@@ -23,13 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class UserFolderTreeItem
 {
-    public class UserFolderTreeItem
-    {
-        public int FolderId { get; set; }
-        public int ParentId { get; set; }
-        public uint Level { get; set; }
-    }
+    public int FolderId { get; set; }
+    public int ParentId { get; set; }
+    public uint Level { get; set; }
 }

@@ -23,174 +23,162 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class FolderDao : BaseMailDao, IFolderDao
 {
-    [Scope]
-    public class FolderDao : BaseMailDao, IFolderDao
+
+    public FolderDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
+    }
 
-        public FolderDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    public Folder GetFolder(FolderType folderType)
+    {
+        var folder = MailDbContext.MailFolderCounters
+            .AsNoTracking()
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folderType)
+            .Select(ToFolder)
+            .SingleOrDefault();
+
+        return folder;
+    }
+
+    public List<Folder> GetFolders(string userId)
+    {
+        var folders = MailDbContext.MailFolderCounters
+            .AsNoTracking()
+            .Where(f => f.Tenant == Tenant && f.IdUser == userId)
+            .Select(ToFolder)
+            .ToList();
+
+        return folders;
+    }
+
+    public List<Folder> GetFolders()
+    {
+        var folders = MailDbContext.MailFolderCounters
+            .AsNoTracking()
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
+            .Select(ToFolder)
+            .ToList();
+
+        return folders;
+    }
+
+    public int Save(Folder folder)
+    {
+        var mailFolder = new MailFolderCounters
         {
+            Tenant = folder.Tenant,
+            IdUser = folder.UserId,
+            Folder = folder.FolderType,
+            UnreadMessagesCount = (uint)folder.UnreadCount,
+            UnreadConversationsCount = (uint)folder.UnreadChainCount,
+            TotalMessagesCount = (uint)folder.TotalCount,
+            TotalConversationsCount = (uint)folder.TotalChainCount
+        };
+
+        MailDbContext.AddOrUpdate(t => t.MailFolderCounters, mailFolder);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int ChangeFolderCounters(
+        FolderType folder,
+        int? unreadMessDiff = null,
+        int? totalMessDiff = null,
+        int? unreadConvDiff = null,
+        int? totalConvDiff = null)
+    {
+        if (!unreadMessDiff.HasValue
+            && !totalMessDiff.HasValue
+            && !unreadConvDiff.HasValue
+            && !totalConvDiff.HasValue)
+        {
+            return -1;
         }
 
-        public Folder GetFolder(FolderType folderType)
-        {
-            var folder = MailDbContext.MailFolderCounters
-                .AsNoTracking()
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folderType)
-                .Select(ToFolder)
-                .SingleOrDefault();
+        MailDbContext.ChangeTracker.Clear();
 
-            return folder;
+        var mailFolder = MailDbContext.MailFolderCounters
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folder)
+            .SingleOrDefault();
+
+        if (mailFolder == null)
+            return 0;
+
+        if (unreadMessDiff.HasValue)
+        {
+            if (unreadMessDiff.Value == 0)
+                mailFolder.UnreadMessagesCount = 0;
+            else
+                mailFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
         }
 
-        public List<Folder> GetFolders(string userId)
+        if (totalMessDiff.HasValue)
         {
-            var folders = MailDbContext.MailFolderCounters
-                .AsNoTracking()
-                .Where(f => f.Tenant == Tenant && f.IdUser == userId)
-                .Select(ToFolder)
-                .ToList();
-
-            return folders;
+            if (totalMessDiff.Value == 0)
+                mailFolder.TotalMessagesCount = 0;
+            else
+                mailFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
         }
 
-        public List<Folder> GetFolders()
+        if (unreadConvDiff.HasValue)
         {
-            var folders = MailDbContext.MailFolderCounters
-                .AsNoTracking()
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
-                .Select(ToFolder)
-                .ToList();
-
-            return folders;
+            if (unreadConvDiff.Value == 0)
+                mailFolder.UnreadConversationsCount = 0;
+            else
+                mailFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
         }
 
-        public int Save(Folder folder)
+        if (totalConvDiff.HasValue)
         {
-            var mailFolder = new MailFolderCounters
-            {
-                Tenant = folder.Tenant,
-                IdUser = folder.UserId,
-                Folder = folder.FolderType,
-                UnreadMessagesCount = (uint)folder.UnreadCount,
-                UnreadConversationsCount = (uint)folder.UnreadChainCount,
-                TotalMessagesCount = (uint)folder.TotalCount,
-                TotalConversationsCount = (uint)folder.TotalChainCount
-            };
-
-            MailDbContext.AddOrUpdate(t => t.MailFolderCounters, mailFolder);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
+            if (totalConvDiff.Value == 0)
+                mailFolder.TotalConversationsCount = 0;
+            else
+                mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
         }
+        var result = MailDbContext.SaveChanges();
 
-        public int ChangeFolderCounters(
-            FolderType folder,
-            int? unreadMessDiff = null,
-            int? totalMessDiff = null,
-            int? unreadConvDiff = null,
-            int? totalConvDiff = null)
+        return result;
+    }
+
+    public int Delete()
+    {
+        var queryDelete = MailDbContext.MailFolderCounters
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId);
+
+        MailDbContext.MailFolderCounters.RemoveRange(queryDelete);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected Folder ToFolder(MailFolderCounters r)
+    {
+        var f = new Folder
         {
-            if (!unreadMessDiff.HasValue
-                && !totalMessDiff.HasValue
-                && !unreadConvDiff.HasValue
-                && !totalConvDiff.HasValue)
-            {
-                return -1;
-            }
+            Tenant = r.Tenant,
+            UserId = r.IdUser,
+            FolderType = (FolderType)r.Folder,
+            TimeModified = r.TimeModified,
+            UnreadCount = (int)r.UnreadMessagesCount,
+            TotalCount = (int)r.TotalMessagesCount,
+            UnreadChainCount = (int)r.UnreadConversationsCount,
+            TotalChainCount = (int)r.TotalConversationsCount
+        };
 
-            MailDbContext.ChangeTracker.Clear();
-
-            var mailFolder = MailDbContext.MailFolderCounters
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Folder == folder)
-                .SingleOrDefault();
-
-            if (mailFolder == null)
-                return 0;
-
-            if (unreadMessDiff.HasValue)
-            {
-                if (unreadMessDiff.Value == 0)
-                    mailFolder.UnreadMessagesCount = 0;
-                else
-                    mailFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
-            }
-
-            if (totalMessDiff.HasValue)
-            {
-                if (totalMessDiff.Value == 0)
-                    mailFolder.TotalMessagesCount = 0;
-                else
-                    mailFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
-            }
-
-            if (unreadConvDiff.HasValue)
-            {
-                if (unreadConvDiff.Value == 0)
-                    mailFolder.UnreadConversationsCount = 0;
-                else
-                    mailFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
-            }
-
-            if (totalConvDiff.HasValue)
-            {
-                if (totalConvDiff.Value == 0)
-                    mailFolder.TotalConversationsCount = 0;
-                else
-                    mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
-            }
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public int Delete()
-        {
-            var queryDelete = MailDbContext.MailFolderCounters
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId);
-
-            MailDbContext.MailFolderCounters.RemoveRange(queryDelete);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected Folder ToFolder(MailFolderCounters r)
-        {
-            var f = new Folder
-            {
-                Tenant = r.Tenant,
-                UserId = r.IdUser,
-                FolderType = (FolderType)r.Folder,
-                TimeModified = r.TimeModified,
-                UnreadCount = (int)r.UnreadMessagesCount,
-                TotalCount = (int)r.TotalMessagesCount,
-                UnreadChainCount = (int)r.UnreadConversationsCount,
-                TotalChainCount = (int)r.TotalConversationsCount
-            };
-
-            return f;
-        }
+        return f;
     }
 }

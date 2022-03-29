@@ -23,15 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum ActionType
 {
-    public enum ActionType
-    {
-        DeleteForever = 0,
-        MoveTo = 1,
-        MarkTag = 2,
-        MarkAsImportant = 3,
-        MarkAsRead = 4
-    }
+    DeleteForever = 0,
+    MoveTo = 1,
+    MarkTag = 2,
+    MarkAsImportant = 3,
+    MarkAsRead = 4
 }

@@ -23,67 +23,57 @@
  *
 */
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using Microsoft.EntityFrameworkCore;
+namespace ASC.Mail.Core.Dao;
 
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailboxDomainDao : BaseMailDao, IMailboxDomainDao
 {
-    [Scope]
-    public class MailboxDomainDao : BaseMailDao, IMailboxDomainDao
+    public MailboxDomainDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailboxDomainDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public MailboxDomain GetDomain(string domainName)
+    {
+        var domain = MailDbContext.MailMailboxDomain
+            .AsNoTracking()
+            .Where(d => d.Name == domainName)
+            .Select(ToMailboxDomain)
+            .FirstOrDefault();
+
+        return domain;
+    }
+
+    public int SaveDomain(MailboxDomain domain)
+    {
+        var mailboxDomain = new MailMailboxDomain
         {
-        }
+            Id = domain.Id,
+            IdProvider = domain.ProviderId,
+            Name = domain.Name
+        };
 
-        public MailboxDomain GetDomain(string domainName)
+        var result = MailDbContext.MailMailboxDomain.Add(mailboxDomain).Entity;
+
+        MailDbContext.SaveChanges();
+
+        return result.Id;
+    }
+
+    protected MailboxDomain ToMailboxDomain(MailMailboxDomain r)
+    {
+        var d = new MailboxDomain
         {
-            var domain = MailDbContext.MailMailboxDomain
-                .AsNoTracking()
-                .Where(d => d.Name == domainName)
-                .Select(ToMailboxDomain)
-                .FirstOrDefault();
+            Id = r.Id,
+            ProviderId = r.IdProvider,
+            Name = r.Name
+        };
 
-            return domain;
-        }
-
-        public int SaveDomain(MailboxDomain domain)
-        {
-            var mailboxDomain = new MailMailboxDomain
-            {
-                Id = domain.Id,
-                IdProvider = domain.ProviderId,
-                Name = domain.Name
-            };
-
-            var result = MailDbContext.MailMailboxDomain.Add(mailboxDomain).Entity;
-
-            MailDbContext.SaveChanges();
-
-            return result.Id;
-        }
-
-        protected MailboxDomain ToMailboxDomain(MailMailboxDomain r)
-        {
-            var d = new MailboxDomain
-            {
-                Id = r.Id,
-                ProviderId = r.IdProvider,
-                Name = r.Name
-            };
-
-            return d;
-        }
+        return d;
     }
 }

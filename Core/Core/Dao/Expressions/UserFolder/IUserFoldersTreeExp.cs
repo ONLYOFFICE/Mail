@@ -23,23 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.UserFolder;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.UserFolder
+public interface IUserFoldersTreeExp
 {
-    public interface IUserFoldersTreeExp
-    {
-        string OrderBy { get; }
+    string OrderBy { get; }
 
-        bool? OrderAsc { get; }
+    bool? OrderAsc { get; }
 
-        int? StartIndex { get; }
+    int? StartIndex { get; }
 
-        int? Limit { get; }
+    int? Limit { get; }
 
-        Expression<Func<MailUserFolderTree, bool>> GetExpression();
-    }
+    Expression<Func<MailUserFolderTree, bool>> GetExpression();
 }

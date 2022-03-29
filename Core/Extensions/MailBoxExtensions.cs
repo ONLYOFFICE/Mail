@@ -23,181 +23,169 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Tenants;
-using ASC.Core.Users;
-using ASC.Data.Storage;
-using ASC.Mail.Exceptions;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
+namespace ASC.Mail.Extensions;
 
-using System;
-using System.Security.Authentication;
-
-namespace ASC.Mail.Extensions
+public static class MailBoxExtensions
 {
-    public static class MailBoxExtensions
+    public static bool IsUserTerminated(this MailBoxData mailbox,
+        TenantManager tenantManager, UserManager userManager, ILog log = null)
     {
-        public static bool IsUserTerminated(this MailBoxData mailbox,
-            TenantManager tenantManager, UserManager userManager, ILog log = null)
+        log = log ?? new NullLog();
+
+        try
         {
-            log = log ?? new NullLog();
+            tenantManager.SetCurrentTenant(mailbox.TenantId);
+
+            var user = userManager.GetUsers(new Guid(mailbox.UserId));
+
+            return user.Status == EmployeeStatus.Terminated;
+        }
+        catch (Exception ex)
+        {
+            log.Debug($"IsUserTerminated(). Cannot detect user status. Exception:\n{ex}\nreturn false.");
+            return false;
+        }
+    }
+
+    public static bool IsUserRemoved(this MailBoxData mailbox,
+        TenantManager tenantManager, UserManager userManager, ILog log = null)
+    {
+        log = log ?? new NullLog();
+
+        try
+        {
+            tenantManager.SetCurrentTenant(mailbox.TenantId);
+
+            if (!Guid.TryParse(mailbox.UserId, out Guid user))
+                return true;
+
+            return !userManager.UserExists(user) || userManager.IsSystemUser(user);
+        }
+        catch (Exception ex)
+        {
+            log.Debug($"IsUserRemoved(). Cannot detect user remove status. Exception:\n{ex}\nreturn false.");
+            return false;
+        }
+    }
+
+    public static UserInfo GetUserInfo(this MailBoxData mailbox,
+        TenantManager tenantManager, UserManager userManager)
+    {
+        try
+        {
+            tenantManager.SetCurrentTenant(mailbox.TenantId);
+            var userInfo = userManager.GetUsers(new Guid(mailbox.UserId));
+
+            return userInfo;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public static DefineConstants.TariffType GetTenantStatus(this MailBoxData mailbox,
+        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
+        int tenantOverdueDays, ILog log = null)
+    {
+        log = log ?? new NullLog();
+
+        DefineConstants.TariffType type;
+
+        try
+        {
+            log.Debug($"Attempt to set current tenant. Tenant {mailbox.TenantId}...");
+            tenantManager.SetCurrentTenant(mailbox.TenantId);
+
+            log.Debug($"Attempt to get current tenant info.");
+            var tenantInfo = tenantManager.GetCurrentTenant();
+
+            log.Debug($"Returned tenant status: {tenantInfo.Status}. TenantId: {tenantInfo.TenantId}. OwnerId: {tenantInfo.OwnerId}");
+
+            if (tenantInfo.Status == TenantStatus.RemovePending)
+                return DefineConstants.TariffType.LongDead;
 
             try
             {
-                tenantManager.SetCurrentTenant(mailbox.TenantId);
-
-                var user = userManager.GetUsers(new Guid(mailbox.UserId));
-
-                return user.Status == EmployeeStatus.Terminated;
+                log.Debug("Authentication attempt by OwnerId for tenant");
+                securityContext.AuthenticateMe(tenantInfo.OwnerId);
             }
-            catch (Exception ex)
+            catch (InvalidCredentialException)
             {
-                log.Debug($"IsUserTerminated(). Cannot detect user status. Exception:\n{ex}\nreturn false.");
+                log.Debug("Authentication failed. Authentication attempt by mailbox UserId");
+                securityContext.AuthenticateMe(new Guid(mailbox.UserId));
+            }
+
+            type = apiHelper.GetTenantTariffLogged(tenantOverdueDays, log);
+        }
+        catch (Exception ex)
+        {
+            log.ErrorFormat("GetTenantStatus(Tenant={0}, User='{1}') Exception: {2}",
+                mailbox.TenantId, mailbox.UserId, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
+            type = DefineConstants.TariffType.Active;
+        }
+
+        return type;
+    }
+
+    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILog log = null)
+    {
+        var quotaEnded = false;
+        log = log ?? new NullLog();
+
+        try
+        {
+            var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
+            var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
+            var usedQuota = quotaController.QuotaCurrentGet();
+            quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
+            log.Debug($"IsTenantQuotaEnded: {quotaEnded} Tenant = {mailbox.TenantId}. " +
+                $"Tenant quota = {MailUtil.BytesToMegabytes(quota.MaxTotalSize)}Mb ({quota.MaxTotalSize}), " +
+                $"used quota = {MailUtil.BytesToMegabytes(usedQuota)}Mb ({usedQuota}) ");
+        }
+        catch (Exception ex)
+        {
+            log.Error($"IsQuotaExhausted(Tenant={mailbox.TenantId}) Exception: {ex.Message} StackTrace: \n{ex.StackTrace}");
+        }
+
+        return quotaEnded;
+    }
+
+    public static bool IsCrmAvailable(this MailBoxData mailbox,
+        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
+        ILog log = null)
+    {
+        log = log ?? new NullLog();
+
+        try
+        {
+            tenantManager.SetCurrentTenant(mailbox.TenantId);
+
+            var tenantInfo = tenantManager.GetCurrentTenant();
+
+            if (tenantInfo.Status == TenantStatus.RemovePending)
                 return false;
-            }
+
+            securityContext.AuthenticateMe(new Guid(mailbox.UserId));
+
+            return apiHelper.IsCrmModuleAvailable();
         }
-
-        public static bool IsUserRemoved(this MailBoxData mailbox,
-            TenantManager tenantManager, UserManager userManager, ILog log = null)
+        catch (Exception ex)
         {
-            log = log ?? new NullLog();
-
-            try
+            if (ex is ApiHelperException)
             {
-                tenantManager.SetCurrentTenant(mailbox.TenantId);
-
-                if (!Guid.TryParse(mailbox.UserId, out Guid user))
-                    return true;
-
-                return !userManager.UserExists(user) || userManager.IsSystemUser(user);
+                var apiEx = ex as ApiHelperException;
+                log.Error($"Get portal settings failed (Tenant: {mailbox.TenantId}, User: {mailbox.UserId}, Mailbox: {mailbox.MailBoxId}). Returned status code: {apiEx.StatusCode}");
             }
-            catch (Exception ex)
-            {
-                log.Debug($"IsUserRemoved(). Cannot detect user remove status. Exception:\n{ex}\nreturn false.");
-                return false;
-            }
-        }
-
-        public static UserInfo GetUserInfo(this MailBoxData mailbox,
-            TenantManager tenantManager, UserManager userManager)
-        {
-            try
-            {
-                tenantManager.SetCurrentTenant(mailbox.TenantId);
-                var userInfo = userManager.GetUsers(new Guid(mailbox.UserId));
-
-                return userInfo;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        public static DefineConstants.TariffType GetTenantStatus(this MailBoxData mailbox,
-            TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-            int tenantOverdueDays, ILog log = null)
-        {
-            log = log ?? new NullLog();
-
-            DefineConstants.TariffType type;
-
-            try
-            {
-                log.Debug($"Attempt to set current tenant. Tenant {mailbox.TenantId}...");
-                tenantManager.SetCurrentTenant(mailbox.TenantId);
-
-                log.Debug($"Attempt to get current tenant info.");
-                var tenantInfo = tenantManager.GetCurrentTenant();
-
-                log.Debug($"Returned tenant status: {tenantInfo.Status}. TenantId: {tenantInfo.TenantId}. OwnerId: {tenantInfo.OwnerId}");
-
-                if (tenantInfo.Status == TenantStatus.RemovePending)
-                    return DefineConstants.TariffType.LongDead;
-
-                try
-                {
-                    log.Debug("Authentication attempt by OwnerId for tenant");
-                    securityContext.AuthenticateMe(tenantInfo.OwnerId);
-                }
-                catch (InvalidCredentialException)
-                {
-                    log.Debug("Authentication failed. Authentication attempt by mailbox UserId");
-                    securityContext.AuthenticateMe(new Guid(mailbox.UserId));
-                }
-
-                type = apiHelper.GetTenantTariffLogged(tenantOverdueDays, log);
-            }
-            catch (Exception ex)
+            else
             {
                 log.ErrorFormat("GetTenantStatus(Tenant={0}, User='{1}') Exception: {2}",
                     mailbox.TenantId, mailbox.UserId, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
-                type = DefineConstants.TariffType.Active;
             }
-
-            return type;
         }
 
-        public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILog log = null)
-        {
-            var quotaEnded = false;
-            log = log ?? new NullLog();
-
-            try
-            {
-                var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
-                var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
-                var usedQuota = quotaController.QuotaCurrentGet();
-                quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
-                log.Debug($"IsTenantQuotaEnded: {quotaEnded} Tenant = {mailbox.TenantId}. " +
-                    $"Tenant quota = {MailUtil.BytesToMegabytes(quota.MaxTotalSize)}Mb ({quota.MaxTotalSize}), " +
-                    $"used quota = {MailUtil.BytesToMegabytes(usedQuota)}Mb ({usedQuota}) ");
-            }
-            catch (Exception ex)
-            {
-                log.Error($"IsQuotaExhausted(Tenant={mailbox.TenantId}) Exception: {ex.Message} StackTrace: \n{ex.StackTrace}");
-            }
-
-            return quotaEnded;
-        }
-
-        public static bool IsCrmAvailable(this MailBoxData mailbox,
-            TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-            ILog log = null)
-        {
-            log = log ?? new NullLog();
-
-            try
-            {
-                tenantManager.SetCurrentTenant(mailbox.TenantId);
-
-                var tenantInfo = tenantManager.GetCurrentTenant();
-
-                if (tenantInfo.Status == TenantStatus.RemovePending)
-                    return false;
-
-                securityContext.AuthenticateMe(new Guid(mailbox.UserId));
-
-                return apiHelper.IsCrmModuleAvailable();
-            }
-            catch (Exception ex)
-            {
-                if (ex is ApiHelperException)
-                {
-                    var apiEx = ex as ApiHelperException;
-                    log.Error($"Get portal settings failed (Tenant: {mailbox.TenantId}, User: {mailbox.UserId}, Mailbox: {mailbox.MailBoxId}). Returned status code: {apiEx.StatusCode}");
-                }
-                else
-                {
-                    log.ErrorFormat("GetTenantStatus(Tenant={0}, User='{1}') Exception: {2}",
-                        mailbox.TenantId, mailbox.UserId, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
-                }
-            }
-
-            return true;
-        }
+        return true;
     }
 }

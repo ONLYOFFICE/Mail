@@ -1,10 +1,7 @@
-﻿using System;
+﻿namespace ASC.Mail.Core.Exceptions;
 
-namespace ASC.Mail.Core.Exceptions
+public class LimitMessageException : Exception
 {
-    public class LimitMessageException : Exception
-    {
-        public LimitMessageException(string message)
-            : base(message) { }
-    }
+    public LimitMessageException(string message)
+        : base(message) { }
 }

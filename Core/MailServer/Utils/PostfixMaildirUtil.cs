@@ -23,33 +23,29 @@
  *
 */
 
+namespace ASC.Mail.Server.Utils;
 
-using System;
-
-namespace ASC.Mail.Server.Utils
+public static class PostfixMaildirUtil
 {
-    public static class PostfixMaildirUtil
+    public static string GenerateMaildirPath(string domain, string localpart, DateTime creationdate)
     {
-        public static string GenerateMaildirPath(string domain, string localpart, DateTime creationdate)
+        var maildir = domain + "/";
+
+        if (localpart.Length >= 3)
         {
-            var maildir = domain + "/";
-
-            if (localpart.Length >= 3)
-            {
-                maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[1], localpart[2]);
-            }
-            else if (localpart.Length == 2)
-            {
-                maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[1], localpart[1]);
-            }
-            else
-            {
-                maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[0], localpart[0]);
-            }
-
-            maildir += string.Format("{0}-{1}/", localpart, creationdate.ToString("yyyy.MM.dd.HH.mm.ss"));
-
-            return maildir.ToLower();
+            maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[1], localpart[2]);
         }
+        else if (localpart.Length == 2)
+        {
+            maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[1], localpart[1]);
+        }
+        else
+        {
+            maildir += string.Format("{0}/{1}/{2}/", localpart[0], localpart[0], localpart[0]);
+        }
+
+        maildir += string.Format("{0}-{1}/", localpart, creationdate.ToString("yyyy.MM.dd.HH.mm.ss"));
+
+        return maildir.ToLower();
     }
 }

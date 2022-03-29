@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class MoveFolderException : ArgumentException
 {
-    public class MoveFolderException : ArgumentException
+    public MoveFolderException(string message)
+        : base(message)
     {
-        public MoveFolderException(string message)
-            : base(message)
-        {
-        }
     }
 }

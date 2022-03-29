@@ -23,14 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class MailboxSignature
 {
-    public class MailboxSignature
-    {
-        public int MailboxId { get; set; }
-        public int Tenant { get; set; }
-        public string Html { get; set; }
-        public bool IsActive { get; set; }
-    }
+    public int MailboxId { get; set; }
+    public int Tenant { get; set; }
+    public string Html { get; set; }
+    public bool IsActive { get; set; }
 }

@@ -23,28 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Core.Common.Settings;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract]
+public class ServerNotificationAddressSettings : ISettings
 {
-    [Serializable]
-    [DataContract]
-    public class ServerNotificationAddressSettings : ISettings
+    [DataMember]
+    public string NotificationAddress { get; set; }
+
+    public ISettings GetDefault(IServiceProvider serviceProvider)
     {
-        [DataMember]
-        public string NotificationAddress { get; set; }
+        return new ServerNotificationAddressSettings { NotificationAddress = string.Empty };
+    }
 
-        public ISettings GetDefault(IServiceProvider serviceProvider)
-        {
-            return new ServerNotificationAddressSettings { NotificationAddress = string.Empty };
-        }
-
-        public Guid ID
-        {
-            get { return new Guid("{C440A7BE-A336-4071-A57E-5E89725E1CF8}"); }
-        }
+    public Guid ID
+    {
+        get { return new Guid("{C440A7BE-A336-4071-A57E-5E89725E1CF8}"); }
     }
 }

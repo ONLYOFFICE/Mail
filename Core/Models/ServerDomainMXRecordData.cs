@@ -23,23 +23,18 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "DNSRecord")]
+public class ServerDomainMxRecordData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "DNSRecord")]
-    public class ServerDomainMxRecordData
-    {
-        [DataMember(IsRequired = true)]
-        public string Host { get; set; }
+    [DataMember(IsRequired = true)]
+    public string Host { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public int Priority { get; set; }
+    [DataMember(IsRequired = true)]
+    public int Priority { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public bool IsVerified { get; set; }
-    }
+    [DataMember(IsRequired = true)]
+    public bool IsVerified { get; set; }
 }

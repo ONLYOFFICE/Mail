@@ -23,37 +23,28 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System;
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Dao.Expressions.Message;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailInfoDao))]
+public interface IMailInfoDao
 {
-    [Scope(typeof(MailInfoDao))]
-    public interface IMailInfoDao
-    {
-        List<MailInfo> GetMailInfoList(IMessagesExp exp, bool skipSelectTags = false);
+    List<MailInfo> GetMailInfoList(IMessagesExp exp, bool skipSelectTags = false);
 
-        long GetMailInfoTotal(IMessagesExp exp);
+    long GetMailInfoTotal(IMessagesExp exp);
 
-        Dictionary<int, int> GetMailCount(IMessagesExp exp);
+    Dictionary<int, int> GetMailCount(IMessagesExp exp);
 
-        Dictionary<int, int> GetMailUserFolderCount(List<int> userFolderIds, bool? unread = null);
+    Dictionary<int, int> GetMailUserFolderCount(List<int> userFolderIds, bool? unread = null);
 
-        Dictionary<int, int> GetMailUserFolderCount(bool? unread = null);
+    Dictionary<int, int> GetMailUserFolderCount(bool? unread = null);
 
-        Tuple<int, int> GetRangeMails(IMessagesExp exp);
+    Tuple<int, int> GetRangeMails(IMessagesExp exp);
 
-        T GetFieldMaxValue<T>(IMessagesExp exp, string field);
+    T GetFieldMaxValue<T>(IMessagesExp exp, string field);
 
-        int SetFieldValue<T>(IMessagesExp exp, string field, T value);
+    int SetFieldValue<T>(IMessagesExp exp, string field, T value);
 
-        int SetFieldsEqual(IMessagesExp exp, string fieldFrom, string fieldTo);
+    int SetFieldsEqual(IMessagesExp exp, string fieldFrom, string fieldTo);
 
-        public List<MailInfo> GetChainedMessagesInfo(List<int> ids);
-    }
+    public List<MailInfo> GetChainedMessagesInfo(List<int> ids);
 }

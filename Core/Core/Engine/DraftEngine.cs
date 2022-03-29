@@ -23,621 +23,585 @@
  *
 */
 
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Notify.Signalr;
-using ASC.Data.Storage;
-using ASC.ElasticSearch;
-using ASC.Mail.Clients;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Contact;
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
-using ASC.Mail.Core.Dao.Expressions.Message;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Exceptions;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-using ASC.Mail.Utils;
-using ASC.Web.Files.Services.WCFService;
-
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Options;
-
-using MimeKit;
-
-using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Web;
-
+using ConfigurationManager = System.Configuration.ConfigurationManager;
+using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
+using FolderType = ASC.Mail.Enums.FolderType;
 using HttpContext = Microsoft.AspNetCore.Http.HttpContext;
 using MailMessage = ASC.Mail.Models.MailMessageData;
+using SecurityContext = ASC.Core.SecurityContext;
+using Task = System.Threading.Tasks.Task;
 
-namespace ASC.Mail.Core.Engine
+namespace ASC.Mail.Core.Engine;
+
+[Scope]
+public class DraftEngine : ComposeEngineBase
 {
-    [Scope]
-    public class DraftEngine : ComposeEngineBase
+    private readonly HttpContext _httpContext;
+    private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfos;
+    private readonly CrmLinkEngine _crmLinkEngine;
+    private readonly EmailInEngine _emailInEngine;
+    private readonly FilterEngine _filterEngine;
+    private readonly AutoreplyEngine _autoreplyEngine;
+    private readonly AlertEngine _alertEngine;
+    private readonly ContactEngine _contactEngine;
+    private readonly FileStorageService<string> _fileStorageService;
+    private readonly FactoryIndexer<MailContact> _factoryIndexer;
+    private readonly FactoryIndexer FactoryIndexerCommon;
+    private readonly IServiceProvider ServiceProvider;
+
+    public DraftEngine(
+        SecurityContext securityContext,
+        TenantManager tenantManager,
+        IMailDaoFactory mailDaoFactory,
+        AccountEngine accountEngine,
+        MailboxEngine mailboxEngine,
+        MessageEngine messageEngine,
+        QuotaEngine quotaEngine,
+        IndexEngine indexEngine,
+        CrmLinkEngine crmLinkEngine,
+        EmailInEngine emailInEngine,
+        FilterEngine filterEngine,
+        AutoreplyEngine autoreplyEngine,
+        AlertEngine alertEngine,
+        ContactEngine contactEngine,
+        StorageManager storageManager,
+        CoreSettings coreSettings,
+        StorageFactory storageFactory,
+        FileStorageService<string> fileStorageService,
+        FactoryIndexer<MailContact> factoryIndexer,
+        FactoryIndexer factoryIndexerCommon,
+        IHttpContextAccessor httpContextAccessor,
+        IServiceProvider serviceProvider,
+        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
+        IOptionsMonitor<ILog> option,
+        MailSettings mailSettings,
+        DeliveryFailureMessageTranslates daemonLabels = null)
+        : base(
+        accountEngine,
+        mailboxEngine,
+        messageEngine,
+        quotaEngine,
+        indexEngine,
+        mailDaoFactory,
+        storageManager,
+        securityContext,
+        tenantManager,
+        coreSettings,
+        storageFactory,
+        optionsSnapshot,
+        option,
+        mailSettings,
+        daemonLabels)
     {
-        private readonly HttpContext _httpContext;
-        private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfos;
-        private readonly CrmLinkEngine _crmLinkEngine;
-        private readonly EmailInEngine _emailInEngine;
-        private readonly FilterEngine _filterEngine;
-        private readonly AutoreplyEngine _autoreplyEngine;
-        private readonly AlertEngine _alertEngine;
-        private readonly ContactEngine _contactEngine;
-        private readonly FileStorageService<string> _fileStorageService;
-        private readonly FactoryIndexer<MailContact> _factoryIndexer;
-        private readonly FactoryIndexer FactoryIndexerCommon;
-        private readonly IServiceProvider ServiceProvider;
+        _crmLinkEngine = crmLinkEngine;
+        _emailInEngine = emailInEngine;
+        _filterEngine = filterEngine;
+        _autoreplyEngine = autoreplyEngine;
+        _alertEngine = alertEngine;
+        _contactEngine = contactEngine;
+        _fileStorageService = fileStorageService;
+        _factoryIndexer = factoryIndexer;
+        FactoryIndexerCommon = factoryIndexerCommon;
+        ServiceProvider = serviceProvider;
+        _httpContext = httpContextAccessor?.HttpContext;
 
-        public DraftEngine(
-            SecurityContext securityContext,
-            TenantManager tenantManager,
-            IMailDaoFactory mailDaoFactory,
-            AccountEngine accountEngine,
-            MailboxEngine mailboxEngine,
-            MessageEngine messageEngine,
-            QuotaEngine quotaEngine,
-            IndexEngine indexEngine,
-            CrmLinkEngine crmLinkEngine,
-            EmailInEngine emailInEngine,
-            FilterEngine filterEngine,
-            AutoreplyEngine autoreplyEngine,
-            AlertEngine alertEngine,
-            ContactEngine contactEngine,
-            StorageManager storageManager,
-            CoreSettings coreSettings,
-            StorageFactory storageFactory,
-            FileStorageService<string> fileStorageService,
-            FactoryIndexer<MailContact> factoryIndexer,
-            FactoryIndexer factoryIndexerCommon,
-            IHttpContextAccessor httpContextAccessor,
-            IServiceProvider serviceProvider,
-            IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-            IOptionsMonitor<ILog> option,
-            MailSettings mailSettings,
-            DeliveryFailureMessageTranslates daemonLabels = null)
-            : base(
-            accountEngine,
-            mailboxEngine,
-            messageEngine,
-            quotaEngine,
-            indexEngine,
-            mailDaoFactory,
-            storageManager,
-            securityContext,
-            tenantManager,
-            coreSettings,
-            storageFactory,
-            optionsSnapshot,
-            option,
-            mailSettings,
-            daemonLabels)
+        _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
+
+        _log = option.Get("ASC.Mail.DraftEngine");
+    }
+
+    #region .Public
+
+    public long Send(MessageModel model, DeliveryFailureMessageTranslates translates = null)
+    {
+        if (model.Id < 1)
+            model.Id = 0;
+
+        if (string.IsNullOrEmpty(model.From))
+            throw new ArgumentNullException("from");
+
+        if (!model.To.Any())
+            throw new ArgumentNullException("to");
+
+        var mailAddress = new MailAddress(model.From);
+
+        var accounts = _accountEngine.GetAccountInfoList().ToAccountData();
+
+        var account = accounts.FirstOrDefault(a => a.Email.ToLower().Equals(mailAddress.Address));
+
+        if (account == null)
+            throw new ArgumentException("Mailbox not found");
+
+        if (account.IsGroup)
+            throw new InvalidOperationException("Sending emails from a group address is forbidden");
+
+        var mbox = _mailboxEngine.GetMailboxData(
+            new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
+
+        if (mbox == null)
+            throw new ArgumentException("No such mailbox");
+
+        if (!mbox.Enabled)
+            throw new InvalidOperationException("Sending emails from a disabled account is forbidden");
+
+        string mimeMessageId, streamId;
+
+        var previousMailboxId = mbox.MailBoxId;
+
+        if (model.Id > 0)
         {
-            _crmLinkEngine = crmLinkEngine;
-            _emailInEngine = emailInEngine;
-            _filterEngine = filterEngine;
-            _autoreplyEngine = autoreplyEngine;
-            _alertEngine = alertEngine;
-            _contactEngine = contactEngine;
-            _fileStorageService = fileStorageService;
-            _factoryIndexer = factoryIndexer;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
-            _httpContext = httpContextAccessor?.HttpContext;
-
-            _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
-
-            _log = option.Get("ASC.Mail.DraftEngine");
-        }
-
-        #region .Public
-
-        public long Send(MessageModel model, DeliveryFailureMessageTranslates translates = null)
-        {
-            if (model.Id < 1)
-                model.Id = 0;
-
-            if (string.IsNullOrEmpty(model.From))
-                throw new ArgumentNullException("from");
-
-            if (!model.To.Any())
-                throw new ArgumentNullException("to");
-
-            var mailAddress = new MailAddress(model.From);
-
-            var accounts = _accountEngine.GetAccountInfoList().ToAccountData();
-
-            var account = accounts.FirstOrDefault(a => a.Email.ToLower().Equals(mailAddress.Address));
-
-            if (account == null)
-                throw new ArgumentException("Mailbox not found");
-
-            if (account.IsGroup)
-                throw new InvalidOperationException("Sending emails from a group address is forbidden");
-
-            var mbox = _mailboxEngine.GetMailboxData(
-                new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
-
-            if (mbox == null)
-                throw new ArgumentException("No such mailbox");
-
-            if (!mbox.Enabled)
-                throw new InvalidOperationException("Sending emails from a disabled account is forbidden");
-
-            string mimeMessageId, streamId;
-
-            var previousMailboxId = mbox.MailBoxId;
-
-            if (model.Id > 0)
+            var message = _messageEngine.GetMessage(model.Id, new MailMessage.Options
             {
-                var message = _messageEngine.GetMessage(model.Id, new MailMessage.Options
-                {
-                    LoadImages = false,
-                    LoadBody = true,
-                    NeedProxyHttp = _mailSettings.NeedProxyHttp,
-                    NeedSanitizer = false
-                });
+                LoadImages = false,
+                LoadBody = true,
+                NeedProxyHttp = _mailSettings.NeedProxyHttp,
+                NeedSanitizer = false
+            });
 
-                if (message.Folder != FolderType.Draft && message.Folder != FolderType.Templates)
-                {
-                    throw new InvalidOperationException("Sending emails is permitted only in the Drafts folder");
-                }
-
-                if (message.HtmlBody.Length > _mailSettings.Defines.MaximumMessageBodySize)
-                {
-                    throw new InvalidOperationException("Message body exceeded limit (" + _mailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
-                }
-
-                mimeMessageId = message.MimeMessageId;
-
-                streamId = message.StreamId;
-
-                foreach (var attachment in model.Attachments)
-                {
-                    attachment.streamId = streamId;
-                }
-
-                previousMailboxId = message.MailboxId;
-            }
-            else
+            if (message.Folder != FolderType.Draft && message.Folder != FolderType.Templates)
             {
-                mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings);
-                streamId = MailUtil.CreateStreamId();
+                throw new InvalidOperationException("Sending emails is permitted only in the Drafts folder");
             }
 
-            var fromAddress = MailUtil.CreateFullEmail(mbox.Name, mailAddress.Address);
-
-            var draft = new MailDraftData(model.Id, mbox, fromAddress, model.To, model.Cc, model.Bcc, model.Subject, mimeMessageId, model.MimeReplyToId,
-                model.Importance, model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
+            if (message.HtmlBody.Length > _mailSettings.Defines.MaximumMessageBodySize)
             {
-                FileLinksShareMode = model.FileLinksShareMode,
-                PreviousMailboxId = previousMailboxId,
-                RequestReceipt = model.RequestReceipt,
-                RequestRead = model.RequestRead,
-                IsAutogenerated = !string.IsNullOrEmpty(model.CalendarIcs),
-                IsAutoreplied = model.IsAutoreply
-            };
+                throw new InvalidOperationException("Message body exceeded limit (" + _mailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
+            }
 
-            DaemonLabels = translates ?? DeliveryFailureMessageTranslates.Defauilt;
+            mimeMessageId = message.MimeMessageId;
 
-            return Send(draft);
+            streamId = message.StreamId;
+
+            foreach (var attachment in model.Attachments)
+            {
+                attachment.streamId = streamId;
+            }
+
+            previousMailboxId = message.MailboxId;
+        }
+        else
+        {
+            mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings);
+            streamId = MailUtil.CreateStreamId();
         }
 
-        public long Send(MailDraftData draft)
+        var fromAddress = MailUtil.CreateFullEmail(mbox.Name, mailAddress.Address);
+
+        var draft = new MailDraftData(model.Id, mbox, fromAddress, model.To, model.Cc, model.Bcc, model.Subject, mimeMessageId, model.MimeReplyToId,
+            model.Importance, model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
         {
-            if (string.IsNullOrEmpty(draft.HtmlBody))
-                draft.HtmlBody = EMPTY_HTML_BODY;
+            FileLinksShareMode = model.FileLinksShareMode,
+            PreviousMailboxId = previousMailboxId,
+            RequestReceipt = model.RequestReceipt,
+            RequestRead = model.RequestRead,
+            IsAutogenerated = !string.IsNullOrEmpty(model.CalendarIcs),
+            IsAutoreplied = model.IsAutoreply
+        };
 
-            var message = Save(draft);
+        DaemonLabels = translates ?? DeliveryFailureMessageTranslates.Defauilt;
 
-            if (message.Id <= 0)
-                throw new ArgumentException(string.Format("DraftManager-Send: Invalid message.Id = {0}", message.Id));
+        return Send(draft);
+    }
 
-            ValidateAddresses(DraftFieldTypes.From, new List<string> { draft.From }, true);
+    public long Send(MailDraftData draft)
+    {
+        if (string.IsNullOrEmpty(draft.HtmlBody))
+            draft.HtmlBody = EMPTY_HTML_BODY;
 
-            message.ToList = ValidateAddresses(DraftFieldTypes.To, draft.To, true);
-            message.CcList = ValidateAddresses(DraftFieldTypes.Cc, draft.Cc, false);
-            message.BccList = ValidateAddresses(DraftFieldTypes.Bcc, draft.Bcc, false);
+        var message = Save(draft);
 
-            var scheme = _httpContext == null
-                ? Uri.UriSchemeHttp
-                : _httpContext.Request.GetUrlRewriter().Scheme;
+        if (message.Id <= 0)
+            throw new ArgumentException(string.Format("DraftManager-Send: Invalid message.Id = {0}", message.Id));
 
-            SetDraftSending(draft);
+        ValidateAddresses(DraftFieldTypes.From, new List<string> { draft.From }, true);
 
-            Task.Run(() =>
+        message.ToList = ValidateAddresses(DraftFieldTypes.To, draft.To, true);
+        message.CcList = ValidateAddresses(DraftFieldTypes.Cc, draft.Cc, false);
+        message.BccList = ValidateAddresses(DraftFieldTypes.Bcc, draft.Bcc, false);
+
+        var scheme = _httpContext == null
+            ? Uri.UriSchemeHttp
+            : _httpContext.Request.GetUrlRewriter().Scheme;
+
+        SetDraftSending(draft);
+
+        Task.Run(() =>
+        {
+            try
             {
+                _tenantManager.SetCurrentTenant(draft.Mailbox.TenantId);
+
+                _securityContext.AuthenticateMe(new Guid(draft.Mailbox.UserId));
+
+                draft.ChangeEmbeddedAttachmentLinks(_log);
+
+                draft.ChangeSmileLinks(_log);
+
+                draft.ChangeAttachedFileLinksAddresses(_fileStorageService, _log);
+
+                draft.ChangeAttachedFileLinksImages(_log);
+
+                if (!string.IsNullOrEmpty(draft.CalendarIcs))
+                {
+                    draft.ChangeAllImagesLinksToEmbedded(_log);
+                }
+
+                draft.ChangeUrlProxyLinks(_log);
+
+                var mimeMessage = draft.ToMimeMessage(_storageManager);
+
+                using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos,
+                    certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit, log: _log,
+                    enableDsn: draft.RequestReceipt))
+                {
+                    mc.Send(mimeMessage,
+                        draft.Mailbox.Imap && !DisableImapSendSyncServers.Contains(draft.Mailbox.Server));
+                }
+
                 try
                 {
-                    _tenantManager.SetCurrentTenant(draft.Mailbox.TenantId);
+                    SaveIcsAttachment(draft, mimeMessage);
 
-                    _securityContext.AuthenticateMe(new Guid(draft.Mailbox.UserId));
+                    SendMailNotification(draft);
 
-                    draft.ChangeEmbeddedAttachmentLinks(_log);
+                    ReleaseSendingDraftOnSuccess(draft, message);
 
-                    draft.ChangeSmileLinks(_log);
+                    _crmLinkEngine.AddRelationshipEventForLinkedAccounts(draft.Mailbox, message);
 
-                    draft.ChangeAttachedFileLinksAddresses(_fileStorageService, _log);
+                    _emailInEngine.SaveEmailInData(draft.Mailbox, message, scheme);
 
-                    draft.ChangeAttachedFileLinksImages(_log);
+                    SaveFrequentlyContactedAddress(draft.Mailbox.TenantId, draft.Mailbox.UserId, mimeMessage);
 
-                    if (!string.IsNullOrEmpty(draft.CalendarIcs))
+                    var filters = _filterEngine.GetList();
+
+                    if (filters.Any())
                     {
-                        draft.ChangeAllImagesLinksToEmbedded(_log);
+                        _filterEngine.ApplyFilters(message, draft.Mailbox, new Models.MailFolder(FolderType.Sent, ""), filters);
                     }
 
-                    draft.ChangeUrlProxyLinks(_log);
-
-                    var mimeMessage = draft.ToMimeMessage(_storageManager);
-
-                    using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos,
-                        certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit, log: _log,
-                        enableDsn: draft.RequestReceipt))
+                    _indexEngine.Update(new List<MailMail>
                     {
-                        mc.Send(mimeMessage,
-                            draft.Mailbox.Imap && !DisableImapSendSyncServers.Contains(draft.Mailbox.Server));
-                    }
-
-                    try
-                    {
-                        SaveIcsAttachment(draft, mimeMessage);
-
-                        SendMailNotification(draft);
-
-                        ReleaseSendingDraftOnSuccess(draft, message);
-
-                        _crmLinkEngine.AddRelationshipEventForLinkedAccounts(draft.Mailbox, message);
-
-                        _emailInEngine.SaveEmailInData(draft.Mailbox, message, scheme);
-
-                        SaveFrequentlyContactedAddress(draft.Mailbox.TenantId, draft.Mailbox.UserId, mimeMessage);
-
-                        var filters = _filterEngine.GetList();
-
-                        if (filters.Any())
-                        {
-                            _filterEngine.ApplyFilters(message, draft.Mailbox, new Models.MailFolder(FolderType.Sent, ""), filters);
-                        }
-
-                        _indexEngine.Update(new List<MailMail>
-                        {
-                            message.ToMailMail(draft.Mailbox.TenantId,
-                                new Guid(draft.Mailbox.UserId))
-                        });
-                    }
-                    catch (Exception ex)
-                    {
-                        _log.ErrorFormat("Unexpected Error in Send() Id = {0}\r\nException: {1}",
-                            message.Id, ex.ToString());
-                    }
+                        message.ToMailMail(draft.Mailbox.TenantId,
+                            new Guid(draft.Mailbox.UserId))
+                    });
                 }
                 catch (Exception ex)
                 {
-                    _log.ErrorFormat("Mail->Send failed: Exception: {0}", ex.ToString());
-
-                    AddNotificationAlertToMailbox(draft, ex);
-
-                    ReleaseSendingDraftOnFailure(draft);
-
-                    SendMailErrorNotification(draft);
+                    _log.ErrorFormat("Unexpected Error in Send() Id = {0}\r\nException: {1}",
+                        message.Id, ex.ToString());
                 }
-                finally
-                {
-                    if (draft.IsAutoreplied)
-                    {
-                        _autoreplyEngine
-                            .SaveAutoreplyHistory(draft.Mailbox, message);
-                    }
-                }
-            });
-
-            return message.Id;
-        }
-
-        #endregion
-
-        #region .Private
-
-        private void SetDraftSending(MailDraftData draft)
-        {
-            _messageEngine.SetConversationsFolder(new List<int> { draft.Id }, FolderType.Sending);
-        }
-
-        private void ReleaseSendingDraftOnSuccess(MailDraftData draft, MailMessage message)
-        {
-            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
-
-            // message was correctly send - lets update its chains id
-            var draftChainId = message.ChainId;
-            // before moving message from draft to sent folder - lets recalculate its correct chain id
-            var chainInfo = _messageEngine.DetectChain(draft.Mailbox,
-                message.MimeMessageId, message.MimeReplyToId, message.Subject);
-
-            message.ChainId = chainInfo.Id;
-
-            if (message.ChainId.Equals(message.MimeMessageId))
-                message.MimeReplyToId = null;
-
-            if (!draftChainId.Equals(message.ChainId))
-            {
-                _mailDaoFactory.GetMailInfoDao().SetFieldValue(
-                    SimpleMessagesExp.CreateBuilder(Tenant, User)
-                        .SetMessageId(message.Id)
-                        .Build(),
-                    "ChainId",
-                    message.ChainId);
-
-                _messageEngine.UpdateChain(draftChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
-                    draft.Mailbox.TenantId, draft.Mailbox.UserId);
-
-                _mailDaoFactory.GetCrmLinkDao().UpdateCrmLinkedChainId(draftChainId, draft.Mailbox.MailBoxId, message.ChainId);
             }
+            catch (Exception ex)
+            {
+                _log.ErrorFormat("Mail->Send failed: Exception: {0}", ex.ToString());
 
-            _messageEngine.UpdateChain(message.ChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
-                draft.Mailbox.TenantId, draft.Mailbox.UserId);
+                AddNotificationAlertToMailbox(draft, ex);
 
-            var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
+                ReleaseSendingDraftOnFailure(draft);
 
-            if (!listObjects.Any())
-                return;
+                SendMailErrorNotification(draft);
+            }
+            finally
+            {
+                if (draft.IsAutoreplied)
+                {
+                    _autoreplyEngine
+                        .SaveAutoreplyHistory(draft.Mailbox, message);
+                }
+            }
+        });
 
-            _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Sent);
+        return message.Id;
+    }
 
+    #endregion
+
+    #region .Private
+
+    private void SetDraftSending(MailDraftData draft)
+    {
+        _messageEngine.SetConversationsFolder(new List<int> { draft.Id }, FolderType.Sending);
+    }
+
+    private void ReleaseSendingDraftOnSuccess(MailDraftData draft, MailMessage message)
+    {
+        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
+        // message was correctly send - lets update its chains id
+        var draftChainId = message.ChainId;
+        // before moving message from draft to sent folder - lets recalculate its correct chain id
+        var chainInfo = _messageEngine.DetectChain(draft.Mailbox,
+            message.MimeMessageId, message.MimeReplyToId, message.Subject);
+
+        message.ChainId = chainInfo.Id;
+
+        if (message.ChainId.Equals(message.MimeMessageId))
+            message.MimeReplyToId = null;
+
+        if (!draftChainId.Equals(message.ChainId))
+        {
             _mailDaoFactory.GetMailInfoDao().SetFieldValue(
                 SimpleMessagesExp.CreateBuilder(Tenant, User)
-                    .SetMessageId(draft.Id)
+                    .SetMessageId(message.Id)
                     .Build(),
-                "FolderRestore",
-                FolderType.Sent);
+                "ChainId",
+                message.ChainId);
 
-            tx.Commit();
+            _messageEngine.UpdateChain(draftChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
+                draft.Mailbox.TenantId, draft.Mailbox.UserId);
+
+            _mailDaoFactory.GetCrmLinkDao().UpdateCrmLinkedChainId(draftChainId, draft.Mailbox.MailBoxId, message.ChainId);
         }
 
-        private void ReleaseSendingDraftOnFailure(MailDraftData draft)
+        _messageEngine.UpdateChain(message.ChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
+            draft.Mailbox.TenantId, draft.Mailbox.UserId);
+
+        var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
+
+        if (!listObjects.Any())
+            return;
+
+        _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Sent);
+
+        _mailDaoFactory.GetMailInfoDao().SetFieldValue(
+            SimpleMessagesExp.CreateBuilder(Tenant, User)
+                .SetMessageId(draft.Id)
+                .Build(),
+            "FolderRestore",
+            FolderType.Sent);
+
+        tx.Commit();
+    }
+
+    private void ReleaseSendingDraftOnFailure(MailDraftData draft)
+    {
+        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
+        var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
+
+        if (!listObjects.Any())
+            return;
+
+        _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Draft);
+
+        tx.Commit();
+    }
+
+    private void SaveIcsAttachment(MailDraftData draft, MimeMessage mimeMessage)
+    {
+        if (string.IsNullOrEmpty(draft.CalendarIcs)) return;
+
+        try
         {
-            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+            var icsAttachment =
+                mimeMessage.Attachments.FirstOrDefault(
+                    a => a.ContentType.IsMimeType("application", "ics"));
 
-            var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
-
-            if (!listObjects.Any())
+            if (icsAttachment == null)
                 return;
 
-            _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Draft);
-
-            tx.Commit();
+            using (var memStream = new MemoryStream(Encoding.UTF8.GetBytes(draft.CalendarIcs)))
+            {
+                _messageEngine
+                    .AttachFileToDraft(draft.Mailbox.TenantId, draft.Mailbox.UserId, draft.Id,
+                        icsAttachment.ContentType.Name, memStream, memStream.Length);
+            }
         }
-
-        private void SaveIcsAttachment(MailDraftData draft, MimeMessage mimeMessage)
+        catch (Exception ex)
         {
-            if (string.IsNullOrEmpty(draft.CalendarIcs)) return;
-
-            try
-            {
-                var icsAttachment =
-                    mimeMessage.Attachments.FirstOrDefault(
-                        a => a.ContentType.IsMimeType("application", "ics"));
-
-                if (icsAttachment == null)
-                    return;
-
-                using (var memStream = new MemoryStream(Encoding.UTF8.GetBytes(draft.CalendarIcs)))
-                {
-                    _messageEngine
-                        .AttachFileToDraft(draft.Mailbox.TenantId, draft.Mailbox.UserId, draft.Id,
-                            icsAttachment.ContentType.Name, memStream, memStream.Length);
-                }
-            }
-            catch (Exception ex)
-            {
-                _log.Warn(string.Format("Problem with attach ICAL to message. mailId={0} Exception:\r\n{1}\r\n", draft.Id, ex));
-            }
+            _log.Warn(string.Format("Problem with attach ICAL to message. mailId={0} Exception:\r\n{1}\r\n", draft.Id, ex));
         }
-
-        private static List<MailAddress> ValidateAddresses(DraftFieldTypes fieldType, List<string> addresses,
-            bool strongValidation)
-        {
-            if (addresses == null || !addresses.Any())
-            {
-                if (strongValidation)
-                {
-                    throw new DraftException(DraftException.ErrorTypes.EmptyField, "Empty email address in {0} field",
-                        fieldType);
-                }
-
-                return null;
-            }
-
-            try
-            {
-                return addresses.ToMailAddresses();
-            }
-            catch (Exception ex)
-            {
-                throw new DraftException(DraftException.ErrorTypes.IncorrectField, ex.Message, fieldType);
-            }
-        }
-
-        private void SendMailErrorNotification(MailDraftData draft)
-        {
-            try
-            {
-                // send success notification
-                _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, -1);
-            }
-            catch (Exception ex)
-            {
-                _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
-            }
-        }
-
-        private void SendMailNotification(MailDraftData draft)
-        {
-            try
-            {
-                var state = 0;
-                if (!string.IsNullOrEmpty(draft.CalendarIcs))
-                {
-                    switch (draft.CalendarMethod)
-                    {
-                        case DefineConstants.ICAL_REQUEST:
-                            state = 1;
-                            break;
-                        case DefineConstants.ICAL_REPLY:
-                            state = 2;
-                            break;
-                        case DefineConstants.ICAL_CANCEL:
-                            state = 3;
-                            break;
-                    }
-                }
-
-                // send success notification
-                _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
-            }
-            catch (Exception ex)
-            {
-                _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
-            }
-        }
-
-        private void SaveFrequentlyContactedAddress(int tenant, string user, MimeMessage mimeMessage)
-        {
-            var recipients = new List<MailboxAddress>();
-            recipients.AddRange(mimeMessage.To.Mailboxes);
-            recipients.AddRange(mimeMessage.Cc.Mailboxes);
-            recipients.AddRange(mimeMessage.Bcc.Mailboxes);
-
-            var treatedAddresses = new List<string>();
-            foreach (var recipient in recipients)
-            {
-                var email = recipient.Address;
-                if (treatedAddresses.Contains(email))
-                    continue;
-
-                var exp = new FullFilterContactsExp(tenant, user, _mailDaoFactory.GetContext(), _factoryIndexer, FactoryIndexerCommon, ServiceProvider,
-                    searchTerm: email, infoType: ContactInfoType.Email);
-
-                var contacts = _contactEngine.GetContactCards(exp);
-
-                if (!contacts.Any())
-                {
-                    var emails = _contactEngine.SearchEmails(tenant, user, email, 1);
-                    if (!emails.Any())
-                    {
-                        var contactCard = new ContactCard(0, tenant, user, recipient.Name, "",
-                            ContactType.FrequentlyContacted, new[] { email });
-
-                        _contactEngine.SaveContactCard(contactCard);
-                    }
-                }
-
-                treatedAddresses.Add(email);
-            }
-        }
-
-        private static List<string> DisableImapSendSyncServers
-        {
-            get
-            {
-                var config = ConfigurationManager.AppSettings["mail.disable-imap-send-sync-servers"] ?? "imap.googlemail.com|imap.gmail.com|imap-mail.outlook.com";
-                return string.IsNullOrEmpty(config) ? new List<string>() : config.Split('|').ToList();
-            }
-        }
-
-        private void AddNotificationAlertToMailbox(MailDraftData draft, Exception exOnSanding)
-        {
-            try
-            {
-                var sbMessage = new StringBuilder(1024);
-
-                sbMessage
-                    .AppendFormat("<div style=\"max-width:500px;font: normal 12px Arial, Tahoma,sans-serif;\"><p style=\"color:gray;font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
-                        DaemonLabels.AutomaticMessageLabel)
-                    .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>", DaemonLabels.MessageIdentificator
-                        .Replace("{subject}", draft.Subject)
-                        .Replace("{date}", DateTime.Now.ToString(CultureInfo.InvariantCulture)))
-                    .AppendFormat("<div><p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}:</p><ul style=\"color:#333;font: normal 12px Arial, Tahoma,sans-serif;\">",
-                        DaemonLabels.RecipientsLabel);
-
-                draft.To.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
-                draft.Cc.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
-                draft.Bcc.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
-
-                sbMessage
-                    .AppendFormat("</ul>")
-                    .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
-                        DaemonLabels.RecommendationsLabel
-                            .Replace("{account_name}", "<b>" + draft.From + "</b>"))
-                    .AppendFormat(
-                        "<a id=\"delivery_failure_button\" mailid={0} class=\"button blue\" style=\"margin-right:8px;\">{1}</a></div>",
-                        draft.Id, DaemonLabels.TryAgainButtonLabel)
-                    .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
-                        DaemonLabels.FaqInformationLabel
-                            .Replace("{url_begin}",
-                                "<a id=\"delivery_failure_faq_link\" target=\"blank\" href=\"#\" class=\"link underline\">")
-                            .Replace("{url_end}", "</a>"));
-
-                const int max_length = 300;
-
-                var smtpResponse = string.IsNullOrEmpty(exOnSanding.Message)
-                    ? "no response"
-                    : exOnSanding.Message.Length > max_length
-                        ? exOnSanding.Message.Substring(0, max_length)
-                        : exOnSanding.Message;
-
-                sbMessage.AppendFormat("<p style=\"color:gray;font: normal 12px Arial, Tahoma,sans-serif;\">{0}: \"{1}\"</p></div>", DaemonLabels.ReasonLabel,
-                    smtpResponse);
-
-                draft.Mailbox.Name = "";
-
-                var messageDelivery = new MailDraftData(0, draft.Mailbox, DaemonLabels.DaemonEmail,
-                    new List<string>() { draft.From }, new List<string>(), new List<string>(),
-                    DaemonLabels.SubjectLabel,
-                    MailUtil.CreateStreamId(), "", true, new List<int>(), sbMessage.ToString(), MailUtil.CreateStreamId(),
-                    new List<MailAttachmentData>());
-
-                // SaveToDraft To Inbox
-                var notifyMessageItem = messageDelivery.ToMailMessage();
-                notifyMessageItem.ChainId = notifyMessageItem.MimeMessageId;
-                notifyMessageItem.IsNew = true;
-
-                _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem, _log);
-
-                var mailDaemonMessageid = _messageEngine.MailSave(draft.Mailbox, notifyMessageItem, 0,
-                    FolderType.Inbox, FolderType.Inbox, null,
-                    string.Empty, string.Empty, false);
-
-                _alertEngine.CreateDeliveryFailureAlert(
-                    draft.Mailbox.TenantId,
-                    draft.Mailbox.UserId,
-                    draft.Mailbox.MailBoxId,
-                    draft.Subject,
-                    draft.From,
-                    draft.Id,
-                    mailDaemonMessageid);
-            }
-            catch (Exception exError)
-            {
-                _log.ErrorFormat("AddNotificationAlertToMailbox() in MailboxId={0} failed with exception:\r\n{1}",
-                    draft.Mailbox.MailBoxId, exError.ToString());
-            }
-        }
-
-        #endregion
     }
+
+    private static List<MailAddress> ValidateAddresses(DraftFieldTypes fieldType, List<string> addresses,
+        bool strongValidation)
+    {
+        if (addresses == null || !addresses.Any())
+        {
+            if (strongValidation)
+            {
+                throw new DraftException(DraftException.ErrorTypes.EmptyField, "Empty email address in {0} field",
+                    fieldType);
+            }
+
+            return null;
+        }
+
+        try
+        {
+            return addresses.ToMailAddresses();
+        }
+        catch (Exception ex)
+        {
+            throw new DraftException(DraftException.ErrorTypes.IncorrectField, ex.Message, fieldType);
+        }
+    }
+
+    private void SendMailErrorNotification(MailDraftData draft)
+    {
+        try
+        {
+            // send success notification
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, -1);
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+        }
+    }
+
+    private void SendMailNotification(MailDraftData draft)
+    {
+        try
+        {
+            var state = 0;
+            if (!string.IsNullOrEmpty(draft.CalendarIcs))
+            {
+                switch (draft.CalendarMethod)
+                {
+                    case DefineConstants.ICAL_REQUEST:
+                        state = 1;
+                        break;
+                    case DefineConstants.ICAL_REPLY:
+                        state = 2;
+                        break;
+                    case DefineConstants.ICAL_CANCEL:
+                        state = 3;
+                        break;
+                }
+            }
+
+            // send success notification
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+        }
+    }
+
+    private void SaveFrequentlyContactedAddress(int tenant, string user, MimeMessage mimeMessage)
+    {
+        var recipients = new List<MailboxAddress>();
+        recipients.AddRange(mimeMessage.To.Mailboxes);
+        recipients.AddRange(mimeMessage.Cc.Mailboxes);
+        recipients.AddRange(mimeMessage.Bcc.Mailboxes);
+
+        var treatedAddresses = new List<string>();
+        foreach (var recipient in recipients)
+        {
+            var email = recipient.Address;
+            if (treatedAddresses.Contains(email))
+                continue;
+
+            var exp = new FullFilterContactsExp(tenant, user, _mailDaoFactory.GetContext(), _factoryIndexer, FactoryIndexerCommon, ServiceProvider,
+                searchTerm: email, infoType: ContactInfoType.Email);
+
+            var contacts = _contactEngine.GetContactCards(exp);
+
+            if (!contacts.Any())
+            {
+                var emails = _contactEngine.SearchEmails(tenant, user, email, 1);
+                if (!emails.Any())
+                {
+                    var contactCard = new ContactCard(0, tenant, user, recipient.Name, "",
+                        ContactType.FrequentlyContacted, new[] { email });
+
+                    _contactEngine.SaveContactCard(contactCard);
+                }
+            }
+
+            treatedAddresses.Add(email);
+        }
+    }
+
+    private static List<string> DisableImapSendSyncServers
+    {
+        get
+        {
+            var config = ConfigurationManager.AppSettings["mail.disable-imap-send-sync-servers"] ?? "imap.googlemail.com|imap.gmail.com|imap-mail.outlook.com";
+            return string.IsNullOrEmpty(config) ? new List<string>() : config.Split('|').ToList();
+        }
+    }
+
+    private void AddNotificationAlertToMailbox(MailDraftData draft, Exception exOnSanding)
+    {
+        try
+        {
+            var sbMessage = new StringBuilder(1024);
+
+            sbMessage
+                .AppendFormat("<div style=\"max-width:500px;font: normal 12px Arial, Tahoma,sans-serif;\"><p style=\"color:gray;font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
+                    DaemonLabels.AutomaticMessageLabel)
+                .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>", DaemonLabels.MessageIdentificator
+                    .Replace("{subject}", draft.Subject)
+                    .Replace("{date}", DateTime.Now.ToString(CultureInfo.InvariantCulture)))
+                .AppendFormat("<div><p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}:</p><ul style=\"color:#333;font: normal 12px Arial, Tahoma,sans-serif;\">",
+                    DaemonLabels.RecipientsLabel);
+
+            draft.To.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
+            draft.Cc.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
+            draft.Bcc.ForEach(rcpt => sbMessage.AppendFormat("<li>{0}</li>", HttpUtility.HtmlEncode(rcpt)));
+
+            sbMessage
+                .AppendFormat("</ul>")
+                .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
+                    DaemonLabels.RecommendationsLabel
+                        .Replace("{account_name}", "<b>" + draft.From + "</b>"))
+                .AppendFormat(
+                    "<a id=\"delivery_failure_button\" mailid={0} class=\"button blue\" style=\"margin-right:8px;\">{1}</a></div>",
+                    draft.Id, DaemonLabels.TryAgainButtonLabel)
+                .AppendFormat("<p style=\"font: normal 12px Arial, Tahoma,sans-serif;\">{0}</p>",
+                    DaemonLabels.FaqInformationLabel
+                        .Replace("{url_begin}",
+                            "<a id=\"delivery_failure_faq_link\" target=\"blank\" href=\"#\" class=\"link underline\">")
+                        .Replace("{url_end}", "</a>"));
+
+            const int max_length = 300;
+
+            var smtpResponse = string.IsNullOrEmpty(exOnSanding.Message)
+                ? "no response"
+                : exOnSanding.Message.Length > max_length
+                    ? exOnSanding.Message.Substring(0, max_length)
+                    : exOnSanding.Message;
+
+            sbMessage.AppendFormat("<p style=\"color:gray;font: normal 12px Arial, Tahoma,sans-serif;\">{0}: \"{1}\"</p></div>", DaemonLabels.ReasonLabel,
+                smtpResponse);
+
+            draft.Mailbox.Name = "";
+
+            var messageDelivery = new MailDraftData(0, draft.Mailbox, DaemonLabels.DaemonEmail,
+                new List<string>() { draft.From }, new List<string>(), new List<string>(),
+                DaemonLabels.SubjectLabel,
+                MailUtil.CreateStreamId(), "", true, new List<int>(), sbMessage.ToString(), MailUtil.CreateStreamId(),
+                new List<MailAttachmentData>());
+
+            // SaveToDraft To Inbox
+            var notifyMessageItem = messageDelivery.ToMailMessage();
+            notifyMessageItem.ChainId = notifyMessageItem.MimeMessageId;
+            notifyMessageItem.IsNew = true;
+
+            _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem, _log);
+
+            var mailDaemonMessageid = _messageEngine.MailSave(draft.Mailbox, notifyMessageItem, 0,
+                FolderType.Inbox, FolderType.Inbox, null,
+                string.Empty, string.Empty, false);
+
+            _alertEngine.CreateDeliveryFailureAlert(
+                draft.Mailbox.TenantId,
+                draft.Mailbox.UserId,
+                draft.Mailbox.MailBoxId,
+                draft.Subject,
+                draft.From,
+                draft.Id,
+                mailDaemonMessageid);
+        }
+        catch (Exception exError)
+        {
+            _log.ErrorFormat("AddNotificationAlertToMailbox() in MailboxId={0} failed with exception:\r\n{1}",
+                draft.Mailbox.MailBoxId, exError.ToString());
+        }
+    }
+
+    #endregion
 }

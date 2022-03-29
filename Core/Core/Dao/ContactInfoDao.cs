@@ -23,75 +23,70 @@
  *
 */
 
+using ContactInfo = ASC.Mail.Core.Entities.ContactInfo;
+using IContactInfoDao = ASC.Mail.Core.Dao.Interfaces.IContactInfoDao;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace ASC.Mail.Core.Dao
+namespace ASC.Mail.Core.Dao;
+
+[Scope]
+public class ContactInfoDao : BaseMailDao, IContactInfoDao
 {
-    [Scope]
-    public class ContactInfoDao : BaseMailDao, IContactInfoDao
+    public ContactInfoDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ContactInfoDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public int SaveContactInfo(ContactInfo contactInfo)
+    {
+        var mailContactInfo = new MailContactInfo
         {
-        }
+            Id = contactInfo.Id,
+            TenantId = contactInfo.Tenant,
+            IdUser = contactInfo.User,
+            IdContact = contactInfo.ContactId,
+            Data = contactInfo.Data,
+            Type = contactInfo.Type,
+            IsPrimary = contactInfo.IsPrimary
+        };
 
-        public int SaveContactInfo(ContactInfo contactInfo)
-        {
-            var mailContactInfo = new MailContactInfo { 
-                Id = contactInfo.Id,
-                TenantId = contactInfo.Tenant,
-                IdUser = contactInfo.User,
-                IdContact = contactInfo.ContactId,
-                Data = contactInfo.Data,
-                Type = contactInfo.Type,
-                IsPrimary = contactInfo.IsPrimary
-            };
+        var entity = MailDbContext.AddOrUpdate(t => t.MailContactInfo, mailContactInfo);
 
-            var entity = MailDbContext.AddOrUpdate(t => t.MailContactInfo, mailContactInfo);
+        MailDbContext.SaveChanges();
 
-            MailDbContext.SaveChanges();
+        return (int)entity.Id;
+    }
 
-            return (int)entity.Id;
-        }
+    public int RemoveContactInfo(int id)
+    {
+        var queryDelete = MailDbContext.MailContactInfo
+            .Where(c => c.TenantId == Tenant
+                && c.IdUser == UserId
+                && c.Id == id);
 
-        public int RemoveContactInfo(int id)
-        {
-            var queryDelete = MailDbContext.MailContactInfo
-                .Where(c => c.TenantId == Tenant
-                    && c.IdUser == UserId
-                    && c.Id == id);
+        MailDbContext.MailContactInfo.RemoveRange(queryDelete);
 
-            MailDbContext.MailContactInfo.RemoveRange(queryDelete);
+        var result = MailDbContext.SaveChanges();
 
-            var result = MailDbContext.SaveChanges();
+        return result;
+    }
 
-            return result;
-        }
+    //TODO: Move this method into ContactDao
+    public int RemoveByContactIds(List<int> contactIds)
+    {
+        var queryDelete = MailDbContext.MailContacts
+            .Where(c => c.TenantId == Tenant
+                && c.IdUser == UserId
+                && contactIds.Contains((int)c.Id));
 
-        //TODO: Move this method into ContactDao
-        public int RemoveByContactIds(List<int> contactIds)
-        {
-            var queryDelete = MailDbContext.MailContacts
-                .Where(c => c.TenantId == Tenant
-                    && c.IdUser == UserId
-                    && contactIds.Contains((int)c.Id));
+        MailDbContext.MailContacts.RemoveRange(queryDelete);
 
-            MailDbContext.MailContacts.RemoveRange(queryDelete);
+        var result = MailDbContext.SaveChanges();
 
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
+        return result;
     }
 }

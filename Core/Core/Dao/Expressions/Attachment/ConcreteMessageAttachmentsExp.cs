@@ -23,56 +23,48 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Attachment
+public class ConcreteMessageAttachmentsExp : UserAttachmentsExp
 {
-    public class ConcreteMessageAttachmentsExp : UserAttachmentsExp
+    public ConcreteMessageAttachmentsExp(int mailId, int tenant, string user, List<int> attachIds = null,
+        bool? isRemoved = false, bool? onlyEmbedded = false)
+        : base(tenant, user, isRemoved)
     {
-        public ConcreteMessageAttachmentsExp(int mailId, int tenant, string user, List<int> attachIds = null,
-            bool? isRemoved = false, bool? onlyEmbedded = false)
-            : base(tenant, user, isRemoved)
+        MailId = mailId;
+        AttachIds = attachIds;
+        OnlyEmbedded = onlyEmbedded;
+    }
+
+    public int MailId { get; }
+
+    public List<int> AttachIds { get; }
+
+    public bool? OnlyEmbedded { get; }
+
+    public override Expression<Func<MailAttachment, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
+
+        exp = exp.And(a => a.IdMail == MailId);
+
+        if (AttachIds != null && AttachIds.Any())
         {
-            MailId = mailId;
-            AttachIds = attachIds;
-            OnlyEmbedded = onlyEmbedded;
+            exp = exp.And(a => AttachIds.Contains(a.Id));
         }
 
-        public int MailId { get; }
-
-        public List<int> AttachIds { get; }
-
-        public bool? OnlyEmbedded { get; }
-
-        public override Expression<Func<MailAttachment, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
-
-            exp = exp.And(a => a.IdMail == MailId);
-
-            if (AttachIds != null && AttachIds.Any())
-            {
-                exp = exp.And(a => AttachIds.Contains(a.Id));
-            }
-
-            if (!OnlyEmbedded.HasValue)
-                return exp;
-
-            if (OnlyEmbedded.Value)
-            {
-                exp = exp.And(a => a.ContentId != null);
-            }
-            else
-            {
-                exp = exp.And(a => a.ContentId == null);
-            }
-
+        if (!OnlyEmbedded.HasValue)
             return exp;
+
+        if (OnlyEmbedded.Value)
+        {
+            exp = exp.And(a => a.ContentId != null);
         }
+        else
+        {
+            exp = exp.And(a => a.ContentId == null);
+        }
+
+        return exp;
     }
 }

@@ -23,27 +23,20 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(CrmLinkDao))]
+public interface ICrmLinkDao
 {
-    [Scope(typeof(CrmLinkDao))]
-    public interface ICrmLinkDao
-    {
-        List<CrmContactData> GetLinkedCrmContactEntities(string chainId, int mailboxId);
+    List<CrmContactData> GetLinkedCrmContactEntities(string chainId, int mailboxId);
 
-        int SaveCrmLinks(string chainId, int mailboxId, IEnumerable<CrmContactData> crmContactEntities);
+    int SaveCrmLinks(string chainId, int mailboxId, IEnumerable<CrmContactData> crmContactEntities);
 
-        int UpdateCrmLinkedMailboxId(string chainId, int oldMailboxId, int newMailboxId);
+    int UpdateCrmLinkedMailboxId(string chainId, int oldMailboxId, int newMailboxId);
 
-        int UpdateCrmLinkedChainId(string chainId, int mailboxId, string newChainId);
+    int UpdateCrmLinkedChainId(string chainId, int mailboxId, string newChainId);
 
-        void RemoveCrmLinks(string chainId, int mailboxId, IEnumerable<CrmContactData> crmContactEntities);
+    void RemoveCrmLinks(string chainId, int mailboxId, IEnumerable<CrmContactData> crmContactEntities);
 
-        int RemoveCrmLinks(int mailboxId);
-    }
+    int RemoveCrmLinks(int mailboxId);
 }

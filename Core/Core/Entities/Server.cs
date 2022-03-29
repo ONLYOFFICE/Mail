@@ -23,16 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class Server
 {
-    public class Server
-    {
-        public int Id { get; set; }
-        public string ConnectionString { get; set; }
-        public string MxRecord { get; set; }
-        public int Type { get; set; }
-        public int SmtpSettingsId { get; set; }
-        public int ImapSettingsId { get; set; }
-    }
+    public int Id { get; set; }
+    public string ConnectionString { get; set; }
+    public string MxRecord { get; set; }
+    public int Type { get; set; }
+    public int SmtpSettingsId { get; set; }
+    public int ImapSettingsId { get; set; }
 }

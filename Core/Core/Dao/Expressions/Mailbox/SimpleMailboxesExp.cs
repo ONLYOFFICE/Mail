@@ -23,35 +23,28 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using System;
-using System.Linq.Expressions;
-
-using ASC.Mail.Core.Dao.Entities;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public class SimpleMailboxesExp : IMailboxesExp
 {
-    public class SimpleMailboxesExp : IMailboxesExp
+    private readonly bool? _isRemoved;
+    public string OrderBy { get; private set; }
+    public bool? OrderAsc { get; private set; }
+    public int? Limit { get; private set; }
+
+    public SimpleMailboxesExp(bool? isRemoved = false)
     {
-        private readonly bool? _isRemoved;
-        public string OrderBy { get; private set; }
-        public bool? OrderAsc { get; private set; }
-        public int? Limit { get; private set; }
+        _isRemoved = isRemoved;
+        OrderBy = null;
+        OrderAsc = false;
+        Limit = null;
+    }
 
-        public SimpleMailboxesExp(bool? isRemoved = false)
-        {
-            _isRemoved = isRemoved;
-            OrderBy = null;
-            OrderAsc = false;
-            Limit = null;
-        }
+    public virtual Expression<Func<MailMailbox, bool>> GetExpression()
+    {
+        if (!_isRemoved.HasValue)
+            return mb => true;
 
-        public virtual Expression<Func<MailMailbox, bool>> GetExpression()
-        {
-            if (!_isRemoved.HasValue)
-                return mb => true;
-
-            return mb => mb.IsRemoved == _isRemoved;
-        }
+        return mb => mb.IsRemoved == _isRemoved;
     }
 }

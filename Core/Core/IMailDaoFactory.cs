@@ -1,87 +1,81 @@
-﻿
-using ASC.Common;
-using ASC.Mail.Core.Dao;
-using ASC.Mail.Core.Dao.Interfaces;
+﻿using IMailboxDao = ASC.Mail.Core.Dao.Interfaces.IMailboxDao;
 
-using Microsoft.EntityFrameworkCore.Storage;
+namespace ASC.Mail.Core;
 
-namespace ASC.Mail.Core
+[Scope(typeof(MailDaoFactory), Additional = typeof(MailDaoFactoryExtension))]
+public interface IMailDaoFactory
 {
-    [Scope(typeof(MailDaoFactory), Additional = typeof(MailDaoFactoryExtension))]
-    public interface IMailDaoFactory
-    {
-        MailDbContext GetContext();
+    MailDbContext GetContext();
 
-        IAccountDao GetAccountDao();
+    IAccountDao GetAccountDao();
 
-        IAlertDao GetAlertDao();
+    IAlertDao GetAlertDao();
 
-        IAttachmentDao GetAttachmentDao();
+    IAttachmentDao GetAttachmentDao();
 
-        IChainDao GetChainDao();
+    IChainDao GetChainDao();
 
-        IContactCardDao GetContactCardDao();
+    IContactCardDao GetContactCardDao();
 
-        IContactDao GetContactDao();
+    IContactDao GetContactDao();
 
-        IContactInfoDao GetContactInfoDao();
+    IContactInfoDao GetContactInfoDao();
 
-        ICrmContactDao GetCrmContactDao();
+    ICrmContactDao GetCrmContactDao();
 
-        ICrmLinkDao GetCrmLinkDao();
+    ICrmLinkDao GetCrmLinkDao();
 
-        IDisplayImagesAddressDao GetDisplayImagesAddressDao();
+    IDisplayImagesAddressDao GetDisplayImagesAddressDao();
 
-        IFilterDao GetFilterDao();
+    IFilterDao GetFilterDao();
 
-        IFolderDao GetFolderDao();
+    IFolderDao GetFolderDao();
 
-        IImapFlagsDao GetImapFlagsDao();
+    IImapFlagsDao GetImapFlagsDao();
 
-        IImapSpecialMailboxDao GetImapSpecialMailboxDao();
+    IImapSpecialMailboxDao GetImapSpecialMailboxDao();
 
-        IMailboxAutoreplyDao GetMailboxAutoreplyDao();
+    IMailboxAutoreplyDao GetMailboxAutoreplyDao();
 
-        IMailboxAutoreplyHistoryDao GetMailboxAutoreplyHistoryDao();
+    IMailboxAutoreplyHistoryDao GetMailboxAutoreplyHistoryDao();
 
-        IMailboxDao GetMailboxDao();
+    IMailboxDao GetMailboxDao();
 
-        IMailboxDomainDao GetMailboxDomainDao();
+    IMailboxDomainDao GetMailboxDomainDao();
 
-        IMailboxProviderDao GetMailboxProviderDao();
+    IMailboxProviderDao GetMailboxProviderDao();
 
-        IMailboxServerDao GetMailboxServerDao();
+    IMailboxServerDao GetMailboxServerDao();
 
-        IMailboxSignatureDao GetMailboxSignatureDao();
+    IMailboxSignatureDao GetMailboxSignatureDao();
 
-        IMailDao GetMailDao();
+    IMailDao GetMailDao();
 
-        IMailGarbageDao GetMailGarbageDao();
+    IMailGarbageDao GetMailGarbageDao();
 
-        IMailInfoDao GetMailInfoDao();
+    IMailInfoDao GetMailInfoDao();
 
-        IServerAddressDao GetServerAddressDao();
+    IServerAddressDao GetServerAddressDao();
 
-        IServerDao GetServerDao();
+    IServerDao GetServerDao();
 
-        IServerDnsDao GetServerDnsDao();
+    IServerDnsDao GetServerDnsDao();
 
-        IServerDomainDao GetServerDomainDao();
+    IServerDomainDao GetServerDomainDao();
 
-        IServerGroupDao GetServerGroupDao();
+    IServerGroupDao GetServerGroupDao();
 
-        ITagAddressDao GetTagAddressDao();
+    ITagAddressDao GetTagAddressDao();
 
-        ITagDao GetTagDao();
+    ITagDao GetTagDao();
 
-        ITagMailDao GetTagMailDao();
+    ITagMailDao GetTagMailDao();
 
-        IUserFolderDao GetUserFolderDao();
+    IUserFolderDao GetUserFolderDao();
 
-        IUserFolderTreeDao GetUserFolderTreeDao();
+    IUserFolderTreeDao GetUserFolderTreeDao();
 
-        IUserFolderXMailDao GetUserFolderXMailDao();
+    IUserFolderXMailDao GetUserFolderXMailDao();
 
-        public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null);
-    }
+    public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null);
 }

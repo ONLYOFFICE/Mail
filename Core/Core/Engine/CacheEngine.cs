@@ -23,64 +23,54 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-using ASC.Common.Caching;
-using ASC.Mail.Models;
-
-using System;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-
-namespace ASC.Mail.Core.Engine
+[Singletone]
+public class CacheEngine
 {
-    [Singletone]
-    public class CacheEngine
+    private readonly ICache _cache;
+    private readonly ICacheNotify<AccountCacheItem> _cacheNotifyItem;
+    private readonly TimeSpan _cacheExpiration;
+    private static readonly Regex AllReg = new Regex(".*", RegexOptions.Compiled);
+
+    public CacheEngine(ICacheNotify<AccountCacheItem> notify, ICache cache)
     {
-        private readonly ICache _cache;
-        private readonly ICacheNotify<AccountCacheItem> _cacheNotifyItem;
-        private readonly TimeSpan _cacheExpiration;
-        private static readonly Regex AllReg = new Regex(".*", RegexOptions.Compiled);
+        _cache = cache;
 
-        public CacheEngine(ICacheNotify<AccountCacheItem> notify, ICache cache)
+        _cacheNotifyItem = notify;
+
+        _cacheExpiration = TimeSpan.FromMinutes(20);
+
+        _cacheNotifyItem.Subscribe((i) =>
         {
-            _cache = cache;
-
-            _cacheNotifyItem = notify;
-
-            _cacheExpiration = TimeSpan.FromMinutes(20);
-
-            _cacheNotifyItem.Subscribe((i) =>
+            if (string.IsNullOrEmpty(i.Key))
             {
-                if (string.IsNullOrEmpty(i.Key))
-                {
-                    _cache.Remove(AllReg);
-                }
-                else
-                {
-                    _cache.Remove(i.Key);
-                }
-            }, CacheNotifyAction.Remove);
-        }
+                _cache.Remove(AllReg);
+            }
+            else
+            {
+                _cache.Remove(i.Key);
+            }
+        }, CacheNotifyAction.Remove);
+    }
 
-        public List<AccountInfo> Get(string username)
-        {
-            return _cache.Get<List<AccountInfo>>(username);
-        }
+    public List<AccountInfo> Get(string username)
+    {
+        return _cache.Get<List<AccountInfo>>(username);
+    }
 
-        public void Set(string username, List<AccountInfo> accounts)
-        {
-            _cache.Insert(username, accounts, _cacheExpiration);
-        }
+    public void Set(string username, List<AccountInfo> accounts)
+    {
+        _cache.Insert(username, accounts, _cacheExpiration);
+    }
 
-        public void Clear(string username)
-        {
-            _cacheNotifyItem.Publish(new AccountCacheItem { Key = username }, CacheNotifyAction.Remove);
-        }
+    public void Clear(string username)
+    {
+        _cacheNotifyItem.Publish(new AccountCacheItem { Key = username }, CacheNotifyAction.Remove);
+    }
 
-        public void ClearAll()
-        {
-            _cacheNotifyItem.Publish(new AccountCacheItem(), CacheNotifyAction.Remove);
-        }
+    public void ClearAll()
+    {
+        _cacheNotifyItem.Publish(new AccountCacheItem(), CacheNotifyAction.Remove);
     }
 }

@@ -23,205 +23,188 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Message;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Enums;
-using ASC.Mail.Utils;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailDao : BaseMailDao, IMailDao
 {
-    [Scope]
-    public class MailDao : BaseMailDao, IMailDao
+    private readonly MessageEngine _messageEngine;
+    public MailDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         MessageEngine messageEngine,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        private readonly MessageEngine _messageEngine;
-        public MailDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             MessageEngine messageEngine,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+        _messageEngine = messageEngine;
+    }
+
+    public int Save(Core.Entities.Mail mail)
+    {
+        var mailMail = new MailMail
         {
-            _messageEngine = messageEngine;
+            Id = mail.Id,
+            MailboxId = mail.MailboxId,
+            TenantId = mail.Tenant,
+            UserId = mail.User,
+            Address = mail.Address,
+            Uidl = mail.Uidl,
+            Md5 = mail.Md5,
+            FromText = MailUtil.NormalizeStringForMySql(mail.From),
+            ToText = MailUtil.NormalizeStringForMySql(mail.To),
+            ReplyTo = mail.Reply,
+            Subject = MailUtil.NormalizeStringForMySql(mail.Subject),
+            Cc = mail.Cc,
+            Bcc = mail.Bcc,
+            Importance = mail.Importance,
+            DateReceived = mail.DateReceived,
+            DateSent = mail.DateSent,
+            Size = (int)mail.Size,
+            AttachmentsCount = mail.AttachCount,
+            Unread = mail.Unread,
+            IsAnswered = mail.IsAnswered,
+            IsForwarded = mail.IsForwarded,
+            Stream = mail.Stream,
+            Folder = (int)mail.Folder,
+            FolderRestore = (int)mail.FolderRestore,
+            Spam = mail.Spam,
+            ReadRequestStatus = mail.ReadRequestStatus,
+            MimeMessageId = mail.MimeMessageId,
+            MimeInReplyTo = mail.MimeInReplyTo,
+            ChainId = mail.ChainId,
+            Introduction = MailUtil.NormalizeStringForMySql(mail.Introduction),
+            ChainDate = mail.DateSent,
+            IsTextBodyOnly = mail.IsTextBodyOnly
+        };
+
+        if (mail.HasParseError)
+            mailMail.HasParseError = mail.HasParseError;
+
+        if (!string.IsNullOrEmpty(mail.CalendarUid))
+            mailMail.CalendarUid = mail.CalendarUid;
+
+        var entry = MailDbContext.AddOrUpdate(m => m.MailMail, mailMail);
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public Core.Entities.Mail GetMail(IMessageExp exp)
+    {
+        var mail = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Select(ToMail)
+            .SingleOrDefault();
+
+        return mail;
+    }
+
+    public Core.Entities.Mail GetNextMail(IMessageExp exp)
+    {
+        var mail = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .OrderBy(m => m.Id)
+            .Take(1)
+            .Select(ToMail)
+            .SingleOrDefault();
+
+        return mail;
+    }
+
+    public List<string> GetExistingUidls(int mailboxId, List<string> uidlList)
+    {
+        var existingUidls = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(m => m.MailboxId == mailboxId && uidlList.Contains(m.Uidl))
+            .Select(m => m.Uidl)
+            .ToList();
+
+        return existingUidls;
+    }
+
+    public int SetMessagesChanged(List<int> ids)
+    {
+        var now = DateTime.UtcNow;
+
+        var mails = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
+
+        foreach (var mail in mails)
+        {
+            mail.LastModifiedOn = now;
         }
 
-        public int Save(Core.Entities.Mail mail)
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected Core.Entities.Mail ToMail(MailMail r)
+    {
+        var mail = new Core.Entities.Mail
         {
-            var mailMail = new MailMail
+            Id = r.Id,
+            MailboxId = r.MailboxId,
+            User = r.UserId,
+            Tenant = r.TenantId,
+            Address = r.Address,
+            Uidl = r.Uidl,
+            Md5 = r.Md5,
+            From = r.FromText,
+            To = r.ToText,
+            Reply = r.ReplyTo,
+            Cc = r.Cc,
+            Bcc = r.Bcc,
+            Subject = r.Subject,
+            Introduction = r.Introduction,
+            Importance = r.Importance,
+            DateReceived = r.DateReceived,
+            DateSent = r.DateSent,
+            Size = r.Size,
+            AttachCount = r.AttachmentsCount,
+            Unread = r.Unread,
+            IsAnswered = r.IsAnswered,
+            IsForwarded = r.IsForwarded,
+            Stream = r.Stream,
+            Folder = (FolderType)r.Folder,
+            FolderRestore = (FolderType)r.FolderRestore,
+            Spam = r.Spam,
+            IsRemoved = r.IsRemoved,
+            TimeModified = r.LastModifiedOn,
+            MimeMessageId = r.MimeMessageId,
+            MimeInReplyTo = r.MimeInReplyTo,
+            ChainId = r.ChainId,
+            ChainDate = r.ChainDate,
+            IsTextBodyOnly = r.IsTextBodyOnly,
+            HasParseError = r.HasParseError,
+            CalendarUid = r.CalendarUid
+        };
+
+        return mail;
+    }
+
+    public string GetDocumentData(MailMail mail)
+    {
+        using (var stream = GetDocumentStream(mail))
+        {
+            if (stream == null) return null;
+
+            using (var sr = new StreamReader(stream))
             {
-                Id = mail.Id,
-                MailboxId = mail.MailboxId,
-                TenantId = mail.Tenant,
-                UserId = mail.User,
-                Address = mail.Address,
-                Uidl = mail.Uidl,
-                Md5 = mail.Md5,
-                FromText = MailUtil.NormalizeStringForMySql(mail.From),
-                ToText = MailUtil.NormalizeStringForMySql(mail.To),
-                ReplyTo = mail.Reply,
-                Subject = MailUtil.NormalizeStringForMySql(mail.Subject),
-                Cc = mail.Cc,
-                Bcc = mail.Bcc,
-                Importance = mail.Importance,
-                DateReceived = mail.DateReceived,
-                DateSent = mail.DateSent,
-                Size = (int)mail.Size,
-                AttachmentsCount = mail.AttachCount,
-                Unread = mail.Unread,
-                IsAnswered = mail.IsAnswered,
-                IsForwarded = mail.IsForwarded,
-                Stream = mail.Stream,
-                Folder = (int)mail.Folder,
-                FolderRestore = (int)mail.FolderRestore,
-                Spam = mail.Spam,
-                ReadRequestStatus = mail.ReadRequestStatus,
-                MimeMessageId = mail.MimeMessageId,
-                MimeInReplyTo = mail.MimeInReplyTo,
-                ChainId = mail.ChainId,
-                Introduction = MailUtil.NormalizeStringForMySql(mail.Introduction),
-                ChainDate = mail.DateSent,
-                IsTextBodyOnly = mail.IsTextBodyOnly
-            };
+                var data = sr.ReadToEnd();
 
-            if (mail.HasParseError)
-                mailMail.HasParseError = mail.HasParseError;
-
-            if (!string.IsNullOrEmpty(mail.CalendarUid))
-                mailMail.CalendarUid = mail.CalendarUid;
-
-            var entry = MailDbContext.AddOrUpdate(m => m.MailMail, mailMail);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public Core.Entities.Mail GetMail(IMessageExp exp)
-        {
-            var mail = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Select(ToMail)
-                .SingleOrDefault();
-
-            return mail;
-        }
-
-        public Core.Entities.Mail GetNextMail(IMessageExp exp)
-        {
-            var mail = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .OrderBy(m => m.Id)
-                .Take(1)
-                .Select(ToMail)
-                .SingleOrDefault();
-
-            return mail;
-        }
-
-        public List<string> GetExistingUidls(int mailboxId, List<string> uidlList)
-        {
-            var existingUidls = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(m => m.MailboxId == mailboxId && uidlList.Contains(m.Uidl))
-                .Select(m => m.Uidl)
-                .ToList();
-
-            return existingUidls;
-        }
-
-        public int SetMessagesChanged(List<int> ids)
-        {
-            var now = DateTime.UtcNow;
-
-            var mails = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
-
-            foreach (var mail in mails)
-            {
-                mail.LastModifiedOn = now;
-            }
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected Core.Entities.Mail ToMail(MailMail r)
-        {
-            var mail = new Core.Entities.Mail
-            {
-                Id = r.Id,
-                MailboxId = r.MailboxId,
-                User = r.UserId,
-                Tenant = r.TenantId,
-                Address = r.Address,
-                Uidl = r.Uidl,
-                Md5 = r.Md5,
-                From = r.FromText,
-                To = r.ToText,
-                Reply = r.ReplyTo,
-                Cc = r.Cc,
-                Bcc = r.Bcc,
-                Subject = r.Subject,
-                Introduction = r.Introduction,
-                Importance = r.Importance,
-                DateReceived = r.DateReceived,
-                DateSent = r.DateSent,
-                Size = r.Size,
-                AttachCount = r.AttachmentsCount,
-                Unread = r.Unread,
-                IsAnswered = r.IsAnswered,
-                IsForwarded = r.IsForwarded,
-                Stream = r.Stream,
-                Folder = (FolderType)r.Folder,
-                FolderRestore = (FolderType)r.FolderRestore,
-                Spam = r.Spam,
-                IsRemoved = r.IsRemoved,
-                TimeModified = r.LastModifiedOn,
-                MimeMessageId = r.MimeMessageId,
-                MimeInReplyTo = r.MimeInReplyTo,
-                ChainId = r.ChainId,
-                ChainDate = r.ChainDate,
-                IsTextBodyOnly = r.IsTextBodyOnly,
-                HasParseError = r.HasParseError,
-                CalendarUid = r.CalendarUid
-            };
-
-            return mail;
-        }
-
-        public string GetDocumentData(MailMail mail)
-        {
-            using (var stream = GetDocumentStream(mail))
-            {
-                if (stream == null) return null;
-
-                using (var sr = new StreamReader(stream))
-                {
-                    var data = sr.ReadToEnd();
-
-                    return HttpUtility.HtmlDecode(data);
-                }
+                return HttpUtility.HtmlDecode(data);
             }
         }
+    }
 
-        public Stream GetDocumentStream(MailMail mail)
-        {
-            return _messageEngine.GetMessageStream(mail.Id);
-        }
+    public Stream GetDocumentStream(MailMail mail)
+    {
+        return _messageEngine.GetMessageStream(mail.Id);
     }
 }

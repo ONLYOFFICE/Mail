@@ -23,77 +23,69 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
+namespace ASC.Mail.Core.Engine;
 
-using System;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class SignatureEngine
 {
-    [Scope]
-    public class SignatureEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string UserId => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly TenantManager _tenantManager;
+    private readonly SecurityContext _securityContext;
+    private readonly IMailDaoFactory _mailDaoFactory;
+    private readonly CacheEngine _cacheEngine;
+    private readonly StorageManager _storageManager;
+
+    public SignatureEngine(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        CacheEngine cacheEngine,
+        StorageManager storageManager)
     {
-        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
-        private string UserId => _securityContext.CurrentAccount.ID.ToString();
+        _tenantManager = tenantManager;
+        _securityContext = securityContext;
 
-        private readonly TenantManager _tenantManager;
-        private readonly SecurityContext _securityContext;
-        private readonly IMailDaoFactory _mailDaoFactory;
-        private readonly CacheEngine _cacheEngine;
-        private readonly StorageManager _storageManager;
+        _mailDaoFactory = mailDaoFactory;
+        _cacheEngine = cacheEngine;
+        _storageManager = storageManager;
+    }
 
-        public SignatureEngine(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            CacheEngine cacheEngine,
-            StorageManager storageManager)
+    public MailSignatureData GetSignature(int mailboxId)
+    {
+        return ToMailMailSignature(_mailDaoFactory.GetMailboxSignatureDao().GetSignature(mailboxId));
+    }
+
+    public MailSignatureData SaveSignature(int mailboxId, string html, bool isActive)
+    {
+        if (!string.IsNullOrEmpty(html))
         {
-            _tenantManager = tenantManager;
-            _securityContext = securityContext;
-
-            _mailDaoFactory = mailDaoFactory;
-            _cacheEngine = cacheEngine;
-            _storageManager = storageManager;
+            html = _storageManager.ChangeEditorImagesLinks(html, mailboxId);
         }
 
-        public MailSignatureData GetSignature(int mailboxId)
+        _cacheEngine.Clear(UserId);
+
+        var signature = new MailboxSignature
         {
-            return ToMailMailSignature(_mailDaoFactory.GetMailboxSignatureDao().GetSignature(mailboxId));
-        }
+            MailboxId = mailboxId,
+            Tenant = Tenant,
+            Html = html,
+            IsActive = isActive
+        };
 
-        public MailSignatureData SaveSignature(int mailboxId, string html, bool isActive)
-        {
-            if (!string.IsNullOrEmpty(html))
-            {
-                html = _storageManager.ChangeEditorImagesLinks(html, mailboxId);
-            }
+        var result = _mailDaoFactory.GetMailboxSignatureDao().SaveSignature(signature);
 
-            _cacheEngine.Clear(UserId);
+        if (result <= 0)
+            throw new Exception("Save failed");
 
-            var signature = new MailboxSignature
-            {
-                MailboxId = mailboxId,
-                Tenant = Tenant,
-                Html = html,
-                IsActive = isActive
-            };
+        return ToMailMailSignature(signature);
+    }
 
-            var result = _mailDaoFactory.GetMailboxSignatureDao().SaveSignature(signature);
-
-            if (result <= 0)
-                throw new Exception("Save failed");
-
-            return ToMailMailSignature(signature);
-        }
-
-        protected MailSignatureData ToMailMailSignature(MailboxSignature signature)
-        {
-            return new MailSignatureData(signature.MailboxId, signature.Tenant, signature.Html, signature.IsActive);
-        }
+    protected MailSignatureData ToMailMailSignature(MailboxSignature signature)
+    {
+        return new MailSignatureData(signature.MailboxId, signature.Tenant, signature.Html, signature.IsActive);
     }
 }

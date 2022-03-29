@@ -23,22 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+public class ContactInfo
 {
-    [Serializable]
-    public class ContactInfo
-    {
-        [DataMember(IsRequired = false, Name = "id")]
-        public int Id { get; set; }
+    [DataMember(IsRequired = false, Name = "id")]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true, Name = "value")]
-        public string Value { get; set; }
+    [DataMember(IsRequired = true, Name = "value")]
+    public string Value { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isPrimary")]
-        public bool IsPrimary { get; set; }
-    }
+    [DataMember(IsRequired = true, Name = "isPrimary")]
+    public bool IsPrimary { get; set; }
 }

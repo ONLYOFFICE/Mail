@@ -23,14 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum ServerType
 {
-    public enum ServerType
-    {
-        ImapOAuth = 0,
-        Imap = 1,
-        Pop3 = 2,
-        Smtp = 3
-    };
-}
+    ImapOAuth = 0,
+    Imap = 1,
+    Pop3 = 2,
+    Smtp = 3
+};

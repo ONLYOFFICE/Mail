@@ -23,37 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public enum DraftFieldTypes
 {
-    public enum DraftFieldTypes
+    None,
+    From,
+    To,
+    Cc,
+    Bcc
+}
+
+public class DraftException : Exception
+{
+    public enum ErrorTypes
     {
-        None,
-        From,
-        To,
-        Cc,
-        Bcc
+        EmptyField = 1,
+        IncorrectField = 2,
+        TotalSizeExceeded = 3
     }
 
-    public class DraftException: Exception
+    public ErrorTypes ErrorType { get; set; }
+    public DraftFieldTypes FieldType { get; set; }
+
+    public DraftException(ErrorTypes type, string message, DraftFieldTypes fieldType = DraftFieldTypes.None)
+        : base(message)
     {
-        public enum ErrorTypes
-        {
-            EmptyField = 1,
-            IncorrectField = 2,
-            TotalSizeExceeded = 3
-        }
-
-        public ErrorTypes ErrorType { get; set; }
-        public DraftFieldTypes FieldType { get; set; }
-
-        public DraftException(ErrorTypes type, string message, DraftFieldTypes fieldType = DraftFieldTypes.None)
-            : base(message)
-        {
-            ErrorType = type;
-            FieldType = fieldType;
-        }
+        ErrorType = type;
+        FieldType = fieldType;
     }
 }

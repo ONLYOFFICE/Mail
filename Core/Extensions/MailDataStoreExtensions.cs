@@ -23,17 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Storage;
 
-using System.Globalization;
-using ASC.Data.Storage;
-
-namespace ASC.Mail.Storage
+public static class MailDataStoreExtensions
 {
-    public static class MailDataStoreExtensions
+    public static IDataStore GetMailStorage(this StorageFactory storageFactory, int tenant)
     {
-        public static IDataStore GetMailStorage(this StorageFactory storageFactory, int tenant)
-        {
-            return storageFactory.GetStorage(tenant.ToString(CultureInfo.InvariantCulture), DefineConstants.MODULE_NAME);
-        }
+        return storageFactory.GetStorage(tenant.ToString(CultureInfo.InvariantCulture), DefineConstants.MODULE_NAME);
     }
 }

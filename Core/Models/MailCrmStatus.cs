@@ -23,24 +23,20 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[DataContract(Namespace = "")]
+public class MailCrmStatus
 {
-    [DataContract(Namespace = "")]
-    public class MailCrmStatus
+    public MailCrmStatus(int messageId, bool isLinked)
     {
-        public MailCrmStatus(int messageId, bool isLinked)
-        {
-            MessageId = messageId;
-            IsLinked = isLinked;
-        }
-
-        [DataMember(Name = "messageId")]
-        public int MessageId { get; private set; }
-
-        [DataMember(Name = "isLinked")]
-        public bool IsLinked { get; private set; }
+        MessageId = messageId;
+        IsLinked = isLinked;
     }
+
+    [DataMember(Name = "messageId")]
+    public int MessageId { get; private set; }
+
+    [DataMember(Name = "isLinked")]
+    public bool IsLinked { get; private set; }
 }

@@ -23,23 +23,16 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxServerDao))]
+public interface IMailboxServerDao
 {
-    [Scope(typeof(MailboxServerDao))]
-    public interface IMailboxServerDao
-    {
-        MailboxServer GetServer(int id);
+    MailboxServer GetServer(int id);
 
-        List<MailboxServer> GetServers(int providerId, bool isUserData = false);
+    List<MailboxServer> GetServers(int providerId, bool isUserData = false);
 
-        int SaveServer(MailboxServer mailboxServer);
+    int SaveServer(MailboxServer mailboxServer);
 
-        int DeleteServer(int id);
-    }
+    int DeleteServer(int id);
 }

@@ -23,31 +23,24 @@
  *
 */
 
+namespace ASC.Web.Mail.Classes;
 
-using System;
-
-using ASC.Common;
-using ASC.Core.Common;
-
-namespace ASC.Web.Mail.Classes
+[Scope]
+public class PathProvider
 {
-    [Scope]
-    public class PathProvider
-    {
-        public string BaseVirtualPath { get; private set; }
-        public string BaseAbsolutePath { get; private set; }
+    public string BaseVirtualPath { get; private set; }
+    public string BaseAbsolutePath { get; private set; }
 
-        public PathProvider(BaseCommonLinkUtility commonLinkUtility)
+    public PathProvider(BaseCommonLinkUtility commonLinkUtility)
+    {
+        BaseVirtualPath = "~/Products/Mail/";
+        try
         {
-            BaseVirtualPath = "~/Products/Mail/";
-            try
-            {
-                BaseAbsolutePath = commonLinkUtility.ToAbsolute(BaseVirtualPath);
-            }
-            catch (Exception)
-            {
-                BaseAbsolutePath = BaseVirtualPath;
-            }
+            BaseAbsolutePath = commonLinkUtility.ToAbsolute(BaseVirtualPath);
+        }
+        catch (Exception)
+        {
+            BaseAbsolutePath = BaseVirtualPath;
         }
     }
 }

@@ -23,37 +23,34 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class MailInfo
 {
-    public class MailInfo
-    {
-        public int Id { get; set; }
-        public string From { get; set; }
-        public string To { get; set; }
-        public string Cc { get; set; }
-        public string ReplyTo { get; set; }
-        public string Subject { get; set; }
-        public bool Importance { get; set; }
-        public DateTime DateSent { get; set; }
-        public int Size { get; set; }
-        public bool HasAttachments { get; set; }
-        public bool IsNew { get; set; }
-        public bool IsAnswered { get; set; }
-        public bool IsForwarded { get; set; }
-        public string LabelsString { get; set; }
-        public FolderType FolderRestore { get; set; }
-        public FolderType Folder { get; set; }
-        public string ChainId { get; set; }
-        public DateTime ChainDate { get; set; }
-        public int MailboxId { get; set; }
-        public string CalendarUid { get; set; }
-        public string Stream { get; set; }
-        public string Uidl { get; set; }
-        public bool IsRemoved { get; set; }
-        public string Intoduction { get; set; }
-    }
+    public int Id { get; set; }
+    public string From { get; set; }
+    public string To { get; set; }
+    public string Cc { get; set; }
+    public string ReplyTo { get; set; }
+    public string Subject { get; set; }
+    public bool Importance { get; set; }
+    public DateTime DateSent { get; set; }
+    public int Size { get; set; }
+    public bool HasAttachments { get; set; }
+    public bool IsNew { get; set; }
+    public bool IsAnswered { get; set; }
+    public bool IsForwarded { get; set; }
+    public string LabelsString { get; set; }
+    public FolderType FolderRestore { get; set; }
+    public FolderType Folder { get; set; }
+    public string ChainId { get; set; }
+    public DateTime ChainDate { get; set; }
+    public int MailboxId { get; set; }
+    public string CalendarUid { get; set; }
+    public string Stream { get; set; }
+    public string Uidl { get; set; }
+    public bool IsRemoved { get; set; }
+    public string Intoduction { get; set; }
 }

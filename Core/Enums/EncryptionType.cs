@@ -23,12 +23,11 @@
  *
 */
 
-namespace ASC.Mail.Enums
+namespace ASC.Mail.Enums;
+
+public enum EncryptionType
 {
-    public enum EncryptionType
-    {
-        None = 0,
-        SSL = 1,
-        StartTLS = 2
-    }
+    None = 0,
+    SSL = 1,
+    StartTLS = 2
 }

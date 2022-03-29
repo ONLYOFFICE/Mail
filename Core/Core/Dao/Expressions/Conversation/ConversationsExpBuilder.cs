@@ -23,64 +23,60 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Conversation;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Expressions.Conversation
+public class ConversationsExpBuilder
 {
-    public class ConversationsExpBuilder
+    private readonly SimpleConversationsExp _exp;
+
+    public ConversationsExpBuilder(int tenant, string user)
     {
-        private readonly SimpleConversationsExp _exp;
+        _exp = new SimpleConversationsExp(tenant, user);
+    }
 
-        public ConversationsExpBuilder(int tenant, string user)
-        {
-            _exp = new SimpleConversationsExp(tenant, user);
-        }
+    public ConversationsExpBuilder SetFoldersIds(List<int> foldersIds)
+    {
+        _exp.FoldersIds = foldersIds;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetFoldersIds(List<int> foldersIds)
-        {
-            _exp.FoldersIds = foldersIds;
-            return this;
-        }
+    public ConversationsExpBuilder SetChainIds(List<string> chainIds)
+    {
+        _exp.ChainIds = chainIds;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetChainIds(List<string> chainIds)
-        {
-            _exp.ChainIds = chainIds;
-            return this;
-        }
+    public ConversationsExpBuilder SetFolder(int folder)
+    {
+        _exp.Folder = folder;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetFolder(int folder)
-        {
-            _exp.Folder = folder;
-            return this;
-        }
+    public ConversationsExpBuilder SetMailboxId(int mailboxId)
+    {
+        _exp.MailboxId = mailboxId;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetMailboxId(int mailboxId)
-        {
-            _exp.MailboxId = mailboxId;
-            return this;
-        }
+    public ConversationsExpBuilder SetChainId(string chainId)
+    {
+        _exp.ChainId = chainId;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetChainId(string chainId)
-        {
-            _exp.ChainId = chainId;
-            return this;
-        }
+    public ConversationsExpBuilder SetUnread(bool unread)
+    {
+        _exp.Unread = unread;
+        return this;
+    }
 
-        public ConversationsExpBuilder SetUnread(bool unread)
-        {
-            _exp.Unread = unread;
-            return this;
-        }
+    public SimpleConversationsExp Build()
+    {
+        return _exp;
+    }
 
-        public SimpleConversationsExp Build()
-        {
-            return _exp;
-        }
-
-        public static implicit operator SimpleConversationsExp(ConversationsExpBuilder builder)
-        {
-            return builder._exp;
-        }
+    public static implicit operator SimpleConversationsExp(ConversationsExpBuilder builder)
+    {
+        return builder._exp;
     }
 }

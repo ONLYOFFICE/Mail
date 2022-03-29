@@ -23,288 +23,275 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class AlertEngine
 {
-    [Scope]
-    public class AlertEngine
+    private readonly IMailDaoFactory _mailDaoFactory;
+
+    public AlertEngine(IMailDaoFactory mailDaoFactory)
     {
-        private readonly IMailDaoFactory _mailDaoFactory;
+        _mailDaoFactory = mailDaoFactory;
+    }
 
-        public AlertEngine(IMailDaoFactory mailDaoFactory)
+    public List<MailAlertData> GetAlerts(/*int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty*/)
+    {
+        var alerts = _mailDaoFactory.GetAlertDao().GetAlerts();
+
+        var alertsList = new List<MailAlertData>();
+
+        foreach (var alert in alerts)
         {
-            _mailDaoFactory = mailDaoFactory;
+
+            alertsList.Add(ToMailAlert(alert));
         }
 
-        public List<MailAlertData> GetAlerts(/*int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty*/)
-        {
-            var alerts = _mailDaoFactory.GetAlertDao().GetAlerts();
+        return alertsList;
+    }
 
-            var alertsList = new List<MailAlertData>();
+    public bool DeleteAlert(long id)
+    {
+        var result = _mailDaoFactory.GetAlertDao().DeleteAlert(id);
 
-            foreach (var alert in alerts)
-            {
+        if (result <= 0)
+            return false;
 
-                alertsList.Add(ToMailAlert(alert));
-            }
+        return true;
+    }
 
-            return alertsList;
-        }
+    public bool DeleteAlert(MailAlertTypes type)
+    {
+        var quotaAlerts = _mailDaoFactory.GetAlertDao().GetAlerts(-1, type);
 
-        public bool DeleteAlert(long id)
-        {
-            var result = _mailDaoFactory.GetAlertDao().DeleteAlert(id);
-
-            if (result <= 0)
-                return false;
-
+        if (!quotaAlerts.Any())
             return true;
-        }
 
-        public bool DeleteAlert(MailAlertTypes type)
+        var result = _mailDaoFactory.GetAlertDao().DeleteAlerts(quotaAlerts.Select(a => a.Id).ToList());
+
+        if (result <= 0)
+            throw new Exception("Delete old alerts failed");
+
+        return true;
+    }
+
+    [DataContract]
+    private struct UploadToDocumentsFailure
+    {
+        [DataMember]
+        public int error_type;
+    }
+
+    public int CreateUploadToDocumentsFailureAlert(int tenant, string user, int mailboxId, UploadToDocumentsErrorType errorType)
+    {
+        var data = new UploadToDocumentsFailure
         {
-            var quotaAlerts = _mailDaoFactory.GetAlertDao().GetAlerts(-1, type);
+            error_type = (int)errorType
+        };
 
-            if (!quotaAlerts.Any())
-                return true;
+        var jsonData = MailUtil.GetJsonString(data);
 
-            var result = _mailDaoFactory.GetAlertDao().DeleteAlerts(quotaAlerts.Select(a => a.Id).ToList());
-
-            if (result <= 0)
-                throw new Exception("Delete old alerts failed");
-
-            return true;
-        }
-
-        [DataContract]
-        private struct UploadToDocumentsFailure
+        var alert = new Alert
         {
-            [DataMember]
-            public int error_type;
-        }
+            Tenant = tenant,
+            User = user,
+            MailboxId = mailboxId,
+            Type = MailAlertTypes.UploadFailure,
+            Data = jsonData
+        };
 
-        public int CreateUploadToDocumentsFailureAlert(int tenant, string user, int mailboxId, UploadToDocumentsErrorType errorType)
-        {
-            var data = new UploadToDocumentsFailure
-            {
-                error_type = (int)errorType
-            };
+        var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
 
-            var jsonData = MailUtil.GetJsonString(data);
+        if (result <= 0)
+            throw new Exception("Save alert failed");
 
-            var alert = new Alert
-            {
-                Tenant = tenant,
-                User = user,
-                MailboxId = mailboxId,
-                Type = MailAlertTypes.UploadFailure,
-                Data = jsonData
-            };
+        return result;
 
-            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
+    }
 
-            if (result <= 0)
-                throw new Exception("Save alert failed");
+    public int CreateDisableAllMailboxesAlert(int tenant, List<string> users)
+    {
+        var result = 0;
 
-            return result;
+        if (!users.Any()) return result;
 
-        }
+        var dao = _mailDaoFactory.GetAlertDao();
 
-        public int CreateDisableAllMailboxesAlert(int tenant, List<string> users)
-        {
-            var result = 0;
-
-            if (!users.Any()) return result;
-
-            var dao = _mailDaoFactory.GetAlertDao();
-
-            foreach (var user in users)
-            {
-                var alert = new Alert
-                {
-                    Tenant = tenant,
-                    User = user,
-                    MailboxId = -1,
-                    Type = MailAlertTypes.DisableAllMailboxes,
-                    Data = null
-                };
-
-                var r = dao.SaveAlert(alert);
-
-                if (r <= 0)
-                    throw new Exception("Save alert failed");
-
-                result += r;
-            }
-
-            return result;
-        }
-
-        public int CreateAuthErrorWarningAlert(int tenant, string user, int mailboxId)
-        {
-            var alert = new Alert
-            {
-                Tenant = tenant,
-                User = user,
-                MailboxId = mailboxId,
-                Type = MailAlertTypes.AuthConnectFailure,
-                Data = null
-            };
-
-            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
-
-            if (result <= 0)
-                throw new Exception("Save alert failed");
-
-            return result;
-        }
-
-        public int CreateAuthErrorDisableAlert(int tenant, string user, int mailboxId)
-        {
-            var dao = _mailDaoFactory.GetAlertDao();
-
-            var alerts = dao.GetAlerts(mailboxId, MailAlertTypes.AuthConnectFailure);
-
-            if (alerts.Any())
-            {
-                var r = dao.DeleteAlerts(alerts.Select(a => a.Id).ToList());
-
-                if (r <= 0)
-                    throw new Exception("Delete alerts failed");
-            }
-
-            var alert = new Alert
-            {
-                Tenant = tenant,
-                User = user,
-                MailboxId = mailboxId,
-                Type = MailAlertTypes.TooManyAuthError,
-                Data = null
-            };
-
-            var result = dao.SaveAlert(alert, true);
-
-            if (result <= 0)
-                throw new Exception("Save alert failed");
-
-            return result;
-        }
-
-        public int CreateQuotaErrorWarningAlert(int tenant, string user)
+        foreach (var user in users)
         {
             var alert = new Alert
             {
                 Tenant = tenant,
                 User = user,
                 MailboxId = -1,
-                Type = MailAlertTypes.QuotaError,
+                Type = MailAlertTypes.DisableAllMailboxes,
                 Data = null
             };
 
-            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
+            var r = dao.SaveAlert(alert);
 
-            if (result <= 0)
+            if (r <= 0)
                 throw new Exception("Save alert failed");
 
-            return result;
+            result += r;
         }
 
-        [DataContract]
-        private struct DeliveryFailure
+        return result;
+    }
+
+    public int CreateAuthErrorWarningAlert(int tenant, string user, int mailboxId)
+    {
+        var alert = new Alert
         {
-            [DataMember]
-            public string subject;
-            [DataMember]
-            public string from;
-            [DataMember]
-            public int message_id;
-            [DataMember]
-            public int failure_id;
-        }
+            Tenant = tenant,
+            User = user,
+            MailboxId = mailboxId,
+            Type = MailAlertTypes.AuthConnectFailure,
+            Data = null
+        };
 
-        public int CreateDeliveryFailureAlert(int tenant, string user, int mailboxId, string subject, string from,
-            int messageId, int mailDaemonMessageid)
+        var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
+
+        if (result <= 0)
+            throw new Exception("Save alert failed");
+
+        return result;
+    }
+
+    public int CreateAuthErrorDisableAlert(int tenant, string user, int mailboxId)
+    {
+        var dao = _mailDaoFactory.GetAlertDao();
+
+        var alerts = dao.GetAlerts(mailboxId, MailAlertTypes.AuthConnectFailure);
+
+        if (alerts.Any())
         {
-            var data = new DeliveryFailure
-            {
-                @from = from,
-                message_id = messageId,
-                subject = subject,
-                failure_id = mailDaemonMessageid
-            };
+            var r = dao.DeleteAlerts(alerts.Select(a => a.Id).ToList());
 
-            var jsonData = MailUtil.GetJsonString(data);
-
-            var alert = new Alert
-            {
-                Tenant = tenant,
-                User = user,
-                MailboxId = mailboxId,
-                Type = MailAlertTypes.DeliveryFailure,
-                Data = jsonData
-            };
-
-            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
-
-            if (result <= 0)
-                throw new Exception("Save alert failed");
-
-            return result;
+            if (r <= 0)
+                throw new Exception("Delete alerts failed");
         }
 
-        [DataContract]
-        private struct CrmOperationFailure
+        var alert = new Alert
         {
-            [DataMember]
-            public int message_id;
-        }
+            Tenant = tenant,
+            User = user,
+            MailboxId = mailboxId,
+            Type = MailAlertTypes.TooManyAuthError,
+            Data = null
+        };
 
-        public int CreateCrmOperationFailureAlert(int tenant, string user, int messageId, MailAlertTypes type)
+        var result = dao.SaveAlert(alert, true);
+
+        if (result <= 0)
+            throw new Exception("Save alert failed");
+
+        return result;
+    }
+
+    public int CreateQuotaErrorWarningAlert(int tenant, string user)
+    {
+        var alert = new Alert
         {
-            var data = new CrmOperationFailure
-            {
-                message_id = messageId
-            };
+            Tenant = tenant,
+            User = user,
+            MailboxId = -1,
+            Type = MailAlertTypes.QuotaError,
+            Data = null
+        };
 
-            var jsonData = MailUtil.GetJsonString(data);
+        var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert, true);
 
-            var alert = new Alert
-            {
-                Tenant = tenant,
-                User = user,
-                MailboxId = -1,
-                Type = type,
-                Data = jsonData
-            };
+        if (result <= 0)
+            throw new Exception("Save alert failed");
 
-            var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
+        return result;
+    }
 
-            if (result <= 0)
-                throw new Exception("Save alert failed");
+    [DataContract]
+    private struct DeliveryFailure
+    {
+        [DataMember]
+        public string subject;
+        [DataMember]
+        public string from;
+        [DataMember]
+        public int message_id;
+        [DataMember]
+        public int failure_id;
+    }
 
-            return result;
-        }
-
-        protected MailAlertData ToMailAlert(Alert a)
+    public int CreateDeliveryFailureAlert(int tenant, string user, int mailboxId, string subject, string from,
+        int messageId, int mailDaemonMessageid)
+    {
+        var data = new DeliveryFailure
         {
-            return new MailAlertData
-            {
-                id = a.Id,
-                id_mailbox = a.MailboxId,
-                type = a.Type,
-                data = a.Data
-            };
-        }
+            @from = from,
+            message_id = messageId,
+            subject = subject,
+            failure_id = mailDaemonMessageid
+        };
+
+        var jsonData = MailUtil.GetJsonString(data);
+
+        var alert = new Alert
+        {
+            Tenant = tenant,
+            User = user,
+            MailboxId = mailboxId,
+            Type = MailAlertTypes.DeliveryFailure,
+            Data = jsonData
+        };
+
+        var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
+
+        if (result <= 0)
+            throw new Exception("Save alert failed");
+
+        return result;
+    }
+
+    [DataContract]
+    private struct CrmOperationFailure
+    {
+        [DataMember]
+        public int message_id;
+    }
+
+    public int CreateCrmOperationFailureAlert(int tenant, string user, int messageId, MailAlertTypes type)
+    {
+        var data = new CrmOperationFailure
+        {
+            message_id = messageId
+        };
+
+        var jsonData = MailUtil.GetJsonString(data);
+
+        var alert = new Alert
+        {
+            Tenant = tenant,
+            User = user,
+            MailboxId = -1,
+            Type = type,
+            Data = jsonData
+        };
+
+        var result = _mailDaoFactory.GetAlertDao().SaveAlert(alert);
+
+        if (result <= 0)
+            throw new Exception("Save alert failed");
+
+        return result;
+    }
+
+    protected MailAlertData ToMailAlert(Alert a)
+    {
+        return new MailAlertData
+        {
+            id = a.Id,
+            id_mailbox = a.MailboxId,
+            type = a.Type,
+            data = a.Data
+        };
     }
 }

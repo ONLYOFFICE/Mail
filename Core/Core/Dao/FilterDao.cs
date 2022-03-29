@@ -23,108 +23,96 @@
  *
 */
 
+using Filter = ASC.Mail.Core.Entities.Filter;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class FilterDao : BaseMailDao, IFilterDao
 {
-    [Scope]
-    public class FilterDao : BaseMailDao, IFilterDao
+    public FilterDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public FilterDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public List<Filter> GetList()
+    {
+        var filters = MailDbContext.MailFilter
+            .AsNoTracking()
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
+            .Select(ToFilter)
+            .ToList();
+
+        return filters;
+    }
+
+    public Filter Get(int id)
+    {
+        var filter = MailDbContext.MailFilter
+            .AsNoTracking()
+            .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
+            .Select(ToFilter)
+            .SingleOrDefault();
+
+        return filter;
+    }
+
+    public int Save(Filter filter)
+    {
+        var now = DateTime.UtcNow;
+
+        var mailFilter = new MailFilter
         {
+            Id = filter.Id,
+            Tenant = filter.Tenant,
+            IdUser = filter.User,
+            Enabled = filter.Enabled,
+            Filter = filter.FilterData,
+            Position = filter.Position,
+            DateModified = now
+        };
+
+        if (filter.Id == 0)
+        {
+            mailFilter.DateCreated = now;
         }
 
-        public List<Filter> GetList()
+        var entry = MailDbContext.AddOrUpdate(t => t.MailFilter, mailFilter);
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var filter = MailDbContext.MailFilter
+           .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
+           .SingleOrDefault();
+
+        MailDbContext.MailFilter.Remove(filter);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected Filter ToFilter(MailFilter r)
+    {
+        var f = new Filter
         {
-            var filters = MailDbContext.MailFilter
-                .AsNoTracking()
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
-                .Select(ToFilter)
-                .ToList();
+            Id = r.Id,
+            Tenant = r.Tenant,
+            User = r.IdUser,
+            Enabled = r.Enabled.GetValueOrDefault(false),
+            FilterData = r.Filter,
+            Position = r.Position
+        };
 
-            return filters;
-        }
-
-        public Filter Get(int id)
-        {
-            var filter = MailDbContext.MailFilter
-                .AsNoTracking()
-                .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
-                .Select(ToFilter)
-                .SingleOrDefault();
-
-            return filter;
-        }
-
-        public int Save(Filter filter)
-        {
-            var now = DateTime.UtcNow;
-
-            var mailFilter = new MailFilter
-            {
-                Id = filter.Id,
-                Tenant = filter.Tenant,
-                IdUser = filter.User,
-                Enabled = filter.Enabled,
-                Filter = filter.FilterData,
-                Position = filter.Position,
-                DateModified = now
-            };
-
-            if (filter.Id == 0)
-            {
-                mailFilter.DateCreated = now;
-            }
-
-            var entry = MailDbContext.AddOrUpdate(t => t.MailFilter, mailFilter);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public int Delete(int id)
-        {
-            var filter = MailDbContext.MailFilter
-               .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
-               .SingleOrDefault();
-
-            MailDbContext.MailFilter.Remove(filter);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected Filter ToFilter(MailFilter r)
-        {
-            var f = new Filter
-            {
-                Id = r.Id,
-                Tenant = r.Tenant,
-                User = r.IdUser,
-                Enabled = r.Enabled.GetValueOrDefault(false),
-                FilterData = r.Filter,
-                Position = r.Position
-            };
-
-            return f;
-        }
+        return f;
     }
 }

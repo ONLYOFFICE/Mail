@@ -23,46 +23,40 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Attachment
+public class ConcreteMailboxAttachmentsExp : UserAttachmentsExp
 {
-    public class ConcreteMailboxAttachmentsExp : UserAttachmentsExp
+    public ConcreteMailboxAttachmentsExp(int mailboxId, int tenant, string user,
+        bool? isRemoved = false, bool? onlyEmbedded = false)
+        : base(tenant, user, isRemoved)
     {
-        public ConcreteMailboxAttachmentsExp(int mailboxId, int tenant, string user,
-            bool? isRemoved = false, bool? onlyEmbedded = false)
-            : base(tenant, user, isRemoved)
-        {
-            MailboxId = mailboxId;
-            OnlyEmbedded = onlyEmbedded;
-        }
+        MailboxId = mailboxId;
+        OnlyEmbedded = onlyEmbedded;
+    }
 
-        public int MailboxId { get; }
+    public int MailboxId { get; }
 
-        public bool? OnlyEmbedded { get; }
+    public bool? OnlyEmbedded { get; }
 
-        public override Expression<Func<MailAttachment, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
+    public override Expression<Func<MailAttachment, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
 
-            exp = exp.And(a => a.IdMailbox == MailboxId);
+        exp = exp.And(a => a.IdMailbox == MailboxId);
 
-            if (!OnlyEmbedded.HasValue)
-                return exp;
-
-            if (OnlyEmbedded.Value)
-            {
-                exp = exp.And(a => a.ContentId != null);
-            }
-            else
-            {
-                exp = exp.And(a => a.ContentId == null);
-            }
-
+        if (!OnlyEmbedded.HasValue)
             return exp;
+
+        if (OnlyEmbedded.Value)
+        {
+            exp = exp.And(a => a.ContentId != null);
         }
+        else
+        {
+            exp = exp.And(a => a.ContentId == null);
+        }
+
+        return exp;
     }
 }

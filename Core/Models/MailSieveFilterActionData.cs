@@ -23,33 +23,29 @@
  *
 */
 
+using ActionType = ASC.Mail.Enums.Filter.ActionType;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Mail.Enums.Filter;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "FilterAction")]
+public class MailSieveFilterActionData : IEquatable<MailSieveFilterActionData>
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "FilterAction")]
-    public class MailSieveFilterActionData : IEquatable<MailSieveFilterActionData>
+    [DataMember(IsRequired = true, Name = "action")]
+    public ActionType Action { get; set; }
+
+    [DataMember(IsRequired = false, Name = "data")]
+    public string Data { get; set; }
+
+    public bool Equals(MailSieveFilterActionData other)
     {
-        [DataMember(IsRequired = true, Name = "action")]
-        public ActionType Action { get; set; }
+        if (other == null) return false;
 
-        [DataMember(IsRequired = false, Name = "data")]
-        public string Data { get; set; }
+        return Action == other.Action && Data.Equals(other.Data);
+    }
 
-        public bool Equals(MailSieveFilterActionData other)
-        {
-            if (other == null) return false;
-
-            return Action == other.Action && Data.Equals(other.Data);
-        }
-
-        public override int GetHashCode()
-        {
-            return Action.GetHashCode() ^ (Data ?? "").GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Action.GetHashCode() ^ (Data ?? "").GetHashCode();
     }
 }

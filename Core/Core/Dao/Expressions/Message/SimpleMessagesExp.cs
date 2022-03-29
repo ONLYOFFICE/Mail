@@ -23,156 +23,148 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Message
+public class SimpleMessagesExp : IMessagesExp
 {
-    public class SimpleMessagesExp : IMessagesExp
+    public int Tenant { get; private set; }
+
+    public string User { get; set; }
+    public bool? IsRemoved { get; set; }
+    public int? Folder { get; set; }
+    public int? MailboxId { get; set; }
+    public string ChainId { get; set; }
+    public string Md5 { get; set; }
+    public string MimeMessageId { get; set; }
+    public int? MessageId { get; set; }
+    public bool? Unread { get; set; }
+
+    public List<int> MessageIds { get; set; }
+    public List<string> MessageUids { get; set; }
+    public List<int> FoldersIds { get; set; }
+    public List<string> ChainIds { get; set; }
+    public List<int> TagIds { get; set; }
+    public int? UserFolderId { get; set; }
+
+    public string OrderBy { get; set; }
+    public bool? OrderAsc { get; set; }
+    public int? StartIndex { get; set; }
+    public int? Limit { get; set; }
+
+    public string Subject { get; set; }
+
+    public DateTime? DateSent { get; set; }
+
+    public Expression<Func<MailMail, bool>> Exp { get; set; }
+
+    public SimpleMessagesExp(int tenant)
     {
-        public int Tenant { get; private set; }
+        Tenant = tenant;
+    }
 
-        public string User { get; set; }
-        public bool? IsRemoved { get; set; }
-        public int? Folder { get; set; }
-        public int? MailboxId { get; set; }
-        public string ChainId { get; set; }
-        public string Md5 { get; set; }
-        public string MimeMessageId { get; set; }
-        public int? MessageId { get; set; }
-        public bool? Unread { get; set; }
+    public SimpleMessagesExp(int tenant, string user, bool? isRemoved = false)
+    {
+        Tenant = tenant;
+        User = user;
+        IsRemoved = isRemoved;
+    }
 
-        public List<int> MessageIds { get; set; }
-        public List<string> MessageUids { get; set; }
-        public List<int> FoldersIds { get; set; }
-        public List<string> ChainIds { get; set; }
-        public List<int> TagIds { get; set; }
-        public int? UserFolderId { get; set; }
+    public static MessagesExpBuilder CreateBuilder(int tenant, string user, bool? isRemoved = false)
+    {
+        return new MessagesExpBuilder(tenant, user, isRemoved);
+    }
 
-        public string OrderBy { get; set; }
-        public bool? OrderAsc { get; set; }
-        public int? StartIndex { get; set; }
-        public int? Limit { get; set; }
+    public static MessagesExpBuilder CreateBuilder(int tenant)
+    {
+        return new MessagesExpBuilder(tenant);
+    }
 
-        public string Subject { get; set; }
+    private const string MM_ALIAS = "mm";
 
-        public DateTime? DateSent { get; set; }
+    public Expression<Func<MailMail, bool>> GetExpression()
+    {
+        Expression<Func<MailMail, bool>> exp = m => m.TenantId == Tenant;
 
-        public Expression<Func<MailMail, bool>> Exp { get; set; }
-
-        public SimpleMessagesExp(int tenant)
+        if (!string.IsNullOrEmpty(User))
         {
-            Tenant = tenant;
+            exp = exp.And(m => m.UserId == User);
         }
 
-        public SimpleMessagesExp(int tenant, string user, bool? isRemoved = false)
+        if (MessageId.HasValue)
         {
-            Tenant = tenant;
-            User = user;
-            IsRemoved = isRemoved;
+            exp = exp.And(m => m.Id == MessageId.Value);
         }
 
-        public static MessagesExpBuilder CreateBuilder(int tenant, string user, bool? isRemoved = false)
+        if (MessageIds != null)
         {
-            return new MessagesExpBuilder(tenant, user, isRemoved);
+            exp = exp.And(m => MessageIds.Contains(m.Id));
         }
 
-        public static MessagesExpBuilder CreateBuilder(int tenant)
+        if (MessageUids != null)
         {
-            return new MessagesExpBuilder(tenant);
+            exp = exp.And(m => MessageUids.Contains(m.Uidl));
         }
 
-        private const string MM_ALIAS = "mm";
-
-        public Expression<Func<MailMail, bool>> GetExpression()
+        if (ChainIds != null)
         {
-            Expression<Func<MailMail, bool>> exp = m => m.TenantId == Tenant;
-
-            if (!string.IsNullOrEmpty(User))
-            {
-                exp = exp.And(m => m.UserId == User);
-            }
-
-            if (MessageId.HasValue)
-            {
-                exp = exp.And(m => m.Id == MessageId.Value);
-            }
-
-            if (MessageIds != null)
-            {
-                exp = exp.And(m => MessageIds.Contains(m.Id));
-            }
-
-            if (MessageUids != null)
-            {
-                exp = exp.And(m => MessageUids.Contains(m.Uidl));
-            }
-
-            if (ChainIds != null)
-            {
-                exp = exp.And(m => ChainIds.Contains(m.ChainId));
-            }
-
-            if (Folder.HasValue)
-            {
-                exp = exp.And(m => m.Folder == Folder.Value);
-            }
-
-            if (IsRemoved.HasValue)
-            {
-                exp = exp.And(m => m.IsRemoved == IsRemoved.Value);
-            }
-
-            if (MailboxId.HasValue)
-            {
-                exp = exp.And(m => m.MailboxId == MailboxId.Value);
-            }
-
-            if (!string.IsNullOrEmpty(Md5))
-            {
-                exp = exp.And(m => m.Md5 == Md5);
-            }
-
-            if (!string.IsNullOrEmpty(MimeMessageId))
-            {
-                exp = exp.And(m => m.MimeMessageId == MimeMessageId);
-            }
-
-            if (!string.IsNullOrEmpty(ChainId))
-            {
-                exp = exp.And(m => m.ChainId == ChainId);
-            }
-
-            if (FoldersIds != null && FoldersIds.Any())
-            {
-                exp = exp.And(m => FoldersIds.Contains(m.Folder));
-            }
-
-            if (Unread.HasValue)
-            {
-                exp = exp.And(m => m.Unread == Unread.Value);
-            }
-
-            if (!string.IsNullOrEmpty(Subject))
-            {
-                exp = exp.And(m => m.Subject.Equals(Subject));
-            }
-
-            if (DateSent.HasValue)
-            {
-                exp = exp.And(m => m.DateSent.Equals(DateSent.Value));
-            }
-
-            if (Exp != null)
-            {
-                exp = exp.And(Exp);
-            }
-
-            return exp;
+            exp = exp.And(m => ChainIds.Contains(m.ChainId));
         }
+
+        if (Folder.HasValue)
+        {
+            exp = exp.And(m => m.Folder == Folder.Value);
+        }
+
+        if (IsRemoved.HasValue)
+        {
+            exp = exp.And(m => m.IsRemoved == IsRemoved.Value);
+        }
+
+        if (MailboxId.HasValue)
+        {
+            exp = exp.And(m => m.MailboxId == MailboxId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(Md5))
+        {
+            exp = exp.And(m => m.Md5 == Md5);
+        }
+
+        if (!string.IsNullOrEmpty(MimeMessageId))
+        {
+            exp = exp.And(m => m.MimeMessageId == MimeMessageId);
+        }
+
+        if (!string.IsNullOrEmpty(ChainId))
+        {
+            exp = exp.And(m => m.ChainId == ChainId);
+        }
+
+        if (FoldersIds != null && FoldersIds.Any())
+        {
+            exp = exp.And(m => FoldersIds.Contains(m.Folder));
+        }
+
+        if (Unread.HasValue)
+        {
+            exp = exp.And(m => m.Unread == Unread.Value);
+        }
+
+        if (!string.IsNullOrEmpty(Subject))
+        {
+            exp = exp.And(m => m.Subject.Equals(Subject));
+        }
+
+        if (DateSent.HasValue)
+        {
+            exp = exp.And(m => m.DateSent.Equals(DateSent.Value));
+        }
+
+        if (Exp != null)
+        {
+            exp = exp.And(Exp);
+        }
+
+        return exp;
     }
 }

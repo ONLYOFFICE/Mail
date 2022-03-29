@@ -23,67 +23,63 @@
  *
 */
 
+using CrmTag = ASC.Mail.Core.Entities.CrmTag;
+using Tag = ASC.Mail.Core.Entities.Tag;
 
-using System.Collections.Generic;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(TagDao))]
+public interface ITagDao
 {
-    [Scope(typeof(TagDao))]
-    public interface ITagDao
-    {
-        /// <summary>
-        ///     Get tag by id.
-        /// </summary>
-        /// <param name="id">id</param>
-        Tag GetTag(int id);
+    /// <summary>
+    ///     Get tag by id.
+    /// </summary>
+    /// <param name="id">id</param>
+    Tag GetTag(int id);
 
-        /// <summary>
-        ///     Get CRM tag by id.
-        /// </summary>
-        /// <param name="id">id</param>
-        Tag GetCrmTag(int id);
+    /// <summary>
+    ///     Get CRM tag by id.
+    /// </summary>
+    /// <param name="id">id</param>
+    Tag GetCrmTag(int id);
 
-        /// <summary>
-        ///     Get tag by name.
-        /// </summary>
-        /// <param name="name">name</param>
-        Tag GetTag(string name);
+    /// <summary>
+    ///     Get tag by name.
+    /// </summary>
+    /// <param name="name">name</param>
+    Tag GetTag(string name);
 
-        /// <summary>
-        ///     Get a list of tags
-        /// </summary>
-        List<Tag> GetTags();
+    /// <summary>
+    ///     Get a list of tags
+    /// </summary>
+    List<Tag> GetTags();
 
-        /// <summary>
-        ///     Get a list of CRM tags
-        /// </summary>
-        List<Tag> GetCrmTags();
+    /// <summary>
+    ///     Get a list of CRM tags
+    /// </summary>
+    List<Tag> GetCrmTags();
 
-        /// <summary>
-        ///     Get a list of CRM tags
-        /// </summary>
-        /// <param name="contactIds">id</param>
-        List<CrmTag> GetCrmTags(List<int> contactIds);
+    /// <summary>
+    ///     Get a list of CRM tags
+    /// </summary>
+    /// <param name="contactIds">id</param>
+    List<CrmTag> GetCrmTags(List<int> contactIds);
 
-        /// <summary>
-        ///     Save or update tag
-        /// </summary>
-        /// <param name="tag"></param>
-        int SaveTag(Tag tag);
+    /// <summary>
+    ///     Save or update tag
+    /// </summary>
+    /// <param name="tag"></param>
+    int SaveTag(Tag tag);
 
-        /// <summary>
-        ///     Delete tag
-        /// </summary>
-        /// <param name="id">id</param>
-        int DeleteTag(int id);
+    /// <summary>
+    ///     Delete tag
+    /// </summary>
+    /// <param name="id">id</param>
+    int DeleteTag(int id);
 
-        /// <summary>
-        ///     Delete tags
-        /// </summary>
-        /// <param name="tagIds">id</param>
-        int DeleteTags(List<int> tagIds);
-    }
+    /// <summary>
+    ///     Delete tags
+    /// </summary>
+    /// <param name="tagIds">id</param>
+    int DeleteTags(List<int> tagIds);
 }

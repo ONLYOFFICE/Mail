@@ -23,124 +23,112 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Models;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 {
-    [Scope]
-    public class MailGarbageDao : BaseMailDao, IMailGarbageDao
+    public MailGarbageDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailGarbageDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
-        {
-        }
+    }
 
-        public int GetMailboxAttachsCount(MailBoxData mailBoxData)
-        {
-            var count = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(m => m.MailboxId == mailBoxData.MailBoxId
-                    && m.TenantId == mailBoxData.TenantId
-                    && m.UserId == mailBoxData.UserId)
-                .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
-                    (m, a) => new
-                    {
-                        Mail = m,
-                        Attachment = a
-                    })
-                .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
-                .Count();
+    public int GetMailboxAttachsCount(MailBoxData mailBoxData)
+    {
+        var count = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(m => m.MailboxId == mailBoxData.MailBoxId
+                && m.TenantId == mailBoxData.TenantId
+                && m.UserId == mailBoxData.UserId)
+            .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
+                (m, a) => new
+                {
+                    Mail = m,
+                    Attachment = a
+                })
+            .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
+            .Count();
 
-            return count;
-        }
+        return count;
+    }
 
-        public List<MailAttachGarbage> GetMailboxAttachs(MailBoxData mailBoxData, int limit)
-        {
-            var list = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(m => m.MailboxId == mailBoxData.MailBoxId
-                    && m.TenantId == mailBoxData.TenantId
-                    && m.UserId == mailBoxData.UserId)
-                .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
-                    (m, a) => new
-                    {
-                        Mail = m,
-                        Attachment = a
-                    })
-                .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
-                .Select(r => new MailAttachGarbage(mailBoxData.UserId, r.Attachment.Id,
-                    r.Mail.Stream, r.Attachment.FileNumber, r.Attachment.StoredName)
-                )
-                .Take(limit)
-                .ToList();
+    public List<MailAttachGarbage> GetMailboxAttachs(MailBoxData mailBoxData, int limit)
+    {
+        var list = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(m => m.MailboxId == mailBoxData.MailBoxId
+                && m.TenantId == mailBoxData.TenantId
+                && m.UserId == mailBoxData.UserId)
+            .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
+                (m, a) => new
+                {
+                    Mail = m,
+                    Attachment = a
+                })
+            .Where(d => !string.IsNullOrEmpty(d.Attachment.StoredName))
+            .Select(r => new MailAttachGarbage(mailBoxData.UserId, r.Attachment.Id,
+                r.Mail.Stream, r.Attachment.FileNumber, r.Attachment.StoredName)
+            )
+            .Take(limit)
+            .ToList();
 
-            return list;
-        }
+        return list;
+    }
 
-        public void CleanupMailboxAttachs(List<MailAttachGarbage> attachGarbageList)
-        {
-            if (!attachGarbageList.Any()) return;
+    public void CleanupMailboxAttachs(List<MailAttachGarbage> attachGarbageList)
+    {
+        if (!attachGarbageList.Any()) return;
 
-            var ids = attachGarbageList.Select(a => a.Id).ToList();
+        var ids = attachGarbageList.Select(a => a.Id).ToList();
 
-            var deleteQuery = MailDbContext.MailAttachment.Where(m => ids.Contains(m.Id));
+        var deleteQuery = MailDbContext.MailAttachment.Where(m => ids.Contains(m.Id));
 
-            MailDbContext.MailAttachment.RemoveRange(deleteQuery);
+        MailDbContext.MailAttachment.RemoveRange(deleteQuery);
 
-            MailDbContext.SaveChanges();
-        }
+        MailDbContext.SaveChanges();
+    }
 
-        public int GetMailboxMessagesCount(MailBoxData mailBoxData)
-        {
-            var count = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(m => m.MailboxId == mailBoxData.MailBoxId
-                    && m.TenantId == mailBoxData.TenantId
-                    && m.UserId == mailBoxData.UserId)
-                .Count();
+    public int GetMailboxMessagesCount(MailBoxData mailBoxData)
+    {
+        var count = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(m => m.MailboxId == mailBoxData.MailBoxId
+                && m.TenantId == mailBoxData.TenantId
+                && m.UserId == mailBoxData.UserId)
+            .Count();
 
-            return count;
-        }
+        return count;
+    }
 
-        public List<MailMessageGarbage> GetMailboxMessages(MailBoxData mailBoxData, int limit)
-        {
-            var list = MailDbContext.MailMail
-                .AsNoTracking()
-                .Where(m => m.MailboxId == mailBoxData.MailBoxId
-                    && m.TenantId == mailBoxData.TenantId
-                    && m.UserId == mailBoxData.UserId)
-                .Select(r => new MailMessageGarbage(mailBoxData.UserId, r.Id, r.Stream))
-                .Take(limit)
-                .ToList();
+    public List<MailMessageGarbage> GetMailboxMessages(MailBoxData mailBoxData, int limit)
+    {
+        var list = MailDbContext.MailMail
+            .AsNoTracking()
+            .Where(m => m.MailboxId == mailBoxData.MailBoxId
+                && m.TenantId == mailBoxData.TenantId
+                && m.UserId == mailBoxData.UserId)
+            .Select(r => new MailMessageGarbage(mailBoxData.UserId, r.Id, r.Stream))
+            .Take(limit)
+            .ToList();
 
-            return list;
-        }
+        return list;
+    }
 
-        public void CleanupMailboxMessages(List<MailMessageGarbage> messageGarbageList)
-        {
-            if (!messageGarbageList.Any()) return;
+    public void CleanupMailboxMessages(List<MailMessageGarbage> messageGarbageList)
+    {
+        if (!messageGarbageList.Any()) return;
 
-            var ids = messageGarbageList.Select(a => a.Id).ToList();
+        var ids = messageGarbageList.Select(a => a.Id).ToList();
 
-            var deleteQuery = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
+        var deleteQuery = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
 
-            MailDbContext.MailMail.RemoveRange(deleteQuery);
+        MailDbContext.MailMail.RemoveRange(deleteQuery);
 
-            MailDbContext.SaveChanges();
-        }
+        MailDbContext.SaveChanges();
     }
 }

@@ -23,21 +23,16 @@
  *
 */
 
+namespace ASC.Mail.Storage;
 
-using System;
-using System.IO;
-
-namespace ASC.Mail.Storage
+public class AttachmentStream : IDisposable
 {
-    public class AttachmentStream : IDisposable
-    {
-        public Stream FileStream { get; set; }
-        public string FileName { get; set; }
-        public long FileSize { get; set; }
+    public Stream FileStream { get; set; }
+    public string FileName { get; set; }
+    public long FileSize { get; set; }
 
-        public void Dispose()
-        {
-            FileStream.Dispose();
-        }
+    public void Dispose()
+    {
+        FileStream.Dispose();
     }
 }

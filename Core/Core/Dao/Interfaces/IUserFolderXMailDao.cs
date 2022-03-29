@@ -23,24 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(UserFolderXMailDao))]
+public interface IUserFolderXMailDao
 {
-    [Scope(typeof(UserFolderXMailDao))]
-    public interface IUserFolderXMailDao
-    {
-        UserFolderXMail Get(int mailId);
-        List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null);
-        List<int> GetMailIds(int folderId);
-        void SetMessagesFolder(IEnumerable<int> messageIds, int folderId);
-        int Save(UserFolderXMail item);
-        int Remove(int? mailId = null, int? folderId = null);
-        int Remove(List<int> mailIds);
-        int RemoveByMailbox(int mailboxId);
-    }
+    UserFolderXMail Get(int mailId);
+    List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null);
+    List<int> GetMailIds(int folderId);
+    void SetMessagesFolder(IEnumerable<int> messageIds, int folderId);
+    int Save(UserFolderXMail item);
+    int Remove(int? mailId = null, int? folderId = null);
+    int Remove(List<int> mailIds);
+    int RemoveByMailbox(int mailboxId);
 }

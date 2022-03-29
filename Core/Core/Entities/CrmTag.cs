@@ -23,40 +23,36 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class CrmTag : IEquatable<CrmTag>
 {
-    public class CrmTag : IEquatable<CrmTag>
+    public int TagId { get; set; }
+    public int EntityType { get; set; }
+    public int TenantId { get; set; }
+    public string TagTitle { get; set; }
+    public int EntityId { get; set; }
+
+    public bool Equals(CrmTag other)
     {
-        public int TagId { get; set; }
-        public int EntityType { get; set; }
-        public int TenantId { get; set; }
-        public string TagTitle { get; set; }
-        public int EntityId { get; set; }
+        if (other == null) return false;
+        return TagId == other.TagId
+               && TenantId == other.TenantId
+               && EntityId == other.EntityId
+               && EntityType == other.EntityType
+               && string.Equals(TagTitle, other.TagTitle, StringComparison.InvariantCultureIgnoreCase);
+    }
 
-        public bool Equals(CrmTag other)
-        {
-            if (other == null) return false;
-            return TagId == other.TagId
-                   && TenantId == other.TenantId
-                   && EntityId == other.EntityId
-                   && EntityType == other.EntityType
-                   && string.Equals(TagTitle, other.TagTitle, StringComparison.InvariantCultureIgnoreCase);
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals(obj as CrmTag);
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals(obj as CrmTag);
-        }
-
-        public override int GetHashCode()
-        {
-            return TagId.GetHashCode() ^ TenantId.GetHashCode() ^ EntityType.GetHashCode() ^ EntityId.GetHashCode() ^ TagTitle.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return TagId.GetHashCode() ^ TenantId.GetHashCode() ^ EntityType.GetHashCode() ^ EntityId.GetHashCode() ^ TagTitle.GetHashCode();
     }
 }

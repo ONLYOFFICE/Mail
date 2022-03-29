@@ -23,62 +23,51 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Data.Storage;
-
-using Microsoft.Extensions.Options;
-
-using System;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class QuotaEngine
 {
-    [Scope]
-    public class QuotaEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private readonly ILog _log;
+    private readonly TenantManager _tenantManager;
+
+    public QuotaEngine(
+        TenantManager tenantManager,
+        IOptionsMonitor<ILog> option)
     {
-        private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
-        private readonly ILog _log;
-        private readonly TenantManager _tenantManager;
 
-        public QuotaEngine(
-            TenantManager tenantManager,
-            IOptionsMonitor<ILog> option)
+        _log = option.Get("ASC.Mail.QuotaEngine");
+        _tenantManager = tenantManager;
+    }
+
+    public void QuotaUsedAdd(long usedQuota)
+    {
+        try
         {
-
-            _log = option.Get("ASC.Mail.QuotaEngine");
-            _tenantManager = tenantManager;
+            var quotaController = new TenantQuotaController(Tenant, _tenantManager);
+            quotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
         }
-
-        public void QuotaUsedAdd(long usedQuota)
+        catch (Exception ex)
         {
-            try
-            {
-                var quotaController = new TenantQuotaController(Tenant, _tenantManager);
-                quotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
-            }
-            catch (Exception ex)
-            {
-                _log.Error(string.Format("QuotaUsedAdd with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
+            _log.Error(string.Format("QuotaUsedAdd with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
 
-                throw;
-            }
+            throw;
         }
+    }
 
-        public void QuotaUsedDelete(long usedQuota)
+    public void QuotaUsedDelete(long usedQuota)
+    {
+        try
         {
-            try
-            {
-                var quotaController = new TenantQuotaController(Tenant, _tenantManager);
-                quotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
-            }
-            catch (Exception ex)
-            {
-                _log.Error(string.Format("QuotaUsedDelete with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
+            var quotaController = new TenantQuotaController(Tenant, _tenantManager);
+            quotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
+        }
+        catch (Exception ex)
+        {
+            _log.Error(string.Format("QuotaUsedDelete with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
 
-                throw;
-            }
+            throw;
         }
     }
 }

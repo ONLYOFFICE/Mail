@@ -23,16 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Server.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Server.Core.Entities;
-
-namespace ASC.Mail.Server.Core.Dao.Interfaces
+[Scope(typeof(IDomainDao))]
+public interface IDomainDao
 {
-    [Scope(typeof(IDomainDao))]
-    public interface IDomainDao
-    {
-        int Save(Domain domain);
-        int Remove(string domain);
-    }
+    int Save(Domain domain);
+    int Remove(string domain);
 }

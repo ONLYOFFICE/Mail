@@ -23,28 +23,24 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class AttachmentsException : Exception
 {
-    public class AttachmentsException : Exception
+    public enum Types
     {
-        public enum Types
-        {
-            Unknown = 0,
-            BadParams = 1,
-            EmptyFile = 2,
-            MessageNotFound = 3,
-            TotalSizeExceeded = 4,
-            DocumentNotFound = 5,
-            DocumentAccessDenied = 6
-        }
-        public Types ErrorType { get; set; }
+        Unknown = 0,
+        BadParams = 1,
+        EmptyFile = 2,
+        MessageNotFound = 3,
+        TotalSizeExceeded = 4,
+        DocumentNotFound = 5,
+        DocumentAccessDenied = 6
+    }
+    public Types ErrorType { get; set; }
 
-        public AttachmentsException(Types type, string message) : base(message) 
-        {
-            ErrorType = type;
-        }
+    public AttachmentsException(Types type, string message) : base(message)
+    {
+        ErrorType = type;
     }
 }

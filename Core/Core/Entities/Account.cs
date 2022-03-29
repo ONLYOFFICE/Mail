@@ -23,34 +23,29 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using ASC.Mail.Models;
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class Account
 {
-    public class Account
-    {
-        public int MailboxId { get; set; }
-        public string MailboxAddress { get; set; }
-        public bool MailboxEnabled { get; set; }
-        public string MailboxAddressName { get; set; }
-        public bool MailboxQuotaError { get; set; }
-        public DateTime? MailboxDateAuthError { get; set; }
-        public string MailboxOAuthToken { get; set; }
-        public bool MailboxIsServerMailbox { get; set; }
-        public string MailboxEmailInFolder { get; set; }
-        public int ServerAddressId { get; set; }
-        public string ServerAddressName { get; set; }
-        public bool ServerAddressIsAlias { get; set; }
-        public int ServerDomainId { get; set; }
-        public string ServerDomainName { get; set; }
-        public int ServerMailGroupId { get; set; }
-        public string ServerMailGroupAddress { get; set; }
-        public int ServerDomainTenant { get; set; }
+    public int MailboxId { get; set; }
+    public string MailboxAddress { get; set; }
+    public bool MailboxEnabled { get; set; }
+    public string MailboxAddressName { get; set; }
+    public bool MailboxQuotaError { get; set; }
+    public DateTime? MailboxDateAuthError { get; set; }
+    public string MailboxOAuthToken { get; set; }
+    public bool MailboxIsServerMailbox { get; set; }
+    public string MailboxEmailInFolder { get; set; }
+    public int ServerAddressId { get; set; }
+    public string ServerAddressName { get; set; }
+    public bool ServerAddressIsAlias { get; set; }
+    public int ServerDomainId { get; set; }
+    public string ServerDomainName { get; set; }
+    public int ServerMailGroupId { get; set; }
+    public string ServerMailGroupAddress { get; set; }
+    public int ServerDomainTenant { get; set; }
 
-        public MailSignatureData MailboxSignature { get; set; }
+    public MailSignatureData MailboxSignature { get; set; }
 
-        public MailAutoreplyData MailboxAutoreply { get; set; }
-    }
+    public MailAutoreplyData MailboxAutoreply { get; set; }
 }

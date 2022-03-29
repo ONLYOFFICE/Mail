@@ -23,114 +23,102 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Extensions;
-using ASC.Mail.Storage;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Linq;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class MailCheckMailserverDomainsDnsOperation : MailOperation
 {
-    public class MailCheckMailserverDomainsDnsOperation : MailOperation
+    private readonly string _domainName;
+    private readonly ServerDns _dns;
+
+    public override MailOperationType OperationType
     {
-        private readonly string _domainName;
-        private readonly ServerDns _dns;
+        get { return MailOperationType.CheckDomainDns; }
+    }
 
-        public override MailOperationType OperationType
+    public MailCheckMailserverDomainsDnsOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        IOptionsMonitor<ILog> optionsMonitor,
+        string domainName,
+        ServerDns dns)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+    {
+        _domainName = domainName;
+        _dns = dns;
+
+        SetSource(_domainName);
+    }
+
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.CheckDomainDns; }
-        }
+            SetProgress((int?)MailOperationCheckDomainDnsProgress.Init, "Setup tenant and user");
 
-        public MailCheckMailserverDomainsDnsOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> optionsMonitor,
-            string domainName,
-            ServerDns dns)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
-        {
-            _domainName = domainName;
-            _dns = dns;
+            TenantManager.SetCurrentTenant(CurrentTenant);
 
-            SetSource(_domainName);
-        }
-
-        protected override void Do()
-        {
             try
             {
-                SetProgress((int?)MailOperationCheckDomainDnsProgress.Init, "Setup tenant and user");
-
-                TenantManager.SetCurrentTenant(CurrentTenant);
-
-                try
-                {
-                    SecurityContext.AuthenticateMe(CurrentUser);
-                }
-                catch
-                {
-                    // User was removed
-                    SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-                }
-
-                ServerDomain domain;
-
-                var domains = MailDaoFactory.GetServerDomainDao().GetDomains();
-
-                domain =
-                    domains.FirstOrDefault(
-                        d => d.Name.Equals(_domainName, StringComparison.InvariantCultureIgnoreCase));
-
-                if (domain == null)
-                    throw new Exception(string.Format("Domain '{0}' not found", _domainName));
-
-
-                var hasChanges = false;
-
-                SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckMx, "Check DNS MX record");
-
-                if (_dns.UpdateMx(domain.Name))
-                {
-                    hasChanges = true;
-                }
-
-                SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckSpf, "Check DNS SPF record");
-
-                if (_dns.UpdateSpf(domain.Name))
-                {
-                    hasChanges = true;
-                }
-
-                SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckDkim, "Check DNS DKIM record");
-
-                if (_dns.UpdateDkim(domain.Name))
-                {
-                    hasChanges = true;
-                }
-
-                if (!hasChanges)
-                    return;
-
-                SetProgress((int?)MailOperationCheckDomainDnsProgress.UpdateResults,
-                    "Update domain dns check results");
-
-                MailDaoFactory.GetServerDnsDao().Save(_dns);
+                SecurityContext.AuthenticateMe(CurrentUser);
             }
-            catch (Exception e)
+            catch
             {
-                Logger.ErrorFormat("Mail operation error -> Domain '{0}' dns check failed. Error: {1}", _domainName, e);
-                Error = "InternalServerError";
+                // User was removed
+                SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
             }
+
+            ServerDomain domain;
+
+            var domains = MailDaoFactory.GetServerDomainDao().GetDomains();
+
+            domain =
+                domains.FirstOrDefault(
+                    d => d.Name.Equals(_domainName, StringComparison.InvariantCultureIgnoreCase));
+
+            if (domain == null)
+                throw new Exception(string.Format("Domain '{0}' not found", _domainName));
+
+
+            var hasChanges = false;
+
+            SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckMx, "Check DNS MX record");
+
+            if (_dns.UpdateMx(domain.Name))
+            {
+                hasChanges = true;
+            }
+
+            SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckSpf, "Check DNS SPF record");
+
+            if (_dns.UpdateSpf(domain.Name))
+            {
+                hasChanges = true;
+            }
+
+            SetProgress((int?)MailOperationCheckDomainDnsProgress.CheckDkim, "Check DNS DKIM record");
+
+            if (_dns.UpdateDkim(domain.Name))
+            {
+                hasChanges = true;
+            }
+
+            if (!hasChanges)
+                return;
+
+            SetProgress((int?)MailOperationCheckDomainDnsProgress.UpdateResults,
+                "Update domain dns check results");
+
+            MailDaoFactory.GetServerDnsDao().Save(_dns);
+        }
+        catch (Exception e)
+        {
+            Logger.ErrorFormat("Mail operation error -> Domain '{0}' dns check failed. Error: {1}", _domainName, e);
+            Error = "InternalServerError";
         }
     }
 }

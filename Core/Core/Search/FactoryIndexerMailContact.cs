@@ -23,120 +23,104 @@
  *
 */
 
+namespace ASC.Mail.Core.Search;
 
-using ASC.Common;
-using ASC.Common.Caching;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.ElasticSearch;
-using ASC.ElasticSearch.Core;
-using ASC.Mail.Core.Dao;
-using ASC.Mail.Core.Dao.Entities;
-
-using Microsoft.Extensions.Options;
-
-using System;
-
-namespace ASC.Mail.Core.Search
+[Scope(Additional = typeof(FactoryIndexerMailContactExtension))]
+public sealed class FactoryIndexerMailContact : FactoryIndexer<MailContact>
 {
-    [Scope(Additional = typeof(FactoryIndexerMailContactExtension))]
-    public sealed class FactoryIndexerMailContact : FactoryIndexer<MailContact>
+    private readonly Lazy<MailDbContext> _lazyMailDbContext;
+    private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
+
+    public FactoryIndexerMailContact(
+        IOptionsMonitor<ILog> options,
+        TenantManager tenantManager,
+        SearchSettingsHelper searchSettingsHelper,
+        FactoryIndexer factoryIndexer,
+        BaseIndexer<MailContact> baseIndexer,
+        IServiceProvider serviceProvider,
+        DbContextManager<MailDbContext> dbContext,
+        ICache cache)
+        : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
     {
-        private readonly Lazy<MailDbContext> _lazyMailDbContext;
-        private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
-
-        public FactoryIndexerMailContact(
-            IOptionsMonitor<ILog> options,
-            TenantManager tenantManager,
-            SearchSettingsHelper searchSettingsHelper,
-            FactoryIndexer factoryIndexer,
-            BaseIndexer<MailContact> baseIndexer,
-            IServiceProvider serviceProvider,
-            DbContextManager<MailDbContext> dbContext,
-            ICache cache)
-            : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
-        {
-            _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
-        }
-
-        /*public override void IndexAll()
-        {
-
-            IQueryable<MailContact> GetBaseQuery(DateTime lastIndexed) =>
-                MailDbContext.MailContacts
-                        .Where(r => r.LastModified >= lastIndexed)
-                        .Join(MailDbContext.Tenants, r => r.TenantId, r => r.Id, (f, t) => new { DbEntity = f, DbTenant = t })
-                        .Where(r => r.DbTenant.Status == ASC.Core.Tenants.TenantStatus.Active)
-                        .Select(r => r.DbEntity);
-
-            (int, int, int) getCount(DateTime lastIndexed)
-            {
-                var q = GetBaseQuery(lastIndexed);
-
-                var count = q.Count();
-                var min = count > 0 ? q.Min(r => r.Id) : 0;
-                var max = count > 0 ? q.Max(r => r.Id) : 0;
-
-                return (count, max, min);
-            }
-
-            List<MailContact> getData(long start, long stop, DateTime lastIndexed) =>
-                    GetBaseQuery(lastIndexed)
-                    .Where(r => r.Id >= start && r.Id <= stop)
-                    .ToList();
-
-            List<int> getIds(DateTime lastIndexed)
-            {
-                long start = 0;
-
-                var result = new List<int>();
-
-                while (true)
-                {
-                    var id = GetBaseQuery(lastIndexed)
-                                .AsNoTracking()
-                                .Where(r => r.Id >= start)
-                                .OrderBy(x => x.Id)
-                                .Skip(BaseIndexer<MailContact>.QueryLimit)
-                                .Select(x => x.Id)
-                                .FirstOrDefault();
-
-                    if (id != 0)
-                    {
-                        start = id;
-                        result.Add(id);
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                return result;
-            }
-
-            try
-            {
-                foreach (var data in Indexer.IndexAll(getCount, getIds, getData))
-                {
-                    Index(data);
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-
-                throw;
-            }
-        }*/
+        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
     }
 
-    public class FactoryIndexerMailContactExtension
+    /*public override void IndexAll()
     {
-        public static void Register(DIHelper services)
+
+        IQueryable<MailContact> GetBaseQuery(DateTime lastIndexed) =>
+            MailDbContext.MailContacts
+                    .Where(r => r.LastModified >= lastIndexed)
+                    .Join(MailDbContext.Tenants, r => r.TenantId, r => r.Id, (f, t) => new { DbEntity = f, DbTenant = t })
+                    .Where(r => r.DbTenant.Status == ASC.Core.Tenants.TenantStatus.Active)
+                    .Select(r => r.DbEntity);
+
+        (int, int, int) getCount(DateTime lastIndexed)
         {
-            services.TryAdd<MailContact>();
+            var q = GetBaseQuery(lastIndexed);
+
+            var count = q.Count();
+            var min = count > 0 ? q.Min(r => r.Id) : 0;
+            var max = count > 0 ? q.Max(r => r.Id) : 0;
+
+            return (count, max, min);
         }
+
+        List<MailContact> getData(long start, long stop, DateTime lastIndexed) =>
+                GetBaseQuery(lastIndexed)
+                .Where(r => r.Id >= start && r.Id <= stop)
+                .ToList();
+
+        List<int> getIds(DateTime lastIndexed)
+        {
+            long start = 0;
+
+            var result = new List<int>();
+
+            while (true)
+            {
+                var id = GetBaseQuery(lastIndexed)
+                            .AsNoTracking()
+                            .Where(r => r.Id >= start)
+                            .OrderBy(x => x.Id)
+                            .Skip(BaseIndexer<MailContact>.QueryLimit)
+                            .Select(x => x.Id)
+                            .FirstOrDefault();
+
+                if (id != 0)
+                {
+                    start = id;
+                    result.Add(id);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        try
+        {
+            foreach (var data in Indexer.IndexAll(getCount, getIds, getData))
+            {
+                Index(data);
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Error(e);
+
+            throw;
+        }
+    }*/
+}
+
+public class FactoryIndexerMailContactExtension
+{
+    public static void Register(DIHelper services)
+    {
+        services.TryAdd<MailContact>();
     }
 }
