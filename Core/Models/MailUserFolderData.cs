@@ -23,38 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "UserFolder")]
+public class MailUserFolderData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "UserFolder")]
-    public class MailUserFolderData
-    {
-        [DataMember(IsRequired = true, Name = "id")]
-        public int Id { get; set; }
+    [DataMember(IsRequired = true, Name = "id")]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true, Name = "parent")]
-        public int ParentId { get; set; }
+    [DataMember(IsRequired = true, Name = "parent")]
+    public int ParentId { get; set; }
 
-        [DataMember(IsRequired = true, Name = "name")]
-        public string Name { get; set; }
+    [DataMember(IsRequired = true, Name = "name")]
+    public string Name { get; set; }
 
-        [DataMember(IsRequired = true, Name = "unread_count")]
-        public int UnreadCount { get; set; }
+    [DataMember(IsRequired = true, Name = "unread_count")]
+    public int UnreadCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "total_count")]
-        public int TotalCount { get; set; }
+    [DataMember(IsRequired = true, Name = "total_count")]
+    public int TotalCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "unread_chain_count")]
-        public int UnreadChainCount { get; set; }
+    [DataMember(IsRequired = true, Name = "unread_chain_count")]
+    public int UnreadChainCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "total_chain_count")]
-        public int TotalChainCount { get; set; }
+    [DataMember(IsRequired = true, Name = "total_chain_count")]
+    public int TotalChainCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "folder_count")]
-        public int FolderCount { get; set; }
-    }
+    [DataMember(IsRequired = true, Name = "folder_count")]
+    public int FolderCount { get; set; }
 }

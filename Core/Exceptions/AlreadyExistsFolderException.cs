@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class AlreadyExistsFolderException : ArgumentException
 {
-    public class AlreadyExistsFolderException : ArgumentException
+    public AlreadyExistsFolderException(string message)
+        : base(message)
     {
-        public AlreadyExistsFolderException(string message)
-            : base(message)
-        {
-        }
     }
 }

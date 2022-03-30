@@ -23,94 +23,82 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using System.Collections.Generic;
-using System.Linq;
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Data.Storage;
-using ASC.Mail.Core.Dao.Expressions.Attachment;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-using ASC.Mail.Utils;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class DocumentsEngine
 {
-    [Scope]
-    public class DocumentsEngine
+    public const string MY_DOCS_FOLDER_ID = "@my";
+
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string User => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+    private readonly ApiHelper _apiHelper;
+    private readonly MessageEngine _messageEngine;
+    private readonly StorageFactory _storageFactory;
+
+    public DocumentsEngine(
+        SecurityContext securityContext,
+        TenantManager tenantManager,
+        ApiHelper apiHelper,
+        MessageEngine messageEngine,
+        StorageFactory storageFactory)
     {
-        public const string MY_DOCS_FOLDER_ID = "@my";
+        _securityContext = securityContext;
+        _tenantManager = tenantManager;
+        _apiHelper = apiHelper;
+        _messageEngine = messageEngine;
+        _storageFactory = storageFactory;
+    }
 
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+    public List<object> StoreAttachmentsToMyDocuments(int messageId)
+    {
+        return StoreAttachmentsToDocuments(messageId, MY_DOCS_FOLDER_ID);
+    }
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private ApiHelper ApiHelper { get; }
-        private MessageEngine MessageEngine { get; }
-        private StorageFactory StorageFactory { get; }
+    public object StoreAttachmentToMyDocuments(int attachmentId)
+    {
+        return StoreAttachmentToDocuments(attachmentId, MY_DOCS_FOLDER_ID);
+    }
 
-        public DocumentsEngine(
-            SecurityContext securityContext,
-            TenantManager tenantManager,
-            ApiHelper apiHelper,
-            MessageEngine messageEngine,
-            StorageFactory storageFactory)
-        {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            ApiHelper = apiHelper;
-            MessageEngine = messageEngine;
-            StorageFactory = storageFactory;
-        }
+    public List<object> StoreAttachmentsToDocuments(int messageId, string folderId)
+    {
+        var attachments =
+            _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(messageId, Tenant, User));
 
-        public List<object> StoreAttachmentsToMyDocuments(int messageId)
-        {
-            return StoreAttachmentsToDocuments(messageId, MY_DOCS_FOLDER_ID);
-        }
+        return
+            attachments.Select(attachment => StoreAttachmentToDocuments(attachment, folderId))
+                .Where(uploadedFileId => uploadedFileId != null)
+                .ToList();
+    }
 
-        public object StoreAttachmentToMyDocuments(int attachmentId)
-        {
-            return StoreAttachmentToDocuments(attachmentId, MY_DOCS_FOLDER_ID);
-        }
+    public object StoreAttachmentToDocuments(int attachmentId, string folderId)
+    {
+        var attachment = _messageEngine.GetAttachment(
+            new ConcreteUserAttachmentExp(attachmentId, Tenant, User));
 
-        public List<object> StoreAttachmentsToDocuments(int messageId, string folderId)
-        {
-            var attachments =
-                MessageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(messageId, Tenant, User));
+        if (attachment == null)
+            return -1;
 
-            return
-                attachments.Select(attachment => StoreAttachmentToDocuments(attachment, folderId))
-                    .Where(uploadedFileId => uploadedFileId != null)
-                    .ToList();
-        }
+        return StoreAttachmentToDocuments(attachment, folderId);
+    }
 
-        public object StoreAttachmentToDocuments(int attachmentId, string folderId)
-        {
-            var attachment = MessageEngine.GetAttachment(
-                new ConcreteUserAttachmentExp(attachmentId, Tenant, User));
+    public object StoreAttachmentToDocuments(MailAttachmentData mailAttachmentData, string folderId)
+    {
+        if (mailAttachmentData == null)
+            return -1;
 
-            if (attachment == null)
-                return -1;
+        var dataStore = _storageFactory.GetMailStorage(Tenant);
 
-            return StoreAttachmentToDocuments(attachment, folderId);
-        }
+        using var file = mailAttachmentData.ToAttachmentStream(dataStore);
 
-        public object StoreAttachmentToDocuments(MailAttachmentData mailAttachmentData, string folderId)
-        {
-            if (mailAttachmentData == null)
-                return -1;
+        var uploadedFileId = _apiHelper.UploadToDocuments(file.FileStream, file.FileName,
+            mailAttachmentData.contentType, folderId, true);
 
-            var dataStore = StorageFactory.GetMailStorage(Tenant);
-
-            using var file = mailAttachmentData.ToAttachmentStream(dataStore);
-
-            var uploadedFileId = ApiHelper.UploadToDocuments(file.FileStream, file.FileName,
-                mailAttachmentData.contentType, folderId, true);
-
-            return uploadedFileId;
-        }
+        return uploadedFileId;
     }
 }

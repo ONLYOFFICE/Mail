@@ -23,242 +23,229 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ServerAddressDao : BaseMailDao, IServerAddressDao
 {
-    [Scope]
-    public class ServerAddressDao : BaseMailDao, IServerAddressDao
+    public ServerAddressDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ServerAddressDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public ServerAddress Get(int id)
+    {
+        var address = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Where(a => a.Tenant == Tenant && a.Id == id)
+            .Select(ToServerAddress)
+            .SingleOrDefault();
+
+        return address;
+    }
+
+    public List<ServerAddress> GetList(List<int> ids = null)
+    {
+        var query = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Where(a => a.Tenant == Tenant);
+
+        if (ids != null && ids.Any())
         {
+            query.Where(a => ids.Contains(a.Id));
         }
 
-        public ServerAddress Get(int id)
-        {
-            var address = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Where(a => a.Tenant == Tenant && a.Id == id)
-                .Select(ToServerAddress)
-                .SingleOrDefault();
+        var list = query
+            .Select(ToServerAddress)
+            .ToList();
 
-            return address;
-        }
+        return list;
+    }
 
-        public List<ServerAddress> GetList(List<int> ids = null)
-        {
-            var query = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Where(a => a.Tenant == Tenant);
+    public List<ServerAddress> GetList(int mailboxId)
+    {
+        var list = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Where(a => a.Tenant == Tenant && a.IdMailbox == mailboxId)
+            .Select(ToServerAddress)
+            .ToList();
 
-            if (ids != null && ids.Any())
+        return list;
+    }
+
+    public List<ServerAddress> GetGroupAddresses(int groupId)
+    {
+        var list = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Where(a => a.Tenant == Tenant)
+           .Join(MailDbContext.MailServerMailGroupXMailServerAddress, a => a.Id, g => g.IdAddress,
+            (a, g) => new
             {
-                query.Where(a => ids.Contains(a.Id));
+                Address = a,
+                Xgroup = g
             }
+           )
+           .Where(o => o.Xgroup.IdMailGroup == groupId)
+           .Select(o => ToServerAddress(o.Address))
+           .ToList();
 
-            var list = query
-                .Select(ToServerAddress)
-                .ToList();
+        return list;
+    }
 
-            return list;
-        }
+    public List<ServerAddress> GetDomainAddresses(int domainId)
+    {
+        var list = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Where(a => a.Tenant == Tenant && a.IdDomain == domainId)
+            .Select(ToServerAddress)
+            .ToList();
 
-        public List<ServerAddress> GetList(int mailboxId)
-        {
-            var list = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Where(a => a.Tenant == Tenant && a.IdMailbox == mailboxId)
-                .Select(ToServerAddress)
-                .ToList();
+        return list;
+    }
 
-            return list;
-        }
-
-        public List<ServerAddress> GetGroupAddresses(int groupId)
-        {
-            var list = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Where(a => a.Tenant == Tenant)
-               .Join(MailDbContext.MailServerMailGroupXMailServerAddress, a => a.Id, g => g.IdAddress,
-                (a, g) => new
-                {
-                    Address = a,
-                    Xgroup = g
-                }
-               )
-               .Where(o => o.Xgroup.IdMailGroup == groupId)
-               .Select(o => ToServerAddress(o.Address))
-               .ToList();
-
-            return list;
-        }
-
-        public List<ServerAddress> GetDomainAddresses(int domainId)
-        {
-            var list = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Where(a => a.Tenant == Tenant && a.IdDomain == domainId)
-                .Select(ToServerAddress)
-                .ToList();
-
-            return list;
-        }
-
-        public void AddAddressesToMailGroup(int groupId, List<int> addressIds)
-        {
-            var list = addressIds.Select(id =>
-                new MailServerMailGroupXMailServerAddress
-                {
-                    IdAddress = id,
-                    IdMailGroup = groupId
-                });
-
-            MailDbContext.MailServerMailGroupXMailServerAddress.AddRange(list);
-
-            MailDbContext.SaveChanges();
-        }
-
-        public void DeleteAddressFromMailGroup(int groupId, int addressId)
-        {
-            var deleteItem = new MailServerMailGroupXMailServerAddress
+    public void AddAddressesToMailGroup(int groupId, List<int> addressIds)
+    {
+        var list = addressIds.Select(id =>
+            new MailServerMailGroupXMailServerAddress
             {
-                IdAddress = addressId,
+                IdAddress = id,
                 IdMailGroup = groupId
-            };
+            });
 
-            MailDbContext.MailServerMailGroupXMailServerAddress.Remove(deleteItem);
+        MailDbContext.MailServerMailGroupXMailServerAddress.AddRange(list);
 
-            MailDbContext.SaveChanges();
+        MailDbContext.SaveChanges();
+    }
+
+    public void DeleteAddressFromMailGroup(int groupId, int addressId)
+    {
+        var deleteItem = new MailServerMailGroupXMailServerAddress
+        {
+            IdAddress = addressId,
+            IdMailGroup = groupId
+        };
+
+        MailDbContext.MailServerMailGroupXMailServerAddress.Remove(deleteItem);
+
+        MailDbContext.SaveChanges();
+    }
+
+    public void DeleteAddressesFromMailGroup(int groupId)
+    {
+        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
+            .Where(x => x.IdMailGroup == groupId);
+
+        MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+
+        MailDbContext.SaveChanges();
+    }
+
+    public void DeleteAddressesFromAnyMailGroup(List<int> addressIds)
+    {
+        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
+            .Where(x => addressIds.Contains(x.IdAddress));
+
+        MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+
+        MailDbContext.SaveChanges();
+    }
+
+    public int Save(ServerAddress address)
+    {
+        var mailServerAddress = new MailServerAddress
+        {
+            Id = address.Id,
+            Name = address.AddressName,
+            Tenant = address.Tenant,
+            IdDomain = address.DomainId,
+            IdMailbox = address.MailboxId,
+            IsMailGroup = address.IsMailGroup,
+            IsAlias = address.IsAlias
+        };
+
+        if (address.Id <= 0)
+        {
+            mailServerAddress.DateCreated = DateTime.UtcNow;
         }
 
-        public void DeleteAddressesFromMailGroup(int groupId)
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerAddress, mailServerAddress);
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var deleteItem = new MailServerAddress
         {
-            var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
-                .Where(x => x.IdMailGroup == groupId);
+            Id = id,
+            Tenant = Tenant
+        };
 
-            MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+        MailDbContext.MailServerAddress.Remove(deleteItem);
 
-            MailDbContext.SaveChanges();
-        }
+        var result = MailDbContext.SaveChanges();
 
-        public void DeleteAddressesFromAnyMailGroup(List<int> addressIds)
-        {
-            var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
-                .Where(x => addressIds.Contains(x.IdAddress));
+        return result;
+    }
 
-            MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+    public int Delete(List<int> ids)
+    {
+        var queryDelete = MailDbContext.MailServerAddress
+            .Where(a => a.Tenant == Tenant && ids.Contains(a.Id));
 
-            MailDbContext.SaveChanges();
-        }
+        MailDbContext.MailServerAddress.RemoveRange(queryDelete);
 
-        public int Save(ServerAddress address)
-        {
-            var mailServerAddress = new MailServerAddress
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public bool IsAddressAlreadyRegistered(string addressName, string domainName)
+    {
+        if (string.IsNullOrEmpty(addressName))
+            throw new ArgumentNullException("addressName");
+
+        if (string.IsNullOrEmpty(domainName))
+            throw new ArgumentNullException("domainName");
+
+        var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
+
+        var exists = MailDbContext.MailServerAddress
+            .AsNoTracking()
+            .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
+            (a, d) => new
             {
-                Id = address.Id,
-                Name = address.AddressName,
-                Tenant = address.Tenant,
-                IdDomain = address.DomainId,
-                IdMailbox = address.MailboxId,
-                IsMailGroup = address.IsMailGroup,
-                IsAlias = address.IsAlias
-            };
+                Address = a,
+                Domain = d
+            })
+            .Where(ad => ad.Address.Name == addressName && tenants.Contains(ad.Address.Tenant) && ad.Domain.Name == domainName)
+            .Select(ad => ad.Address.Id)
+            .Any();
 
-            if (address.Id <= 0)
-            {
-                mailServerAddress.DateCreated = DateTime.UtcNow;
-            }
+        return exists;
+    }
 
-            var entry = MailDbContext.AddOrUpdate(t => t.MailServerAddress, mailServerAddress);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public int Delete(int id)
+    protected ServerAddress ToServerAddress(MailServerAddress r)
+    {
+        var s = new ServerAddress
         {
-            var deleteItem = new MailServerAddress
-            {
-                Id = id,
-                Tenant = Tenant
-            };
+            Id = r.Id,
+            AddressName = r.Name,
+            Tenant = r.Tenant,
+            DomainId = r.IdDomain,
+            MailboxId = r.IdMailbox,
+            IsMailGroup = r.IsMailGroup,
+            IsAlias = r.IsAlias,
+            DateCreated = r.DateCreated
+        };
 
-            MailDbContext.MailServerAddress.Remove(deleteItem);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public int Delete(List<int> ids)
-        {
-            var queryDelete = MailDbContext.MailServerAddress
-                .Where(a => a.Tenant == Tenant && ids.Contains(a.Id));
-
-            MailDbContext.MailServerAddress.RemoveRange(queryDelete);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public bool IsAddressAlreadyRegistered(string addressName, string domainName)
-        {
-            if (string.IsNullOrEmpty(addressName))
-                throw new ArgumentNullException("addressName");
-
-            if (string.IsNullOrEmpty(domainName))
-                throw new ArgumentNullException("domainName");
-
-            var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
-
-            var exists = MailDbContext.MailServerAddress
-                .AsNoTracking()
-                .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
-                (a, d) => new
-                {
-                    Address = a,
-                    Domain = d
-                })
-                .Where(ad => ad.Address.Name == addressName && tenants.Contains(ad.Address.Tenant) && ad.Domain.Name == domainName)
-                .Select(ad => ad.Address.Id)
-                .Any();
-
-            return exists;
-        }
-
-        protected ServerAddress ToServerAddress(MailServerAddress r)
-        {
-            var s = new ServerAddress
-            {
-                Id = r.Id,
-                AddressName = r.Name,
-                Tenant = r.Tenant,
-                DomainId = r.IdDomain,
-                MailboxId = r.IdMailbox,
-                IsMailGroup = r.IsMailGroup,
-                IsAlias = r.IsAlias,
-                DateCreated = r.DateCreated
-            };
-
-            return s;
-        }
+        return s;
     }
 }

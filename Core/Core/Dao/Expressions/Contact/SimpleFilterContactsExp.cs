@@ -23,36 +23,30 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Contact;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Contact
+public class SimpleFilterContactsExp : IContactsExp
 {
-    public class SimpleFilterContactsExp : IContactsExp
+    public int Tenant { get; private set; }
+    public string User { get; private set; }
+
+    public bool? OrderAsc { get; private set; }
+    public int? StartIndex { get; private set; }
+    public int? Limit { get; private set; }
+
+    public SimpleFilterContactsExp(int tenant, string user, bool? orderAsc = null,
+        int? startIndex = null, int? limit = null)
     {
-        public int Tenant { get; private set; }
-        public string User { get; private set; }
+        Tenant = tenant;
+        User = user;
 
-        public bool? OrderAsc { get; private set; }
-        public int? StartIndex { get; private set; }
-        public int? Limit { get; private set; }
+        OrderAsc = orderAsc;
+        StartIndex = startIndex;
+        Limit = limit;
+    }
 
-        public SimpleFilterContactsExp(int tenant, string user, bool? orderAsc = null,
-            int? startIndex = null, int? limit = null)
-        {
-            Tenant = tenant;
-            User = user;
-
-            OrderAsc = orderAsc;
-            StartIndex = startIndex;
-            Limit = limit;
-        }
-
-        public virtual Expression<Func<MailContact, bool>> GetExpression()
-        {
-            return r => r.TenantId == Tenant && r.IdUser == User;
-        }
+    public virtual Expression<Func<MailContact, bool>> GetExpression()
+    {
+        return r => r.TenantId == Tenant && r.IdUser == User;
     }
 }

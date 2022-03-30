@@ -23,40 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-using System.Net.Mail;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public class СoncreteUserMailboxExp : UserMailboxExp
 {
-    public class СoncreteUserMailboxExp : UserMailboxExp
+    private readonly string _email;
+    private readonly int? _id;
+
+    public СoncreteUserMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
+        : base(tenant, user, isRemoved)
     {
-        private readonly string _email;
-        private readonly int? _id;
+        _id = id;
+    }
 
-        public СoncreteUserMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
-            : base(tenant, user, isRemoved)
-        {
-            _id = id;
-        }
+    public СoncreteUserMailboxExp(MailAddress address, int tenant, string user, bool? isRemoved = false)
+        : base(tenant, user, isRemoved)
+    {
+        _email = address.Address.ToLowerInvariant();
+    }
 
-        public СoncreteUserMailboxExp(MailAddress address, int tenant, string user, bool? isRemoved = false)
-            : base(tenant, user, isRemoved)
-        {
-            _email = address.Address.ToLowerInvariant();
-        }
+    public override Expression<Func<MailMailbox, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
 
-        public override Expression<Func<MailMailbox, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
+        exp = _id.HasValue
+            ? exp.And(mb => mb.Id == _id.Value)
+            : exp.And(mb => mb.Address == _email);
 
-            exp = _id.HasValue 
-                ? exp.And(mb => mb.Id == _id.Value) 
-                : exp.And(mb => mb.Address == _email);
-
-            return exp;
-        }
+        return exp;
     }
 }

@@ -23,26 +23,21 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "WebDomain")]
+public class ServerDomainData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "WebDomain")]
-    public class ServerDomainData
-    {
-        [DataMember(IsRequired = true)]
-        public int Id { get; set; }
+    [DataMember(IsRequired = true)]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public bool IsSharedDomain { get; set; }
+    [DataMember(IsRequired = true)]
+    public bool IsSharedDomain { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public string Name { get; set; }
+    [DataMember(IsRequired = true)]
+    public string Name { get; set; }
 
-        [DataMember]
-        public ServerDomainDnsData Dns { get; set; }
-    }
+    [DataMember]
+    public ServerDomainDnsData Dns { get; set; }
 }

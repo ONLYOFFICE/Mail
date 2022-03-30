@@ -22,7 +22,7 @@ namespace ASC.Mail.Controllers
         [Read(@"filters")]
         public IEnumerable<MailSieveFilterData> GetFilters()
         {
-            var filters = FilterEngine.GetList();
+            var filters = _filterEngine.GetList();
             return filters;
         }
 
@@ -37,7 +37,7 @@ namespace ASC.Mail.Controllers
         [Create(@"filters")]
         public MailSieveFilterData CreateFilter(MailSieveFilterData filter)
         {
-            var id = FilterEngine.Create(filter);
+            var id = _filterEngine.Create(filter);
             filter.Id = id;
             return filter;
         }
@@ -53,7 +53,7 @@ namespace ASC.Mail.Controllers
         [Update(@"filters")]
         public MailSieveFilterData UpdateFilter(MailSieveFilterData filter)
         {
-            FilterEngine.Update(filter);
+            _filterEngine.Update(filter);
 
             return filter;
         }
@@ -69,7 +69,7 @@ namespace ASC.Mail.Controllers
         [Delete(@"filters/{id}")]
         public int DeleteFilter(int id)
         {
-            FilterEngine.Delete(id);
+            _filterEngine.Delete(id);
 
             return id;
         }
@@ -93,9 +93,9 @@ namespace ASC.Mail.Controllers
             if (!pageSize.HasValue)
                 pageSize = 10;
 
-            var messages = MessageEngine.GetFilteredMessages(filter, page.Value, pageSize.Value, out long total);
+            var messages = _messageEngine.GetFilteredMessages(filter, page.Value, pageSize.Value, out long total);
 
-            ApiContext.SetTotalCount(total);
+            _apiContext.SetTotalCount(total);
 
             return messages;
         }
@@ -116,7 +116,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                return OperationEngine.ApplyFilter(id, TranslateMailOperationStatus);
+                return _operationEngine.ApplyFilter(id, TranslateMailOperationStatus);
             }
             catch (Exception)
             {

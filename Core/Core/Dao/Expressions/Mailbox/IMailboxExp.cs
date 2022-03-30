@@ -23,14 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public interface IMailboxExp
 {
-    public interface IMailboxExp
-    {
-        Expression<Func<Entities.MailMailbox, bool>> GetExpression();
-    }
+    Expression<Func<Entities.MailMailbox, bool>> GetExpression();
 }

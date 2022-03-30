@@ -23,321 +23,405 @@
  *
 */
 
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao.Expressions.Conversation;
-using ASC.Mail.Core.Dao.Expressions.Message;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Web.Core;
-
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
+using FolderType = ASC.Mail.Enums.FolderType;
+using SecurityContext = ASC.Core.SecurityContext;
+using Tag = ASC.Mail.Core.Entities.Tag;
 
-namespace ASC.Mail.Core.Engine
+namespace ASC.Mail.Core.Engine;
+
+[Scope]
+public class TagEngine
 {
-    [Scope]
-    public class TagEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string UserId => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly TenantManager _tenantManager;
+    private readonly SecurityContext _securityContext;
+    private readonly ILog _log;
+    private readonly IMailDaoFactory _mailDaoFactory;
+    private readonly WebItemSecurity _webItemSecurity;
+
+    public TagEngine(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        WebItemSecurity webItemSecurity,
+        IOptionsMonitor<ILog> option)
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string UserId => SecurityContext.CurrentAccount.ID.ToString();
+        _tenantManager = tenantManager;
+        _securityContext = securityContext;
 
-        private TenantManager TenantManager { get; }
-        private SecurityContext SecurityContext { get; }
-        private ILog Log { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        public TagEngine(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            WebItemSecurity webItemSecurity,
-            IOptionsMonitor<ILog> option)
+        _mailDaoFactory = mailDaoFactory;
+
+        _webItemSecurity = webItemSecurity;
+
+        _log = option.Get("ASC.Mail.TagEngine");
+    }
+
+    public Tag GetTag(int id)
+    {
+        return _mailDaoFactory.GetTagDao().GetTag(id);
+    }
+
+    public Tag GetTag(string name)
+    {
+        return _mailDaoFactory.GetTagDao().GetTag(name);
+    }
+
+    public List<Tag> GetTags()
+    {
+        var tagList = _mailDaoFactory.GetTagDao().GetTags();
+
+        if (!_webItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID))
         {
-            TenantManager = tenantManager;
-            SecurityContext = securityContext;
-
-            MailDaoFactory = mailDaoFactory;
-
-            WebItemSecurity = webItemSecurity;
-
-            Log = option.Get("ASC.Mail.TagEngine");
-        }
-
-        public Tag GetTag(int id)
-        {
-            return MailDaoFactory.GetTagDao().GetTag(id);
-        }
-
-        public Tag GetTag(string name)
-        {
-            return MailDaoFactory.GetTagDao().GetTag(name);
-        }
-
-        public List<Tag> GetTags()
-        {
-            var tagList = MailDaoFactory.GetTagDao().GetTags();
-
-            if (!WebItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID))
-            {
-                return tagList
-                    .Where(p => p.TagName != "")
-                    .OrderByDescending(p => p.Id)
-                    .ToList();
-            }
-
-            var actualCrmTags = MailDaoFactory.GetTagDao().GetCrmTags();
-
-            var removedCrmTags =
-                tagList.Where(t => t.Id < 0 && !actualCrmTags.Exists(ct => ct.Id == t.Id))
-                    .ToList();
-
-            if (removedCrmTags.Any())
-            {
-                MailDaoFactory.GetTagDao().DeleteTags(removedCrmTags.Select(t => t.Id).ToList());
-                removedCrmTags.ForEach(t => tagList.Remove(t));
-            }
-
-            foreach (var crmTag in actualCrmTags)
-            {
-                var tag = tagList.FirstOrDefault(t => t.Id == crmTag.Id);
-                if (tag != null)
-                    tag.TagName = crmTag.TagName;
-                else
-                    tagList.Add(crmTag);
-            }
-
             return tagList
-                .Where(p => !string.IsNullOrEmpty(p.TagName))
+                .Where(p => p.TagName != "")
                 .OrderByDescending(p => p.Id)
                 .ToList();
         }
 
-        public List<CrmTag> GetCrmTags(string email)
-        {
-            var tags = new List<CrmTag>();
+        var actualCrmTags = _mailDaoFactory.GetTagDao().GetCrmTags();
 
-            var allowedContactIds = MailDaoFactory.GetCrmContactDao().GetCrmContactIds(email);
-
-            if (!allowedContactIds.Any())
-                return tags;
-
-            tags = MailDaoFactory.GetTagDao().GetCrmTags(allowedContactIds);
-
-            return tags
-                .Where(p => !string.IsNullOrEmpty(p.TagTitle))
-                .OrderByDescending(p => p.TagId)
+        var removedCrmTags =
+            tagList.Where(t => t.Id < 0 && !actualCrmTags.Exists(ct => ct.Id == t.Id))
                 .ToList();
+
+        if (removedCrmTags.Any())
+        {
+            _mailDaoFactory.GetTagDao().DeleteTags(removedCrmTags.Select(t => t.Id).ToList());
+            removedCrmTags.ForEach(t => tagList.Remove(t));
         }
 
-        public bool IsTagExists(string name)
+        foreach (var crmTag in actualCrmTags)
         {
-            var tag = MailDaoFactory.GetTagDao().GetTag(name);
-
-            return tag != null;
-
+            var tag = tagList.FirstOrDefault(t => t.Id == crmTag.Id);
+            if (tag != null)
+                tag.TagName = crmTag.TagName;
+            else
+                tagList.Add(crmTag);
         }
 
-        public Tag CreateTag(string name, string style, IEnumerable<string> addresses)
+        return tagList
+            .Where(p => !string.IsNullOrEmpty(p.TagName))
+            .OrderByDescending(p => p.Id)
+            .ToList();
+    }
+
+    public List<CrmTag> GetCrmTags(string email)
+    {
+        var tags = new List<CrmTag>();
+
+        var allowedContactIds = _mailDaoFactory.GetCrmContactDao().GetCrmContactIds(email);
+
+        if (!allowedContactIds.Any())
+            return tags;
+
+        tags = _mailDaoFactory.GetTagDao().GetCrmTags(allowedContactIds);
+
+        return tags
+            .Where(p => !string.IsNullOrEmpty(p.TagTitle))
+            .OrderByDescending(p => p.TagId)
+            .ToList();
+    }
+
+    public bool IsTagExists(string name)
+    {
+        var tag = _mailDaoFactory.GetTagDao().GetTag(name);
+
+        return tag != null;
+
+    }
+
+    public Tag CreateTag(string name, string style, IEnumerable<string> addresses)
+    {
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentNullException("name");
+
+        //TODO: Need transaction?
+
+        var tag = _mailDaoFactory.GetTagDao().GetTag(name);
+
+        if (tag != null)
+            throw new ArgumentException("Tag name already exists");
+
+        var emails = addresses as IList<string> ?? addresses.ToList();
+
+        tag = new Tag
         {
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentNullException("name");
+            Id = 0,
+            TagName = name,
+            Tenant = Tenant,
+            User = UserId,
+            Addresses = string.Join(";", emails),
+            Style = style,
+            Count = 0,
+            CrmId = 0
+        };
 
-            //TODO: Need transaction?
+        var id = _mailDaoFactory.GetTagDao().SaveTag(tag);
 
-            var tag = MailDaoFactory.GetTagDao().GetTag(name);
+        if (id < 0)
+            throw new Exception("Save failed");
+
+        foreach (var email in emails)
+        {
+            _mailDaoFactory.GetTagAddressDao().Save(id, email);
+        }
+
+        tag.Id = id;
+
+        //Commit transaction
+
+        return tag;
+    }
+
+    public Tag UpdateTag(int id, string name, string style, IEnumerable<string> addresses)
+    {
+        var tag = _mailDaoFactory.GetTagDao().GetTag(id);
+
+        if (tag == null)
+            throw new ArgumentException(@"Tag not found");
+
+        if (!tag.TagName.Equals(name))
+        {
+            var tagByName = _mailDaoFactory.GetTagDao().GetTag(name);
+
+            if (tagByName != null && tagByName.Id != id)
+                throw new ArgumentException(@"Tag name already exists");
+
+            tag.TagName = name;
+            tag.Style = style;
+        }
+
+        //Start transaction
+        var oldAddresses = _mailDaoFactory.GetTagAddressDao().GetTagAddresses(tag.Id);
+
+        var newAddresses = addresses as IList<string> ?? addresses.ToList();
+        tag.Addresses = string.Join(";", newAddresses);
+
+        _mailDaoFactory.GetTagDao().SaveTag(tag);
+
+        if (!newAddresses.Any())
+        {
+            if (oldAddresses.Any())
+                _mailDaoFactory.GetTagAddressDao().Delete(tag.Id);
+        }
+        else
+        {
+            foreach (var oldAddress in oldAddresses)
+            {
+                if (!newAddresses.Contains(oldAddress))
+                {
+                    _mailDaoFactory.GetTagAddressDao().Delete(tag.Id, oldAddress);
+                }
+            }
+
+            foreach (var newAddress in newAddresses)
+            {
+                if (!oldAddresses.Contains(newAddress))
+                {
+                    _mailDaoFactory.GetTagAddressDao().Save(tag.Id, newAddress);
+                }
+            }
+        }
+
+        //Commit transaction
+
+        return tag;
+    }
+
+    public bool DeleteTag(int id)
+    {
+        //Begin transaction
+
+        _mailDaoFactory.GetTagDao().DeleteTag(id);
+
+        _mailDaoFactory.GetTagAddressDao().Delete(id);
+
+        _mailDaoFactory.GetTagMailDao().DeleteByTagId(id);
+
+        //Commit transaction
+
+        return true;
+    }
+
+    public List<int> GetOrCreateTags(int tenant, string user, string[] names)
+    {
+        var tagIds = new List<int>();
+
+        if (!names.Any())
+            return tagIds;
+
+
+        var tags = _mailDaoFactory.GetTagDao().GetTags();
+
+        foreach (var name in names)
+        {
+            var tag =
+                tags.FirstOrDefault(t => t.TagName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
 
             if (tag != null)
-                throw new ArgumentException("Tag name already exists");
-
-            var emails = addresses as IList<string> ?? addresses.ToList();
+            {
+                tagIds.Add(tag.Id);
+                continue;
+            }
 
             tag = new Tag
             {
                 Id = 0,
                 TagName = name,
-                Tenant = Tenant,
-                User = UserId,
-                Addresses = string.Join(";", emails),
-                Style = style,
+                Addresses = "",
                 Count = 0,
-                CrmId = 0
+                CrmId = 0,
+                Style = (Math.Abs(name.GetHashCode() % 16) + 1).ToString(CultureInfo.InvariantCulture),
+                Tenant = tenant,
+                User = user
             };
 
-            var id = MailDaoFactory.GetTagDao().SaveTag(tag);
+            var id = _mailDaoFactory.GetTagDao().SaveTag(tag);
 
-            if (id < 0)
-                throw new Exception("Save failed");
-
-            foreach (var email in emails)
+            if (id > 0)
             {
-                MailDaoFactory.GetTagAddressDao().Save(id, email);
+                _log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
+                    name, id);
+
+                tagIds.Add(id);
             }
-
-            tag.Id = id;
-
-            //Commit transaction
-
-            return tag;
         }
 
-        public Tag UpdateTag(int id, string name, string style, IEnumerable<string> addresses)
+        return tagIds;
+    }
+
+    public void SetMessagesTag(List<int> messageIds, int tagId)
+    {
+        using (var tx = _mailDaoFactory.BeginTransaction())
         {
-            var tag = MailDaoFactory.GetTagDao().GetTag(id);
-
-            if (tag == null)
-                throw new ArgumentException(@"Tag not found");
-
-            if (!tag.TagName.Equals(name))
+            if (!SetMessagesTag(_mailDaoFactory, messageIds, tagId))
             {
-                var tagByName = MailDaoFactory.GetTagDao().GetTag(name);
-
-                if (tagByName != null && tagByName.Id != id)
-                    throw new ArgumentException(@"Tag name already exists");
-
-                tag.TagName = name;
-                tag.Style = style;
+                tx.Rollback();
+                return;
             }
 
-            //Start transaction
-            var oldAddresses = MailDaoFactory.GetTagAddressDao().GetTagAddresses(tag.Id);
-
-            var newAddresses = addresses as IList<string> ?? addresses.ToList();
-            tag.Addresses = string.Join(";", newAddresses);
-
-            MailDaoFactory.GetTagDao().SaveTag(tag);
-
-            if (!newAddresses.Any())
-            {
-                if (oldAddresses.Any())
-                    MailDaoFactory.GetTagAddressDao().Delete(tag.Id);
-            }
-            else
-            {
-                foreach (var oldAddress in oldAddresses)
-                {
-                    if (!newAddresses.Contains(oldAddress))
-                    {
-                        MailDaoFactory.GetTagAddressDao().Delete(tag.Id, oldAddress);
-                    }
-                }
-
-                foreach (var newAddress in newAddresses)
-                {
-                    if (!oldAddresses.Contains(newAddress))
-                    {
-                        MailDaoFactory.GetTagAddressDao().Save(tag.Id, newAddress);
-                    }
-                }
-            }
-
-            //Commit transaction
-
-            return tag;
+            tx.Commit();
         }
 
-        public bool DeleteTag(int id)
+        UpdateIndexerTags(messageIds, UpdateAction.Add, tagId);
+
+        _log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
+            string.Join(",", messageIds));
+    }
+
+    public bool SetMessagesTag(IMailDaoFactory daoFactory, List<int> messageIds, int tagId)
+    {
+        var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
+
+        if (tag == null)
         {
-            //Begin transaction
-
-            MailDaoFactory.GetTagDao().DeleteTag(id);
-
-            MailDaoFactory.GetTagAddressDao().Delete(id);
-
-            MailDaoFactory.GetTagMailDao().DeleteByTagId(id);
-
-            //Commit transaction
-
-            return true;
+            return false;
         }
 
-        public List<int> GetOrCreateTags(int tenant, string user, string[] names)
+        GetValidForUserMessages(messageIds, out List<int> validIds, out List<ChainInfo> chains);
+
+        _mailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
+
+        UpdateTagsCount(tag);
+
+        foreach (var chain in chains)
         {
-            var tagIds = new List<int>();
+            UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
+        }
 
-            if (!names.Any())
-                return tagIds;
+        // Change time_modified for index
+        _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
+        return true;
+    }
 
-            var tags = MailDaoFactory.GetTagDao().GetTags();
+    public void UpdateChainTags(string chainId, FolderType folder, int mailboxId)
+    {
+        var tags = _mailDaoFactory.GetTagMailDao().GetChainTags(chainId, folder, mailboxId);
 
-            foreach (var name in names)
+        var updateQuery = SimpleConversationsExp.CreateBuilder(Tenant, UserId)
+                .SetChainId(chainId)
+                .SetMailboxId(mailboxId)
+                .SetFolder((int)folder)
+                .Build();
+
+        _mailDaoFactory.GetChainDao().SetFieldValue(
+            updateQuery,
+            "Tags",
+            tags);
+    }
+
+    public void UnsetMessagesTag(List<int> messageIds, int tagId)
+    {
+        List<int> validIds;
+
+        using (var tx = _mailDaoFactory.BeginTransaction())
+        {
+            GetValidForUserMessages(messageIds, out validIds, out List<ChainInfo> chains);
+
+            _mailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
+
+            var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
+
+            if (tag != null)
+                UpdateTagsCount(tag);
+
+            foreach (var chain in chains)
             {
-                var tag =
-                    tags.FirstOrDefault(t => t.TagName.Equals(name, StringComparison.InvariantCultureIgnoreCase));
-
-                if (tag != null)
-                {
-                    tagIds.Add(tag.Id);
-                    continue;
-                }
-
-                tag = new Tag
-                {
-                    Id = 0,
-                    TagName = name,
-                    Addresses = "",
-                    Count = 0,
-                    CrmId = 0,
-                    Style = (Math.Abs(name.GetHashCode() % 16) + 1).ToString(CultureInfo.InvariantCulture),
-                    Tenant = tenant,
-                    User = user
-                };
-
-                var id = MailDaoFactory.GetTagDao().SaveTag(tag);
-
-                if (id > 0)
-                {
-                    Log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
-                        name, id);
-
-                    tagIds.Add(id);
-                }
+                UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
             }
 
-            return tagIds;
+            // Change time_modified for index
+            _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+
+            tx.Commit();
         }
 
-        public void SetMessagesTag(List<int> messageIds, int tagId)
+        UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
+    }
+
+    public void SetConversationsTag(IEnumerable<int> messagesIds, int tagId)
+    {
+        var ids = messagesIds as IList<int> ?? messagesIds.ToList();
+
+        if (!ids.Any()) return;
+
+        List<int> validIds;
+
+        using (var tx = _mailDaoFactory.BeginTransaction())
         {
-            using (var tx = MailDaoFactory.BeginTransaction())
-            {
-                if (!SetMessagesTag(MailDaoFactory, messageIds, tagId))
-                {
-                    tx.Rollback();
-                    return;
-                }
-
-                tx.Commit();
-            }
-
-            UpdateIndexerTags(messageIds, UpdateAction.Add, tagId);
-
-            Log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
-                string.Join(",", messageIds));
-        }
-
-        public bool SetMessagesTag(IMailDaoFactory daoFactory, List<int> messageIds, int tagId)
-        {
-            var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
+            var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
             if (tag == null)
             {
-                return false;
+                tx.Rollback();
+                return;
             }
 
-            GetValidForUserMessages(messageIds, out List<int> validIds, out List<ChainInfo> chains);
+            var foundedChains = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
 
-            MailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
+            if (!foundedChains.Any())
+            {
+                tx.Rollback();
+                return;
+            }
+
+            validIds = foundedChains.Select(r => r.Id).ToList();
+            var chains =
+                foundedChains.GroupBy(r => new { r.ChainId, r.Folder, r.MailboxId })
+                    .Select(
+                        r =>
+                            new ChainInfo
+                            {
+                                Id = r.Key.ChainId,
+                                Folder = r.Key.Folder,
+                                MailboxId = r.Key.MailboxId
+                            });
+
+            _mailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
 
             UpdateTagsCount(tag);
 
@@ -347,228 +431,129 @@ namespace ASC.Mail.Core.Engine
             }
 
             // Change time_modified for index
-            MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+            _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
-            return true;
+            tx.Commit();
         }
 
-        public void UpdateChainTags(string chainId, FolderType folder, int mailboxId)
+        UpdateIndexerTags(validIds, UpdateAction.Add, tagId);
+    }
+
+    public void UnsetConversationsTag(IEnumerable<int> messagesIds, int tagId)
+    {
+        var ids = messagesIds as IList<int> ?? messagesIds.ToList();
+
+        if (!ids.Any()) return;
+
+        List<int> validIds;
+
+        using (var tx = _mailDaoFactory.BeginTransaction())
         {
-            var tags = MailDaoFactory.GetTagMailDao().GetChainTags(chainId, folder, mailboxId);
+            var foundedChains = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
 
-            var updateQuery = SimpleConversationsExp.CreateBuilder(Tenant, UserId)
-                    .SetChainId(chainId)
-                    .SetMailboxId(mailboxId)
-                    .SetFolder((int)folder)
-                    .Build();
-
-            MailDaoFactory.GetChainDao().SetFieldValue(
-                updateQuery,
-                "Tags",
-                tags);
-        }
-
-        public void UnsetMessagesTag(List<int> messageIds, int tagId)
-        {
-            List<int> validIds;
-
-            using (var tx = MailDaoFactory.BeginTransaction())
+            if (!foundedChains.Any())
             {
-                GetValidForUserMessages(messageIds, out validIds, out List<ChainInfo> chains);
-
-                MailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
-
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
-
-                if (tag != null)
-                    UpdateTagsCount(tag);
-
-                foreach (var chain in chains)
-                {
-                    UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
-                }
-
-                // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
-
-                tx.Commit();
+                tx.Rollback();
+                return;
             }
 
-            UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
-        }
+            validIds = foundedChains.Select(r => r.Id).ToList();
 
-        public void SetConversationsTag(IEnumerable<int> messagesIds, int tagId)
-        {
-            var ids = messagesIds as IList<int> ?? messagesIds.ToList();
+            var chains =
+                foundedChains.GroupBy(r => new { r.ChainId, r.Folder, r.MailboxId })
+                    .Select(
+                        r =>
+                            new ChainInfo
+                            {
+                                Id = r.Key.ChainId,
+                                Folder = r.Key.Folder,
+                                MailboxId = r.Key.MailboxId
+                            });
 
-            if (!ids.Any()) return;
+            _mailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
 
-            List<int> validIds;
+            var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
-            using (var tx = MailDaoFactory.BeginTransaction())
-            {
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
-
-                if (tag == null)
-                {
-                    tx.Rollback();
-                    return;
-                }
-
-                var foundedChains = MailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
-
-                if (!foundedChains.Any())
-                {
-                    tx.Rollback();
-                    return;
-                }
-
-                validIds = foundedChains.Select(r => r.Id).ToList();
-                var chains =
-                    foundedChains.GroupBy(r => new { r.ChainId, r.Folder, r.MailboxId })
-                        .Select(
-                            r =>
-                                new ChainInfo
-                                {
-                                    Id = r.Key.ChainId,
-                                    Folder = r.Key.Folder,
-                                    MailboxId = r.Key.MailboxId
-                                });
-
-                MailDaoFactory.GetTagMailDao().SetMessagesTag(validIds, tag.Id);
-
+            if (tag != null)
                 UpdateTagsCount(tag);
 
-                foreach (var chain in chains)
-                {
-                    UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
-                }
-
-                // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
-
-                tx.Commit();
-            }
-
-            UpdateIndexerTags(validIds, UpdateAction.Add, tagId);
-        }
-
-        public void UnsetConversationsTag(IEnumerable<int> messagesIds, int tagId)
-        {
-            var ids = messagesIds as IList<int> ?? messagesIds.ToList();
-
-            if (!ids.Any()) return;
-
-            List<int> validIds;
-
-            using (var tx = MailDaoFactory.BeginTransaction())
+            foreach (var chain in chains)
             {
-                var foundedChains = MailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
-
-                if (!foundedChains.Any())
-                {
-                    tx.Rollback();
-                    return;
-                }
-
-                validIds = foundedChains.Select(r => r.Id).ToList();
-
-                var chains =
-                    foundedChains.GroupBy(r => new { r.ChainId, r.Folder, r.MailboxId })
-                        .Select(
-                            r =>
-                                new ChainInfo
-                                {
-                                    Id = r.Key.ChainId,
-                                    Folder = r.Key.Folder,
-                                    MailboxId = r.Key.MailboxId
-                                });
-
-                MailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
-
-                var tag = MailDaoFactory.GetTagDao().GetTag(tagId);
-
-                if (tag != null)
-                    UpdateTagsCount(tag);
-
-                foreach (var chain in chains)
-                {
-                    UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
-                }
-
-                // Change time_modified for index
-                MailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
-
-                tx.Commit();
+                UpdateChainTags(chain.Id, chain.Folder, chain.MailboxId);
             }
 
-            UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
+            // Change time_modified for index
+            _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
+
+            tx.Commit();
         }
 
-        private void UpdateIndexerTags(List<int> ids, UpdateAction action, int tagId)
-        {
-            //TODO: because error when query
+        UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
+    }
 
-            /*
-             * Type: script_exception Reason: "runtime error" 
-             * CausedBy: "Type: illegal_argument_exception 
-             * Reason: "dynamic method [java.util.HashMap, contains/1] not found""
-             */
+    private void UpdateIndexerTags(List<int> ids, UpdateAction action, int tagId)
+    {
+        //TODO: because error when query
 
-            //var t = ServiceProvider.GetService<MailMail>();
-            //if (!FactoryIndexer.Support(t) || !FactoryIndexerCommon.CheckState(false))
+        /*
+         * Type: script_exception Reason: "runtime error" 
+         * CausedBy: "Type: illegal_argument_exception 
+         * Reason: "dynamic method [java.util.HashMap, contains/1] not found""
+         */
+
+        //var t = ServiceProvider.GetService<MailMail>();
+        //if (!FactoryIndexer.Support(t) || !FactoryIndexerCommon.CheckState(false))
+        return;
+
+        /*if (ids == null || !ids.Any())
             return;
 
-            /*if (ids == null || !ids.Any())
-                return;
-
-            var data = new MailMail
-            {
-                Tags = new List<MailTag>
-                    {
-                        new MailTag
-                        {
-                            Id = tagId
-                        }
-                    }
-            };
-
-            Expression<Func<Selector<MailMail>, Selector<MailMail>>> exp =
-                s => s.In(m => m.Id, ids.ToArray());
-
-            IndexEngine.Update(data, exp, action, s => s.Tags.ToList());*/
-        }
-
-        private void UpdateTagsCount(Tag tag)
+        var data = new MailMail
         {
-            var count = MailDaoFactory.GetTagMailDao().CalculateTagCount(tag.Id);
-
-            tag.Count = count;
-
-            MailDaoFactory.GetTagDao().SaveTag(tag);
-        }
-
-        private void GetValidForUserMessages(List<int> messagesIds, out List<int> validIds,
-            out List<ChainInfo> chains)
-        {
-            var mailInfoList = MailDaoFactory.GetMailInfoDao().GetMailInfoList(
-                SimpleMessagesExp.CreateBuilder(Tenant, UserId)
-                    .SetMessageIds(messagesIds)
-                    .Build());
-
-            validIds = new List<int>();
-            chains = new List<ChainInfo>();
-
-            foreach (var mailInfo in mailInfoList)
-            {
-                validIds.Add(mailInfo.Id);
-                chains.Add(new ChainInfo
+            Tags = new List<MailTag>
                 {
-                    Id = mailInfo.ChainId,
-                    Folder = mailInfo.Folder,
-                    MailboxId = mailInfo.MailboxId
-                });
-            }
+                    new MailTag
+                    {
+                        Id = tagId
+                    }
+                }
+        };
+
+        Expression<Func<Selector<MailMail>, Selector<MailMail>>> exp =
+            s => s.In(m => m.Id, ids.ToArray());
+
+        IndexEngine.Update(data, exp, action, s => s.Tags.ToList());*/
+    }
+
+    private void UpdateTagsCount(Tag tag)
+    {
+        var count = _mailDaoFactory.GetTagMailDao().CalculateTagCount(tag.Id);
+
+        tag.Count = count;
+
+        _mailDaoFactory.GetTagDao().SaveTag(tag);
+    }
+
+    private void GetValidForUserMessages(List<int> messagesIds, out List<int> validIds,
+        out List<ChainInfo> chains)
+    {
+        var mailInfoList = _mailDaoFactory.GetMailInfoDao().GetMailInfoList(
+            SimpleMessagesExp.CreateBuilder(Tenant, UserId)
+                .SetMessageIds(messagesIds)
+                .Build());
+
+        validIds = new List<int>();
+        chains = new List<ChainInfo>();
+
+        foreach (var mailInfo in mailInfoList)
+        {
+            validIds.Add(mailInfo.Id);
+            chains.Add(new ChainInfo
+            {
+                Id = mailInfo.ChainId,
+                Folder = mailInfo.Folder,
+                MailboxId = mailInfo.MailboxId
+            });
         }
     }
 }

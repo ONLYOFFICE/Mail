@@ -23,21 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Contact;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Contact
+public interface IContactsExp
 {
-    public interface IContactsExp
-    {
-        bool? OrderAsc { get; }
+    bool? OrderAsc { get; }
 
-        int? StartIndex { get; }
+    int? StartIndex { get; }
 
-        int? Limit { get; }
+    int? Limit { get; }
 
-        Expression<Func<MailContact, bool>> GetExpression();
-    }
+    Expression<Func<MailContact, bool>> GetExpression();
 }

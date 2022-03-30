@@ -23,19 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum MailAlertTypes
 {
-    public enum MailAlertTypes
-    {
-        Empty = 0,
-        DeliveryFailure = 1,
-        LinkFailure = 2,
-        ExportFailure = 3,
-        UploadFailure = 4,
-        DisableAllMailboxes = 5,
-        AuthConnectFailure = 6,
-        TooManyAuthError = 7,
-        QuotaError = 8
-    }
+    Empty = 0,
+    DeliveryFailure = 1,
+    LinkFailure = 2,
+    ExportFailure = 3,
+    UploadFailure = 4,
+    DisableAllMailboxes = 5,
+    AuthConnectFailure = 6,
+    TooManyAuthError = 7,
+    QuotaError = 8
 }

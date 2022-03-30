@@ -24,14 +24,14 @@
 */
 
 
-using System;
-using System.Linq;
-
 using ASC.Common;
 using ASC.Core;
 using ASC.Mail.Core.Resources;
 using ASC.Web.Core;
 using ASC.Web.Mail.Classes;
+
+using System;
+using System.Linq;
 
 namespace ASC.Mail.Configuration
 {
@@ -42,18 +42,18 @@ namespace ASC.Mail.Configuration
 
         public static readonly Guid ID = WebItemManager.MailProductID;
 
-        private AuthContext AuthContext { get; }
-        private UserManager UserManager { get; }
-        private PathProvider PathProvider { get; }
+        private readonly AuthContext _authContext;
+        private readonly UserManager _userManager;
+        private readonly PathProvider _pathProvider;
 
         public ProductEntryPoint(
             AuthContext authContext,
             UserManager userManager,
             PathProvider pathProvider)
         {
-            AuthContext = authContext;
-            UserManager = userManager;
-            PathProvider = pathProvider;
+            _authContext = authContext;
+            _userManager = userManager;
+            _pathProvider = pathProvider;
         }
 
         public override Guid ProductID
@@ -73,7 +73,7 @@ namespace ASC.Mail.Configuration
 
         public override string StartURL
         {
-            get { return PathProvider.BaseAbsolutePath; }
+            get { return _pathProvider.BaseAbsolutePath; }
         }
 
         public override string HelpURL

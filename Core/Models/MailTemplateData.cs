@@ -23,23 +23,19 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System.Collections.Generic;
-using ASC.Mail.Enums;
-using ASC.Mail.Models.Base;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+public class MailTemplateData : MailComposeBase
 {
-    public class MailTemplateData : MailComposeBase
+    public MailTemplateData(int id, MailBoxData mailBoxData, string from, List<string> to, List<string> cc,
+        List<string> bcc,
+        string subject, string mimeMessageId, string mimeReplyToId, bool important,
+        List<int> tags, string body, string streamId, List<MailAttachmentData> attachments, string calendarIcs = "")
+        : base(
+            id, mailBoxData, FolderType.Templates, from, to, cc, bcc, subject, mimeMessageId, mimeReplyToId, important,
+            tags, body, streamId, attachments, calendarIcs)
     {
-        public MailTemplateData(int id, MailBoxData mailBoxData, string from, List<string> to, List<string> cc,
-            List<string> bcc,
-            string subject, string mimeMessageId, string mimeReplyToId, bool important,
-            List<int> tags, string body, string streamId, List<MailAttachmentData> attachments, string calendarIcs = "")
-            : base(
-                id, mailBoxData, FolderType.Templates, from, to, cc, bcc, subject, mimeMessageId, mimeReplyToId, important,
-                tags, body, streamId, attachments, calendarIcs)
-        {
-        }
     }
 }

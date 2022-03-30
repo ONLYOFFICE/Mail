@@ -23,17 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class ServerGroup
 {
-    public class ServerGroup
-    {
-        public int Id { get; set; }
-        public int Tenant { get; set; }
-        public int AddressId { get; set; }
-        public string Address { get; set; }
-        public DateTime DateCreated { get; set; }
-    }
+    public int Id { get; set; }
+    public int Tenant { get; set; }
+    public int AddressId { get; set; }
+    public string Address { get; set; }
+    public DateTime DateCreated { get; set; }
 }

@@ -23,112 +23,100 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
+namespace ASC.Mail.Core.Engine;
 
-using Microsoft.Extensions.Options;
-
-using System;
-using System.IO;
-using System.Linq;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class CalendarEngine
 {
-    [Scope]
-    public class CalendarEngine
+    private readonly ILog _log;
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+    private readonly ApiHelper _apiHelper;
+
+    public CalendarEngine(SecurityContext securityContext,
+        TenantManager tenantManager,
+        ApiHelper apiHelper,
+        IOptionsMonitor<ILog> option)
     {
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private ApiHelper ApiHelper { get; }
+        _securityContext = securityContext;
+        _tenantManager = tenantManager;
+        _apiHelper = apiHelper;
+        _log = option.Get("ASC.Mail.CalendarEngine");
+    }
 
-        public CalendarEngine(SecurityContext securityContext,
-            TenantManager tenantManager,
-            ApiHelper apiHelper,
-            IOptionsMonitor<ILog> option)
+    public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
+        string calendarCharset, string calendarContentType)
+    {
+        try
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            ApiHelper = apiHelper;
-            Log = option.Get("ASC.Mail.CalendarEngine");
+            if (string.IsNullOrEmpty(calendarEventUid) ||
+                string.IsNullOrEmpty(calendarIcs) ||
+                calendarContentType != "text/calendar")
+                return;
+
+            var calendar = MailUtil.ParseValidCalendar(calendarIcs, _log);
+
+            if (calendar == null)
+                return;
+
+            var alienEvent = true;
+
+            var organizer = calendar.Events[0].Organizer;
+
+            if (organizer != null)
+            {
+                var orgEmail = calendar.Events[0].Organizer.Value.ToString()
+                    .ToLowerInvariant()
+                    .Replace("mailto:", "");
+
+                if (orgEmail.Equals(mailBoxData.EMail.Address))
+                    alienEvent = false;
+            }
+            else
+            {
+                throw new ArgumentException("calendarIcs.organizer is null");
+            }
+
+            if (alienEvent)
+            {
+                if (calendar.Events[0].Attendees.Any(
+                    a =>
+                        a.Value.ToString()
+                            .ToLowerInvariant()
+                            .Replace("mailto:", "")
+                            .Equals(mailBoxData.EMail.Address)))
+                {
+                    alienEvent = false;
+                }
+            }
+
+            if (alienEvent)
+                return;
+
+            _tenantManager.SetCurrentTenant(mailBoxData.TenantId);
+            _securityContext.AuthenticateMe(new Guid(mailBoxData.UserId));
+
+            using (var ms = new MemoryStream(EncodingTools.GetEncodingByCodepageName(calendarCharset).GetBytes(calendarIcs)))
+            {
+                _apiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
+            }
+
+            _log.Info("CalendarEngine->UploadIcsToCalendar() has been succeeded");
         }
-
-        public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
-            string calendarCharset, string calendarContentType)
+        catch (Exception ex)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(calendarEventUid) ||
-                    string.IsNullOrEmpty(calendarIcs) ||
-                    calendarContentType != "text/calendar")
-                    return;
-
-                var calendar = MailUtil.ParseValidCalendar(calendarIcs, Log);
-
-                if (calendar == null)
-                    return;
-
-                var alienEvent = true;
-
-                var organizer = calendar.Events[0].Organizer;
-
-                if (organizer != null)
-                {
-                    var orgEmail = calendar.Events[0].Organizer.Value.ToString()
-                        .ToLowerInvariant()
-                        .Replace("mailto:", "");
-
-                    if (orgEmail.Equals(mailBoxData.EMail.Address))
-                        alienEvent = false;
-                }
-                else
-                {
-                    throw new ArgumentException("calendarIcs.organizer is null");
-                }
-
-                if (alienEvent)
-                {
-                    if (calendar.Events[0].Attendees.Any(
-                        a =>
-                            a.Value.ToString()
-                                .ToLowerInvariant()
-                                .Replace("mailto:", "")
-                                .Equals(mailBoxData.EMail.Address)))
-                    {
-                        alienEvent = false;
-                    }
-                }
-
-                if (alienEvent)
-                    return;
-
-                TenantManager.SetCurrentTenant(mailBoxData.TenantId);
-                SecurityContext.AuthenticateMe(new Guid(mailBoxData.UserId));
-
-                using (var ms = new MemoryStream(EncodingTools.GetEncodingByCodepageName(calendarCharset).GetBytes(calendarIcs)))
-                {
-                    ApiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
-                }
-
-                Log.Info("CalendarEngine->UploadIcsToCalendar() has been succeeded");
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("CalendarEngine->UploadIcsToCalendar with \r\n" +
-                          "calendarId: {0}\r\n" +
-                          "calendarEventUid: '{1}'\r\n" +
-                          "calendarIcs: '{2}'\r\n" +
-                          "calendarCharset: '{3}'\r\n" +
-                          "calendarContentType: '{4}'\r\n" +
-                          "calendarEventReceiveEmail: '{5}'\r\n" +
-                          "Exception:\r\n{6}\r\n",
-                    calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
-                    mailBoxData.EMail.Address, ex.ToString());
-            }
+            _log.ErrorFormat("CalendarEngine->UploadIcsToCalendar with \r\n" +
+                      "calendarId: {0}\r\n" +
+                      "calendarEventUid: '{1}'\r\n" +
+                      "calendarIcs: '{2}'\r\n" +
+                      "calendarCharset: '{3}'\r\n" +
+                      "calendarContentType: '{4}'\r\n" +
+                      "calendarEventReceiveEmail: '{5}'\r\n" +
+                      "Exception:\r\n{6}\r\n",
+                calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
+                mailBoxData.EMail.Address, ex.ToString());
         }
     }
 }

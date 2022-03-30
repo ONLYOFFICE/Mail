@@ -23,35 +23,30 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "NotificationAddress")]
+public class ServerNotificationAddressData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "NotificationAddress")]
-    public class ServerNotificationAddressData
-    {
-        [DataMember(IsRequired = true)]
-        public string Email { get; set; }
+    [DataMember(IsRequired = true)]
+    public string Email { get; set; }
 
-        [DataMember(Name = "smtp_server")]
-        public string SmtpServer { get; set; }
+    [DataMember(Name = "smtp_server")]
+    public string SmtpServer { get; set; }
 
-        [DataMember(Name = "smtp_port")]
-        public int SmtpPort { get; set; }
+    [DataMember(Name = "smtp_port")]
+    public int SmtpPort { get; set; }
 
-        [DataMember(Name = "smtp_account")]
-        public string SmtpAccount { get; set; }
+    [DataMember(Name = "smtp_account")]
+    public string SmtpAccount { get; set; }
 
-        [DataMember(Name = "smtp_auth")]
-        public bool SmtpAuth { get; set; }
+    [DataMember(Name = "smtp_auth")]
+    public bool SmtpAuth { get; set; }
 
-        [DataMember(Name = "smtp_encryption_type")]
-        public string SmptEncryptionType { get; set; }
+    [DataMember(Name = "smtp_encryption_type")]
+    public string SmptEncryptionType { get; set; }
 
-        [DataMember(Name = "smtp_auth_type")]
-        public string SmtpAuthenticationType { get; set; }
-    }
+    [DataMember(Name = "smtp_auth_type")]
+    public string SmtpAuthenticationType { get; set; }
 }

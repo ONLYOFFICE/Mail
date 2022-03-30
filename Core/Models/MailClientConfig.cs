@@ -31,323 +31,310 @@
 //  </auto-generated>
 // ------------------------------------------------------------------------------
 
-using System;
-using System.CodeDom.Compiler;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Xml;
-using System.Xml.Serialization;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+#region Base entity class
+public class EntityBase<T>
 {
-    #region Base entity class
-    public class EntityBase<T>
+    private static XmlSerializer _serializer;
+
+    private static XmlSerializer Serializer
     {
-
-// ReSharper disable StaticFieldInGenericType
-        private static XmlSerializer _serializer;
-// ReSharper restore StaticFieldInGenericType
-
-        private static XmlSerializer Serializer
+        get
         {
-            get
+            if ((_serializer == null))
             {
-                if ((_serializer == null))
-                {
-                    _serializer = new XmlSerializer(typeof(T));
-                }
-                return _serializer;
+                _serializer = new XmlSerializer(typeof(T));
             }
+            return _serializer;
         }
-
-        #region Serialize/Deserialize
-
-        /// <summary>
-        /// Serializes current EntityBase object into an XML document
-        /// </summary>
-        /// <returns>string XML value</returns>
-        public virtual string Serialize()
-        {
-            using (var memoryStream = new MemoryStream())
-            {
-                Serializer.Serialize(memoryStream, this);
-                memoryStream.Seek(0, SeekOrigin.Begin);
-                using (var streamReader = new StreamReader(memoryStream))
-                {
-                    return streamReader.ReadToEnd();
-                }
-            }
-
-        }
-
-        /// <summary>
-        /// Serializes current EntityBase object into file
-        /// </summary>
-        /// <param name="fileName">full path of outupt xml file</param>
-        /// <param name="exception">output Exception value if failed</param>
-        /// <returns>true if can serialize and save into file; otherwise, false</returns>
-        public virtual bool SaveToFile(string fileName, out Exception exception)
-        {
-            exception = null;
-            try
-            {
-                SaveToFile(fileName);
-                return true;
-            }
-            catch (Exception e)
-            {
-                exception = e;
-                return false;
-            }
-        }
-
-        public virtual void SaveToFile(string fileName)
-        {
-            var xmlString = Serialize();
-            var xmlFile = new FileInfo(fileName);
-            using (var streamWriter = xmlFile.CreateText())
-            {
-                streamWriter.WriteLine(xmlString);
-            }
-        }
-
-        /// <summary>
-        /// Deserializes xml markup from file into an EntityBase object
-        /// </summary>
-        /// <param name="fileName">string xml file to load and deserialize</param>
-        /// <param name="obj">Output EntityBase object</param>
-        /// <param name="exception">output Exception value if deserialize failed</param>
-        /// <returns>true if this XmlSerializer can deserialize the object; otherwise, false</returns>
-        public static bool LoadFromFile(string fileName, out T obj, out Exception exception)
-        {
-            exception = null;
-            obj = default(T);
-            try
-            {
-                obj = LoadFromFile(fileName);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                exception = ex;
-                return false;
-            }
-        }
-
-        public static bool LoadFromFile(string fileName, out T obj)
-        {
-            Exception exception;
-            return LoadFromFile(fileName, out obj, out exception);
-        }
-
-        public static T LoadFromFile(string fileName)
-        {
-            using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read))
-            {
-                using (var sr = new StreamReader(file))
-                {
-                    return ((T) (Serializer.Deserialize(XmlReader.Create(sr))));
-                }
-            }
-        }
-
-        #endregion
     }
+
+    #region Serialize/Deserialize
+
+    /// <summary>
+    /// Serializes current EntityBase object into an XML document
+    /// </summary>
+    /// <returns>string XML value</returns>
+    public virtual string Serialize()
+    {
+        using (var memoryStream = new MemoryStream())
+        {
+            Serializer.Serialize(memoryStream, this);
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using (var streamReader = new StreamReader(memoryStream))
+            {
+                return streamReader.ReadToEnd();
+            }
+        }
+
+    }
+
+    /// <summary>
+    /// Serializes current EntityBase object into file
+    /// </summary>
+    /// <param name="fileName">full path of outupt xml file</param>
+    /// <param name="exception">output Exception value if failed</param>
+    /// <returns>true if can serialize and save into file; otherwise, false</returns>
+    public virtual bool SaveToFile(string fileName, out Exception exception)
+    {
+        exception = null;
+        try
+        {
+            SaveToFile(fileName);
+            return true;
+        }
+        catch (Exception e)
+        {
+            exception = e;
+            return false;
+        }
+    }
+
+    public virtual void SaveToFile(string fileName)
+    {
+        var xmlString = Serialize();
+        var xmlFile = new FileInfo(fileName);
+        using (var streamWriter = xmlFile.CreateText())
+        {
+            streamWriter.WriteLine(xmlString);
+        }
+    }
+
+    /// <summary>
+    /// Deserializes xml markup from file into an EntityBase object
+    /// </summary>
+    /// <param name="fileName">string xml file to load and deserialize</param>
+    /// <param name="obj">Output EntityBase object</param>
+    /// <param name="exception">output Exception value if deserialize failed</param>
+    /// <returns>true if this XmlSerializer can deserialize the object; otherwise, false</returns>
+    public static bool LoadFromFile(string fileName, out T obj, out Exception exception)
+    {
+        exception = null;
+        obj = default(T);
+        try
+        {
+            obj = LoadFromFile(fileName);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+            return false;
+        }
+    }
+
+    public static bool LoadFromFile(string fileName, out T obj)
+    {
+        Exception exception;
+        return LoadFromFile(fileName, out obj, out exception);
+    }
+
+    public static T LoadFromFile(string fileName)
+    {
+        using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read))
+        {
+            using (var sr = new StreamReader(file))
+            {
+                return ((T) (Serializer.Deserialize(XmlReader.Create(sr))));
+            }
+        }
+    }
+
     #endregion
+}
+#endregion
 
-    [GeneratedCode("System.Xml", "2.0.50727.3082")]
-    [Serializable]
-    [DebuggerStepThrough]
-    [DesignerCategory(@"code")]
-    [XmlType(AnonymousType = true)]
-    [XmlRoot("clientConfig", Namespace = "", IsNullable = false)]
-    public class ClientConfig : EntityBase<ClientConfig>
+[GeneratedCode("System.Xml", "2.0.50727.3082")]
+[Serializable]
+[DebuggerStepThrough]
+[DesignerCategory(@"code")]
+[XmlType(AnonymousType = true)]
+[XmlRoot("clientConfig", Namespace = "", IsNullable = false)]
+public class ClientConfig : EntityBase<ClientConfig>
+{
+    private ClientConfigEmailProvider _emailProviderField;
+
+    [XmlAttribute("version")]
+    public decimal Version { get; set; }
+
+    [XmlIgnore]
+    public bool VersionSpecified { get; set; }
+
+    /// <summary>
+    /// clientConfig class constructor
+    /// </summary>
+    public ClientConfig()
     {
-        private ClientConfigEmailProvider _emailProviderField;
+        _emailProviderField = new ClientConfigEmailProvider();
+    }
 
-        [XmlAttribute("version")]
-        public decimal Version { get; set; }
-
-        [XmlIgnore]
-        public bool VersionSpecified { get; set; }
-
-        /// <summary>
-        /// clientConfig class constructor
-        /// </summary>
-        public ClientConfig()
+    [XmlElement("emailProvider", Order = 0)]
+    public ClientConfigEmailProvider EmailProvider
+    {
+        get
         {
-            _emailProviderField = new ClientConfigEmailProvider();
+            return _emailProviderField;
         }
-
-        [XmlElement("emailProvider", Order = 0)]
-        public ClientConfigEmailProvider EmailProvider
+        set
         {
-            get
-            {
-                return _emailProviderField;
-            }
-            set
-            {
-                _emailProviderField = value;
-            }
+            _emailProviderField = value;
+        }
+    }
+}
+
+[GeneratedCode("System.Xml", "2.0.50727.3082")]
+[Serializable]
+[DebuggerStepThrough]
+[DesignerCategory(@"code")]
+[XmlType(AnonymousType = true)]
+[XmlRoot("clientConfigEmailProvider")]
+public class ClientConfigEmailProvider : EntityBase<ClientConfigEmailProvider>
+{
+    private List<string> _domainField;
+
+    private List<ClientConfigEmailProviderIncomingServer> _incomingServerField;
+
+    private List<ClientConfigEmailProviderOutgoingServer> _outgoingServerField;
+
+    private ClientConfigEmailProviderDocumentation _documentationField;
+
+    [XmlElement("displayName", Order = 1)]
+    public string DisplayName { get; set; }
+
+    [XmlElement("displayShortName", Order = 2)]
+    public string DisplayShortName { get; set; }
+
+    [XmlAttribute("id")]
+    public string Id { get; set; }
+
+
+    /// <summary>
+    /// clientConfigEmailProvider class constructor
+    /// </summary>
+    public ClientConfigEmailProvider()
+    {
+        _documentationField = new ClientConfigEmailProviderDocumentation();
+        _outgoingServerField = new List<ClientConfigEmailProviderOutgoingServer>();
+        _incomingServerField = new List<ClientConfigEmailProviderIncomingServer>();
+        _domainField = new List<string>();
+    }
+
+    [XmlElement("domain", Order = 0)]
+    public List<string> Domain
+    {
+        get
+        {
+            return _domainField;
+        }
+        set
+        {
+            _domainField = value;
         }
     }
 
-    [GeneratedCode("System.Xml", "2.0.50727.3082")]
-    [Serializable]
-    [DebuggerStepThrough]
-    [DesignerCategory(@"code")]
-    [XmlType(AnonymousType = true)]
-    [XmlRoot("clientConfigEmailProvider")]
-    public class ClientConfigEmailProvider : EntityBase<ClientConfigEmailProvider>
+    [XmlElement("incomingServer", Order = 3)]
+    public List<ClientConfigEmailProviderIncomingServer> IncomingServer
     {
-        private List<string> _domainField;
-
-        private List<ClientConfigEmailProviderIncomingServer> _incomingServerField;
-
-        private List<ClientConfigEmailProviderOutgoingServer> _outgoingServerField;
-
-        private ClientConfigEmailProviderDocumentation _documentationField;
-
-        [XmlElement("displayName", Order = 1)]
-        public string DisplayName { get; set; }
-
-        [XmlElement("displayShortName", Order = 2)]
-        public string DisplayShortName { get; set; }
-
-        [XmlAttribute("id")]
-        public string Id { get; set; }
-
-
-        /// <summary>
-        /// clientConfigEmailProvider class constructor
-        /// </summary>
-        public ClientConfigEmailProvider()
+        get
         {
-            _documentationField = new ClientConfigEmailProviderDocumentation();
-            _outgoingServerField = new List<ClientConfigEmailProviderOutgoingServer>();
-            _incomingServerField = new List<ClientConfigEmailProviderIncomingServer>();
-            _domainField = new List<string>();
+            return _incomingServerField;
         }
-
-        [XmlElement("domain", Order = 0)]
-        public List<string> Domain
+        set
         {
-            get
-            {
-                return _domainField;
-            }
-            set
-            {
-                _domainField = value;
-            }
-        }
-
-        [XmlElement("incomingServer", Order = 3)]
-        public List<ClientConfigEmailProviderIncomingServer> IncomingServer
-        {
-            get
-            {
-                return _incomingServerField;
-            }
-            set
-            {
-                _incomingServerField = value;
-            }
-        }
-
-        [XmlElement("outgoingServer", Order = 4)]
-        public List<ClientConfigEmailProviderOutgoingServer> OutgoingServer
-        {
-            get
-            {
-                return _outgoingServerField;
-            }
-            set
-            {
-                _outgoingServerField = value;
-            }
-        }
-
-        [XmlElement("documentation", Order = 5)]
-        public ClientConfigEmailProviderDocumentation Documentation
-        {
-            get
-            {
-                return _documentationField;
-            }
-            set
-            {
-                _documentationField = value;
-            }
+            _incomingServerField = value;
         }
     }
 
-    [GeneratedCode("System.Xml", "2.0.50727.3082")]
-    [Serializable]
-    [DebuggerStepThrough]
-    [DesignerCategory(@"code")]
-    [XmlType(AnonymousType = true)]
-    [XmlRoot("clientConfigEmailProviderIncomingServer")]
-    public class ClientConfigEmailProviderIncomingServer : EntityBase<ClientConfigEmailProviderIncomingServer>
+    [XmlElement("outgoingServer", Order = 4)]
+    public List<ClientConfigEmailProviderOutgoingServer> OutgoingServer
     {
-        [XmlElement("hostname", Order = 0)]
-        public string Hostname { get; set; }
-
-        [XmlElement("port", Order = 1)]
-        public int Port { get; set; }
-
-        [XmlElement("socketType", Order = 2)]
-        public string SocketType { get; set; }
-
-        [XmlElement("authentication", Order = 3)]
-        public string Authentication { get; set; }
-
-        [XmlElement("username", Order = 4)]
-        public string Username { get; set; }
-
-        [XmlAttribute("type")]
-        public string Type { get; set; }
+        get
+        {
+            return _outgoingServerField;
+        }
+        set
+        {
+            _outgoingServerField = value;
+        }
     }
 
-    [GeneratedCode("System.Xml", "2.0.50727.3082")]
-    [Serializable]
-    [DebuggerStepThrough]
-    [DesignerCategory(@"code")]
-    [XmlType(AnonymousType = true)]
-    [XmlRoot("clientConfigEmailProviderOutgoingServer")]
-    public class ClientConfigEmailProviderOutgoingServer : EntityBase<ClientConfigEmailProviderOutgoingServer>
+    [XmlElement("documentation", Order = 5)]
+    public ClientConfigEmailProviderDocumentation Documentation
     {
-        [XmlElement("hostname", Order = 0)]
-        public string Hostname { get; set; }
-
-        [XmlElement("port", Order = 1)]
-        public int Port { get; set; }
-
-        [XmlElement("socketType", Order = 2)]
-        public string SocketType { get; set; }
-
-        [XmlElement("authentication", Order = 3)]
-        public string Authentication { get; set; }
-
-        [XmlElement("username", Order = 4)]
-        public string Username { get; set; }
-
-        [XmlAttribute("type")]
-        public string Type { get; set; }
+        get
+        {
+            return _documentationField;
+        }
+        set
+        {
+            _documentationField = value;
+        }
     }
+}
 
-    [GeneratedCode("System.Xml", "2.0.50727.3082")]
-    [Serializable]
-    [DebuggerStepThrough]
-    [DesignerCategory(@"code")]
-    [XmlType(AnonymousType = true)]
-    [XmlRoot("clientConfigEmailProviderDocumentation")]
-    public class ClientConfigEmailProviderDocumentation : EntityBase<ClientConfigEmailProviderDocumentation>
-    {
-        [XmlAttribute("url")]
-        public string Url { get; set; }
-    }
+[GeneratedCode("System.Xml", "2.0.50727.3082")]
+[Serializable]
+[DebuggerStepThrough]
+[DesignerCategory(@"code")]
+[XmlType(AnonymousType = true)]
+[XmlRoot("clientConfigEmailProviderIncomingServer")]
+public class ClientConfigEmailProviderIncomingServer : EntityBase<ClientConfigEmailProviderIncomingServer>
+{
+    [XmlElement("hostname", Order = 0)]
+    public string Hostname { get; set; }
+
+    [XmlElement("port", Order = 1)]
+    public int Port { get; set; }
+
+    [XmlElement("socketType", Order = 2)]
+    public string SocketType { get; set; }
+
+    [XmlElement("authentication", Order = 3)]
+    public string Authentication { get; set; }
+
+    [XmlElement("username", Order = 4)]
+    public string Username { get; set; }
+
+    [XmlAttribute("type")]
+    public string Type { get; set; }
+}
+
+[GeneratedCode("System.Xml", "2.0.50727.3082")]
+[Serializable]
+[DebuggerStepThrough]
+[DesignerCategory(@"code")]
+[XmlType(AnonymousType = true)]
+[XmlRoot("clientConfigEmailProviderOutgoingServer")]
+public class ClientConfigEmailProviderOutgoingServer : EntityBase<ClientConfigEmailProviderOutgoingServer>
+{
+    [XmlElement("hostname", Order = 0)]
+    public string Hostname { get; set; }
+
+    [XmlElement("port", Order = 1)]
+    public int Port { get; set; }
+
+    [XmlElement("socketType", Order = 2)]
+    public string SocketType { get; set; }
+
+    [XmlElement("authentication", Order = 3)]
+    public string Authentication { get; set; }
+
+    [XmlElement("username", Order = 4)]
+    public string Username { get; set; }
+
+    [XmlAttribute("type")]
+    public string Type { get; set; }
+}
+
+[GeneratedCode("System.Xml", "2.0.50727.3082")]
+[Serializable]
+[DebuggerStepThrough]
+[DesignerCategory(@"code")]
+[XmlType(AnonymousType = true)]
+[XmlRoot("clientConfigEmailProviderDocumentation")]
+public class ClientConfigEmailProviderDocumentation : EntityBase<ClientConfigEmailProviderDocumentation>
+{
+    [XmlAttribute("url")]
+    public string Url { get; set; }
 }

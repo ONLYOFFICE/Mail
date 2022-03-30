@@ -23,19 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ServerDnsDao))]
+public interface IServerDnsDao
 {
-    [Scope(typeof(ServerDnsDao))]
-    public interface IServerDnsDao
-    {
-        ServerDns Get(int id);
-        ServerDns GetById(int id);
-        ServerDns GetFree();
-        int Save(ServerDns dns);
-        int Delete(int id);
-    }
+    ServerDns Get(int id);
+    ServerDns GetById(int id);
+    ServerDns GetFree();
+    int Save(ServerDns dns);
+    int Delete(int id);
 }

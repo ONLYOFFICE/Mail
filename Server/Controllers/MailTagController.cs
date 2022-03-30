@@ -22,7 +22,7 @@ namespace ASC.Mail.Controllers
         [Read(@"tags")]
         public IEnumerable<MailTagData> GetTags()
         {
-            return TagEngine.GetTags().ToTagData();
+            return _tagEngine.GetTags().ToTagData();
         }
 
         /// <summary>
@@ -45,10 +45,10 @@ namespace ASC.Mail.Controllers
             if (string.IsNullOrEmpty(name))
                 throw new ArgumentException(MailApiResource.ErrorTagNameCantBeEmpty);
 
-            if (TagEngine.IsTagExists(name))
+            if (_tagEngine.IsTagExists(name))
                 throw new ArgumentException(MailApiResource.ErrorTagNameAlreadyExists.Replace("%1", "\"" + name + "\""));
 
-            return TagEngine.CreateTag(name, style, addresses).ToTagData();
+            return _tagEngine.CreateTag(name, style, addresses).ToTagData();
 
         }
 
@@ -78,7 +78,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var tag = TagEngine.UpdateTag(id, name, style, addresses);
+                var tag = _tagEngine.UpdateTag(id, name, style, addresses);
 
                 return tag.ToTagData();
             }
@@ -106,7 +106,7 @@ namespace ASC.Mail.Controllers
             if (id < 0)
                 throw new ArgumentException(@"Invalid tag id", "id");
 
-            if (!TagEngine.DeleteTag(id))
+            if (!_tagEngine.DeleteTag(id))
                 throw new Exception("DeleteTag failed");
 
             return id;
@@ -127,7 +127,7 @@ namespace ASC.Mail.Controllers
             if (!messages.Any())
                 throw new ArgumentException(@"Messages are empty", "messages");
 
-            TagEngine.SetMessagesTag(messages, id);
+            _tagEngine.SetMessagesTag(messages, id);
 
             return id;
         }
@@ -147,7 +147,7 @@ namespace ASC.Mail.Controllers
             if (!messages.Any())
                 throw new ArgumentException(@"Messages are empty", "messages");
 
-            TagEngine.UnsetMessagesTag(messages, id);
+            _tagEngine.UnsetMessagesTag(messages, id);
 
             return id;
         }

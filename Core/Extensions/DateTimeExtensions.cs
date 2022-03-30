@@ -23,35 +23,30 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System;
-using ASC.Core.Tenants;
-
-namespace ASC.Mail.Extensions
+public static class DateTimeExtensions
 {
-    public static class DateTimeExtensions
-    {
-        //TODO: fix 
-        //public static string ToVerbString(this DateTime dateTime)
-        //{
-        //    try
-        //    {
-        //        TimeSpan diff = (TenantUtil.DateTimeNow().Date - dateTime.Date);
+    //TODO: fix 
+    //public static string ToVerbString(this DateTime dateTime)
+    //{
+    //    try
+    //    {
+    //        TimeSpan diff = (TenantUtil.DateTimeNow().Date - dateTime.Date);
 
-        //        if (diff.Days == 0)
-        //        {
-        //            return dateTime.ToShortTimeString();
-        //        } 
-        //        if (TenantUtil.DateTimeNow().Year == dateTime.Date.Year)
-        //        {
-        //            return String.Format("{0}", dateTime.ToString("MMMM dd"));
-        //        }
-        //        return String.Format("{0} {1} {2}", dateTime.ToString("dd"), dateTime.ToString("MMMM"), dateTime.ToString("yyyy"));
-        //    }
-        //    catch (Exception)
-        //    {
-        //        return String.Format("{0} {1}", dateTime.ToShortDateString(), dateTime.ToShortTimeString());
-        //    }
-        //}
-    }
+    //        if (diff.Days == 0)
+    //        {
+    //            return dateTime.ToShortTimeString();
+    //        } 
+    //        if (TenantUtil.DateTimeNow().Year == dateTime.Date.Year)
+    //        {
+    //            return String.Format("{0}", dateTime.ToString("MMMM dd"));
+    //        }
+    //        return String.Format("{0} {1} {2}", dateTime.ToString("dd"), dateTime.ToString("MMMM"), dateTime.ToString("yyyy"));
+    //    }
+    //    catch (Exception)
+    //    {
+    //        return String.Format("{0} {1}", dateTime.ToShortDateString(), dateTime.ToShortTimeString());
+    //    }
+    //}
 }

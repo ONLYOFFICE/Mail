@@ -23,147 +23,137 @@
  *
 */
 
+namespace ASC.Mail.Storage;
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-
-using ASC.Core;
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Storage
+public static class MailStoragePathCombiner
 {
-    public static class MailStoragePathCombiner
-    {
-        public const string BODY_FILE_NAME = "body.html";
-        public const string EML_FILE_NAME = "message.eml";
+    public const string BODY_FILE_NAME = "body.html";
+    public const string EML_FILE_NAME = "message.eml";
 
-        private static readonly Dictionary<char, string> Replacements = new Dictionary<char, string>
-                {
-                    {'+', "%2b"}, {'#', "%23"}, {'|', "_"}, {'<', "_"}, {'>', "_"}, {'"', "_"}, {':', "_"}, {'~', "_"}, {'?', "_"}
-                };
-
-        private const string BAD_CHARS_IN_PATH = "|<>:\"~?";
-
-        private static string ComplexReplace(string str, string replacement)
-        {
-            return replacement.Aggregate(str, (current, badChar) => current.Replace(badChar.ToString(CultureInfo.InvariantCulture), Replacements[badChar]));
-        }
-
-        public static string PrepareAttachmentName(string name)
-        {
-            return ComplexReplace(name, BAD_CHARS_IN_PATH);
-        }
-
-        //public static string GetPreSignedUri(int fileId, int tenant, string user, string stream, int fileNumber, string fileName)
-        //{
-        //    //TODO: Move url to config;
-        //    const string attachmentPath = "/addons/mail/httphandlers/download.ashx";
-
-        //    var uriBuilder = new UriBuilder(CommonLinkUtility.GetFullAbsolutePath(attachmentPath));
-        //    if (uriBuilder.Uri.IsLoopback)
-        //    {
-        //        uriBuilder.Host = Dns.GetHostName();
-        //    }
-
-        //    var query = uriBuilder.Query;
-
-        //    query += "attachid=" + fileId + "&";
-        //    query += "stream=" + stream + "&";
-        //    query += FilesLinkUtility.AuthKey + "=" + EmailValidationKeyProvider.GetEmailKey(fileId + stream);
-
-        //    var url = uriBuilder.Uri + "?" + query;
-
-        //    return url;
-        //}
-
-        public static string GetStoredUrl(Uri uri)
-        {
-            var url = uri.ToString();
-
-            if (WorkContext.IsMono && uri.Scheme == Uri.UriSchemeFile)
+    private static readonly Dictionary<char, string> Replacements = new Dictionary<char, string>
             {
-                if (url.StartsWith("file://"))
-                    url = url.Substring(7);
-            }
+                {'+', "%2b"}, {'#', "%23"}, {'|', "_"}, {'<', "_"}, {'>', "_"}, {'"', "_"}, {':', "_"}, {'~', "_"}, {'?', "_"}
+            };
 
-            return GetStoredUrl(url);
-        }
+    private const string BAD_CHARS_IN_PATH = "|<>:\"~?";
 
-        private static string GetStoredUrl(string fullUrl)
+    private static string ComplexReplace(string str, string replacement)
+    {
+        return replacement.Aggregate(str, (current, badChar) => current.Replace(badChar.ToString(CultureInfo.InvariantCulture), Replacements[badChar]));
+    }
+
+    public static string PrepareAttachmentName(string name)
+    {
+        return ComplexReplace(name, BAD_CHARS_IN_PATH);
+    }
+
+    //public static string GetPreSignedUri(int fileId, int tenant, string user, string stream, int fileNumber, string fileName)
+    //{
+    //    //TODO: Move url to config;
+    //    const string attachmentPath = "/addons/mail/httphandlers/download.ashx";
+
+    //    var uriBuilder = new UriBuilder(CommonLinkUtility.GetFullAbsolutePath(attachmentPath));
+    //    if (uriBuilder.Uri.IsLoopback)
+    //    {
+    //        uriBuilder.Host = Dns.GetHostName();
+    //    }
+
+    //    var query = uriBuilder.Query;
+
+    //    query += "attachid=" + fileId + "&";
+    //    query += "stream=" + stream + "&";
+    //    query += FilesLinkUtility.AuthKey + "=" + EmailValidationKeyProvider.GetEmailKey(fileId + stream);
+
+    //    var url = uriBuilder.Uri + "?" + query;
+
+    //    return url;
+    //}
+
+    public static string GetStoredUrl(Uri uri)
+    {
+        var url = uri.ToString();
+
+        if (WorkContext.IsMono && uri.Scheme == Uri.UriSchemeFile)
         {
-            return ComplexReplace(fullUrl, "#");
+            if (url.StartsWith("file://"))
+                url = url.Substring(7);
         }
 
-        public static string GetFileKey(string user, string stream, int fileNumber, string fileName)
-        {
-            return string.Format("{0}/{1}/attachments/{2}/{3}", user, stream, fileNumber, ComplexReplace(fileName, BAD_CHARS_IN_PATH));
-        }
+        return GetStoredUrl(url);
+    }
 
-        public static string GetTempFileKey(string user, string stream, int fileNumber, string fileName)
-        {
-            return string.Format("temp/{0}/{1}/attachments/{2}/{3}", user, stream, fileNumber, ComplexReplace(fileName, BAD_CHARS_IN_PATH));
-        }
+    private static string GetStoredUrl(string fullUrl)
+    {
+        return ComplexReplace(fullUrl, "#");
+    }
 
-        public static string GetBodyKey(string stream)
-        {
-            return string.Format("{0}/{1}", stream, BODY_FILE_NAME);
-        }
+    public static string GetFileKey(string user, string stream, int fileNumber, string fileName)
+    {
+        return string.Format("{0}/{1}/attachments/{2}/{3}", user, stream, fileNumber, ComplexReplace(fileName, BAD_CHARS_IN_PATH));
+    }
 
-        public static string GetBodyKey(string user, string stream)
-        {
-            return string.Format("{0}/{1}/{2}", user, stream, BODY_FILE_NAME);
-        }
+    public static string GetTempFileKey(string user, string stream, int fileNumber, string fileName)
+    {
+        return string.Format("temp/{0}/{1}/attachments/{2}/{3}", user, stream, fileNumber, ComplexReplace(fileName, BAD_CHARS_IN_PATH));
+    }
 
-        public static string GetEmlKey(string user, string stream)
-        {
-            return string.Format("{0}/{1}/{2}", user, stream, EML_FILE_NAME);
-        }
+    public static string GetBodyKey(string stream)
+    {
+        return string.Format("{0}/{1}", stream, BODY_FILE_NAME);
+    }
 
-        public static string GerStoredFilePath(MailAttachmentData mailAttachmentData)
-        {
-            return GetFileKey(mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
-        }
+    public static string GetBodyKey(string user, string stream)
+    {
+        return string.Format("{0}/{1}/{2}", user, stream, BODY_FILE_NAME);
+    }
 
-        public static string GetTempStoredFilePath(MailAttachmentData mailAttachmentData)
-        {
-            return GetTempFileKey(mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
-        }
+    public static string GetEmlKey(string user, string stream)
+    {
+        return string.Format("{0}/{1}/{2}", user, stream, EML_FILE_NAME);
+    }
 
-        //public static string GetPreSignedUrl(MailAttachmentData mailAttachmentData)
-        //{
-        //    return GetPreSignedUri(mailAttachmentData.fileId, mailAttachmentData.tenant, mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
-        //}
+    public static string GerStoredFilePath(MailAttachmentData mailAttachmentData)
+    {
+        return GetFileKey(mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
+    }
 
-        public static string GerStoredSignatureImagePath(string user, int mailboxId, string storedName)
-        {
-            return String.Format("{0}/signatures/{1}/{2}", user, mailboxId, ComplexReplace(storedName, BAD_CHARS_IN_PATH));
-        }
+    public static string GetTempStoredFilePath(MailAttachmentData mailAttachmentData)
+    {
+        return GetTempFileKey(mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
+    }
 
-        public static string GetMessageDirectory(string user, string stream)
-        {
-            return String.Format("{0}/{1}", user, stream);
-        }
+    //public static string GetPreSignedUrl(MailAttachmentData mailAttachmentData)
+    //{
+    //    return GetPreSignedUri(mailAttachmentData.fileId, mailAttachmentData.tenant, mailAttachmentData.user, mailAttachmentData.streamId, mailAttachmentData.fileNumber, mailAttachmentData.storedName);
+    //}
 
-        public static string GetUserMailsDirectory(string user)
-        {
-            return String.Format("{0}", user);
-        }
+    public static string GerStoredSignatureImagePath(string user, int mailboxId, string storedName)
+    {
+        return String.Format("{0}/signatures/{1}/{2}", user, mailboxId, ComplexReplace(storedName, BAD_CHARS_IN_PATH));
+    }
 
-        public static string GetEditorSmileBaseUrl()
-        {
-            return "/usercontrols/common/ckeditor/plugins/smiley/teamlab_images";
-        }
+    public static string GetMessageDirectory(string user, string stream)
+    {
+        return String.Format("{0}/{1}", user, stream);
+    }
 
-        public static string GetEditorImagesBaseUrl()
-        {
-            return "/usercontrols/common/ckeditor/plugins/filetype/images";
-        }
+    public static string GetUserMailsDirectory(string user)
+    {
+        return String.Format("{0}", user);
+    }
 
-        public static string GetProxyHttpHandlerUrl()
-        {
-            return "/httphandlers/urlProxy.ashx";
-        }
+    public static string GetEditorSmileBaseUrl()
+    {
+        return "/usercontrols/common/ckeditor/plugins/smiley/teamlab_images";
+    }
+
+    public static string GetEditorImagesBaseUrl()
+    {
+        return "/usercontrols/common/ckeditor/plugins/filetype/images";
+    }
+
+    public static string GetProxyHttpHandlerUrl()
+    {
+        return "/httphandlers/urlProxy.ashx";
     }
 }

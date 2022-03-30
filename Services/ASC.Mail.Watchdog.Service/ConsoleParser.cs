@@ -1,44 +1,37 @@
-﻿using System.Linq;
+﻿namespace ASC.Mail.Watchdog.Service;
 
-using ASC.Common;
-
-using CommandLine;
-
-namespace ASC.Mail.Watchdog.Service
+[Singletone]
+public class ConsoleParameters
 {
-    [Singletone]
-    public class ConsoleParameters
+    [Option("console", Required = false, HelpText = "Console state")]
+    public bool IsConsole { get; set; }
+}
+
+[Singletone]
+public class ConsoleParser
+{
+    string[] _args;
+
+    public ConsoleParser(string[] args)
     {
-        [Option("console", Required = false, HelpText = "Console state")]
-        public bool IsConsole { get; set; }
+        _args = args;
     }
 
-    [Singletone]
-    public class ConsoleParser
+    public ConsoleParameters GetParsedParameters()
     {
-        string[] _args;
+        var _consoleParameters = new ConsoleParameters();
 
-        public ConsoleParser(string[] args)
+        if (_args.Any())
         {
-            _args = args;
+            CommandLine.Parser.Default.ParseArguments<ConsoleParameters>(_args)
+                .WithParsed(param => _consoleParameters = param)
+                .WithNotParsed(errs =>
+                {
+                    var helpText = @"Bad command line parameters.";
+                    System.Console.Error.Write(helpText);
+                });
         }
 
-        public ConsoleParameters GetParsedParameters()
-        {
-            var _consoleParameters = new ConsoleParameters();
-
-            if (_args.Any())
-            {
-                Parser.Default.ParseArguments<ConsoleParameters>(_args)
-                    .WithParsed(param => _consoleParameters = param)
-                    .WithNotParsed(errs =>
-                    {
-                        var helpText = @"Bad command line parameters.";
-                        System.Console.Error.Write(helpText);
-                    });
-            }
-
-            return _consoleParameters;
-        }
+        return _consoleParameters;
     }
 }

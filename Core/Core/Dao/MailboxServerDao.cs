@@ -23,104 +23,92 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailboxServerDao : BaseMailDao, IMailboxServerDao
 {
-    [Scope]
-    public class MailboxServerDao : BaseMailDao, IMailboxServerDao
+    public MailboxServerDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailboxServerDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public MailboxServer GetServer(int id)
+    {
+        var server = MailDbContext.MailMailboxServer
+            .AsNoTracking()
+            .Where(s => s.Id == id)
+            .Select(ToMailboxServer)
+            .FirstOrDefault();
+
+        return server;
+    }
+
+    public List<MailboxServer> GetServers(int providerId, bool isUserData = false)
+    {
+        var servers = MailDbContext.MailMailboxServer
+            .AsNoTracking()
+            .Where(s => s.IdProvider == providerId && s.IsUserData == isUserData)
+            .Select(ToMailboxServer)
+            .ToList();
+
+        return servers;
+    }
+
+    public int SaveServer(MailboxServer mailboxServer)
+    {
+        var server = new MailMailboxServer
         {
-        }
+            Id = mailboxServer.Id,
+            IdProvider = mailboxServer.ProviderId,
+            Type = mailboxServer.Type,
+            Hostname = mailboxServer.Hostname,
+            Port = mailboxServer.Port,
+            SocketType = mailboxServer.SocketType,
+            Username = mailboxServer.Username,
+            Authentication = mailboxServer.Authentication,
+            IsUserData = mailboxServer.IsUserData
+        };
 
-        public MailboxServer GetServer(int id)
+        var result = MailDbContext.MailMailboxServer.Add(server).Entity;
+
+        MailDbContext.SaveChanges();
+
+        return result.Id;
+    }
+
+    public int DeleteServer(int id)
+    {
+        var server = MailDbContext.MailMailboxServer
+           .Where(s => s.Id == id)
+           .First();
+
+
+        var result = MailDbContext.MailMailboxServer.Remove(server);
+
+        return MailDbContext.SaveChanges();
+    }
+
+    protected MailboxServer ToMailboxServer(MailMailboxServer r)
+    {
+        var s = new MailboxServer
         {
-            var server = MailDbContext.MailMailboxServer
-                .AsNoTracking()
-                .Where(s => s.Id == id)
-                .Select(ToMailboxServer)
-                .FirstOrDefault();
+            Id = r.Id,
+            ProviderId = r.IdProvider,
+            Type = r.Type,
+            Hostname = r.Hostname,
+            Port = r.Port,
+            SocketType = r.SocketType,
+            Username = r.Username,
+            Authentication = r.Authentication,
+            IsUserData = r.IsUserData
+        };
 
-            return server;
-        }
-
-        public List<MailboxServer> GetServers(int providerId, bool isUserData = false)
-        {
-            var servers = MailDbContext.MailMailboxServer
-                .AsNoTracking()
-                .Where(s => s.IdProvider == providerId && s.IsUserData == isUserData)
-                .Select(ToMailboxServer)
-                .ToList();
-
-            return servers;
-        }
-
-        public int SaveServer(MailboxServer mailboxServer)
-        {
-            var server = new MailMailboxServer
-            {
-                Id = mailboxServer.Id,
-                IdProvider = mailboxServer.ProviderId,
-                Type = mailboxServer.Type,
-                Hostname = mailboxServer.Hostname,
-                Port = mailboxServer.Port,
-                SocketType = mailboxServer.SocketType,
-                Username = mailboxServer.Username,
-                Authentication = mailboxServer.Authentication,
-                IsUserData = mailboxServer.IsUserData
-            };
-
-            var result = MailDbContext.MailMailboxServer.Add(server).Entity;
-
-            MailDbContext.SaveChanges();
-
-            return result.Id;
-        }
-
-        public int DeleteServer(int id)
-        {
-            var server = MailDbContext.MailMailboxServer
-               .Where(s => s.Id == id)
-               .First();
-
-
-            var result = MailDbContext.MailMailboxServer.Remove(server);
-
-            return MailDbContext.SaveChanges();
-        }
-
-        protected MailboxServer ToMailboxServer(MailMailboxServer r)
-        {
-            var s = new MailboxServer
-            {
-                Id = r.Id,
-                ProviderId = r.IdProvider,
-                Type = r.Type,
-                Hostname = r.Hostname,
-                Port = r.Port,
-                SocketType = r.SocketType,
-                Username = r.Username,
-                Authentication = r.Authentication,
-                IsUserData = r.IsUserData
-            };
-
-            return s;
-        }
+        return s;
     }
 }

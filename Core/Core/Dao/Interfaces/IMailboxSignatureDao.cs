@@ -23,43 +23,36 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxSignatureDao))]
+public interface IMailboxSignatureDao
 {
-    [Scope(typeof(MailboxSignatureDao))]
-    public interface IMailboxSignatureDao
-    {
-        /// <summary>
-        ///     Get signature by mailbox id.
-        /// </summary>
-        /// <param name="mailboxId"></param>
-        /// <returns>signature</returns>
-        MailboxSignature GetSignature(int mailboxId);
+    /// <summary>
+    ///     Get signature by mailbox id.
+    /// </summary>
+    /// <param name="mailboxId"></param>
+    /// <returns>signature</returns>
+    MailboxSignature GetSignature(int mailboxId);
 
-        /// <summary>
-        ///     Get a list of signature.
-        /// </summary>
-        /// <param name="mailboxIds"></param>
-        /// <returns>list of signature</returns>
-        List<MailboxSignature> GetSignatures(List<int> mailboxIds);
+    /// <summary>
+    ///     Get a list of signature.
+    /// </summary>
+    /// <param name="mailboxIds"></param>
+    /// <returns>list of signature</returns>
+    List<MailboxSignature> GetSignatures(List<int> mailboxIds);
 
-        /// <summary>
-        ///     Save or update signature
-        /// </summary>
-        /// <param name="signature"></param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int SaveSignature(MailboxSignature signature);
+    /// <summary>
+    ///     Save or update signature
+    /// </summary>
+    /// <param name="signature"></param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int SaveSignature(MailboxSignature signature);
 
-        /// <summary>
-        ///     Delete signature
-        /// </summary>
-        /// <param name="mailboxId">id</param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int DeleteSignature(int mailboxId);
-    }
+    /// <summary>
+    ///     Delete signature
+    /// </summary>
+    /// <param name="mailboxId">id</param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int DeleteSignature(int mailboxId);
 }

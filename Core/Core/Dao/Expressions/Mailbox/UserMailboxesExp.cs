@@ -23,37 +23,31 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public class UserMailboxesExp : TenantMailboxesExp
 {
-    public class UserMailboxesExp : TenantMailboxesExp
+    private readonly string _user;
+    private readonly bool? _onlyTeamlab;
+
+    public UserMailboxesExp(int tenant, string user, bool? isRemoved = false, bool? onlyTeamlab = null)
+        : base(tenant, isRemoved)
     {
-        private readonly string _user;
-        private readonly bool? _onlyTeamlab;
+        _user = user;
+        _onlyTeamlab = onlyTeamlab;
+    }
 
-        public UserMailboxesExp(int tenant, string user, bool? isRemoved = false, bool? onlyTeamlab = null)
-            : base(tenant, isRemoved)
+    public override Expression<Func<MailMailbox, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
+
+        exp = exp.And(mb => mb.IdUser == _user);
+
+        if (_onlyTeamlab.HasValue)
         {
-            _user = user;
-            _onlyTeamlab = onlyTeamlab;
+            exp = exp.And(mb => mb.IsServerMailbox == _onlyTeamlab.Value);
         }
 
-        public override Expression<Func<MailMailbox, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
-
-            exp = exp.And(mb => mb.IdUser == _user);
-
-            if (_onlyTeamlab.HasValue)
-            {
-                exp = exp.And(mb => mb.IsServerMailbox == _onlyTeamlab.Value);
-            }
-
-            return exp;
-        }
+        return exp;
     }
 }

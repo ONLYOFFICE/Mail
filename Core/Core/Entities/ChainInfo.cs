@@ -23,17 +23,14 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class ChainInfo
 {
-    public class ChainInfo
-    {
-        public string Id { get; set; }
-        public FolderType Folder { get; set; }
-        public int MailboxId { get; set; }
-        public DateTime? ChainDate { get; set; }
-    }
+    public string Id { get; set; }
+    public FolderType Folder { get; set; }
+    public int MailboxId { get; set; }
+    public DateTime? ChainDate { get; set; }
 }

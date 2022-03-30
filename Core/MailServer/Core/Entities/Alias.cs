@@ -23,42 +23,36 @@
  *
 */
 
+namespace ASC.Mail.Server.Core.Entities;
 
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-
-namespace ASC.Mail.Server.Core.Entities
+[Table("alias")]
+public partial class Alias
 {
-    [Table("alias")]
-    public partial class Alias
-    {
-        [Key]
-        [Column("address", TypeName = "varchar(255)")]
-        public string Address { get; set; }
-        [Column("goto", TypeName = "text")]
-        public string Goto { get; set; }
-        [Required]
-        [Column("name", TypeName = "varchar(255)")]
-        public string Name { get; set; }
-        [Column("moderators", TypeName = "text")]
-        public string Moderators { get; set; }
-        [Required]
-        [Column("accesspolicy", TypeName = "varchar(30)")]
-        public string Accesspolicy { get; set; }
-        [Required]
-        [Column("domain", TypeName = "varchar(255)")]
-        public string Domain { get; set; }
-        [Column("islist")]
-        public bool Islist { get; set; }
-        [Column("created", TypeName = "datetime")]
-        public DateTime Created { get; set; }
-        [Column("modified", TypeName = "datetime")]
-        public DateTime Modified { get; set; }
-        [Column("expired", TypeName = "datetime")]
-        public DateTime Expired { get; set; }
-        [Required]
-        [Column("active")]
-        public bool? Active { get; set; }
-    }
+    [Key]
+    [Column("address", TypeName = "varchar(255)")]
+    public string Address { get; set; }
+    [Column("goto", TypeName = "text")]
+    public string Goto { get; set; }
+    [Required]
+    [Column("name", TypeName = "varchar(255)")]
+    public string Name { get; set; }
+    [Column("moderators", TypeName = "text")]
+    public string Moderators { get; set; }
+    [Required]
+    [Column("accesspolicy", TypeName = "varchar(30)")]
+    public string Accesspolicy { get; set; }
+    [Required]
+    [Column("domain", TypeName = "varchar(255)")]
+    public string Domain { get; set; }
+    [Column("islist")]
+    public bool Islist { get; set; }
+    [Column("created", TypeName = "datetime")]
+    public DateTime Created { get; set; }
+    [Column("modified", TypeName = "datetime")]
+    public DateTime Modified { get; set; }
+    [Column("expired", TypeName = "datetime")]
+    public DateTime Expired { get; set; }
+    [Required]
+    [Column("active")]
+    public bool? Active { get; set; }
 }

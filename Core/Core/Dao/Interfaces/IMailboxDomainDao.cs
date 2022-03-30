@@ -23,17 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxDomainDao))]
+public interface IMailboxDomainDao
 {
-    [Scope(typeof(MailboxDomainDao))]
-    public interface IMailboxDomainDao
-    {
-        MailboxDomain GetDomain(string domainName);
+    MailboxDomain GetDomain(string domainName);
 
-        int SaveDomain(MailboxDomain domain);
-    }
+    int SaveDomain(MailboxDomain domain);
 }

@@ -23,83 +23,72 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailboxProviderDao : BaseMailDao, IMailboxProviderDao
 {
-    [Scope]
-    public class MailboxProviderDao : BaseMailDao, IMailboxProviderDao
+    public MailboxProviderDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailboxProviderDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public MailboxProvider GetProvider(int id)
+    {
+        var provider = MailDbContext.MailMailboxProvider
+            .AsNoTracking()
+            .Where(d => d.Id == id)
+            .Select(ToMailboxProvider)
+            .FirstOrDefault();
+
+        return provider;
+    }
+
+    public MailboxProvider GetProvider(string providerName)
+    {
+        var provider = MailDbContext.MailMailboxProvider
+            .AsNoTracking()
+            .Where(d => d.Name == providerName)
+            .Select(ToMailboxProvider)
+            .FirstOrDefault();
+
+        return provider;
+    }
+
+    public int SaveProvider(MailboxProvider provider)
+    {
+        var mailboxProvider = new MailMailboxProvider
         {
-        }
+            Id = provider.Id,
+            Name = provider.Name,
+            DisplayName = provider.DisplayName,
+            DisplayShortName = provider.DisplayShortName,
+            Documentation = provider.Url
+        };
 
-        public MailboxProvider GetProvider(int id)
+        var result = MailDbContext.MailMailboxProvider.Add(mailboxProvider).Entity;
+
+        MailDbContext.SaveChanges();
+
+        return result.Id;
+    }
+
+    protected MailboxProvider ToMailboxProvider(MailMailboxProvider r)
+    {
+        var p = new MailboxProvider
         {
-            var provider = MailDbContext.MailMailboxProvider
-                .AsNoTracking()
-                .Where(d => d.Id == id)
-                .Select(ToMailboxProvider)
-                .FirstOrDefault();
+            Id = r.Id,
+            Name = r.Name,
+            DisplayName = r.DisplayName,
+            DisplayShortName = r.DisplayShortName,
+            Url = r.Documentation
+        };
 
-            return provider;
-        }
-
-        public MailboxProvider GetProvider(string providerName)
-        {
-            var provider = MailDbContext.MailMailboxProvider
-                .AsNoTracking()
-                .Where(d => d.Name == providerName)
-                .Select(ToMailboxProvider)
-                .FirstOrDefault();
-
-            return provider;
-        }
-
-        public int SaveProvider(MailboxProvider provider)
-        {
-            var mailboxProvider = new MailMailboxProvider
-            {
-                Id = provider.Id,
-                Name = provider.Name,
-                DisplayName = provider.DisplayName,
-                DisplayShortName = provider.DisplayShortName,
-                Documentation = provider.Url
-            };
-
-            var result = MailDbContext.MailMailboxProvider.Add(mailboxProvider).Entity;
-
-            MailDbContext.SaveChanges();
-
-            return result.Id;
-        }
-
-        protected MailboxProvider ToMailboxProvider(MailMailboxProvider r)
-        {
-            var p = new MailboxProvider
-            {
-                Id = r.Id,
-                Name = r.Name,
-                DisplayName = r.DisplayName,
-                DisplayShortName = r.DisplayShortName,
-                Url = r.Documentation
-            };
-
-            return p;
-        }
+        return p;
     }
 }

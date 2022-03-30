@@ -23,89 +23,76 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryDao
 {
-    [Scope]
-    public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryDao
+    public MailboxAutoreplyHistoryDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailboxAutoreplyHistoryDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public List<string> GetAutoreplyHistorySentEmails(int mailboxId, string email, int autoreplyDaysInterval)
+    {
+        var emails = MailDbContext.MailMailboxAutoreplyHistory
+            .AsNoTracking()
+            .Where(h => h.IdMailbox == mailboxId
+                && h.SendingEmail == email
+                && EF.Functions.DateDiffDay(h.SendingDate, DateTime.UtcNow) <= autoreplyDaysInterval)
+            .Select(h => h.SendingEmail)
+            .ToList();
+
+        return emails;
+    }
+
+    public int SaveAutoreplyHistory(MailboxAutoreplyHistory autoreplyHistory)
+    {
+        var model = new MailMailboxAutoreplyHistory
         {
+            IdMailbox = autoreplyHistory.MailboxId,
+            Tenant = autoreplyHistory.Tenant,
+            SendingEmail = autoreplyHistory.SendingEmail,
+            SendingDate = autoreplyHistory.SendingDate
+        };
+
+        MailDbContext.MailMailboxAutoreplyHistory.Add(model);
+
+        var count = MailDbContext.SaveChanges();
+
+        return count;
+    }
+
+    public int DeleteAutoreplyHistory(int mailboxId)
+    {
+        var history = MailDbContext.MailMailboxAutoreplyHistory
+            .Where(h => h.IdMailbox == mailboxId && h.Tenant == Tenant)
+            .FirstOrDefault();
+
+        if (history != null)
+        {
+            MailDbContext.MailMailboxAutoreplyHistory.Remove(history);
+            return MailDbContext.SaveChanges();
         }
 
-        public List<string> GetAutoreplyHistorySentEmails(int mailboxId, string email, int autoreplyDaysInterval)
+        return 0;
+    }
+
+    protected MailboxAutoreplyHistory ToAutoreplyHistory(MailMailboxAutoreplyHistory r)
+    {
+        var obj = new MailboxAutoreplyHistory
         {
-            var emails = MailDbContext.MailMailboxAutoreplyHistory
-                .AsNoTracking()
-                .Where(h => h.IdMailbox == mailboxId
-                    && h.SendingEmail == email
-                    && EF.Functions.DateDiffDay(h.SendingDate, DateTime.UtcNow) <= autoreplyDaysInterval)
-                .Select(h => h.SendingEmail)
-                .ToList();
+            MailboxId = r.IdMailbox,
+            Tenant = r.Tenant,
+            SendingDate = r.SendingDate,
+            SendingEmail = r.SendingEmail
+        };
 
-            return emails;
-        }
-
-        public int SaveAutoreplyHistory(MailboxAutoreplyHistory autoreplyHistory)
-        {
-            var model = new MailMailboxAutoreplyHistory
-            {
-                IdMailbox = autoreplyHistory.MailboxId,
-                Tenant = autoreplyHistory.Tenant,
-                SendingEmail = autoreplyHistory.SendingEmail,
-                SendingDate = autoreplyHistory.SendingDate
-            };
-
-            MailDbContext.MailMailboxAutoreplyHistory.Add(model);
-
-            var count = MailDbContext.SaveChanges();
-
-            return count;
-        }
-
-        public int DeleteAutoreplyHistory(int mailboxId)
-        {
-            var history = MailDbContext.MailMailboxAutoreplyHistory
-                .Where(h => h.IdMailbox == mailboxId && h.Tenant == Tenant)
-                .FirstOrDefault();
-
-            if (history != null)
-            {
-                MailDbContext.MailMailboxAutoreplyHistory.Remove(history);
-                return MailDbContext.SaveChanges();
-            }
-
-            return 0;
-        }
-
-        protected MailboxAutoreplyHistory ToAutoreplyHistory(MailMailboxAutoreplyHistory r)
-        {
-            var obj = new MailboxAutoreplyHistory
-            {
-                MailboxId = r.IdMailbox,
-                Tenant = r.Tenant,
-                SendingDate = r.SendingDate,
-                SendingEmail = r.SendingEmail
-            };
-
-            return obj;
-        }
+        return obj;
     }
 }

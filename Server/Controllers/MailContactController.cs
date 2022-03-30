@@ -23,7 +23,7 @@ namespace ASC.Mail.Controllers
             if (string.IsNullOrEmpty(term))
                 throw new ArgumentException(@"term parameter empty.", "term");
 
-            return ContactEngine.SearchEmails(TenantId, UserId, term, 
+            return _contactEngine.SearchEmails(TenantId, UserId, term, 
                 MailAutocompleteMaxCountPerSystem, MailAutocompleteTimeout);
         }
 
@@ -42,10 +42,10 @@ namespace ASC.Mail.Controllers
         public IEnumerable<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
             string sortorder)
         {
-            var contacts = ContactEngine
+            var contacts = _contactEngine
                 .GetContacts(search, contactType, pageSize, fromIndex, sortorder, out int totalCount);
 
-            ApiContext.SetTotalCount(totalCount);
+            _apiContext.SetTotalCount(totalCount);
 
             return contacts;
         }
@@ -62,7 +62,7 @@ namespace ASC.Mail.Controllers
         [Read(@"contacts/bycontactinfo")]
         public IEnumerable<MailContactData> GetContactsByContactInfo(ContactInfoType infoType, string data, bool? isPrimary)
         {
-            var contacts = ContactEngine.GetContactsByContactInfo(infoType, data, isPrimary);
+            var contacts = _contactEngine.GetContactsByContactInfo(infoType, data, isPrimary);
 
             return contacts;
         }
@@ -77,7 +77,7 @@ namespace ASC.Mail.Controllers
         [Create(@"contact/add")]
         public MailContactData CreateContact(ContactModel model)
         {
-            var newContact = ContactEngine.CreateContact(model);
+            var newContact = _contactEngine.CreateContact(model);
 
             return newContact;
         }
@@ -92,7 +92,7 @@ namespace ASC.Mail.Controllers
         [Update(@"contacts/remove")]
         public IEnumerable<int> RemoveContacts(List<int> ids)
         {
-            ContactEngine.RemoveContacts(ids);
+            _contactEngine.RemoveContacts(ids);
 
             return ids;
         }
@@ -111,7 +111,7 @@ namespace ASC.Mail.Controllers
         [Update(@"contact/update")]
         public MailContactData UpdateContact(ContactModel model)
         {
-            var contact = ContactEngine.UpdateContact(model);
+            var contact = _contactEngine.UpdateContact(model);
 
             return contact;
         }
@@ -130,7 +130,7 @@ namespace ASC.Mail.Controllers
             if (messageId < 0)
                 throw new ArgumentException(@"meesage_id must be positive integer", "message_id");
 
-            return CrmLinkEngine.GetLinkedCrmEntitiesId(messageId);
+            return _crmLinkEngine.GetLinkedCrmEntitiesId(messageId);
         }
     }
 }

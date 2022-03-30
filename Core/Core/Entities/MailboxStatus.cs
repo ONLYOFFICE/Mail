@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class MailboxStatus
 {
-    public class MailboxStatus
-    {
-        public int Id { get; set; }
-        public bool Enabled { get; set; }
-        public bool IsRemoved { get; set; }
-        public DateTime BeginDate { get; set; }
-    }
+    public int Id { get; set; }
+    public bool Enabled { get; set; }
+    public bool IsRemoved { get; set; }
+    public DateTime BeginDate { get; set; }
 }

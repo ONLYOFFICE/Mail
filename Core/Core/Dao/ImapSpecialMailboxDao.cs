@@ -23,66 +23,56 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+public class ImapSpecialMailboxDao : BaseMailDao, IImapSpecialMailboxDao
 {
-    public class ImapSpecialMailboxDao : BaseMailDao, IImapSpecialMailboxDao
+    public ImapSpecialMailboxDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ImapSpecialMailboxDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public List<ServerFolderAccessInfo> GetServerFolderAccessInfoList()
+    {
+        var serverFolderAccessInfoList = new List<ServerFolderAccessInfo>();
+
+        var imapSpecialMailboxes = MailDbContext.MailImapSpecialMailbox
+            .AsNoTracking()
+            .ToList();
+
+        imapSpecialMailboxes.ForEach(r =>
         {
-        }
-
-        public List<ServerFolderAccessInfo> GetServerFolderAccessInfoList()
-        {
-            var serverFolderAccessInfoList = new List<ServerFolderAccessInfo>();
-
-            var imapSpecialMailboxes = MailDbContext.MailImapSpecialMailbox
-                .AsNoTracking()
-                .ToList();
-
-            imapSpecialMailboxes.ForEach(r =>
+            var fi = new ServerFolderAccessInfo.FolderInfo
             {
-                var fi = new ServerFolderAccessInfo.FolderInfo
-                {
-                    folder_id = (FolderType)r.FolderId,
-                    skip = r.Skip
-                };
+                folder_id = (FolderType)r.FolderId,
+                skip = r.Skip
+            };
 
-                var existItem = serverFolderAccessInfoList.FirstOrDefault(x => x.Server == r.Server);
+            var existItem = serverFolderAccessInfoList.FirstOrDefault(x => x.Server == r.Server);
 
-                if (existItem != null)
+            if (existItem != null)
+            {
+                existItem.FolderAccessList.TryAdd(r.Name, fi);  //[r.Server][r.MailboxName] = mb;
+            }
+            else
+            {
+                serverFolderAccessInfoList.Add(new ServerFolderAccessInfo
                 {
-                    existItem.FolderAccessList.TryAdd(r.Name, fi);  //[r.Server][r.MailboxName] = mb;
-                }
-                else
-                {
-                    serverFolderAccessInfoList.Add(new ServerFolderAccessInfo
+                    Server = r.Server,
+                    FolderAccessList = new Dictionary<string, ServerFolderAccessInfo.FolderInfo>
                     {
-                        Server = r.Server,
-                        FolderAccessList = new Dictionary<string, ServerFolderAccessInfo.FolderInfo>
-                        {
-                            [r.Name] = fi
-                        }
-                    });
-                }
-            });
+                        [r.Name] = fi
+                    }
+                });
+            }
+        });
 
-            return serverFolderAccessInfoList;
-        }
+        return serverFolderAccessInfoList;
     }
 }

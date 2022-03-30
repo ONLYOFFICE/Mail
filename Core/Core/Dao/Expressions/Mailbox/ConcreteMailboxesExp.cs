@@ -23,41 +23,34 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using System;
-using System.Linq.Expressions;
-
-using ASC.Mail.Core.Dao.Entities;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public class ConcreteMailboxesExp : IMailboxesExp
 {
-    public class ConcreteMailboxesExp : IMailboxesExp
+    private readonly bool? _isRemoved;
+    public string OrderBy { get; private set; }
+    public bool? OrderAsc { get; private set; }
+    public int? Limit { get; private set; }
+    public string Address { get; set; }
+    public bool? IsProcessed { get; private set; }
+
+    public ConcreteMailboxesExp(string address, bool? isRemoved = false, bool isProcessd = true)
     {
-        private readonly bool? _isRemoved;
-        public string OrderBy { get; private set; }
-        public bool? OrderAsc { get; private set; }
-        public int? Limit { get; private set; }
-        public string Address { get; set; }
-        public bool? IsProcessed { get; private set; }
+        _isRemoved = isRemoved;
+        OrderBy = null;
+        OrderAsc = false;
+        Limit = null;
+        Address = address;
+        IsProcessed = isProcessd;
+    }
 
-        public ConcreteMailboxesExp(string address, bool? isRemoved = false, bool isProcessd = true)
-        {
-            _isRemoved = isRemoved;
-            OrderBy = null;
-            OrderAsc = false;
-            Limit = null;
-            Address = address;
-            IsProcessed = isProcessd;
-        }
+    public virtual Expression<Func<MailMailbox, bool>> GetExpression()
+    {
+        Expression<Func<MailMailbox, bool>> exp = mb => mb.IsRemoved == _isRemoved;
 
-        public virtual Expression<Func<MailMailbox, bool>> GetExpression()
-        {
-            Expression<Func<MailMailbox, bool>> exp = mb => mb.IsRemoved == _isRemoved;
+        exp = exp.And(m => m.Address == Address);
+        exp = exp.And(m => m.IsProcessed == IsProcessed);
 
-            exp = exp.And(m => m.Address == Address);
-            exp = exp.And(m => m.IsProcessed == IsProcessed);
-
-            return exp;
-        }
+        return exp;
     }
 }

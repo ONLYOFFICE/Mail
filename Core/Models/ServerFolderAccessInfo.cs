@@ -1,18 +1,16 @@
-﻿using ASC.Mail.Enums;
-using System.Collections.Generic;
+﻿using FolderType = ASC.Mail.Enums.FolderType;
 
-namespace ASC.Mail.Models
+namespace ASC.Mail.Models;
+
+public class ServerFolderAccessInfo
 {
-    public class ServerFolderAccessInfo
+    public string Server { get; set; }
+
+    public Dictionary<string, FolderInfo> FolderAccessList { get; set; }
+
+    public class FolderInfo
     {
-        public string Server { get; set; }
-
-        public Dictionary<string, FolderInfo> FolderAccessList { get; set; }
-
-        public class FolderInfo
-        {
-            public FolderType folder_id;
-            public bool skip;
-        }
+        public FolderType folder_id;
+        public bool skip;
     }
 }

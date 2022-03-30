@@ -3,7 +3,9 @@ using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
 using ASC.Web.Api.Routing;
+
 using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.IO;
 
@@ -27,7 +29,7 @@ namespace ASC.Mail.Controllers
             if (string.IsNullOrEmpty(id_folder))
                 id_folder = DocumentsEngine.MY_DOCS_FOLDER_ID;
 
-            var savedAttachmentsList = DocumentsEngine.StoreAttachmentsToDocuments(id_message, id_folder);
+            var savedAttachmentsList = _documentsEngine.StoreAttachmentsToDocuments(id_message, id_folder);
 
             return savedAttachmentsList.Count;
         }
@@ -48,7 +50,7 @@ namespace ASC.Mail.Controllers
             if (string.IsNullOrEmpty(id_folder))
                 id_folder = DocumentsEngine.MY_DOCS_FOLDER_ID;
 
-            var documentId = DocumentsEngine.StoreAttachmentToDocuments(id_attachment, id_folder);
+            var documentId = _documentsEngine.StoreAttachmentToDocuments(id_attachment, id_folder);
 
             return documentId;
         }
@@ -65,7 +67,7 @@ namespace ASC.Mail.Controllers
         [Create(@"messages/attachment/add")]
         public MailAttachmentData AddAttachment(int id_message, string name, Stream file, string content_type)
         {
-            var attachment = MessageEngine
+            var attachment = _messageEngine
                 .AttachFileToDraft(TenantId, UserId, id_message, name, file, file.Length, content_type);
 
             return attachment;
@@ -84,7 +86,7 @@ namespace ASC.Mail.Controllers
             if (string.IsNullOrEmpty(ical_body))
                 throw new ArgumentException(@"Empty calendar body", "ical_body");
 
-            var calendar = MailUtil.ParseValidCalendar(ical_body, Log);
+            var calendar = MailUtil.ParseValidCalendar(ical_body, _log);
 
             if (calendar == null)
                 throw new ArgumentException(@"Invalid calendar body", "ical_body");
@@ -96,7 +98,7 @@ namespace ASC.Mail.Controllers
             writer.Flush();
             ms.Position = 0;
 
-            var attachment = MessageEngine
+            var attachment = _messageEngine
                 .AttachFileToDraft(TenantId, UserId, id_message, calendar.Method.ToLowerInvariant() + ".ics",
                     ms, ms.Length, "text/calendar");
 
@@ -117,7 +119,7 @@ namespace ASC.Mail.Controllers
             //Thread.CurrentThread.CurrentCulture = CurrentCulture;
             //Thread.CurrentThread.CurrentUICulture = CurrentCulture;
 
-            return OperationEngine.DownloadAllAttachments(messageId, TranslateMailOperationStatus);
+            return _operationEngine.DownloadAllAttachments(messageId, TranslateMailOperationStatus);
         }
     }
 }

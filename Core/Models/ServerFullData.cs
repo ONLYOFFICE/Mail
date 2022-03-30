@@ -23,28 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "FullServer")]
+public class ServerFullData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "FullServer")]
-    public class ServerFullData
-    {
-        [DataMember(IsRequired = true)]
-        public ServerData Server { get; set; }
+    [DataMember(IsRequired = true)]
+    public ServerData Server { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public List<ServerDomainData> Domains { get; set; }
+    [DataMember(IsRequired = true)]
+    public List<ServerDomainData> Domains { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public List<ServerMailboxData> Mailboxes { get; set; }
+    [DataMember(IsRequired = true)]
+    public List<ServerMailboxData> Mailboxes { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public List<ServerDomainGroupData> Mailgroups { get; set; }
+    [DataMember(IsRequired = true)]
+    public List<ServerDomainGroupData> Mailgroups { get; set; }
 
-    }
 }

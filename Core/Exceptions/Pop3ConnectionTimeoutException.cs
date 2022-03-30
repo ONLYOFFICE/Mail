@@ -23,11 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-namespace ASC.Mail.Exceptions
+public class Pop3ConnectionTimeoutException : Pop3ConnectionException
 {
-    public class Pop3ConnectionTimeoutException : Pop3ConnectionException
-    {
-        public Pop3ConnectionTimeoutException() : base("pop3 connection timeout exceeded") { }
-    }
+    public Pop3ConnectionTimeoutException() : base("pop3 connection timeout exceeded") { }
 }

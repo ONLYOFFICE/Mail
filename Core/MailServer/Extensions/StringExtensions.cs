@@ -23,19 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Server.Extensions;
 
-namespace ASC.Mail.Server.Extensions
+public static class StringExtensions
 {
-    public static class StringExtensions
+    public static string Prefix(this string str, string prefix)
     {
-        public static string Prefix(this string str, string prefix)
-        {
-            return string.IsNullOrEmpty(prefix) ? str : string.Format("{0}.{1}", prefix, str);
-        }
+        return string.IsNullOrEmpty(prefix) ? str : string.Format("{0}.{1}", prefix, str);
+    }
 
-        public static string Alias(this string str, string alias)
-        {
-            return string.IsNullOrEmpty(alias) ? str : string.Format("{0} {1}", str, alias);
-        }
+    public static string Alias(this string str, string alias)
+    {
+        return string.IsNullOrEmpty(alias) ? str : string.Format("{0} {1}", str, alias);
     }
 }

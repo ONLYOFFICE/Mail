@@ -23,13 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum ApplyToMessagesType
 {
-    public enum ApplyToMessagesType
-    {
-        AllExceptSpam = 0,
-        AllIncludeSpam = 1,
-        SpamOnly = 2
-    }
+    AllExceptSpam = 0,
+    AllIncludeSpam = 1,
+    SpamOnly = 2
 }

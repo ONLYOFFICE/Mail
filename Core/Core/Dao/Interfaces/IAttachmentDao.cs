@@ -24,29 +24,23 @@
 */
 
 
-using System.Collections.Generic;
+using Attachment = ASC.Mail.Core.Entities.Attachment;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Dao.Expressions.Attachment;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(AttachmentDao))]
+public interface IAttachmentDao
 {
-    [Scope(typeof(AttachmentDao))]
-    public interface IAttachmentDao
-    {
-        Attachment GetAttachment(IAttachmentExp exp);
+    Attachment GetAttachment(IAttachmentExp exp);
 
-        List<Attachment> GetAttachments(IAttachmentsExp exp);
+    List<Attachment> GetAttachments(IAttachmentsExp exp);
 
-        long GetAttachmentsSize(IAttachmentsExp exp);
+    long GetAttachmentsSize(IAttachmentsExp exp);
 
-        int GetAttachmentsMaxFileNumber(IAttachmentsExp exp);
+    int GetAttachmentsMaxFileNumber(IAttachmentsExp exp);
 
-        int GetAttachmentsCount(IAttachmentsExp exp);
+    int GetAttachmentsCount(IAttachmentsExp exp);
 
-        bool SetAttachmnetsRemoved(IAttachmentsExp exp);
+    bool SetAttachmnetsRemoved(IAttachmentsExp exp);
 
-        int SaveAttachment(Attachment attachment);
-    }
+    int SaveAttachment(Attachment attachment);
 }

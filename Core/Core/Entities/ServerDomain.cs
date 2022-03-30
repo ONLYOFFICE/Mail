@@ -23,18 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class ServerDomain
 {
-    public class ServerDomain
-    {
-        public int Id { get; set; }
-        public int Tenant { get; set; }
-        public string Name { get; set; }
-        public bool IsVerified { get; set; }
-        public DateTime DateAdded { get; set; }
-        public DateTime DateChecked { get; set; }
-    }
+    public int Id { get; set; }
+    public int Tenant { get; set; }
+    public string Name { get; set; }
+    public bool IsVerified { get; set; }
+    public DateTime DateAdded { get; set; }
+    public DateTime DateChecked { get; set; }
 }

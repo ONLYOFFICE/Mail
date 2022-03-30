@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class NotFoundFilterDataException : ArgumentException
 {
-    public class NotFoundFilterDataException : ArgumentException
+    public NotFoundFilterDataException(string message)
+        : base(message)
     {
-        public NotFoundFilterDataException(string message)
-            : base(message)
-        {
-        }
     }
 }

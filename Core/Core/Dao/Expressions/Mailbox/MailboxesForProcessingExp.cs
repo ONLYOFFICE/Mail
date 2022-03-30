@@ -23,73 +23,62 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using System;
-using System.Linq;
-using System.Linq.Expressions;
-
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Dao.Entities;
-
-using Microsoft.EntityFrameworkCore;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public class MailboxesForProcessingExp : IMailboxesExp
 {
-    public class MailboxesForProcessingExp : IMailboxesExp
+    public string OrderBy
     {
-        public string OrderBy
+        get { return MailMailboxNames.DateChecked; }
+    }
+    public bool? OrderAsc { get; private set; }
+    public int? Limit { get; private set; }
+
+    private readonly MailSettings _mailSettings;
+    private readonly bool _onlyActive;
+
+    public MailboxesForProcessingExp(MailSettings mailSettings, int tasksLimit, bool active)
+    {
+        _mailSettings = mailSettings;
+
+        Limit = tasksLimit > 0 ? tasksLimit : null;
+
+        _onlyActive = active;
+
+        OrderAsc = true;
+    }
+
+    Expression<Func<MailMailbox, bool>> IMailboxesExp.GetExpression()
+    {
+        var now = DateTime.UtcNow;
+
+        Expression<Func<MailMailbox, bool>> exp = mb =>
+        mb.IsProcessed == false
+        && mb.DateLoginDelayExpires < now
+        && mb.IsRemoved == false
+        && mb.Enabled == true;
+
+        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.All)
         {
-            get { return MailMailboxNames.DateChecked; }
+            exp = exp.And(mb => mb.IsServerMailbox == (_mailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
         }
-        public bool? OrderAsc { get; private set; }
-        public int? Limit { get; private set; }
 
-        private MailSettings MailSettings { get; set; }
-        private bool OnlyActive { get; set; }
-
-        public MailboxesForProcessingExp(MailSettings mailSettings, int tasksLimit, bool active)
+        if (_mailSettings.Aggregator.EnableSignalr)
         {
-            MailSettings = mailSettings;
-
-            Limit = tasksLimit > 0 ? tasksLimit : null;
-
-            OnlyActive = active;
-
-            OrderAsc = true;
+            exp = exp.And(mb => mb.UserOnline == _onlyActive);
         }
-
-        Expression<Func<MailMailbox, bool>> IMailboxesExp.GetExpression()
+        else
         {
-            var now = DateTime.UtcNow;
-
-            Expression<Func<MailMailbox, bool>> exp = mb =>
-            mb.IsProcessed == false
-            && mb.DateLoginDelayExpires < now
-            && mb.IsRemoved == false
-            && mb.Enabled == true;
-
-            if (MailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.All)
-            {
-                exp = exp.And(mb => mb.IsServerMailbox == (MailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
-            }
-
-            if (MailSettings.Aggregator.EnableSignalr)
-            {
-                exp = exp.And(mb => mb.UserOnline == OnlyActive);
-            }
-            else
-            {
-                exp = exp.And(mb => mb.DateUserChecked == null || OnlyActive
-                ? EF.Functions.DateDiffSecond(mb.DateUserChecked, now) < MailSettings.Defines.ActiveInterval.TotalSeconds
-                : EF.Functions.DateDiffSecond(mb.DateUserChecked, now) >= MailSettings.Defines.ActiveInterval.TotalSeconds);
-            }
-
-            if (MailSettings.Defines.WorkOnUsersOnlyList.Any())
-            {
-                exp = exp.And(mb => MailSettings.Defines.WorkOnUsersOnlyList.Contains(mb.IdUser));
-            }
-
-            return exp;
+            exp = exp.And(mb => mb.DateUserChecked == null || _onlyActive
+            ? EF.Functions.DateDiffSecond(mb.DateUserChecked, now) < _mailSettings.Defines.ActiveInterval.TotalSeconds
+            : EF.Functions.DateDiffSecond(mb.DateUserChecked, now) >= _mailSettings.Defines.ActiveInterval.TotalSeconds);
         }
+
+        if (_mailSettings.Defines.WorkOnUsersOnlyList.Any())
+        {
+            exp = exp.And(mb => _mailSettings.Defines.WorkOnUsersOnlyList.Contains(mb.IdUser));
+        }
+
+        return exp;
     }
 }

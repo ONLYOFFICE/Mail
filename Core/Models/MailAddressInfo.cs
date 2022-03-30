@@ -23,22 +23,20 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+public class MailAddressInfo
 {
-    public class MailAddressInfo
+    public int Id { get; private set; }
+
+    public string Email { get; private set; }
+
+    public int DomainId { get; private set; }
+
+    public MailAddressInfo(int id, string email, int domainId)
     {
-        public int Id { get; private set; }
-
-        public string Email { get; private set; }
-
-        public int DomainId { get; private set; }
-
-        public MailAddressInfo(int id, string email, int domainId)
-        {
-            Id = id;
-            Email = email;
-            DomainId = domainId;
-        }
+        Id = id;
+        Email = email;
+        DomainId = domainId;
     }
 }

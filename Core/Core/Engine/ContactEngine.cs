@@ -23,414 +23,390 @@
  *
 */
 
+using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
+using SecurityContext = ASC.Core.SecurityContext;
+using Task = System.Threading.Tasks.Task;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Contact;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
-using ASC.Web.Core;
-using ASC.Web.Studio.Utility;
+namespace ASC.Mail.Core.Engine;
 
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class ContactEngine
 {
-    [Scope]
-    public class ContactEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string User => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly ILog _log;
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+    private readonly IMailDaoFactory _mailDaoFactory;
+    private readonly IndexEngine _indexEngine;
+    private readonly AccountEngine _accountEngine;
+    private readonly ApiHelper _apiHelper;
+    private readonly FactoryIndexer<MailContact> _factoryIndexer;
+    private readonly FactoryIndexer _factoryIndexerCommon;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly WebItemSecurity _webItemSecurity;
+    private readonly CommonLinkUtility _commonLinkUtility;
+    private readonly MailDbContext _mailDbContext;
+
+    public ContactEngine(
+        SecurityContext securityContext,
+        DbContextManager<MailDbContext> dbContextManager,
+        TenantManager tenantManager,
+        IMailDaoFactory mailDaoFactory,
+        IndexEngine indexEngine,
+        AccountEngine accountEngine,
+        ApiHelper apiHelper,
+        FactoryIndexer<MailContact> factoryIndexer,
+        FactoryIndexer factoryIndexerCommon,
+        WebItemSecurity webItemSecurity,
+        CommonLinkUtility commonLinkUtility,
+        IServiceProvider serviceProvider,
+        IOptionsMonitor<ILog> option)
     {
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+        _securityContext = securityContext;
+        _mailDbContext = dbContextManager.Get("mail");
+        _tenantManager = tenantManager;
+        _mailDaoFactory = mailDaoFactory;
+        _indexEngine = indexEngine;
+        _accountEngine = accountEngine;
+        _apiHelper = apiHelper;
+        _factoryIndexer = factoryIndexer;
+        _factoryIndexerCommon = factoryIndexerCommon;
+        _serviceProvider = serviceProvider;
+        _webItemSecurity = webItemSecurity;
+        _commonLinkUtility = commonLinkUtility;
+        _log = option.Get("ASC.Mail.ContactEngine");
+    }
 
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private IndexEngine IndexEngine { get; }
-        private AccountEngine AccountEngine { get; }
-        private ApiHelper ApiHelper { get; }
-        private FactoryIndexer<MailContact> FactoryIndexer { get; }
-        private FactoryIndexer FactoryIndexerCommon { get; }
-        private IServiceProvider ServiceProvider { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        private CommonLinkUtility CommonLinkUtility { get; }
-        private MailDbContext MailDbContext { get; }
+    public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
+        string sortorder, out int totalCount)
+    {
+        var exp = string.IsNullOrEmpty(search) && !contactType.HasValue
+            ? new SimpleFilterContactsExp(Tenant, User, sortorder == DefineConstants.ASCENDING, fromIndex, pageSize)
+            : new FullFilterContactsExp(Tenant, User, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider, search, contactType,
+                orderAsc: sortorder == DefineConstants.ASCENDING,
+                startIndex: fromIndex, limit: pageSize);
 
-        public ContactEngine(
-            SecurityContext securityContext,
-            DbContextManager<MailDbContext> dbContextManager,
-            TenantManager tenantManager,
-            IMailDaoFactory mailDaoFactory,
-            IndexEngine indexEngine,
-            AccountEngine accountEngine,
-            ApiHelper apiHelper,
-            FactoryIndexer<MailContact> factoryIndexer,
-            FactoryIndexer factoryIndexerCommon,
-            WebItemSecurity webItemSecurity,
-            CommonLinkUtility commonLinkUtility,
-            IServiceProvider serviceProvider,
-            IOptionsMonitor<ILog> option)
+        var contacts = GetContactCards(exp);
+
+        if (contacts.Any() && contacts.Count() < pageSize)
         {
-            SecurityContext = securityContext;
-            MailDbContext = dbContextManager.Get("mail");
-            TenantManager = tenantManager;
-            MailDaoFactory = mailDaoFactory;
-            IndexEngine = indexEngine;
-            AccountEngine = accountEngine;
-            ApiHelper = apiHelper;
-            FactoryIndexer = factoryIndexer;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
-            WebItemSecurity = webItemSecurity;
-            CommonLinkUtility = commonLinkUtility;
-            Log = option.Get("ASC.Mail.ContactEngine");
+            totalCount = fromIndex + contacts.Count;
+        }
+        else
+        {
+            totalCount = GetContactCardsCount(exp);
         }
 
-        public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
-            string sortorder, out int totalCount)
+        return contacts.ToMailContactDataList(_commonLinkUtility);
+    }
+
+    public List<MailContactData> GetContactsByContactInfo(ContactInfoType infoType, string data, bool? isPrimary)
+    {
+        var exp = new FullFilterContactsExp(Tenant, User, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider,
+            data, infoType: infoType, isPrimary: isPrimary);
+
+        var contacts = GetContactCards(exp);
+
+        return contacts.ToMailContactDataList(_commonLinkUtility);
+    }
+
+    public MailContactData CreateContact(ContactModel model)
+    {
+        if (model.Emails == null || !model.Emails.Any())
+            throw new ArgumentException(@"Invalid list of emails.", "emails");
+
+        var contactCard = new ContactCard(0, Tenant, User, model.Name, model.Description, ContactType.Personal, model.Emails,
+            model.PhoneNumbers);
+
+        var newContact = SaveContactCard(contactCard);
+
+        return newContact.ToMailContactData(_commonLinkUtility);
+    }
+
+    public List<ContactCard> GetContactCards(IContactsExp exp)
+    {
+        if (exp == null)
+            throw new ArgumentNullException("exp");
+
+        var list = _mailDaoFactory.GetContactCardDao().GetContactCards(exp);
+
+        return list;
+    }
+
+    public int GetContactCardsCount(IContactsExp exp)
+    {
+        if (exp == null)
+            throw new ArgumentNullException("exp");
+
+        var count = _mailDaoFactory.GetContactCardDao().GetContactCardsCount(exp);
+
+        return count;
+    }
+
+    public ContactCard GetContactCard(int id)
+    {
+        var contactCard = _mailDaoFactory.GetContactCardDao().GetContactCard(id);
+
+        return contactCard;
+    }
+
+    public ContactCard SaveContactCard(ContactCard contactCard)
+    {
+        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
         {
-            var exp = string.IsNullOrEmpty(search) && !contactType.HasValue
-                ? new SimpleFilterContactsExp(Tenant, User, sortorder == DefineConstants.ASCENDING, fromIndex, pageSize)
-                : new FullFilterContactsExp(Tenant, User, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider, search, contactType,
-                    orderAsc: sortorder == DefineConstants.ASCENDING,
-                    startIndex: fromIndex, limit: pageSize);
+            var contactId = _mailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
 
-            var contacts = GetContactCards(exp);
+            contactCard.ContactInfo.Id = contactId;
 
-            if (contacts.Any() && contacts.Count() < pageSize)
+            foreach (var contactItem in contactCard.ContactItems)
             {
-                totalCount = fromIndex + contacts.Count;
+                contactItem.ContactId = contactId;
+
+                var contactItemId = _mailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
+
+                contactItem.Id = contactItemId;
             }
-            else
-            {
-                totalCount = GetContactCardsCount(exp);
-            }
 
-            return contacts.ToMailContactDataList(CommonLinkUtility);
+            tx.Commit();
         }
 
-        public List<MailContactData> GetContactsByContactInfo(ContactInfoType infoType, string data, bool? isPrimary)
-        {
-            var exp = new FullFilterContactsExp(Tenant, User, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider,
-                data, infoType: infoType, isPrimary: isPrimary);
+        _log.Debug("IndexEngine->SaveContactCard()");
 
-            var contacts = GetContactCards(exp);
+        _indexEngine.Add(contactCard.ToMailContactWrapper());
 
-            return contacts.ToMailContactDataList(CommonLinkUtility);
-        }
+        return contactCard;
+    }
 
-        public MailContactData CreateContact(ContactModel model)
-        {
-            if (model.Emails == null || !model.Emails.Any())
-                throw new ArgumentException(@"Invalid list of emails.", "emails");
+    public MailContactData UpdateContact(ContactModel model)
+    {
+        if (model.Id < 0)
+            throw new ArgumentException(@"Invalid contact id.", "id");
 
-            var contactCard = new ContactCard(0, Tenant, User, model.Name, model.Description, ContactType.Personal, model.Emails,
-                model.PhoneNumbers);
+        if (model.Emails == null || !model.Emails.Any())
+            throw new ArgumentException(@"Invalid list of emails.", "emails");
 
-            var newContact = SaveContactCard(contactCard);
+        var contactCard = new ContactCard(model.Id, Tenant, User, model.Name, model.Description,
+            ContactType.Personal, model.Emails, model.PhoneNumbers);
 
-            return newContact.ToMailContactData(CommonLinkUtility);
-        }
+        var contact = UpdateContactCard(contactCard);
 
-        public List<ContactCard> GetContactCards(IContactsExp exp)
-        {
-            if (exp == null)
-                throw new ArgumentNullException("exp");
+        return contact.ToMailContactData(_commonLinkUtility);
+    }
 
-            var list = MailDaoFactory.GetContactCardDao().GetContactCards(exp);
+    public ContactCard UpdateContactCard(ContactCard newContactCard)
+    {
+        var contactId = newContactCard.ContactInfo.Id;
 
-            return list;
-        }
+        if (contactId < 0)
+            throw new ArgumentException("Invalid contact id");
 
-        public int GetContactCardsCount(IContactsExp exp)
-        {
-            if (exp == null)
-                throw new ArgumentNullException("exp");
+        var contactCard = GetContactCard(contactId);
 
-            var count = MailDaoFactory.GetContactCardDao().GetContactCardsCount(exp);
+        if (null == contactCard)
+            throw new ArgumentException("Contact not found");
 
-            return count;
-        }
+        var contactChanged = !contactCard.ContactInfo.Equals(newContactCard.ContactInfo);
 
-        public ContactCard GetContactCard(int id)
-        {
-            var contactCard = MailDaoFactory.GetContactCardDao().GetContactCard(id);
+        var newContactItems = newContactCard.ContactItems.Where(c => !contactCard.ContactItems.Contains(c)).ToList();
 
+        var removedContactItems = contactCard.ContactItems.Where(c => !newContactCard.ContactItems.Contains(c)).ToList();
+
+        if (!contactChanged && !newContactItems.Any() && !removedContactItems.Any())
             return contactCard;
-        }
 
-        public ContactCard SaveContactCard(ContactCard contactCard)
+        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
         {
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            if (contactChanged)
             {
-                var contactId = MailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
+                _mailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
 
-                contactCard.ContactInfo.Id = contactId;
+                contactCard.ContactInfo = newContactCard.ContactInfo;
+            }
 
-                foreach (var contactItem in contactCard.ContactItems)
+            if (newContactItems.Any())
+            {
+                foreach (var contactItem in newContactItems)
                 {
                     contactItem.ContactId = contactId;
 
-                    var contactItemId = MailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
+                    var contactItemId = _mailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
 
                     contactItem.Id = contactItemId;
-                }
 
-                tx.Commit();
+                    contactCard.ContactItems.Add(contactItem);
+                }
             }
 
-            Log.Debug("IndexEngine->SaveContactCard()");
+            if (removedContactItems.Any())
+            {
+                foreach (var contactItem in removedContactItems)
+                {
+                    _mailDaoFactory.GetContactInfoDao().RemoveContactInfo(contactItem.Id);
 
-            IndexEngine.Add(contactCard.ToMailContactWrapper());
+                    contactCard.ContactItems.Remove(contactItem);
+                }
+            }
 
-            return contactCard;
+            tx.Commit();
         }
 
-        public MailContactData UpdateContact(ContactModel model)
+        _log.Debug("IndexEngine->UpdateContactCard()");
+
+        _indexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
+
+        return contactCard;
+    }
+
+    public void RemoveContacts(List<int> ids)
+    {
+        if (!ids.Any())
+            throw new ArgumentException(@"Empty ids collection", "ids");
+
+        using (var tx = _mailDaoFactory.BeginTransaction())
         {
-            if (model.Id < 0)
-                throw new ArgumentException(@"Invalid contact id.", "id");
+            _mailDaoFactory.GetContactDao().RemoveContacts(ids);
 
-            if (model.Emails == null || !model.Emails.Any())
-                throw new ArgumentException(@"Invalid list of emails.", "emails");
+            _mailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
 
-            var contactCard = new ContactCard(model.Id, Tenant, User, model.Name, model.Description,
-                ContactType.Personal, model.Emails, model.PhoneNumbers);
-
-            var contact = UpdateContactCard(contactCard);
-
-            return contact.ToMailContactData(CommonLinkUtility);
+            tx.Commit();
         }
 
-        public ContactCard UpdateContactCard(ContactCard newContactCard)
+        _log.Debug("IndexEngine->RemoveContacts()");
+
+        _indexEngine.RemoveContacts(ids, Tenant, new Guid(User));
+    }
+
+    /// <summary>
+    /// Search emails in Accounts, Mail, CRM, Peaople Contact System
+    /// </summary>
+    /// <param name="tenant">Tenant id</param>
+    /// <param name="userName">User id</param>
+    /// <param name="term">Search word</param>
+    /// <param name="maxCountPerSystem">limit result per Contact System</param>
+    /// <param name="timeout">Timeout in milliseconds</param>
+    /// <param name="httpContextScheme"></param>
+    /// <returns></returns>
+    public List<string> SearchEmails(int tenant, string userName, string term, int maxCountPerSystem, int timeout = -1)
+    {
+        var equality = new ContactEqualityComparer();
+        var contacts = new List<string>();
+        var userGuid = new Guid(userName);
+
+        var watch = new Stopwatch();
+
+        watch.Start();
+
+        var taskList = new List<Task<List<string>>>()
         {
-            var contactId = newContactCard.ContactInfo.Id;
-
-            if (contactId < 0)
-                throw new ArgumentException("Invalid contact id");
-
-            var contactCard = GetContactCard(contactId);
-
-            if (null == contactCard)
-                throw new ArgumentException("Contact not found");
-
-            var contactChanged = !contactCard.ContactInfo.Equals(newContactCard.ContactInfo);
-
-            var newContactItems = newContactCard.ContactItems.Where(c => !contactCard.ContactItems.Contains(c)).ToList();
-
-            var removedContactItems = contactCard.ContactItems.Where(c => !newContactCard.ContactItems.Contains(c)).ToList();
-
-            if (!contactChanged && !newContactItems.Any() && !removedContactItems.Any())
-                return contactCard;
-
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            Task.Run(() =>
             {
-                if (contactChanged)
-                {
-                    MailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
+                _tenantManager.SetCurrentTenant(tenant);
+                _securityContext.AuthenticateMe(userGuid);
 
-                    contactCard.ContactInfo = newContactCard.ContactInfo;
-                }
+                var exp = new FullFilterContactsExp(tenant, userName, _mailDbContext, _factoryIndexer, _factoryIndexerCommon, _serviceProvider,
+                    term, infoType: ContactInfoType.Email, orderAsc: true, limit: maxCountPerSystem);
 
-                if (newContactItems.Any())
-                {
-                    foreach (var contactItem in newContactItems)
-                    {
-                        contactItem.ContactId = contactId;
+                var contactCards = GetContactCards(exp);
 
-                        var contactItemId = MailDaoFactory.GetContactInfoDao().SaveContactInfo(contactItem);
-
-                        contactItem.Id = contactItemId;
-
-                        contactCard.ContactItems.Add(contactItem);
-                    }
-                }
-
-                if (removedContactItems.Any())
-                {
-                    foreach (var contactItem in removedContactItems)
-                    {
-                        MailDaoFactory.GetContactInfoDao().RemoveContactInfo(contactItem.Id);
-
-                        contactCard.ContactItems.Remove(contactItem);
-                    }
-                }
-
-                tx.Commit();
-            }
-
-            Log.Debug("IndexEngine->UpdateContactCard()");
-
-            IndexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
-
-            return contactCard;
-        }
-
-        public void RemoveContacts(List<int> ids)
-        {
-            if (!ids.Any())
-                throw new ArgumentException(@"Empty ids collection", "ids");
-
-            using (var tx = MailDaoFactory.BeginTransaction())
-            {
-                MailDaoFactory.GetContactDao().RemoveContacts(ids);
-
-                MailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
-
-                tx.Commit();
-            }
-
-            Log.Debug("IndexEngine->RemoveContacts()");
-
-            IndexEngine.RemoveContacts(ids, Tenant, new Guid(User));
-        }
-
-        /// <summary>
-        /// Search emails in Accounts, Mail, CRM, Peaople Contact System
-        /// </summary>
-        /// <param name="tenant">Tenant id</param>
-        /// <param name="userName">User id</param>
-        /// <param name="term">Search word</param>
-        /// <param name="maxCountPerSystem">limit result per Contact System</param>
-        /// <param name="timeout">Timeout in milliseconds</param>
-        /// <param name="httpContextScheme"></param>
-        /// <returns></returns>
-        public List<string> SearchEmails(int tenant, string userName, string term, int maxCountPerSystem, int timeout = -1)
-        {
-            var equality = new ContactEqualityComparer();
-            var contacts = new List<string>();
-            var userGuid = new Guid(userName);
-
-            var watch = new Stopwatch();
-
-            watch.Start();
-
-            var taskList = new List<Task<List<string>>>()
-            {
-                Task.Run(() =>
-                {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
-
-                    var exp = new FullFilterContactsExp(tenant, userName, MailDbContext, FactoryIndexer, FactoryIndexerCommon, ServiceProvider,
-                        term, infoType: ContactInfoType.Email, orderAsc: true, limit: maxCountPerSystem);
-
-                    var contactCards = GetContactCards(exp);
-
-                    return (from contactCard in contactCards
-                        from contactItem in contactCard.ContactItems
-                        select
-                            string.IsNullOrEmpty(contactCard.ContactInfo.ContactName)
-                                ? contactItem.Data
-                                : MailUtil.CreateFullEmail(contactCard.ContactInfo.ContactName, contactItem.Data))
-                        .ToList();
-                }),
-
-                Task.Run(() =>
-                {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
-
-                    return AccountEngine.SearchAccountEmails(term);
-                }),
-
-                Task.Run(() =>
-                {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
-
-                    return WebItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID)
-                        ? ApiHelper.SearchCrmEmails(term, maxCountPerSystem)
-                        : new List<string>();
-                }),
-
-                Task.Run(() =>
-                {
-                    TenantManager.SetCurrentTenant(tenant);
-                    SecurityContext.AuthenticateMe(userGuid);
-
-                    return WebItemSecurity.IsAvailableForMe(WebItemManager.PeopleProductID)
-                        ? ApiHelper.SearchPeopleEmails(term, 0, maxCountPerSystem)
-                        : new List<string>();
-                })
-            };
-
-            try
-            {
-                var taskArray = taskList.ToArray<Task>();
-
-                Task.WaitAll(taskArray, timeout);
-
-                watch.Stop();
-            }
-            catch (AggregateException e)
-            {
-                watch.Stop();
-
-                var errorText =
-                    new StringBuilder("SearchEmails: \nThe following exceptions have been thrown by WaitAll():");
-
-                foreach (var t in e.InnerExceptions)
-                {
-                    errorText
-                        .AppendFormat("\n-------------------------------------------------\n{0}", t);
-                }
-
-                Log.Error(errorText.ToString());
-            }
-
-            contacts =
-                taskList.Aggregate(contacts,
-                    (current, task) => !task.IsFaulted
-                                       && task.IsCompleted
-                                       && !task.IsCanceled
-                        ? current.Concat(task.Result).ToList()
-                        : current)
-                    .Distinct(equality)
+                return (from contactCard in contactCards
+                    from contactItem in contactCard.ContactItems
+                    select
+                        string.IsNullOrEmpty(contactCard.ContactInfo.ContactName)
+                            ? contactItem.Data
+                            : MailUtil.CreateFullEmail(contactCard.ContactInfo.ContactName, contactItem.Data))
                     .ToList();
+            }),
 
-            Log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
+            Task.Run(() =>
+            {
+                _tenantManager.SetCurrentTenant(tenant);
+                _securityContext.AuthenticateMe(userGuid);
 
-            return contacts;
+                return _accountEngine.SearchAccountEmails(term);
+            }),
+
+            Task.Run(() =>
+            {
+                _tenantManager.SetCurrentTenant(tenant);
+                _securityContext.AuthenticateMe(userGuid);
+
+                return _webItemSecurity.IsAvailableForMe(WebItemManager.CRMProductID)
+                    ? _apiHelper.SearchCrmEmails(term, maxCountPerSystem)
+                    : new List<string>();
+            }),
+
+            Task.Run(() =>
+            {
+                _tenantManager.SetCurrentTenant(tenant);
+                _securityContext.AuthenticateMe(userGuid);
+
+                return _webItemSecurity.IsAvailableForMe(WebItemManager.PeopleProductID)
+                    ? _apiHelper.SearchPeopleEmails(term, 0, maxCountPerSystem)
+                    : new List<string>();
+            })
+        };
+
+        try
+        {
+            var taskArray = taskList.ToArray<Task>();
+
+            Task.WaitAll(taskArray, timeout);
+
+            watch.Stop();
+        }
+        catch (AggregateException e)
+        {
+            watch.Stop();
+
+            var errorText =
+                new StringBuilder("SearchEmails: \nThe following exceptions have been thrown by WaitAll():");
+
+            foreach (var t in e.InnerExceptions)
+            {
+                errorText
+                    .AppendFormat("\n-------------------------------------------------\n{0}", t);
+            }
+
+            _log.Error(errorText.ToString());
         }
 
-        public class ContactEqualityComparer : IEqualityComparer<string>
+        contacts =
+            taskList.Aggregate(contacts,
+                (current, task) => !task.IsFaulted
+                                   && task.IsCompleted
+                                   && !task.IsCanceled
+                    ? current.Concat(task.Result).ToList()
+                    : current)
+                .Distinct(equality)
+                .ToList();
+
+        _log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
+
+        return contacts;
+    }
+
+    public class ContactEqualityComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string contact1, string contact2)
         {
-            public bool Equals(string contact1, string contact2)
-            {
-                if (contact1 == null && contact2 == null)
-                    return true;
+            if (contact1 == null && contact2 == null)
+                return true;
 
-                if (contact1 == null || contact2 == null)
-                    return false;
+            if (contact1 == null || contact2 == null)
+                return false;
 
-                var contact1Parts = contact1.Split('<');
-                var contact2Parts = contact2.Split('<');
+            var contact1Parts = contact1.Split('<');
+            var contact2Parts = contact2.Split('<');
 
-                return contact1Parts.Last().Replace(">", "") == contact2Parts.Last().Replace(">", "");
-            }
+            return contact1Parts.Last().Replace(">", "") == contact2Parts.Last().Replace(">", "");
+        }
 
-            public int GetHashCode(string str)
-            {
-                var strParts = str.Split('<');
-                return strParts.Last().Replace(">", "").GetHashCode();
-            }
+        public int GetHashCode(string str)
+        {
+            var strParts = str.Split('<');
+            return strParts.Last().Replace(">", "").GetHashCode();
         }
     }
 }

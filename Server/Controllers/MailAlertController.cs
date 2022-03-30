@@ -17,7 +17,7 @@ namespace ASC.Mail.Controllers
         [Read("alert")]
         public IList<MailAlertData> GetAlerts()
         {
-            var alerts = AlertEngine.GetAlerts();
+            var alerts = _alertEngine.GetAlerts();
             return alerts;
         }
 
@@ -34,7 +34,7 @@ namespace ASC.Mail.Controllers
             if (id < 0)
                 throw new ArgumentException(@"Invalid alert id. Id must be positive integer.", "id");
 
-            var success = AlertEngine.DeleteAlert(id);
+            var success = _alertEngine.DeleteAlert(id);
 
             if (!success)
                 throw new Exception("Delete failed");

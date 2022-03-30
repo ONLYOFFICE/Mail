@@ -23,14 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Attachment
+public interface IAttachmentExp
 {
-    public interface IAttachmentExp
-    {
-        Expression<Func<Entities.MailAttachment, bool>> GetExpression();
-    }
+    Expression<Func<Entities.MailAttachment, bool>> GetExpression();
 }

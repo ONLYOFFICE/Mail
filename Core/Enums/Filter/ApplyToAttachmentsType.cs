@@ -23,13 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum ApplyToAttachmentsType
 {
-    public enum ApplyToAttachmentsType
-    {
-        WithAndWithoutAttachments = 0,
-        WithAttachments = 1,
-        WithoutAttachments = 2
-    }
+    WithAndWithoutAttachments = 0,
+    WithAttachments = 1,
+    WithoutAttachments = 2
 }

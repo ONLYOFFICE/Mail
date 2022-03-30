@@ -23,103 +23,99 @@
  *
 */
 
+namespace ASC.Mail.Clients.Imap;
 
-using System;
-
-namespace ASC.Mail.Clients.Imap
+public class UidInterval
 {
-    public class UidInterval
+    public UidInterval(int from, int to)
     {
-        public UidInterval(int from, int to)
+        if (from < 1)
+            throw new ArgumentException("UidlInterval constructor from argument must be greater then 1");
+
+        if (to < 1)
+            throw new ArgumentException("UidlInterval constructor to argument must be greater then 1");
+
+        if (from > to)
+            throw new ArgumentException("UidlInterval constructor to argument must be greater then from argument");
+
+        From = from;
+        To = to;
+    }
+
+    public int From { get; private set; }
+    public int To { get; private set; }
+
+    public bool In(int val)
+    {
+        return val >= From && val <= To;
+    }
+
+    public static bool operator ==(UidInterval a, UidInterval b)
+    {
+        // If both are null, or both are same instance, return true.
+        if (ReferenceEquals(a, b))
         {
-            if (from < 1)
-                throw new ArgumentException("UidlInterval constructor from argument must be greater then 1");
-
-            if (to < 1)
-                throw new ArgumentException("UidlInterval constructor to argument must be greater then 1");
-
-            if (from > to)
-                throw new ArgumentException("UidlInterval constructor to argument must be greater then from argument");
-
-            From = from;
-            To = to;
+            return true;
         }
 
-        public int From { get; private set; }
-        public int To { get; private set; }
-
-        public bool In(int val)
+        // If one is null, but not both, return false.
+        if (((object)a == null) || ((object)b == null))
         {
-            return val >= From && val <= To;
+            return false;
         }
 
-        public static bool operator ==(UidInterval a, UidInterval b)
+        // Return true if the fields match:
+        return a.From == b.From && a.To == b.To;
+    }
+
+    public static bool operator !=(UidInterval a, UidInterval b)
+    {
+        return !(a == b);
+    }
+
+    public override bool Equals(Object obj)
+    {
+        // If parameter is null return false.
+        if (obj == null)
         {
-            // If both are null, or both are same instance, return true.
-            if (ReferenceEquals(a, b))
-            {
-                return true;
-            }
-
-            // If one is null, but not both, return false.
-            if (((object)a == null) || ((object)b == null))
-            {
-                return false;
-            }
-
-            // Return true if the fields match:
-            return a.From == b.From && a.To == b.To;
+            return false;
         }
 
-        public static bool operator !=(UidInterval a, UidInterval b)
+        // If parameter cannot be cast to Point return false.
+        var p = obj as UidInterval;
+        if ((Object)p == null)
         {
-            return !(a == b);
+            return false;
         }
 
-        public override bool Equals(Object obj)
+        // Return true if the fields match:
+        return (From == p.From) && (To == p.To);
+    }
+
+    public bool Equals(UidInterval p)
+    {
+        // If parameter is null return false:
+        if ((object)p == null)
         {
-            // If parameter is null return false.
-            if (obj == null)
-            {
-                return false;
-            }
-
-            // If parameter cannot be cast to Point return false.
-            var p = obj as UidInterval;
-            if ((Object)p == null)
-            {
-                return false;
-            }
-
-            // Return true if the fields match:
-            return (From == p.From) && (To == p.To);
+            return false;
         }
 
-        public bool Equals(UidInterval p)
-        {
-            // If parameter is null return false:
-            if ((object)p == null)
-            {
-                return false;
-            }
+        // Return true if the fields match:
+        return (From == p.From) && (To == p.To);
+    }
 
-            // Return true if the fields match:
-            return (From == p.From) && (To == p.To);
-        }
+    public override int GetHashCode()
+    {
+        return From ^ To;
+    }
 
-        public override int GetHashCode()
-        {
-            return From ^ To;
-        }
+    public bool IsToUidMax()
+    {
+        return To == int.MaxValue;
+    }
 
-        public bool IsToUidMax()
-        {
-            return To == int.MaxValue;
-        }
-
-        public bool IsFromUidMin()
-        {
-            return From == 1;
-        }
+    public bool IsFromUidMin()
+    {
+        return From == 1;
     }
 }

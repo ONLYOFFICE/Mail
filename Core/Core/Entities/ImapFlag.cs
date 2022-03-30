@@ -23,13 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class ImapFlag
 {
-    public class ImapFlag
-    {
-        public int FolderId { get; set; }
-        public string Name { get; set; }
-        public bool Skip { get; set; }
-    }
+    public int FolderId { get; set; }
+    public string Name { get; set; }
+    public bool Skip { get; set; }
 }

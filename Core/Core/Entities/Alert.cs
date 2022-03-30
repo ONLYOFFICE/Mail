@@ -23,18 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using ASC.Mail.Enums;
-
-namespace ASC.Mail.Core.Entities
+public class Alert
 {
-    public class Alert
-    {
-        public int Id { get; set; }
-        public int Tenant { get; set; }
-        public string User { get; set; }
-        public int MailboxId { get; set; }
-        public MailAlertTypes Type { get; set; }
-        public string Data { get; set; }
-    }
+    public int Id { get; set; }
+    public int Tenant { get; set; }
+    public string User { get; set; }
+    public int MailboxId { get; set; }
+    public MailAlertTypes Type { get; set; }
+    public string Data { get; set; }
 }

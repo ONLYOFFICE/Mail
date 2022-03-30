@@ -23,37 +23,31 @@
  *
 */
 
+namespace ASC.Mail.Server.Utils;
 
-using System;
-using ASC.Mail.Server.Exceptions;
-using Newtonsoft.Json.Linq;
-
-namespace ASC.Mail.Server.Utils
+public class PostfixConnectionStringParser
 {
-    public class PostfixConnectionStringParser
+    public PostfixConnectionStringParser(string connectionString)
     {
-        public PostfixConnectionStringParser(string connectionString)
-        {
-            Parse(connectionString);
-        }
-
-        private void Parse(string connectionString)
-        {
-            try
-            {
-                var parsedConnection = JObject.Parse(connectionString);
-                PostfixAdminDbConnectionString = parsedConnection["DbConnection"].ToString();
-            }
-            catch (NullReferenceException)
-            {
-                throw new InvalidPostfixConnectionStringException("Invalid connection string. Some keys wasn't founded");
-            }
-            catch (Exception)
-            {
-                throw new InvalidPostfixConnectionStringException("Invalid connection string");
-            }
-        }
-
-        public string PostfixAdminDbConnectionString { get; private set; }
+        Parse(connectionString);
     }
+
+    private void Parse(string connectionString)
+    {
+        try
+        {
+            var parsedConnection = JObject.Parse(connectionString);
+            PostfixAdminDbConnectionString = parsedConnection["DbConnection"].ToString();
+        }
+        catch (NullReferenceException)
+        {
+            throw new InvalidPostfixConnectionStringException("Invalid connection string. Some keys wasn't founded");
+        }
+        catch (Exception)
+        {
+            throw new InvalidPostfixConnectionStringException("Invalid connection string");
+        }
+    }
+
+    public string PostfixAdminDbConnectionString { get; private set; }
 }

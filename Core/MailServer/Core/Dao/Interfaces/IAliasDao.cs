@@ -23,17 +23,14 @@
  *
 */
 
+using Alias = ASC.Mail.Server.Core.Entities.Alias;
 
-using ASC.Common;
-using ASC.Mail.Server.Core.Entities;
+namespace ASC.Mail.Server.Core.Dao.Interfaces;
 
-namespace ASC.Mail.Server.Core.Dao.Interfaces
+[Scope(typeof(IAliasDao))]
+public interface IAliasDao
 {
-    [Scope(typeof(IAliasDao))]
-    public interface IAliasDao
-    {
-        int Save(Alias alias);
-        int Remove(string address);
-        int RemoveByDomain(string domain);
-    }
+    int Save(Alias alias);
+    int Remove(string address);
+    int RemoveByDomain(string domain);
 }

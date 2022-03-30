@@ -23,20 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Extensions
+public static class EnumerableExtensions
 {
-    public static class EnumerableExtensions
+    public static IEnumerable<TSource> DistinctBy<TSource, TKey>
+        (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
     {
-        public static IEnumerable<TSource> DistinctBy<TSource, TKey>
-            (this IEnumerable<TSource> source, Func<TSource, TKey> keySelector)
-        {
-            var seenKeys = new HashSet<TKey>();
-            return source.Where(element => seenKeys.Add(keySelector(element)));
-        }
+        var seenKeys = new HashSet<TKey>();
+        return source.Where(element => seenKeys.Add(keySelector(element)));
     }
 }

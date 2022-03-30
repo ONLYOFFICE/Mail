@@ -23,19 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Authorization;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core.Common.Configuration;
-using ASC.FederatedLogin.LoginProviders;
-
-namespace ASC.Mail.Authorization
+[Scope]
+public class GoogleOAuth2Authorization : BaseOAuth2Authorization<GoogleLoginProvider>
 {
-    [Scope]
-    public class GoogleOAuth2Authorization : BaseOAuth2Authorization<GoogleLoginProvider>
+    public GoogleOAuth2Authorization(ILog log, ConsumerFactory consumerFactory) : base(log, consumerFactory)
     {
-        public GoogleOAuth2Authorization(ILog log, ConsumerFactory consumerFactory) : base(log, consumerFactory)
-        {
-        }
     }
 }

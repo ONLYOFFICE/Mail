@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine.Operations.Base;
 
-using System;
-
-namespace ASC.Mail.Core.Engine.Operations.Base
+public class MailOperationAlreadyRunningException : Exception
 {
-    public class MailOperationAlreadyRunningException: Exception
+    public MailOperationAlreadyRunningException(string message)
+        : base(message)
     {
-        public MailOperationAlreadyRunningException(string message)
-            : base(message)
-        {
-        }
     }
 }

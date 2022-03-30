@@ -23,25 +23,20 @@
  *
 */
 
+namespace ASC.Mail.Server.Utils;
 
-using System;
-using System.Text;
-
-namespace ASC.Mail.Server.Utils
+public class PasswordGenerator
 {
-    public class PasswordGenerator
+    public static string GenerateNewPassword(int length)
     {
-        public static string GenerateNewPassword(int length)
+        const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        var res = new StringBuilder(length);
+        var rnd = new Random();
+        while (0 < length--)
         {
-            const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-            var res = new StringBuilder(length);
-            var rnd = new Random();
-            while (0 < length--)
-            {
-                res.Append(valid[rnd.Next(valid.Length)]);
-            }
-            return res.ToString();
-
+            res.Append(valid[rnd.Next(valid.Length)]);
         }
+        return res.ToString();
+
     }
 }

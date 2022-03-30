@@ -23,51 +23,43 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.UserFolder;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.UserFolder
+public class SimpleUserFoldersTreeExp : IUserFoldersTreeExp
 {
-    public class SimpleUserFoldersTreeExp : IUserFoldersTreeExp
+    public List<int> Ids { get; set; }
+    public int? ParentId { get; set; }
+    public uint? Level { get; set; }
+
+    public string OrderBy { get; set; }
+    public bool? OrderAsc { get; set; }
+    public int? StartIndex { get; set; }
+    public int? Limit { get; set; }
+
+    public static UserFoldersTreeExpBuilder CreateBuilder()
     {
-        public List<int> Ids { get; set; }
-        public int? ParentId { get; set; }
-        public uint? Level { get; set; }
+        return new UserFoldersTreeExpBuilder();
+    }
 
-        public string OrderBy { get; set; }
-        public bool? OrderAsc { get; set; }
-        public int? StartIndex { get; set; }
-        public int? Limit { get; set; }
+    public Expression<Func<MailUserFolderTree, bool>> GetExpression()
+    {
+        Expression<Func<MailUserFolderTree, bool>> exp = t => true;
 
-        public static UserFoldersTreeExpBuilder CreateBuilder()
+        if (Ids != null && Ids.Any())
         {
-            return new UserFoldersTreeExpBuilder();
+            exp = exp.And(t => Ids.Contains(t.FolderId));
         }
 
-        public Expression<Func<MailUserFolderTree, bool>> GetExpression()
+        if (ParentId.HasValue)
         {
-            Expression<Func<MailUserFolderTree, bool>> exp = t => true;
-
-            if (Ids != null && Ids.Any())
-            {
-                exp = exp.And(t => Ids.Contains(t.FolderId));
-            }
-
-            if (ParentId.HasValue)
-            {
-                exp = exp.And(t => t.ParentId == ParentId.Value);
-            }
-
-            if (Level.HasValue)
-            {
-                exp = exp.And(t => Level == Level.Value);
-            }
-
-            return exp;
+            exp = exp.And(t => t.ParentId == ParentId.Value);
         }
+
+        if (Level.HasValue)
+        {
+            exp = exp.And(t => Level == Level.Value);
+        }
+
+        return exp;
     }
 }

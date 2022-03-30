@@ -23,29 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ServerAddressDao))]
+public interface IServerAddressDao
 {
-    [Scope(typeof(ServerAddressDao))]
-    public interface IServerAddressDao
-    {
-        ServerAddress Get(int id);
-        List<ServerAddress> GetList(List<int> ids = null);
-        List<ServerAddress> GetList(int mailboxId);
-        List<ServerAddress> GetGroupAddresses(int groupId);
-        List<ServerAddress> GetDomainAddresses(int domainId);
-        void AddAddressesToMailGroup(int groupId, List<int> addressIds);
-        void DeleteAddressFromMailGroup(int groupId, int addressId);
-        void DeleteAddressesFromMailGroup(int groupId);
-        void DeleteAddressesFromAnyMailGroup(List<int> addressIds);
-        int Save(ServerAddress address);
-        int Delete(int id);
-        int Delete(List<int> ids);
-        bool IsAddressAlreadyRegistered(string addressName, string domainName);
-    }
+    ServerAddress Get(int id);
+    List<ServerAddress> GetList(List<int> ids = null);
+    List<ServerAddress> GetList(int mailboxId);
+    List<ServerAddress> GetGroupAddresses(int groupId);
+    List<ServerAddress> GetDomainAddresses(int domainId);
+    void AddAddressesToMailGroup(int groupId, List<int> addressIds);
+    void DeleteAddressFromMailGroup(int groupId, int addressId);
+    void DeleteAddressesFromMailGroup(int groupId);
+    void DeleteAddressesFromAnyMailGroup(List<int> addressIds);
+    int Save(ServerAddress address);
+    int Delete(int id);
+    int Delete(List<int> ids);
+    bool IsAddressAlreadyRegistered(string addressName, string domainName);
 }

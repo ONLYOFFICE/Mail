@@ -22,41 +22,35 @@
  * Pursuant to Section 7 § 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
+using FolderType = ASC.Mail.Enums.FolderType;
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Enums;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(TagMailDao))]
+public interface ITagMailDao
 {
-    [Scope(typeof(TagMailDao))]
-    public interface ITagMailDao
-    {
-        /// <summary>
-        ///     Set tag on messages
-        /// </summary>
-        /// <param name="messageIds"></param>
-        /// <param name="tagId"></param>
-        void SetMessagesTag(IEnumerable<int> messageIds, int tagId);
+    /// <summary>
+    ///     Set tag on messages
+    /// </summary>
+    /// <param name="messageIds"></param>
+    /// <param name="tagId"></param>
+    void SetMessagesTag(IEnumerable<int> messageIds, int tagId);
 
-        int CalculateTagCount(int id);
+    int CalculateTagCount(int id);
 
-        Dictionary<int, List<int>> GetMailTagsDictionary(List<int> mailIds);
+    Dictionary<int, List<int>> GetMailTagsDictionary(List<int> mailIds);
 
-        List<int> GetTagIds(List<int> mailIds);
+    List<int> GetTagIds(List<int> mailIds);
 
-        List<int> GetTagIds(int mailboxId);
+    List<int> GetTagIds(int mailboxId);
 
-        string GetChainTags(string chainId, FolderType folder, int mailboxId);
+    string GetChainTags(string chainId, FolderType folder, int mailboxId);
 
-        int Delete(int tagId, List<int> mailIds);
+    int Delete(int tagId, List<int> mailIds);
 
-        int DeleteByTagId(int tagId);
+    int DeleteByTagId(int tagId);
 
-        int DeleteByMailboxId(int mailboxId);
+    int DeleteByMailboxId(int mailboxId);
 
-        int DeleteByMailIds(List<int> mailIds);
-    }
+    int DeleteByMailIds(List<int> mailIds);
 }

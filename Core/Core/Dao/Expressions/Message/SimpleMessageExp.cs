@@ -23,28 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Message
+public class SimpleMessageExp : IMessageExp
 {
-    public class SimpleMessageExp : IMessageExp
+    public SimpleMessageExp(bool? isRemoved = false)
     {
-        public SimpleMessageExp(bool? isRemoved = false)
-        {
-            IsRemoved = isRemoved;
-        }
+        IsRemoved = isRemoved;
+    }
 
-        public bool? IsRemoved { get; }
+    public bool? IsRemoved { get; }
 
-        public virtual Expression<Func<MailMail, bool>> GetExpression()
-        {
-            if (!IsRemoved.HasValue)
-                return m => true;
+    public virtual Expression<Func<MailMail, bool>> GetExpression()
+    {
+        if (!IsRemoved.HasValue)
+            return m => true;
 
-            return m => m.IsRemoved == IsRemoved;
-        }
+        return m => m.IsRemoved == IsRemoved;
     }
 }

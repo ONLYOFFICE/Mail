@@ -1,27 +1,22 @@
-﻿using ASC.Common;
-using ASC.Mail.Server.Core.Dao;
-using ASC.Mail.Server.Core.Dao.Interfaces;
+﻿using IMailboxDao = ASC.Mail.Server.Core.Dao.Interfaces.IMailboxDao;
 
-using Microsoft.EntityFrameworkCore.Storage;
+namespace ASC.Mail.Core.MailServer.Core.Dao;
 
-namespace ASC.Mail.Core.MailServer.Core.Dao
+[Scope(typeof(MailServerDaoFactory), Additional = typeof(MailServerDaoFactoryExtension))]
+public interface IMailServerDaoFactory
 {
-    [Scope(typeof(MailServerDaoFactory), Additional = typeof(MailServerDaoFactoryExtension))]
-    public interface IMailServerDaoFactory
-    {
-        MailServerDbContext GetContext();
+    MailServerDbContext GetContext();
 
-        void SetServerDbConnectionString(string serverCs);
+    void SetServerDbConnectionString(string serverCs);
 
-        IAliasDao GetAliasDao();
+    IAliasDao GetAliasDao();
 
-        IDkimDao GetDkimDao();
+    IDkimDao GetDkimDao();
 
-        IDomainDao GetDomainDao();
+    IDomainDao GetDomainDao();
 
-        IMailboxDao GetMailboxDao();
+    IMailboxDao GetMailboxDao();
 
-        public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null);
-    }
+    public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null);
 }
 

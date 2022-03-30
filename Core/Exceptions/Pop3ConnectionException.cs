@@ -23,13 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class Pop3ConnectionException : Exception
 {
-    public class Pop3ConnectionException : Exception
-    {
-        public Pop3ConnectionException(string message) : base(message) { }
-    }
+    public Pop3ConnectionException(string message) : base(message) { }
 }

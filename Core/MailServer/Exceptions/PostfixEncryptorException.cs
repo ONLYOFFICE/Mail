@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Server.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Server.Exceptions
+public class PostfixEncryptorException : Exception
 {
-    public class PostfixEncryptorException : Exception
+    public PostfixEncryptorException(string message)
+        : base(message)
     {
-        public PostfixEncryptorException(string message)
-            : base(message)
-        {
-        }
     }
 }

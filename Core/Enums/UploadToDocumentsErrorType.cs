@@ -23,12 +23,10 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum UploadToDocumentsErrorType
 {
-    public enum UploadToDocumentsErrorType
-    {
-        FolderNotFound = 1,
-        AccessDenied = 2
-    }
+    FolderNotFound = 1,
+    AccessDenied = 2
 }

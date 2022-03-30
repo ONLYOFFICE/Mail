@@ -23,44 +23,40 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class ContactInfo : IEquatable<ContactInfo>
 {
-    public class ContactInfo : IEquatable<ContactInfo>
+    public int Id { get; set; }
+    public int Tenant { get; set; }
+    public string User { get; set; }
+    public int ContactId { get; set; }
+    public string Data { get; set; }
+    public int Type { get; set; }
+    public bool IsPrimary { get; set; }
+
+    public bool Equals(ContactInfo other)
     {
-        public int Id { get; set; }
-        public int Tenant { get; set; }
-        public string User { get; set; }
-        public int ContactId { get; set; }
-        public string Data { get; set; }
-        public int Type { get; set; }
-        public bool IsPrimary { get; set; }
+        if (other == null) return false;
+        return string.Equals(User, other.User, StringComparison.InvariantCultureIgnoreCase)
+               && Tenant == other.Tenant
+               && ContactId == other.ContactId
+               && string.Equals(Data, other.Data, StringComparison.InvariantCultureIgnoreCase)
+               && Type == other.Type
+               && IsPrimary == other.IsPrimary;
+    }
 
-        public bool Equals(ContactInfo other)
-        {
-            if (other == null) return false;
-            return string.Equals(User, other.User, StringComparison.InvariantCultureIgnoreCase)
-                   && Tenant == other.Tenant
-                   && ContactId == other.ContactId
-                   && string.Equals(Data, other.Data, StringComparison.InvariantCultureIgnoreCase)
-                   && Type == other.Type
-                   && IsPrimary == other.IsPrimary;
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals(obj as ContactInfo);
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals(obj as ContactInfo);
-        }
-
-        public override int GetHashCode()
-        {
-            return Tenant.GetHashCode() ^ User.GetHashCode() ^ ContactId.GetHashCode() ^ Data.GetHashCode() ^
-                   Type.GetHashCode() ^ IsPrimary.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Tenant.GetHashCode() ^ User.GetHashCode() ^ ContactId.GetHashCode() ^ Data.GetHashCode() ^
+               Type.GetHashCode() ^ IsPrimary.GetHashCode();
     }
 }

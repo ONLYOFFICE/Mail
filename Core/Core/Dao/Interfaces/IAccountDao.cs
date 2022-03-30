@@ -22,18 +22,12 @@
  * Pursuant to Section 7 § 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
+using Account = ASC.Mail.Core.Entities.Account;
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(AccountDao))]
+public interface IAccountDao
 {
-    [Scope(typeof(AccountDao))]
-    public interface IAccountDao
-    {
-        List<Account> GetAccounts();
-    }
+    List<Account> GetAccounts();
 }

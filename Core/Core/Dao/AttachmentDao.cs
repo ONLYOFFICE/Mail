@@ -23,149 +23,137 @@
  *
 */
 
+using Attachment = ASC.Mail.Core.Entities.Attachment;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Attachment;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class AttachmentDao : BaseMailDao, IAttachmentDao
 {
-    [Scope]
-    public class AttachmentDao : BaseMailDao, IAttachmentDao
+    public AttachmentDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public AttachmentDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public Attachment GetAttachment(IAttachmentExp exp)
+    {
+        var attachemnt = MailDbContext.MailAttachment
+            .AsNoTracking()
+            .Include(a => a.Mail)
+            .Where(exp.GetExpression())
+            .Select(ToAttachment)
+            .FirstOrDefault();
+
+        return attachemnt;
+    }
+
+    public List<Attachment> GetAttachments(IAttachmentsExp exp)
+    {
+        var attachemnts = MailDbContext.MailAttachment
+            .AsNoTracking()
+            .Include(a => a.Mail)
+            .Where(exp.GetExpression())
+            .Select(ToAttachment)
+            .ToList();
+
+        return attachemnts;
+    }
+
+    public long GetAttachmentsSize(IAttachmentsExp exp)
+    {
+        var size = MailDbContext.MailAttachment
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Sum(a => a.Size);
+
+        return size;
+    }
+
+    public int GetAttachmentsMaxFileNumber(IAttachmentsExp exp)
+    {
+        var number = MailDbContext.MailAttachment
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Select(a => a.FileNumber)
+            .DefaultIfEmpty()
+            .Max();
+
+        return number;
+    }
+
+    public int GetAttachmentsCount(IAttachmentsExp exp)
+    {
+        var count = MailDbContext.MailAttachment
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Count();
+
+        return count;
+    }
+
+    public bool SetAttachmnetsRemoved(IAttachmentsExp exp)
+    {
+        var attachments = MailDbContext.MailAttachment.Where(exp.GetExpression());
+
+        foreach (var att in attachments)
         {
+            att.NeedRemove = true;
         }
 
-        public Attachment GetAttachment(IAttachmentExp exp)
+        MailDbContext.UpdateRange(attachments);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result > 0;
+    }
+
+    public int SaveAttachment(Attachment attachment)
+    {
+        var mailAttachment = new MailAttachment
         {
-            var attachemnt = MailDbContext.MailAttachment
-                .AsNoTracking()
-                .Include(a => a.Mail)
-                .Where(exp.GetExpression())
-                .Select(ToAttachment)
-                .FirstOrDefault();
+            Id = attachment.Id,
+            Tenant = attachment.Tenant,
+            IdMail = attachment.MailId,
+            IdMailbox = attachment.MailboxId,
+            Name = attachment.Name,
+            StoredName = attachment.StoredName,
+            Type = attachment.Type,
+            Size = attachment.Size,
+            FileNumber = attachment.FileNumber,
+            NeedRemove = attachment.IsRemoved,
+            ContentId = attachment.ContentId
+        };
 
-            return attachemnt;
-        }
+        var entry = MailDbContext.MailAttachment.Add(mailAttachment);
 
-        public List<Attachment> GetAttachments(IAttachmentsExp exp)
+        MailDbContext.SaveChanges();
+
+        return entry.Entity.Id;
+    }
+
+    protected Attachment ToAttachment(MailAttachment r)
+    {
+        var a = new Attachment
         {
-            var attachemnts = MailDbContext.MailAttachment
-                .AsNoTracking()
-                .Include(a => a.Mail)
-                .Where(exp.GetExpression())
-                .Select(ToAttachment)
-                .ToList();
+            Id = r.Id,
+            MailId = r.IdMail,
+            Name = r.Name,
+            StoredName = r.StoredName,
+            Type = r.Type,
+            Size = r.Size,
+            IsRemoved = r.NeedRemove,
+            FileNumber = r.FileNumber,
+            ContentId = r.ContentId,
+            Tenant = r.Tenant,
+            MailboxId = r.IdMailbox,
+            Stream = r.Mail.Stream,
+            User = r.Mail.UserId
+        };
 
-            return attachemnts;
-        }
-
-        public long GetAttachmentsSize(IAttachmentsExp exp)
-        {
-            var size = MailDbContext.MailAttachment
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Sum(a => a.Size);
-
-            return size;
-        }
-
-        public int GetAttachmentsMaxFileNumber(IAttachmentsExp exp)
-        {
-            var number = MailDbContext.MailAttachment
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Select(a => a.FileNumber)
-                .DefaultIfEmpty()
-                .Max();
-
-            return number;
-        }
-
-        public int GetAttachmentsCount(IAttachmentsExp exp)
-        {
-            var count = MailDbContext.MailAttachment
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Count();
-
-            return count;
-        }
-
-        public bool SetAttachmnetsRemoved(IAttachmentsExp exp)
-        {
-            var attachments = MailDbContext.MailAttachment.Where(exp.GetExpression());
-
-            foreach (var att in attachments)
-            {
-                att.NeedRemove = true;
-            }
-
-            MailDbContext.UpdateRange(attachments);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result > 0;
-        }
-
-        public int SaveAttachment(Attachment attachment)
-        {
-            var mailAttachment = new MailAttachment
-            {
-                Id = attachment.Id,
-                Tenant = attachment.Tenant,
-                IdMail = attachment.MailId,
-                IdMailbox = attachment.MailboxId,
-                Name = attachment.Name,
-                StoredName = attachment.StoredName,
-                Type = attachment.Type,
-                Size = attachment.Size,
-                FileNumber = attachment.FileNumber,
-                NeedRemove = attachment.IsRemoved,
-                ContentId = attachment.ContentId
-            };
-
-            var entry = MailDbContext.MailAttachment.Add(mailAttachment);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Entity.Id;
-        }
-
-        protected Attachment ToAttachment(MailAttachment r)
-        {
-            var a = new Attachment
-            {
-                Id = r.Id,
-                MailId = r.IdMail,
-                Name = r.Name,
-                StoredName = r.StoredName,
-                Type = r.Type,
-                Size = r.Size,
-                IsRemoved = r.NeedRemove,
-                FileNumber = r.FileNumber,
-                ContentId = r.ContentId,
-                Tenant = r.Tenant,
-                MailboxId = r.IdMailbox,
-                Stream = r.Mail.Stream,
-                User = r.Mail.UserId
-            };
-
-            return a;
-        }
+        return a;
     }
 }

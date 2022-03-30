@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class MailboxAutoreplyHistory
 {
-    public class MailboxAutoreplyHistory
-    {
-        public int MailboxId { get; set; }
-        public int Tenant { get; set; }
-        public string SendingEmail { get; set; }
-        public DateTime SendingDate { get; set; }
-    }
+    public int MailboxId { get; set; }
+    public int Tenant { get; set; }
+    public string SendingEmail { get; set; }
+    public DateTime SendingDate { get; set; }
 }

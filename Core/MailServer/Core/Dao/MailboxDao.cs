@@ -23,74 +23,67 @@
  *
 */
 
+using IMailboxDao = ASC.Mail.Server.Core.Dao.Interfaces.IMailboxDao;
+using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
 
-using System.Linq;
+namespace ASC.Mail.Server.Core.Dao;
 
-using ASC.Common;
-using ASC.Core.Common.EF;
-using ASC.Mail.Server.Core.Dao.Interfaces;
-using ASC.Mail.Server.Core.Entities;
-using ASC.Mail.Server.Utils;
-
-namespace ASC.Mail.Server.Core.Dao
+[Scope]
+public class MailboxDao : BaseServerDao, IMailboxDao
 {
-    [Scope]
-    public class MailboxDao : BaseServerDao, IMailboxDao
+    public MailboxDao(DbContextManager<MailServerDbContext> dbContext)
+        : base(dbContext)
     {
-        public MailboxDao(DbContextManager<MailServerDbContext> dbContext)
-            : base(dbContext)
-        {
-        }
+    }
 
-        public int Save(Mailbox mailbox, bool deliver = true)
-        {
-            mailbox.Password = PostfixPasswordEncryptor.EncryptString(HashType.Md5, mailbox.Password);
+    public int Save(Mailbox mailbox, bool deliver = true)
+    {
+        mailbox.Password = PostfixPasswordEncryptor.EncryptString(HashType.Md5, mailbox.Password);
 
-            var entry = MailServerDbContext.AddOrUpdate(r => r.Mailbox, mailbox);
+        var entry = MailServerDbContext.AddOrUpdate(r => r.Mailbox, mailbox);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int ChangePassword(string username, string newPassword)
-        {
-            var mb = MailServerDbContext.Mailbox
-                .Where(mb => mb.Username
-                    .Equals(username, System.StringComparison.InvariantCultureIgnoreCase))
-                .SingleOrDefault();
+    public int ChangePassword(string username, string newPassword)
+    {
+        var mb = MailServerDbContext.Mailbox
+            .Where(mb => mb.Username
+                .Equals(username, System.StringComparison.InvariantCultureIgnoreCase))
+            .SingleOrDefault();
 
-            if (mb == null)
-                return -1;
+        if (mb == null)
+            return -1;
 
-            mb.Password = PostfixPasswordEncryptor.EncryptString(HashType.Md5, newPassword);
+        mb.Password = PostfixPasswordEncryptor.EncryptString(HashType.Md5, newPassword);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int Remove(string address)
-        {
-            var query = MailServerDbContext.Mailbox.Where(a =>
-                a.Username.Equals(address, System.StringComparison.InvariantCultureIgnoreCase));
+    public int Remove(string address)
+    {
+        var query = MailServerDbContext.Mailbox.Where(a =>
+            a.Username.Equals(address, System.StringComparison.InvariantCultureIgnoreCase));
 
-            MailServerDbContext.Mailbox.RemoveRange(query);
+        MailServerDbContext.Mailbox.RemoveRange(query);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int RemoveByDomain(string domain)
-        {
-            var query = MailServerDbContext.Mailbox.Where(a => a.Domain.ToLower() == domain.ToLower());
+    public int RemoveByDomain(string domain)
+    {
+        var query = MailServerDbContext.Mailbox.Where(a => a.Domain.ToLower() == domain.ToLower());
 
-            MailServerDbContext.Mailbox.RemoveRange(query);
+        MailServerDbContext.Mailbox.RemoveRange(query);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
     }
 }

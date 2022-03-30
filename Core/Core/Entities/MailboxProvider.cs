@@ -23,15 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class MailboxProvider
 {
-    public class MailboxProvider
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public string DisplayName { get; set; }
-        public string DisplayShortName { get; set; }
-        public string Url { get; set; }
-    }
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public string DisplayName { get; set; }
+    public string DisplayShortName { get; set; }
+    public string Url { get; set; }
 }

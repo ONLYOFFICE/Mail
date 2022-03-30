@@ -42,7 +42,7 @@ namespace ASC.Mail.Controllers
             if (account == null)
                 throw new ArgumentException("Mailbox not found");
 
-            return SignatureEngine.SaveSignature(mailbox_id, html, is_active);
+            return _signatureEngine.SaveSignature(mailbox_id, html, is_active);
         }
     }
 }

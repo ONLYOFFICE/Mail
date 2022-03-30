@@ -23,16 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class EmptyFolderException : ArgumentException
 {
-    public class EmptyFolderException : ArgumentException
+    public EmptyFolderException(string message)
+        : base(message)
     {
-        public EmptyFolderException(string message)
-            : base(message)
-        {
-        }
     }
 }

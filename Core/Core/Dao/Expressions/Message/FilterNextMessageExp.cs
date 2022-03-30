@@ -23,39 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Models;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Message
+public class FilterNextMessageExp : FilterMessagesExp
 {
-    public class FilterNextMessageExp : FilterMessagesExp
+    public DateTime DateSent { get; private set; }
+
+    public FilterNextMessageExp(DateTime dateSent, int tenant, string user, MailSearchFilterData filter)
+        : base(null, tenant, user, filter)
     {
-        public DateTime DateSent { get; private set; }
+        DateSent = dateSent;
+    }
 
-        public FilterNextMessageExp(DateTime dateSent, int tenant, string user, MailSearchFilterData filter)
-            : base(null, tenant, user, filter)
+    private const string MM_ALIAS = "mm";
+
+    public override Expression<Func<MailMail, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
+
+        if (OrderAsc != null && OrderAsc.Value)
         {
-            DateSent = dateSent;
+            exp = exp.And(m => m.DateSent >= DateSent);
+        }
+        else
+        {
+            exp = exp.And(m => m.DateSent <= DateSent);
         }
 
-        private const string MM_ALIAS = "mm";
-
-        public override Expression<Func<MailMail, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
-
-            if (OrderAsc != null && OrderAsc.Value)
-            {
-                exp = exp.And(m => m.DateSent >= DateSent);
-            }
-            else {
-                exp = exp.And(m => m.DateSent <= DateSent);
-            }
-
-            return exp;
-        }
+        return exp;
     }
 }

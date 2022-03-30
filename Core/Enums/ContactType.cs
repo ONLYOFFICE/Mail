@@ -23,12 +23,10 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum ContactType
 {
-    public enum ContactType
-    {
-        FrequentlyContacted = 0,
-        Personal
-    }
+    FrequentlyContacted = 0,
+    Personal
 }

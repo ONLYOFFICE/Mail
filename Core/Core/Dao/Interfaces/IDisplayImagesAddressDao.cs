@@ -23,32 +23,26 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(DisplayImagesAddressDao))]
+public interface IDisplayImagesAddressDao
 {
-    [Scope(typeof(DisplayImagesAddressDao))]
-    public interface IDisplayImagesAddressDao
-    {
-        /// <summary>
-        ///     Get Addresses for display images.
-        /// </summary>
-        /// <returns>List of string emails</returns>
-        List<string> GetDisplayImagesAddresses();
+    /// <summary>
+    ///     Get Addresses for display images.
+    /// </summary>
+    /// <returns>List of string emails</returns>
+    List<string> GetDisplayImagesAddresses();
 
-        /// <summary>
-        ///     Add address for display images
-        /// </summary>
-        /// <param name="address"></param>
-        void AddDisplayImagesAddress(string address);
+    /// <summary>
+    ///     Add address for display images
+    /// </summary>
+    /// <param name="address"></param>
+    void AddDisplayImagesAddress(string address);
 
-        /// <summary>
-        ///     Delete address for display images
-        /// </summary>
-        /// <param name="address"></param>
-        void RemovevDisplayImagesAddress(string address);
-    }
+    /// <summary>
+    ///     Delete address for display images
+    /// </summary>
+    /// <param name="address"></param>
+    void RemovevDisplayImagesAddress(string address);
 }

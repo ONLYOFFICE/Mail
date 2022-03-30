@@ -23,143 +23,131 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ServerDnsDao : BaseMailDao, IServerDnsDao
 {
-    [Scope]
-    public class ServerDnsDao : BaseMailDao, IServerDnsDao
+    public ServerDnsDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ServerDnsDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public ServerDns Get(int domainId)
+    {
+        var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
+
+        var dns = MailDbContext.MailServerDns
+            .AsNoTracking()
+            .Where(d => tenants.Contains(d.Tenant) && d.IdDomain == domainId)
+            .Select(ToServerDns)
+            .SingleOrDefault();
+
+        return dns;
+    }
+
+    public ServerDns GetById(int id)
+    {
+        var dns = MailDbContext.MailServerDns
+            .AsNoTracking()
+            .Where(d => d.Tenant == Tenant && d.Id == id)
+            .Select(ToServerDns)
+            .SingleOrDefault();
+
+        return dns;
+    }
+
+    public ServerDns GetFree()
+    {
+        var dns = MailDbContext.MailServerDns
+            .AsNoTracking()
+            .Where(d => d.Tenant == Tenant && d.IdUser == UserId && d.IdDomain == DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID)
+            .Select(ToServerDns)
+            .SingleOrDefault();
+
+        return dns;
+    }
+
+    public int Save(ServerDns dns)
+    {
+        var mailDns = new MailServerDns
         {
-        }
+            Id = (uint)dns.Id,
+            Tenant = dns.Tenant,
+            IdUser = dns.User,
+            IdDomain = dns.DomainId,
+            DomainCheck = dns.DomainCheck,
+            DkimSelector = dns.DkimSelector,
+            DkimPrivateKey = dns.DkimPrivateKey,
+            DkimPublicKey = dns.DkimPublicKey,
+            DkimTtl = dns.DkimTtl,
+            DkimVerified = dns.DkimVerified,
+            DkimDateChecked = dns.DkimDateChecked,
+            Spf = dns.Spf,
+            SpfTtl = dns.SpfTtl,
+            SpfVerified = dns.SpfVerified,
+            SpfDateChecked = dns.SpfDateChecked,
+            Mx = dns.Mx,
+            MxTtl = dns.MxTtl,
+            MxVerified = dns.MxVerified,
+            MxDateChecked = dns.MxDateChecked,
+            TimeModified = dns.TimeModified
+        };
 
-        public ServerDns Get(int domainId)
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerDns, mailDns);
+
+        MailDbContext.SaveChanges();
+
+        return (int)entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var mailDns = new MailServerDns
         {
-            var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
+            Id = (uint)id,
+            Tenant = Tenant,
+            IdUser = UserId
+        };
 
-            var dns = MailDbContext.MailServerDns
-                .AsNoTracking()
-                .Where(d => tenants.Contains(d.Tenant) && d.IdDomain == domainId)
-                .Select(ToServerDns)
-                .SingleOrDefault();
+        MailDbContext.MailServerDns.Remove(mailDns);
 
-            return dns;
-        }
+        var result = MailDbContext.SaveChanges();
 
-        public ServerDns GetById(int id)
+        return result;
+    }
+
+    protected ServerDns ToServerDns(MailServerDns r)
+    {
+        var s = new ServerDns
         {
-            var dns = MailDbContext.MailServerDns
-                .AsNoTracking()
-                .Where(d => d.Tenant == Tenant && d.Id == id)
-                .Select(ToServerDns)
-                .SingleOrDefault();
+            Id = (int)r.Id,
+            Tenant = r.Tenant,
+            User = r.IdUser,
+            DomainId = r.IdDomain,
+            DomainCheck = r.DomainCheck,
+            DkimSelector = r.DkimSelector,
+            DkimPrivateKey = r.DkimPrivateKey,
+            DkimPublicKey = r.DkimPublicKey,
+            DkimTtl = r.DkimTtl,
+            DkimVerified = r.DkimVerified,
+            DkimDateChecked = r.DkimDateChecked,
+            Spf = r.Spf,
+            SpfTtl = r.SpfTtl,
+            SpfVerified = r.SpfVerified,
+            SpfDateChecked = r.SpfDateChecked,
+            Mx = r.Mx,
+            MxTtl = r.MxTtl,
+            MxVerified = r.MxVerified,
+            MxDateChecked = r.MxDateChecked,
+            TimeModified = r.TimeModified
+        };
 
-            return dns;
-        }
-
-        public ServerDns GetFree()
-        {
-            var dns = MailDbContext.MailServerDns
-                .AsNoTracking()
-                .Where(d => d.Tenant == Tenant && d.IdUser == UserId && d.IdDomain == DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID)
-                .Select(ToServerDns)
-                .SingleOrDefault();
-
-            return dns;
-        }
-
-        public int Save(ServerDns dns)
-        {
-            var mailDns = new MailServerDns
-            {
-                Id = (uint)dns.Id,
-                Tenant = dns.Tenant,
-                IdUser = dns.User,
-                IdDomain = dns.DomainId,
-                DomainCheck = dns.DomainCheck,
-                DkimSelector = dns.DkimSelector,
-                DkimPrivateKey = dns.DkimPrivateKey,
-                DkimPublicKey = dns.DkimPublicKey,
-                DkimTtl = dns.DkimTtl,
-                DkimVerified = dns.DkimVerified,
-                DkimDateChecked = dns.DkimDateChecked,
-                Spf = dns.Spf,
-                SpfTtl = dns.SpfTtl,
-                SpfVerified = dns.SpfVerified,
-                SpfDateChecked = dns.SpfDateChecked,
-                Mx = dns.Mx,
-                MxTtl = dns.MxTtl,
-                MxVerified = dns.MxVerified,
-                MxDateChecked = dns.MxDateChecked,
-                TimeModified = dns.TimeModified
-            };
-
-            var entry = MailDbContext.AddOrUpdate(t => t.MailServerDns, mailDns);
-
-            MailDbContext.SaveChanges();
-
-            return (int)entry.Id;
-        }
-
-        public int Delete(int id)
-        {
-            var mailDns = new MailServerDns
-            {
-                Id = (uint)id,
-                Tenant = Tenant,
-                IdUser = UserId
-            };
-
-            MailDbContext.MailServerDns.Remove(mailDns);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected ServerDns ToServerDns(MailServerDns r)
-        {
-            var s = new ServerDns
-            {
-                Id = (int)r.Id,
-                Tenant = r.Tenant,
-                User = r.IdUser,
-                DomainId = r.IdDomain,
-                DomainCheck = r.DomainCheck,
-                DkimSelector = r.DkimSelector,
-                DkimPrivateKey = r.DkimPrivateKey,
-                DkimPublicKey = r.DkimPublicKey,
-                DkimTtl = r.DkimTtl,
-                DkimVerified = r.DkimVerified,
-                DkimDateChecked = r.DkimDateChecked,
-                Spf = r.Spf,
-                SpfTtl = r.SpfTtl,
-                SpfVerified = r.SpfVerified,
-                SpfDateChecked = r.SpfDateChecked,
-                Mx = r.Mx,
-                MxTtl = r.MxTtl,
-                MxVerified = r.MxVerified,
-                MxDateChecked = r.MxDateChecked,
-                TimeModified = r.TimeModified
-            };
-
-            return s;
-        }
+        return s;
     }
 }

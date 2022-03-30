@@ -23,154 +23,142 @@
  *
 */
 
+using Contact = ASC.Mail.Core.Entities.Contact;
+using ContactInfo = ASC.Mail.Core.Entities.ContactInfo;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Contact;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ContactCardDao : BaseMailDao, IContactCardDao
 {
-    [Scope]
-    public class ContactCardDao : BaseMailDao, IContactCardDao
+    public ContactCardDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ContactCardDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public ContactCard GetContactCard(int id)
+    {
+        var contacts = MailDbContext.MailContacts
+            .AsNoTracking()
+            .Where(c => c.TenantId == Tenant && c.IdUser == UserId && c.Id == id)
+            .Select(ToContact)
+            .ToList();
+
+        var contactInfos = MailDbContext.MailContactInfo
+            .AsNoTracking()
+            .Where(c => c.IdContact == id)
+            .Select(ToContactInfo)
+            .ToList();
+
+        var result = ToContactCardList(contacts, contactInfos)
+            .SingleOrDefault();
+
+        return result;
+    }
+
+    public List<ContactCard> GetContactCards(IContactsExp exp)
+    {
+        var query = MailDbContext.MailContacts
+            .AsNoTracking()
+            .Where(exp.GetExpression());
+
+        if (exp.OrderAsc.HasValue)
         {
-        }
-
-        public ContactCard GetContactCard(int id)
-        {
-            var contacts = MailDbContext.MailContacts
-                .AsNoTracking()
-                .Where(c => c.TenantId == Tenant && c.IdUser == UserId && c.Id == id)
-                .Select(ToContact)
-                .ToList();
-
-            var contactInfos = MailDbContext.MailContactInfo
-                .AsNoTracking()
-                .Where(c => c.IdContact == id)
-                .Select(ToContactInfo)
-                .ToList();
-
-            var result = ToContactCardList(contacts, contactInfos)
-                .SingleOrDefault();
-
-            return result;
-        }
-
-        public List<ContactCard> GetContactCards(IContactsExp exp)
-        {
-            var query = MailDbContext.MailContacts
-                .AsNoTracking()
-                .Where(exp.GetExpression());
-
-            if (exp.OrderAsc.HasValue)
+            if (exp.OrderAsc.Value)
             {
-                if (exp.OrderAsc.Value)
-                {
-                    query.OrderBy(r => r.Name);
-                }
-                else
-                {
-                    query.OrderByDescending(r => r.Name);
-                }
+                query.OrderBy(r => r.Name);
             }
-
-            if (exp.StartIndex.HasValue)
+            else
             {
-                query.Skip(exp.StartIndex.Value);
+                query.OrderByDescending(r => r.Name);
             }
+        }
 
-            if (exp.Limit.HasValue)
+        if (exp.StartIndex.HasValue)
+        {
+            query.Skip(exp.StartIndex.Value);
+        }
+
+        if (exp.Limit.HasValue)
+        {
+            query.Take(exp.Limit.Value);
+        }
+
+        var contacts = query
+            .Select(ToContact)
+            .ToList();
+
+        var ids = contacts.Select(c => c.Id).ToList();
+
+        var contactInfos = MailDbContext.MailContactInfo
+            .AsNoTracking()
+            .Where(c => ids.Contains(c.IdContact))
+            .Select(ToContactInfo)
+            .ToList();
+
+        return ToContactCardList(contacts, contactInfos);
+    }
+
+    public int GetContactCardsCount(IContactsExp exp)
+    {
+        var count = MailDbContext.MailContacts
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Join(MailDbContext.MailContactInfo.DefaultIfEmpty(), c => c.Id, ci => ci.IdContact,
+            (c, ci) => new
             {
-                query.Take(exp.Limit.Value);
-            }
+                Contact = c,
+                Info = ci
+            })
+            .Select(fci => fci.Contact.Id)
+            .Distinct()
+            .Count();
 
-            var contacts = query
-                .Select(ToContact)
+        return count;
+    }
+
+    protected List<ContactCard> ToContactCardList(List<Contact> contacts, List<ContactInfo> contactInfos)
+    {
+        return
+            contacts.Select(
+                contact => new ContactCard(contact, contactInfos.Where(ci => ci.ContactId == contact.Id).ToList()))
                 .ToList();
+    }
 
-            var ids = contacts.Select(c => c.Id).ToList();
-
-            var contactInfos = MailDbContext.MailContactInfo
-                .AsNoTracking()
-                .Where(c => ids.Contains(c.IdContact))
-                .Select(ToContactInfo)
-                .ToList();
-
-            return ToContactCardList(contacts, contactInfos);
-        }
-
-        public int GetContactCardsCount(IContactsExp exp)
+    protected Contact ToContact(MailContact r)
+    {
+        var c = new Contact
         {
-            var count = MailDbContext.MailContacts
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Join(MailDbContext.MailContactInfo.DefaultIfEmpty(), c => c.Id, ci => ci.IdContact,
-                (c, ci) => new
-                {
-                    Contact = c,
-                    Info = ci
-                })
-                .Select(fci => fci.Contact.Id)
-                .Distinct()
-                .Count();
+            Id = (int)r.Id,
+            User = r.IdUser,
+            Tenant = r.TenantId,
+            ContactName = r.Name,
+            Address = r.Address,
+            Description = r.Description,
+            Type = (ContactType)r.Type,
+            HasPhoto = r.HasPhoto
+        };
 
-            return count;
-        }
+        return c;
+    }
 
-        protected List<ContactCard> ToContactCardList(List<Contact> contacts, List<ContactInfo> contactInfos)
+    protected ContactInfo ToContactInfo(MailContactInfo r)
+    {
+        var c = new ContactInfo
         {
-            return
-                contacts.Select(
-                    contact => new ContactCard(contact, contactInfos.Where(ci => ci.ContactId == contact.Id).ToList()))
-                    .ToList();
-        }
+            Id = (int)r.Id,
+            Tenant = r.TenantId,
+            User = r.IdUser,
+            ContactId = (int)r.IdContact,
+            Data = r.Data,
+            Type = r.Type,
+            IsPrimary = r.IsPrimary
+        };
 
-        protected Contact ToContact(MailContact r)
-        {
-            var c = new Contact
-            {
-                Id = (int)r.Id,
-                User = r.IdUser,
-                Tenant = r.TenantId,
-                ContactName = r.Name,
-                Address = r.Address,
-                Description = r.Description,
-                Type = (ContactType)r.Type,
-                HasPhoto = r.HasPhoto
-            };
-
-            return c;
-        }
-
-        protected ContactInfo ToContactInfo(MailContactInfo r)
-        {
-            var c = new ContactInfo
-            {
-                Id = (int)r.Id,
-                Tenant = r.TenantId,
-                User = r.IdUser,
-                ContactId = (int)r.IdContact,
-                Data = r.Data,
-                Type = r.Type,
-                IsPrimary = r.IsPrimary
-            };
-
-            return c;
-        }
+        return c;
     }
 }

@@ -23,42 +23,38 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class Mailbox
 {
-    public class Mailbox
-    {
-        public int Id { get; set; }
-        public string User { get; set; }
-        public int Tenant { get; set; }
-        public string Address { get; set; }
-        public bool Enabled { get; set; }
-        public string Password { get; set; }
-        public int MsgCountLast { get; set; }
-        public long SizeLast { get; set; }
-        public string SmtpPassword { get; set; }
-        public string Name { get; set; }
-        public int LoginDelay { get; set; }
-        public bool IsProcessed { get; set; }
-        public bool IsRemoved { get; set; }
-        public bool IsDefault { get; set; }
-        public bool QuotaError { get; set; }
-        public bool Imap { get; set; }
-        public DateTime BeginDate { get; set; }
-        public int OAuthType { get; set; }
-        public string OAuthToken { get; set; }
-        public string ImapIntervals { get; set; }
-        public int SmtpServerId { get; set; }
-        public int ServerId { get; set; }
-        public string EmailInFolder { get; set; }
-        public bool IsTeamlabMailbox { get; set; }
-        public DateTime DateCreated { get; set; }
-        public DateTime DateChecked { get; set; }
-        public DateTime DateUserChecked { get; set; }
-        public bool UserOnline { get; set; }
-        public DateTime DateLoginDelayExpires { get; set; }
-        public DateTime? DateAuthError { get; set; }
-    }
+    public int Id { get; set; }
+    public string User { get; set; }
+    public int Tenant { get; set; }
+    public string Address { get; set; }
+    public bool Enabled { get; set; }
+    public string Password { get; set; }
+    public int MsgCountLast { get; set; }
+    public long SizeLast { get; set; }
+    public string SmtpPassword { get; set; }
+    public string Name { get; set; }
+    public int LoginDelay { get; set; }
+    public bool IsProcessed { get; set; }
+    public bool IsRemoved { get; set; }
+    public bool IsDefault { get; set; }
+    public bool QuotaError { get; set; }
+    public bool Imap { get; set; }
+    public DateTime BeginDate { get; set; }
+    public int OAuthType { get; set; }
+    public string OAuthToken { get; set; }
+    public string ImapIntervals { get; set; }
+    public int SmtpServerId { get; set; }
+    public int ServerId { get; set; }
+    public string EmailInFolder { get; set; }
+    public bool IsTeamlabMailbox { get; set; }
+    public DateTime DateCreated { get; set; }
+    public DateTime DateChecked { get; set; }
+    public DateTime DateUserChecked { get; set; }
+    public bool UserOnline { get; set; }
+    public DateTime DateLoginDelayExpires { get; set; }
+    public DateTime? DateAuthError { get; set; }
 }

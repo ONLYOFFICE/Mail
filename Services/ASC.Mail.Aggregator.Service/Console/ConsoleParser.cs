@@ -1,37 +1,30 @@
-﻿using System.Linq;
+﻿namespace ASC.Mail.Aggregator.Service.Console;
 
-using ASC.Common;
-
-using CommandLine;
-
-namespace ASC.Mail.Aggregator.Service.Console
+[Singletone]
+public class ConsoleParser
 {
-    [Singletone]
-    public class ConsoleParser
+    string[] _args;
+
+    public ConsoleParser(string[] args)
     {
-        string[] _args;
+        _args = args;
+    }
 
-        public ConsoleParser(string[] args)
+    public ConsoleParameters GetParsedParameters()
+    {
+        var _consoleParameters = new ConsoleParameters();
+
+        if (_args.Any())
         {
-            _args = args;
+            CommandLine.Parser.Default.ParseArguments<ConsoleParameters>(_args)
+                .WithParsed(param => _consoleParameters = param)
+                .WithNotParsed(errs =>
+                {
+                    var helpText = @"Bad command line parameters.";
+                    System.Console.Error.Write(helpText);
+                });
         }
 
-        public ConsoleParameters GetParsedParameters()
-        {
-            var _consoleParameters = new ConsoleParameters();
-
-            if (_args.Any())
-            {
-                Parser.Default.ParseArguments<ConsoleParameters>(_args)
-                    .WithParsed(param => _consoleParameters = param)
-                    .WithNotParsed(errs =>
-                    {
-                        var helpText = @"Bad command line parameters.";
-                        System.Console.Error.Write(helpText);
-                    });
-            }
-
-            return _consoleParameters;
-        }
+        return _consoleParameters;
     }
 }

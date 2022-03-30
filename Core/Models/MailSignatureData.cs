@@ -23,31 +23,27 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[DataContract(Namespace = "")]
+public class MailSignatureData
 {
-    [DataContract(Namespace = "")]
-    public class MailSignatureData
+    public MailSignatureData(int mailboxId, int tenant, string html, bool isActive)
     {
-        public MailSignatureData(int mailboxId, int tenant, string html, bool isActive)
-        {
-            Tenant = tenant;
-            MailboxId = mailboxId;
-            Html = html;
-            IsActive = isActive;
-        }
-
-        public int Tenant { get; private set; }
-
-        [DataMember(Name = "mailboxId")]
-        public int MailboxId { get; private set; }
-
-        [DataMember(Name = "html")]
-        public string Html { get; private set; }
-
-        [DataMember(Name = "isActive")]
-        public bool IsActive { get; private set; }
+        Tenant = tenant;
+        MailboxId = mailboxId;
+        Html = html;
+        IsActive = isActive;
     }
+
+    public int Tenant { get; private set; }
+
+    [DataMember(Name = "mailboxId")]
+    public int MailboxId { get; private set; }
+
+    [DataMember(Name = "html")]
+    public string Html { get; private set; }
+
+    [DataMember(Name = "isActive")]
+    public bool IsActive { get; private set; }
 }

@@ -23,43 +23,38 @@
  *
 */
 
+using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 
-using System.Collections.Generic;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxAutoreplyDao))]
+public interface IMailboxAutoreplyDao
 {
-    [Scope(typeof(MailboxAutoreplyDao))]
-    public interface IMailboxAutoreplyDao
-    {
-        /// <summary>
-        ///     Get autoreply by mailbox id.
-        /// </summary>
-        /// <param name="mailboxId"></param>
-        /// <returns>signature</returns>
-        MailboxAutoreply GetAutoreply(Mailbox mailbox);
+    /// <summary>
+    ///     Get autoreply by mailbox id.
+    /// </summary>
+    /// <param name="mailboxId"></param>
+    /// <returns>signature</returns>
+    MailboxAutoreply GetAutoreply(Mailbox mailbox);
 
-        /// <summary>
-        ///     Get a list of autoreply.
-        /// </summary>
-        /// <param name="mailboxIds"></param>
-        /// <returns>list of autoreply</returns>
-        List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds);
+    /// <summary>
+    ///     Get a list of autoreply.
+    /// </summary>
+    /// <param name="mailboxIds"></param>
+    /// <returns>list of autoreply</returns>
+    List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds);
 
-        /// <summary>
-        ///     Save or update autoreply
-        /// </summary>
-        /// <param name="autoreply"></param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int SaveAutoreply(MailboxAutoreply autoreply);
+    /// <summary>
+    ///     Save or update autoreply
+    /// </summary>
+    /// <param name="autoreply"></param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int SaveAutoreply(MailboxAutoreply autoreply);
 
-        /// <summary>
-        ///     Delete signature
-        /// </summary>
-        /// <param name="mailboxId">id</param>
-        /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
-        int DeleteAutoreply(int mailboxId);
-    }
+    /// <summary>
+    ///     Delete signature
+    /// </summary>
+    /// <param name="mailboxId">id</param>
+    /// <returns>count of affected rows: 1 - OK, 0 - Fail</returns>
+    int DeleteAutoreply(int mailboxId);
 }

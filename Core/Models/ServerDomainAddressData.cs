@@ -23,23 +23,18 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "Address")]
+public class ServerDomainAddressData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "Address")]
-    public class ServerDomainAddressData
-    {
-        [DataMember(IsRequired = true)]
-        public int Id { get; set; }
+    [DataMember(IsRequired = true)]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public int DomainId { get; set; }
+    [DataMember(IsRequired = true)]
+    public int DomainId { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public string Email { get; set; }
-    }
+    [DataMember(IsRequired = true)]
+    public string Email { get; set; }
 }

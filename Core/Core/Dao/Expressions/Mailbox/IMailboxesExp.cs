@@ -23,20 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Mailbox
+public interface IMailboxesExp
 {
-    public interface IMailboxesExp
-    {
-        string OrderBy { get; }
+    string OrderBy { get; }
 
-        bool? OrderAsc { get; }
+    bool? OrderAsc { get; }
 
-        int? Limit { get; }
+    int? Limit { get; }
 
-        Expression<Func<Entities.MailMailbox, bool>> GetExpression();
-    }
+    Expression<Func<Entities.MailMailbox, bool>> GetExpression();
 }

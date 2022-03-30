@@ -23,292 +23,281 @@
  *
 */
 
-
-using ASC.Data.Storage;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-using ASC.Web.Studio.Utility;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
+using Attachment = ASC.Mail.Core.Entities.Attachment;
 using ContactInfo = ASC.Mail.Models.ContactInfo;
+using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
+using Tag = ASC.Mail.Core.Entities.Tag;
 
-namespace ASC.Mail.Extensions
+namespace ASC.Mail.Extensions;
+
+public static class ModelExtensions
 {
-    public static class ModelExtensions
+    public static List<MailAccountData> ToAccountData(this AccountInfo account)
     {
-        public static List<MailAccountData> ToAccountData(this AccountInfo account)
-        {
-            var fromEmailList = new List<MailAccountData>();
-            //var mailBoxAccountSettings = MailBoxAccountSettings.LoadForCurrentUser();
+        var fromEmailList = new List<MailAccountData>();
+        //var mailBoxAccountSettings = MailBoxAccountSettings.LoadForCurrentUser();
 
-            var emailData = new MailAccountData
+        var emailData = new MailAccountData
+        {
+            MailboxId = account.Id,
+            Email = account.Email,
+            Name = account.Name,
+            Enabled = account.Enabled,
+            OAuthConnection = account.OAuthConnection,
+            AuthError = account.AuthError,
+            QuotaError = account.QuotaError,
+            Signature = account.Signature,
+            Autoreply = account.Autoreply,
+            EMailInFolder = account.EMailInFolder,
+            IsAlias = false,
+            IsGroup = false,
+            IsTeamlabMailbox = account.IsTeamlabMailbox,
+            IsDefault = false, //mailBoxAccountSettings.DefaultEmail == account.Email,
+            IsSharedDomainMailbox = account.IsSharedDomainMailbox
+        };
+        fromEmailList.Add(emailData);
+
+        foreach (var alias in account.Aliases)
+        {
+            emailData = new MailAccountData
             {
                 MailboxId = account.Id,
-                Email = account.Email,
+                Email = alias.Email,
                 Name = account.Name,
                 Enabled = account.Enabled,
-                OAuthConnection = account.OAuthConnection,
+                OAuthConnection = false,
                 AuthError = account.AuthError,
                 QuotaError = account.QuotaError,
                 Signature = account.Signature,
                 Autoreply = account.Autoreply,
                 EMailInFolder = account.EMailInFolder,
-                IsAlias = false,
+                IsAlias = true,
                 IsGroup = false,
                 IsTeamlabMailbox = account.IsTeamlabMailbox,
-                IsDefault = false, //mailBoxAccountSettings.DefaultEmail == account.Email,
-                IsSharedDomainMailbox = account.IsSharedDomainMailbox
+                IsDefault = false, // mailBoxAccountSettings.DefaultEmail == alias.Email
             };
             fromEmailList.Add(emailData);
-
-            foreach (var alias in account.Aliases)
-            {
-                emailData = new MailAccountData
-                {
-                    MailboxId = account.Id,
-                    Email = alias.Email,
-                    Name = account.Name,
-                    Enabled = account.Enabled,
-                    OAuthConnection = false,
-                    AuthError = account.AuthError,
-                    QuotaError = account.QuotaError,
-                    Signature = account.Signature,
-                    Autoreply = account.Autoreply,
-                    EMailInFolder = account.EMailInFolder,
-                    IsAlias = true,
-                    IsGroup = false,
-                    IsTeamlabMailbox = account.IsTeamlabMailbox,
-                    IsDefault = false, // mailBoxAccountSettings.DefaultEmail == alias.Email
-                };
-                fromEmailList.Add(emailData);
-            }
-
-            foreach (
-                var @group in
-                    account.Groups.Where(@group => fromEmailList.FindIndex(e => e.Email.Equals(@group.Email)) == -1))
-            {
-                emailData = new MailAccountData
-                {
-                    MailboxId = account.Id,
-                    Email = @group.Email,
-                    Name = "",
-                    Enabled = true,
-                    OAuthConnection = false,
-                    AuthError = false,
-                    QuotaError = false,
-                    Signature = new MailSignatureData(-1, account.Signature.Tenant, "", false),
-                    Autoreply = new MailAutoreplyData(-1, account.Signature.Tenant, false, false,
-                        false, DateTime.MinValue, DateTime.MinValue, String.Empty, String.Empty),
-                    EMailInFolder = "",
-                    IsAlias = false,
-                    IsGroup = true,
-                    IsTeamlabMailbox = true
-                };
-                fromEmailList.Add(emailData);
-            }
-
-            return fromEmailList;
         }
 
-        public static List<MailAccountData> ToAccountData(this List<AccountInfo> accounts)
+        foreach (
+            var @group in
+                account.Groups.Where(@group => fromEmailList.FindIndex(e => e.Email.Equals(@group.Email)) == -1))
         {
-            var fromEmailList = new List<MailAccountData>();
-
-            fromEmailList = accounts.Aggregate(fromEmailList, (current, account) => current.Concat(account.ToAccountData()).ToList());
-
-            return fromEmailList.DistinctBy(a => a.Email).ToList();
-        }
-
-        private const string BASE_VIRTUAL_PATH = "~/addons/mail/";
-
-        public static MailContactData ToMailContactData(this ContactCard contactCard, CommonLinkUtility commonLinkUtility)
-        {
-            var baseAbsolutePath = commonLinkUtility.ToAbsolute(BASE_VIRTUAL_PATH).ToLower();
-
-            var emails = new MailContactData.EmailsList<ContactInfo>();
-            var phones = new MailContactData.PhoneNumgersList<ContactInfo>();
-
-            foreach (var contact in contactCard.ContactItems)
+            emailData = new MailAccountData
             {
-                if (contact.Type == (int)ContactInfoType.Email)
-                {
-                    if (contact.IsPrimary)
-                        emails.Insert(0,
-                            new ContactInfo { Id = contact.Id, Value = contact.Data, IsPrimary = contact.IsPrimary });
-                    else
-                        emails.Add(new ContactInfo
-                        {
-                            Id = contact.Id,
-                            Value = contact.Data,
-                            IsPrimary = contact.IsPrimary
-                        });
-                }
-                else if (contact.Type == (int)ContactInfoType.Phone)
-                {
-                    if (contact.IsPrimary)
-                        phones.Insert(0,
-                            new ContactInfo { Id = contact.Id, Value = contact.Data, IsPrimary = contact.IsPrimary });
-                    else
-                        phones.Add(new ContactInfo
-                        {
-                            Id = contact.Id,
-                            Value = contact.Data,
-                            IsPrimary = contact.IsPrimary
-                        });
-                }
-            }
-
-            var contactData = new MailContactData
-            {
-                ContactId = contactCard.ContactInfo.Id,
-                Name = contactCard.ContactInfo.ContactName,
-                Description = contactCard.ContactInfo.Description,
-                Emails = emails,
-                PhoneNumbers = phones,
-                Type = (int)contactCard.ContactInfo.Type,
-                SmallFotoUrl =
-                    string.Format("{0}HttpHandlers/contactphoto.ashx?cid={1}&ps=1", baseAbsolutePath, contactCard.ContactInfo.Id)
-                        .ToLower(),
-                MediumFotoUrl =
-                    string.Format("{0}HttpHandlers/contactphoto.ashx?cid={1}&ps=2", baseAbsolutePath, contactCard.ContactInfo.Id)
-                        .ToLower()
+                MailboxId = account.Id,
+                Email = @group.Email,
+                Name = "",
+                Enabled = true,
+                OAuthConnection = false,
+                AuthError = false,
+                QuotaError = false,
+                Signature = new MailSignatureData(-1, account.Signature.Tenant, "", false),
+                Autoreply = new MailAutoreplyData(-1, account.Signature.Tenant, false, false,
+                    false, DateTime.MinValue, DateTime.MinValue, String.Empty, String.Empty),
+                EMailInFolder = "",
+                IsAlias = false,
+                IsGroup = true,
+                IsTeamlabMailbox = true
             };
-
-            return contactData;
+            fromEmailList.Add(emailData);
         }
 
-        public static List<MailContactData> ToMailContactDataList(this List<ContactCard> contacts, CommonLinkUtility commonLinkUtility)
+        return fromEmailList;
+    }
+
+    public static List<MailAccountData> ToAccountData(this List<AccountInfo> accounts)
+    {
+        var fromEmailList = new List<MailAccountData>();
+
+        fromEmailList = accounts.Aggregate(fromEmailList, (current, account) => current.Concat(account.ToAccountData()).ToList());
+
+        return fromEmailList.DistinctBy(a => a.Email).ToList();
+    }
+
+    private const string BASE_VIRTUAL_PATH = "~/addons/mail/";
+
+    public static MailContactData ToMailContactData(this ContactCard contactCard, CommonLinkUtility commonLinkUtility)
+    {
+        var baseAbsolutePath = commonLinkUtility.ToAbsolute(BASE_VIRTUAL_PATH).ToLower();
+
+        var emails = new MailContactData.EmailsList<ContactInfo>();
+        var phones = new MailContactData.PhoneNumgersList<ContactInfo>();
+
+        foreach (var contact in contactCard.ContactItems)
         {
-            var contactsList = contacts
-                .Select(contact => contact.ToMailContactData(commonLinkUtility))
-                .ToList();
-
-            return contactsList;
-        }
-
-        public static void GetNeededAccounts(this List<MailAccountData> accounts, out MailAccountData defaultAccount,
-            out List<MailAccountData> commonAccounts, out List<MailAccountData> serverAccounts,
-            out List<MailAccountData> aliases, out List<MailAccountData> groups)
-        {
-            defaultAccount = null;
-            commonAccounts = new List<MailAccountData>();
-            serverAccounts = new List<MailAccountData>();
-            aliases = new List<MailAccountData>();
-            groups = new List<MailAccountData>();
-
-            if (accounts == null)
+            if (contact.Type == (int)ContactInfoType.Email)
             {
-                return;
-            }
-
-            foreach (var account in accounts)
-            {
-                if (account.IsDefault)
-                {
-                    defaultAccount = account;
-                }
-                else if (account.IsGroup)
-                {
-                    groups.Add(account);
-                }
-                else if (account.IsAlias)
-                {
-                    aliases.Add(account);
-                }
-                else if (account.IsTeamlabMailbox)
-                {
-                    serverAccounts.Add(account);
-                }
+                if (contact.IsPrimary)
+                    emails.Insert(0,
+                        new ContactInfo { Id = contact.Id, Value = contact.Data, IsPrimary = contact.IsPrimary });
                 else
-                {
-                    commonAccounts.Add(account);
-                }
+                    emails.Add(new ContactInfo
+                    {
+                        Id = contact.Id,
+                        Value = contact.Data,
+                        IsPrimary = contact.IsPrimary
+                    });
+            }
+            else if (contact.Type == (int)ContactInfoType.Phone)
+            {
+                if (contact.IsPrimary)
+                    phones.Insert(0,
+                        new ContactInfo { Id = contact.Id, Value = contact.Data, IsPrimary = contact.IsPrimary });
+                else
+                    phones.Add(new ContactInfo
+                    {
+                        Id = contact.Id,
+                        Value = contact.Data,
+                        IsPrimary = contact.IsPrimary
+                    });
             }
         }
 
-        public static List<MailFolderData> ToFolderData(this List<FolderEngine.MailFolderInfo> folders)
+        var contactData = new MailContactData
         {
-            return folders.Select(ToFolderData).ToList();
+            ContactId = contactCard.ContactInfo.Id,
+            Name = contactCard.ContactInfo.ContactName,
+            Description = contactCard.ContactInfo.Description,
+            Emails = emails,
+            PhoneNumbers = phones,
+            Type = (int)contactCard.ContactInfo.Type,
+            SmallFotoUrl =
+                string.Format("{0}HttpHandlers/contactphoto.ashx?cid={1}&ps=1", baseAbsolutePath, contactCard.ContactInfo.Id)
+                    .ToLower(),
+            MediumFotoUrl =
+                string.Format("{0}HttpHandlers/contactphoto.ashx?cid={1}&ps=2", baseAbsolutePath, contactCard.ContactInfo.Id)
+                    .ToLower()
+        };
+
+        return contactData;
+    }
+
+    public static List<MailContactData> ToMailContactDataList(this List<ContactCard> contacts, CommonLinkUtility commonLinkUtility)
+    {
+        var contactsList = contacts
+            .Select(contact => contact.ToMailContactData(commonLinkUtility))
+            .ToList();
+
+        return contactsList;
+    }
+
+    public static void GetNeededAccounts(this List<MailAccountData> accounts, out MailAccountData defaultAccount,
+        out List<MailAccountData> commonAccounts, out List<MailAccountData> serverAccounts,
+        out List<MailAccountData> aliases, out List<MailAccountData> groups)
+    {
+        defaultAccount = null;
+        commonAccounts = new List<MailAccountData>();
+        serverAccounts = new List<MailAccountData>();
+        aliases = new List<MailAccountData>();
+        groups = new List<MailAccountData>();
+
+        if (accounts == null)
+        {
+            return;
         }
 
-        public static MailFolderData ToFolderData(this FolderEngine.MailFolderInfo folder)
+        foreach (var account in accounts)
         {
-            return new MailFolderData
+            if (account.IsDefault)
             {
-                Id = folder.id,
-                UnreadCount = folder.unread,
-                UnreadMessagesCount = folder.unreadMessages,
-                TotalCount = folder.total,
-                TotalMessgesCount = folder.totalMessages,
-                TimeModified = folder.timeModified
-            };
-        }
-
-        public static MailTagData ToTagData(this Tag tag)
-        {
-            return new MailTagData
+                defaultAccount = account;
+            }
+            else if (account.IsGroup)
             {
-                Id = tag.Id,
-                Name = tag.TagName,
-                Style = tag.Style,
-                Addresses = new MailTagData.AddressesList<string>(tag.Addresses.Split(';')),
-                LettersCount = tag.Count
-            };
-        }
-
-        public static List<MailTagData> ToTagData(this List<Tag> tags)
-        {
-            return tags
-                .Select(t => new MailTagData
-                {
-                    Id = t.Id,
-                    Name = t.TagName,
-                    Style = t.Style,
-                    Addresses = new MailTagData.AddressesList<string>(t.Addresses.Split(';')),
-                    LettersCount = t.Count
-                })
-                .ToList();
-        }
-
-        public static Attachment ToAttachmnet(this MailAttachmentData a, int mailId, bool isRemoved = false)
-        {
-            var attachment = new Attachment
+                groups.Add(account);
+            }
+            else if (account.IsAlias)
             {
-                Id = a.fileId,
-                MailId = mailId,
-                Name = a.fileName,
-                StoredName = a.storedName,
-                Type = a.contentType,
-                Size = a.size,
-                FileNumber = a.fileNumber,
-                IsRemoved = isRemoved,
-                ContentId = a.contentId,
-                Tenant = a.tenant,
-                MailboxId = a.mailboxId
-            };
-
-            return attachment;
-        }
-
-        public static AttachmentStream ToAttachmentStream(this MailAttachmentData mailAttachmentData, IDataStore storage, int offset = 0)
-        {
-            if (mailAttachmentData == null)
-                throw new InvalidOperationException("Attachment not found");
-
-            var attachmentPath = MailStoragePathCombiner.GerStoredFilePath(mailAttachmentData);
-            var result = new AttachmentStream
+                aliases.Add(account);
+            }
+            else if (account.IsTeamlabMailbox)
             {
-                FileStream = storage.GetReadStreamAsync("", attachmentPath, offset).Result,
-                FileName = mailAttachmentData.fileName,
-                FileSize = mailAttachmentData.size
-            };
-            return result;
+                serverAccounts.Add(account);
+            }
+            else
+            {
+                commonAccounts.Add(account);
+            }
         }
+    }
+
+    public static List<MailFolderData> ToFolderData(this List<FolderEngine.MailFolderInfo> folders)
+    {
+        return folders.Select(ToFolderData).ToList();
+    }
+
+    public static MailFolderData ToFolderData(this FolderEngine.MailFolderInfo folder)
+    {
+        return new MailFolderData
+        {
+            Id = folder.id,
+            UnreadCount = folder.unread,
+            UnreadMessagesCount = folder.unreadMessages,
+            TotalCount = folder.total,
+            TotalMessgesCount = folder.totalMessages,
+            TimeModified = folder.timeModified
+        };
+    }
+
+    public static MailTagData ToTagData(this Tag tag)
+    {
+        return new MailTagData
+        {
+            Id = tag.Id,
+            Name = tag.TagName,
+            Style = tag.Style,
+            Addresses = new MailTagData.AddressesList<string>(tag.Addresses.Split(';')),
+            LettersCount = tag.Count
+        };
+    }
+
+    public static List<MailTagData> ToTagData(this List<Tag> tags)
+    {
+        return tags
+            .Select(t => new MailTagData
+            {
+                Id = t.Id,
+                Name = t.TagName,
+                Style = t.Style,
+                Addresses = new MailTagData.AddressesList<string>(t.Addresses.Split(';')),
+                LettersCount = t.Count
+            })
+            .ToList();
+    }
+
+    public static Attachment ToAttachmnet(this MailAttachmentData a, int mailId, bool isRemoved = false)
+    {
+        var attachment = new Attachment
+        {
+            Id = a.fileId,
+            MailId = mailId,
+            Name = a.fileName,
+            StoredName = a.storedName,
+            Type = a.contentType,
+            Size = a.size,
+            FileNumber = a.fileNumber,
+            IsRemoved = isRemoved,
+            ContentId = a.contentId,
+            Tenant = a.tenant,
+            MailboxId = a.mailboxId
+        };
+
+        return attachment;
+    }
+
+    public static AttachmentStream ToAttachmentStream(this MailAttachmentData mailAttachmentData, IDataStore storage, int offset = 0)
+    {
+        if (mailAttachmentData == null)
+            throw new InvalidOperationException("Attachment not found");
+
+        var attachmentPath = MailStoragePathCombiner.GerStoredFilePath(mailAttachmentData);
+        var result = new AttachmentStream
+        {
+            FileStream = storage.GetReadStreamAsync("", attachmentPath, offset).Result,
+            FileName = mailAttachmentData.fileName,
+            FileSize = mailAttachmentData.size
+        };
+        return result;
     }
 }

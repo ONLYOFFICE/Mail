@@ -23,46 +23,41 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System.Security.Cryptography;
-using System.Text;
-
-namespace ASC.Mail.Extensions
+public static class StringExtensions
 {
-    public static class StringExtensions
+    public static string GetMd5(this string text)
     {
-        public static string GetMd5(this string text)
-        {
-            var bs = Encoding.UTF8.GetBytes(text);
-            return bs.GetMd5();
-        }
+        var bs = Encoding.UTF8.GetBytes(text);
+        return bs.GetMd5();
+    }
 
-        public static string GetMd5(this byte[] utf8Bytes)
+    public static string GetMd5(this byte[] utf8Bytes)
+    {
+        var x =
+            new MD5CryptoServiceProvider();
+        var bs = x.ComputeHash(utf8Bytes);
+        var s = new StringBuilder(32);
+        foreach (var b in bs)
         {
-            var x =
-                new MD5CryptoServiceProvider();
-            var bs = x.ComputeHash(utf8Bytes);
-            var s = new StringBuilder(32);
-            foreach (var b in bs)
-            {
-                s.Append(b.ToString("x2").ToLower());
-            }
-            return s.ToString();
+            s.Append(b.ToString("x2").ToLower());
         }
+        return s.ToString();
+    }
 
-        public static string Prefix(this string str, string prefix)
-        {
-            return string.IsNullOrEmpty(prefix) ? str : string.Format("{0}.{1}", prefix, str);
-        }
+    public static string Prefix(this string str, string prefix)
+    {
+        return string.IsNullOrEmpty(prefix) ? str : string.Format("{0}.{1}", prefix, str);
+    }
 
-        public static string Alias(this string str, string alias)
-        {
-            return string.IsNullOrEmpty(alias) ? str : string.Format("{0} {1}", str, alias);
-        }
+    public static string Alias(this string str, string alias)
+    {
+        return string.IsNullOrEmpty(alias) ? str : string.Format("{0} {1}", str, alias);
+    }
 
-        public static string Tabs(int n)
-        {
-            return new string('\t', n);
-        }
+    public static string Tabs(int n)
+    {
+        return new string('\t', n);
     }
 }

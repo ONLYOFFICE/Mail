@@ -23,322 +23,296 @@
  *
 */
 
+namespace ASC.Mail.Core.Engine;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Search;
-using ASC.Mail.Models;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class IndexEngine
 {
-    [Scope]
-    public class IndexEngine
+    private readonly FactoryIndexerMailMail _factoryIndexerMailMail;
+    private readonly FactoryIndexer _factoryIndexerCommon;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IMailDaoFactory _mailDaoFactory;
+    private readonly ILog _log;
+
+    public IndexEngine(
+        FactoryIndexerMailMail factoryIndexerMailMail,
+        FactoryIndexer factoryIndexerCommon,
+        IServiceProvider serviceProvider,
+        IMailDaoFactory mailDaoFactory,
+        IOptionsMonitor<ILog> option)
     {
-        private FactoryIndexerMailMail FactoryIndexerMailMail { get; }
-        private FactoryIndexer FactoryIndexerCommon { get; }
-        private IServiceProvider ServiceProvider { get; }
-        public Lazy<MailDbContext> LazyMailDbContext { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
-        private ILog Log { get; }
+        _factoryIndexerMailMail = factoryIndexerMailMail;
+        _factoryIndexerCommon = factoryIndexerCommon;
+        _serviceProvider = serviceProvider;
+        _mailDaoFactory = mailDaoFactory;
+        _log = option.Get("ASC.Mail.IndexEngine");
+    }
 
-        public IndexEngine(
-            FactoryIndexerMailMail factoryIndexerMailMail,
-            FactoryIndexer factoryIndexerCommon,
-            IServiceProvider serviceProvider,
-            DbContextManager<MailDbContext> dbContext,
-            IMailDaoFactory mailDaoFactory,
-            IOptionsMonitor<ILog> option)
+    public bool IsIndexAvailable()
+    {
+        var service = _serviceProvider.GetService<MailMail>();
+
+        if (!_factoryIndexerMailMail.Support(service))
         {
-            FactoryIndexerMailMail = factoryIndexerMailMail;
-            FactoryIndexerCommon = factoryIndexerCommon;
-            ServiceProvider = serviceProvider;
-            LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
-            MailDaoFactory = mailDaoFactory;
-            Log = option.Get("ASC.Mail.IndexEngine");
+            _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer<MailWrapper>.Support == false");
+            return false;
         }
 
-        public bool IsIndexAvailable()
+        if (!_factoryIndexerCommon.CheckState(false))
         {
-            var service = ServiceProvider.GetService<MailMail>();
-
-            if (!FactoryIndexerMailMail.Support(service))
-            {
-                Log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer<MailWrapper>.Support == false");
-                return false;
-            }
-
-            if (!FactoryIndexerCommon.CheckState(false))
-            {
-                Log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer.CheckState(false) == false");
-                return false;
-            }
-
-            return true;
+            _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer.CheckState(false) == false");
+            return false;
         }
 
-        public void Add<T>(T data) where T : class, ISearchItem, new()
+        return true;
+    }
+
+    public void Add<T>(T data) where T : class, ISearchItem, new()
+    {
+        try
         {
-            try
+            if (data == null) throw new ArgumentNullException(nameof(data));
+
+            if (!IsIndexAvailable()) return;
+
+            var entityType = data.GetType();
+
+            if (entityType == typeof(MailMail))
             {
-                if (data == null) throw new ArgumentNullException(nameof(data));
-
-                if (!IsIndexAvailable()) return;
-
-                var entityType = data.GetType();
-
-                if (entityType == typeof(MailMail))
-                {
-                    var indexer = ServiceProvider.GetService<FactoryIndexerMailMail>();
-                    var mail = data as MailMail;
-                    indexer.Index(InitMailDocument(mail));
-                }
-                else if (entityType == typeof(MailContact))
-                {
-                    var indexer = ServiceProvider.GetService<FactoryIndexerMailContact>();
-                    var contact = data as MailContact;
-                    indexer.Index(contact);
-                }
-                else
-                {
-                    //?? some other entities with index
-                }
-
-                Log.InfoFormat("IndexEngine->Add<{0}>(mail Id = {1}) success", typeof(T), data == null ? -1 : data.Id);
+                var indexer = _serviceProvider.GetService<FactoryIndexerMailMail>();
+                var mail = data as MailMail;
+                indexer.Index(InitMailDocument(mail));
             }
-            catch (Exception ex)
+            else if (entityType == typeof(MailContact))
             {
-                Log.ErrorFormat("IndexEngine->Add<{0}>(mail Id = {1}) error: {2}", typeof(T), data == null ? -1 : data.Id, ex.ToString());
+                var indexer = _serviceProvider.GetService<FactoryIndexerMailContact>();
+                var contact = data as MailContact;
+                indexer.Index(contact);
             }
+            else
+            {
+                //?? some other entities with index
+            }
+
+            _log.InfoFormat("IndexEngine->Add<{0}>(mail Id = {1}) success", typeof(T), data == null ? -1 : data.Id);
         }
-
-        private MailMail InitMailDocument(MailMail mail)
+        catch (Exception ex)
         {
-            using var scope = ServiceProvider.CreateScope();
-            var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+            _log.ErrorFormat("IndexEngine->Add<{0}>(mail Id = {1}) error: {2}", typeof(T), data == null ? -1 : data.Id, ex.ToString());
+        }
+    }
 
-            tenantManager.SetCurrentTenant(mail.TenantId);
+    private MailMail InitMailDocument(MailMail mail)
+    {
+        using var scope = _serviceProvider.CreateScope();
+        var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
-            mail.Document = new Document
+        tenantManager.SetCurrentTenant(mail.TenantId);
+
+        mail.Document = new Document
+        {
+            Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(""))
+        };
+
+        if (!_factoryIndexerMailMail.CanIndexByContent(mail)) return mail;
+
+        try
+        {
+            var data = _mailDaoFactory.GetMailDao().GetDocumentData(mail);
+
+            if (!string.IsNullOrEmpty(data))
             {
-                Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(""))
-            };
-
-            if (!FactoryIndexerMailMail.CanIndexByContent(mail)) return mail;
-
-            try
-            {
-                var data = MailDaoFactory.GetMailDao().GetDocumentData(mail);
-
-                if (!string.IsNullOrEmpty(data))
-                {
-                    mail.Document.Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(data));
-                    return mail;
-                }
-
-                using (var stream = MailDaoFactory.GetMailDao().GetDocumentStream(mail))
-                {
-                    if (stream == null) return mail;
-
-                    using (var ms = new MemoryStream())
-                    {
-                        stream.CopyTo(ms);
-                        mail.Document.Data = Convert.ToBase64String(ms.GetBuffer());
-                    }
-                }
-
+                mail.Document.Data = Convert.ToBase64String(Encoding.UTF8.GetBytes(data));
                 return mail;
             }
-            catch (FileNotFoundException e)
+
+            using (var stream = _mailDaoFactory.GetMailDao().GetDocumentStream(mail))
             {
-                Log.Error("InitDocument FileNotFoundException", e);
-            }
-            catch (Exception e)
-            {
-                Log.Error("InitDocument", e);
+                if (stream == null) return mail;
+
+                using (var ms = new MemoryStream())
+                {
+                    stream.CopyTo(ms);
+                    mail.Document.Data = Convert.ToBase64String(ms.GetBuffer());
+                }
             }
 
             return mail;
         }
-
-        public void Update(List<MailMail> mails, UpdateAction action, Expression<Func<MailMail, IList>> fields)
+        catch (FileNotFoundException e)
         {
-            try
-            {
-                if (mails == null || !mails.Any())
-                    throw new ArgumentNullException("mails");
-
-                if (!IsIndexAvailable())
-                    return;
-
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-                mails.ForEach(x => indexer.Update(x, action, fields));
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->Update(count = {0}) error: {1}", mails == null ? 0 : mails.Count,
-                    ex.ToString());
-            }
+            _log.Error("InitDocument FileNotFoundException", e);
+        }
+        catch (Exception e)
+        {
+            _log.Error("InitDocument", e);
         }
 
-        public void Update(MailMail data, Expression<Func<Selector<MailMail>, Selector<MailMail>>> expression,
-            UpdateAction action, Expression<Func<MailMail, IList>> fields)
+        return mail;
+    }
+
+    public void Update(List<MailMail> mails, UpdateAction action, Expression<Func<MailMail, IList>> fields)
+    {
+        try
         {
-            try
-            {
-                if (data == null)
-                    throw new ArgumentNullException("data");
+            if (mails == null || !mails.Any())
+                throw new ArgumentNullException("mails");
 
-                if (expression == null)
-                    throw new ArgumentNullException("expression");
+            if (!IsIndexAvailable())
+                return;
 
-                if (!IsIndexAvailable())
-                    return;
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-                indexer.Update(data, expression, action, fields);
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
-            }
+            mails.ForEach(x => indexer.Update(x, action, fields));
         }
-
-        public void Update(MailMail data, Expression<Func<Selector<MailMail>, Selector<MailMail>>> expression,
-            params Expression<Func<MailMail, object>>[] fields)
+        catch (Exception ex)
         {
-            try
-            {
-                if (data == null)
-                    throw new ArgumentNullException("data");
-
-                if (expression == null)
-                    throw new ArgumentNullException("expression");
-
-                if (!IsIndexAvailable())
-                    return;
-
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-                indexer.Update(data, expression, true, fields);
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
-            }
+            _log.ErrorFormat("IndexEngine->Update(count = {0}) error: {1}", mails == null ? 0 : mails.Count,
+                ex.ToString());
         }
+    }
 
-        public void Update<T>(List<T> list, params Expression<Func<T, object>>[] fields) where T : class, ISearchItem, new()
+    public void Update(MailMail data, Expression<Func<Selector<MailMail>, Selector<MailMail>>> expression,
+        UpdateAction action, Expression<Func<MailMail, IList>> fields)
+    {
+        try
         {
-            try
-            {
-                if (list == null || !list.Any())
-                    throw new ArgumentNullException("list");
+            if (data == null)
+                throw new ArgumentNullException("data");
 
-                if (!IsIndexAvailable())
-                    return;
+            if (expression == null)
+                throw new ArgumentNullException("expression");
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<T>>();
+            if (!IsIndexAvailable())
+                return;
 
-                list.ForEach(x => indexer.Update(x, true, fields));
-            }
-            catch (Exception ex)
-            {
-                var typeParameterType = typeof(T);
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
-                Log.ErrorFormat("IndexEngine->Update<{0}>(mail Id = {1}) error: {2}", typeParameterType, list == null ? 0 : list.Count, ex.ToString());
-            }
+            indexer.Update(data, expression, action, fields);
         }
-
-        public void Remove(List<int> ids, int tenant, Guid user)
+        catch (Exception ex)
         {
-            try
-            {
-                if (ids == null || !ids.Any())
-                    throw new ArgumentNullException("ids");
-
-                if (!IsIndexAvailable())
-                    return;
-
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
-
-                ids.ForEach(id =>
-                    indexer.Delete(
-                        r => new Selector<MailMail>(ServiceProvider)
-                            .Where(m => m.Id, id)
-                            .Where(e => e.UserId, user.ToString())
-                            .Where(e => e.TenantId, tenant)));
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->Remove(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
-            }
+            _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
         }
+    }
 
-        public void Remove(MailBoxData mailBox)
+    public void Update(MailMail data, Expression<Func<Selector<MailMail>, Selector<MailMail>>> expression,
+        params Expression<Func<MailMail, object>>[] fields)
+    {
+        try
         {
-            try
-            {
-                if (mailBox == null)
-                    throw new ArgumentNullException("mailBox");
+            if (data == null)
+                throw new ArgumentNullException("data");
 
-                if (!IsIndexAvailable())
-                    return;
+            if (expression == null)
+                throw new ArgumentNullException("expression");
 
-                var selector = new Selector<MailMail>(ServiceProvider)
-                    .Where(m => m.MailboxId, mailBox.MailBoxId)
-                    .Where(e => e.UserId, mailBox.UserId)
-                    .Where(e => e.TenantId, mailBox.TenantId);
+            if (!IsIndexAvailable())
+                return;
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailMail>>();
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
 
-                indexer.Delete(r => selector);
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->Remove(mailboxId = {0}) error: {1}", mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
-            }
+            indexer.Update(data, expression, true, fields);
         }
-
-        public void RemoveContacts(List<int> ids, int tenant, Guid user)
+        catch (Exception ex)
         {
-            try
-            {
-                if (ids == null || !ids.Any())
-                    throw new ArgumentNullException("ids");
+            _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
+        }
+    }
 
-                if (!IsIndexAvailable())
-                    return;
+    public void Update<T>(List<T> list, params Expression<Func<T, object>>[] fields) where T : class, ISearchItem, new()
+    {
+        try
+        {
+            if (list == null || !list.Any())
+                throw new ArgumentNullException("list");
 
-                var indexer = ServiceProvider.GetService<FactoryIndexer<MailContact>>();
+            if (!IsIndexAvailable())
+                return;
 
+            var indexer = _serviceProvider.GetService<FactoryIndexer<T>>();
+
+            list.ForEach(x => indexer.Update(x, true, fields));
+        }
+        catch (Exception ex)
+        {
+            var typeParameterType = typeof(T);
+
+            _log.ErrorFormat("IndexEngine->Update<{0}>(mail Id = {1}) error: {2}", typeParameterType, list == null ? 0 : list.Count, ex.ToString());
+        }
+    }
+
+    public void Remove(List<int> ids, int tenant, Guid user)
+    {
+        try
+        {
+            if (ids == null || !ids.Any())
+                throw new ArgumentNullException("ids");
+
+            if (!IsIndexAvailable())
+                return;
+
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
+
+            ids.ForEach(id =>
                 indexer.Delete(
-                    r => new Selector<MailContact>(ServiceProvider)
-                        .In(s => s.Id, ids.ToArray())
-                        .Where(e => e.IdUser, user.ToString())
-                        .Where(e => e.TenantId, tenant));
-            }
-            catch (Exception ex)
-            {
-                Log.ErrorFormat("IndexEngine->RemoveContacts(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
-            }
+                    r => new Selector<MailMail>(_serviceProvider)
+                        .Where(m => m.Id, id)
+                        .Where(e => e.UserId, user.ToString())
+                        .Where(e => e.TenantId, tenant)));
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorFormat("IndexEngine->Remove(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
+        }
+    }
+
+    public void Remove(MailBoxData mailBox)
+    {
+        try
+        {
+            if (mailBox == null)
+                throw new ArgumentNullException("mailBox");
+
+            if (!IsIndexAvailable())
+                return;
+
+            var selector = new Selector<MailMail>(_serviceProvider)
+                .Where(m => m.MailboxId, mailBox.MailBoxId)
+                .Where(e => e.UserId, mailBox.UserId)
+                .Where(e => e.TenantId, mailBox.TenantId);
+
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailMail>>();
+
+            indexer.Delete(r => selector);
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorFormat("IndexEngine->Remove(mailboxId = {0}) error: {1}", mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
+        }
+    }
+
+    public void RemoveContacts(List<int> ids, int tenant, Guid user)
+    {
+        try
+        {
+            if (ids == null || !ids.Any())
+                throw new ArgumentNullException("ids");
+
+            if (!IsIndexAvailable())
+                return;
+
+            var indexer = _serviceProvider.GetService<FactoryIndexer<MailContact>>();
+
+            indexer.Delete(
+                r => new Selector<MailContact>(_serviceProvider)
+                    .In(s => s.Id, ids.ToArray())
+                    .Where(e => e.IdUser, user.ToString())
+                    .Where(e => e.TenantId, tenant));
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorFormat("IndexEngine->RemoveContacts(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
         }
     }
 }

@@ -23,28 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Core.Common.Settings;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract]
+public class MailBoxAccountSettings : ISettings
 {
-    [Serializable]
-    [DataContract]
-    public class MailBoxAccountSettings : ISettings
+    [DataMember]
+    public string DefaultEmail { get; set; }
+
+    public Guid ID
     {
-        [DataMember]
-        public string DefaultEmail { get; set; }
+        get { return new Guid("{C550A7BE-A756-4071-A33E-3E89625E7CF8}"); }
+    }
 
-        public Guid ID
-        {
-            get { return new Guid("{C550A7BE-A756-4071-A33E-3E89625E7CF8}"); }
-        }
-
-        public ISettings GetDefault(IServiceProvider serviceProvider)
-        {
-            return new MailBoxAccountSettings { DefaultEmail = String.Empty };
-        }
+    public ISettings GetDefault(IServiceProvider serviceProvider)
+    {
+        return new MailBoxAccountSettings { DefaultEmail = String.Empty };
     }
 }

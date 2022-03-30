@@ -23,21 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ImapSpecialMailboxDao))]
+public interface IImapSpecialMailboxDao
 {
-
-    [Scope(typeof(ImapSpecialMailboxDao))]
-    public interface IImapSpecialMailboxDao
-    {
-        /// <summary>
-        ///     Get a list of defined IMAP special folders.
-        /// </summary>
-        List<ServerFolderAccessInfo> GetServerFolderAccessInfoList();
-    }
+    /// <summary>
+    ///     Get a list of defined IMAP special folders.
+    /// </summary>
+    List<ServerFolderAccessInfo> GetServerFolderAccessInfoList();
 }

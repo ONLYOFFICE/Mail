@@ -23,29 +23,23 @@
  *
 */
 
+namespace ASC.Mail.Authorization;
 
-using System;
-using System.Collections.Generic;
-using DotNetOpenAuth.OAuth2;
-
-namespace ASC.Mail.Authorization
+public class AuthorizationTracker : IClientAuthorizationTracker
 {
-    public class AuthorizationTracker : IClientAuthorizationTracker
+    private List<string> _scope;
+
+    public AuthorizationTracker(List<string> scope)
     {
-        private List<string> _scope;
+        _scope = scope;
+    }
 
-        public AuthorizationTracker(List<string> scope)
+    public IAuthorizationState GetAuthorizationState(
+      Uri callbackUrl, string clientState)
+    {
+        return new AuthorizationState(_scope)
         {
-            _scope = scope;
-        }
-
-        public IAuthorizationState GetAuthorizationState(
-          Uri callbackUrl, string clientState)
-        {
-            return new AuthorizationState(_scope)
-            {
-                Callback = callbackUrl
-            };
-        }
+            Callback = callbackUrl
+        };
     }
 }

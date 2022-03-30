@@ -23,158 +23,138 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.ElasticSearch;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.UserFolder;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Enums;
-using ASC.Mail.Storage;
-
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class MailRemoveUserFolderOperation : MailOperation
 {
-    public class MailRemoveUserFolderOperation : MailOperation
+    public override MailOperationType OperationType
     {
-        private readonly int _userFolderId;
+        get { return MailOperationType.RemoveUserFolder; }
+    }
 
-        public override MailOperationType OperationType
+    private readonly int _userFolderId;
+    private readonly MessageEngine _messageEngine;
+    private readonly IndexEngine _indexEngine;
+    private readonly FactoryIndexer<MailMail> _factoryIndexer;
+    private readonly IServiceProvider _serviceProvider;
+
+    public MailRemoveUserFolderOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        MessageEngine messageEngine,
+        IndexEngine indexEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        FactoryIndexer<MailMail> factoryIndexer,
+        IServiceProvider serviceProvider,
+        IOptionsMonitor<ILog> optionsMonitor,
+        int userFolderId)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+    {
+        _messageEngine = messageEngine;
+        _indexEngine = indexEngine;
+        _factoryIndexer = factoryIndexer;
+        _serviceProvider = serviceProvider;
+        _userFolderId = userFolderId;
+
+        SetSource(userFolderId.ToString());
+    }
+
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.RemoveUserFolder; }
+            SetProgress((int?)MailOperationRemoveUserFolderProgress.Init, "Setup tenant and user");
+
+            TenantManager.SetCurrentTenant(CurrentTenant);
+
+            SecurityContext.AuthenticateMe(CurrentUser);
+
+            SetProgress((int?)MailOperationRemoveUserFolderProgress.DeleteFolders, "Delete folders");
+
+            Delete(_userFolderId);
+
+            SetProgress((int?)MailOperationRemoveUserFolderProgress.Finished);
         }
-
-        public UserFolderEngine UserFolderEngine { get; }
-        public MessageEngine MessageEngine { get; }
-        public IndexEngine IndexEngine { get; }
-        public FactoryIndexer<MailMail> FactoryIndexer { get; }
-        public IServiceProvider ServiceProvider { get; }
-
-        public MailRemoveUserFolderOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            UserFolderEngine userFolderEngine,
-            MessageEngine messageEngine,
-            IndexEngine indexEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            FactoryIndexer<MailMail> factoryIndexer,
-            IServiceProvider serviceProvider,
-            IOptionsMonitor<ILog> optionsMonitor,
-            int userFolderId)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        catch (Exception e)
         {
-            UserFolderEngine = userFolderEngine;
-            MessageEngine = messageEngine;
-            IndexEngine = indexEngine;
-            FactoryIndexer = factoryIndexer;
-            ServiceProvider = serviceProvider;
-            _userFolderId = userFolderId;
-
-            SetSource(userFolderId.ToString());
+            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Error = "InternalServerError";
         }
+    }
 
-        protected override void Do()
+    public void Delete(int folderId)
+    {
+        var affectedIds = new List<int>();
+
+        //TODO: Check or increase timeout for DB connection
+        //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RecalculateFoldersTimeout))
+
+        var folder = MailDaoFactory.GetUserFolderDao().Get(folderId);
+        if (folder == null)
+            return;
+
+        using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
         {
-            try
+            //Find folder sub-folders
+            var expTree = SimpleUserFoldersTreeExp.CreateBuilder()
+                .SetParent(folder.Id)
+                .Build();
+
+            var removeFolderIds = MailDaoFactory.GetUserFolderTreeDao().Get(expTree)
+                .ConvertAll(f => f.FolderId);
+
+            if (!removeFolderIds.Contains(folderId))
+                removeFolderIds.Add(folderId);
+
+            //Remove folder with subfolders
+            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.TenantId, CurrentUser.ID.ToString())
+                .SetIds(removeFolderIds)
+                .Build();
+
+            MailDaoFactory.GetUserFolderDao().Remove(expFolders);
+
+            //Remove folder tree info
+            expTree = SimpleUserFoldersTreeExp.CreateBuilder()
+                .SetIds(removeFolderIds)
+                .Build();
+
+            MailDaoFactory.GetUserFolderTreeDao().Remove(expTree);
+
+            //Move mails to trash
+            foreach (var id in removeFolderIds)
             {
-                SetProgress((int?)MailOperationRemoveUserFolderProgress.Init, "Setup tenant and user");
+                var listMailIds = MailDaoFactory.GetUserFolderXMailDao().GetMailIds(id);
 
-                TenantManager.SetCurrentTenant(CurrentTenant);
+                if (!listMailIds.Any()) continue;
 
-                SecurityContext.AuthenticateMe(CurrentUser);
-
-                SetProgress((int?)MailOperationRemoveUserFolderProgress.DeleteFolders, "Delete folders");
-
-                Delete(_userFolderId);
-
-                SetProgress((int?)MailOperationRemoveUserFolderProgress.Finished);
-            }
-            catch (Exception e)
-            {
-                Logger.Error("Mail operation error -> Remove user folder: {0}", e);
-                Error = "InternalServerError";
-            }
-        }
-
-        public void Delete(int folderId)
-        {
-            var affectedIds = new List<int>();
-
-            //TODO: Check or increase timeout for DB connection
-            //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RecalculateFoldersTimeout))
-
-            var folder = MailDaoFactory.GetUserFolderDao().Get(folderId);
-            if (folder == null)
-                return;
-
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
-            {
-                //Find folder sub-folders
-                var expTree = SimpleUserFoldersTreeExp.CreateBuilder()
-                    .SetParent(folder.Id)
-                    .Build();
-
-                var removeFolderIds = MailDaoFactory.GetUserFolderTreeDao().Get(expTree)
-                    .ConvertAll(f => f.FolderId);
-
-                if (!removeFolderIds.Contains(folderId))
-                    removeFolderIds.Add(folderId);
-
-                //Remove folder with subfolders
-                var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.TenantId, CurrentUser.ID.ToString())
-                    .SetIds(removeFolderIds)
-                    .Build();
-
-                MailDaoFactory.GetUserFolderDao().Remove(expFolders);
-
-                //Remove folder tree info
-                expTree = SimpleUserFoldersTreeExp.CreateBuilder()
-                    .SetIds(removeFolderIds)
-                    .Build();
-
-                MailDaoFactory.GetUserFolderTreeDao().Remove(expTree);
+                affectedIds.AddRange(listMailIds);
 
                 //Move mails to trash
-                foreach (var id in removeFolderIds)
-                {
-                    var listMailIds = MailDaoFactory.GetUserFolderXMailDao().GetMailIds(id);
+                _messageEngine.SetFolder(MailDaoFactory, listMailIds, FolderType.Trash);
 
-                    if (!listMailIds.Any()) continue;
-
-                    affectedIds.AddRange(listMailIds);
-
-                    //Move mails to trash
-                    MessageEngine.SetFolder(MailDaoFactory, listMailIds, FolderType.Trash);
-
-                    //Remove listMailIds from 'mail_user_folder_x_mail'
-                    MailDaoFactory.GetUserFolderXMailDao().Remove(listMailIds);
-                }
-
-                tx.Commit();
+                //Remove listMailIds from 'mail_user_folder_x_mail'
+                MailDaoFactory.GetUserFolderXMailDao().Remove(listMailIds);
             }
 
-            MailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(folder.ParentId);
-
-            var t = ServiceProvider.GetService<MailMail>();
-            if (!FactoryIndexer.Support(t) || !affectedIds.Any())
-                return;
-
-            var data = new MailMail
-            {
-                Folder = (byte)FolderType.Trash
-            };
-
-            IndexEngine.Update(data, s => s.In(m => m.Id, affectedIds.ToArray()), wrapper => wrapper.Unread);
+            tx.Commit();
         }
+
+        MailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(folder.ParentId);
+
+        var t = _serviceProvider.GetService<MailMail>();
+        if (!_factoryIndexer.Support(t) || !affectedIds.Any())
+            return;
+
+        var data = new MailMail
+        {
+            Folder = (byte)FolderType.Trash
+        };
+
+        _indexEngine.Update(data, s => s.In(m => m.Id, affectedIds.ToArray()), wrapper => wrapper.Unread);
     }
 }
