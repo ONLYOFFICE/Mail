@@ -36,6 +36,7 @@ global using LiteDB;
 
 global using MailKit.Net.Imap;
 global using MailKit.Net.Pop3;
+global using MailKit.Security;
 
 global using Microsoft.AspNetCore.Builder;
 global using Microsoft.AspNetCore.Hosting;

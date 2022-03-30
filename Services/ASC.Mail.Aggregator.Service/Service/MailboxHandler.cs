@@ -1,4 +1,7 @@
-﻿namespace ASC.Mail.Aggregator.Service.Service;
+﻿
+using AuthenticationException = MailKit.Security.AuthenticationException;
+
+namespace ASC.Mail.Aggregator.Service.Service;
 
 internal class MailboxHandler : IDisposable
 {
