@@ -1315,7 +1315,7 @@ public class MessageEngine : BaseEngine
             log.Debug($"Convert MimeMessage->MailMessage (md5={md5})");
 
             var message = mimeMessage.ConvertToMailMessage(
-                TenantManager, CoreSettings,
+                _tenantManager, _coreSettings,
                 folder, unread, chainInfo.Id,
                 chainInfo.ChainDate, streamId,
                 mailbox.MailBoxId, true, log);
