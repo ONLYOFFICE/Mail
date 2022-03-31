@@ -27,7 +27,7 @@ namespace ASC.Mail.ImapSync
         public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
         public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
         public FolderType Folder => MailWorkFolder.Folder;
-        public int FolderInt => (int)MailWorkFolder.Folder;
+        public int FolderTypeInt => (int)MailWorkFolder.Folder;
         public bool IsRootFolder => ImapWorkFolder.Name == ImapWorkFolder.FullName;
         public IMailFolder GetImapFolderByType(int folderType) => GetImapFolderByType((FolderType)folderType);
         public IMailFolder GetImapFolderByType(FolderType folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == folderType).Key;
@@ -659,8 +659,6 @@ namespace ASC.Mail.ImapSync
 
                 return;
             }
-
-            _log.Debug($"TaskManager imap client alive, folder {ImapWorkFolder.FullName}.");
 
             if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
             {

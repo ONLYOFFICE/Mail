@@ -1320,6 +1320,69 @@ namespace ASC.Mail.Core.Engine
             return null;
         }
 
+        //Instead Save only for ImapSync. Just save message in DB without any check.
+        public MailMessageData SaveWithoutCheck(     
+            MailBoxData mailbox, MimeMessage mimeMessage, string uidl, Models.MailFolder folder,
+            int? userFolderId, bool unread = true, ILog log = null)
+        {
+            if (mailbox == null)
+                throw new ArgumentException(@"mailbox is null", "mailbox");
+
+            if (mimeMessage == null)
+                throw new ArgumentException(@"message is null", "mimeMessage");
+
+            if (uidl == null)
+                throw new ArgumentException(@"uidl is null", "uidl");
+
+            if (log == null)
+                log = new NullLog();
+
+            var md5 =
+                    string.Format("{0}|{1}|{2}|{3}",
+                        mimeMessage.From.Mailboxes.Any() ? mimeMessage.From.Mailboxes.First().Address : "",
+                        mimeMessage.Subject, mimeMessage.Date.UtcDateTime, mimeMessage.MessageId).GetMd5();
+
+            log.Debug($"DetectChainId(md5={md5}))");
+
+            var chainInfo = DetectChain(mailbox, mimeMessage.MessageId, mimeMessage.InReplyTo,
+                mimeMessage.Subject);
+
+            var streamId = MailUtil.CreateStreamId();
+
+            log.Debug($"Convert MimeMessage->MailMessage (md5={md5})");
+
+            var message = mimeMessage.ConvertToMailMessage(
+                TenantManager, CoreSettings,
+                folder, unread, chainInfo.Id,
+                chainInfo.ChainDate, streamId,
+                mailbox.MailBoxId, true, log);
+
+            log.Debug($"TryStoreMailData(md5={md5})");
+
+            if (!TryStoreMailData(message, mailbox, log))
+            {
+                throw new Exception("Failed to save message");
+            }
+
+            log.Debug($"MailSave(md5={md5})");
+
+            if (TrySaveMail(mailbox, message, folder, userFolderId, uidl, md5, log))
+            {
+                return message;
+            }
+
+            if (TryRemoveMailDirectory(mailbox, message.StreamId, log))
+            {
+                log.InfoFormat("Problem with mail proccessing(Account:{0}). Body and attachment have been deleted", mailbox.EMail);
+            }
+            else
+            {
+                throw new Exception("Can't delete mail folder with data");
+            }
+
+            return null;
+        }
+
         //TODO: Need refactoring
         public string StoreMailBody(MailBoxData mailBoxData, MailMessageData messageItem, ILog log)
         {
