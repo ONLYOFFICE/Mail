@@ -23,11 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-namespace ASC.Mail.Exceptions
+public class SmtpConnectionTimeoutException : SmtpConnectionException
 {
-    public class SmtpConnectionTimeoutException : SmtpConnectionException
-    {
-        public SmtpConnectionTimeoutException() : base("smtp connection timeout exceeded") { }
-    }
+    public SmtpConnectionTimeoutException() : base("smtp connection timeout exceeded") { }
 }

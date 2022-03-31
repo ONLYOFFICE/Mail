@@ -23,45 +23,42 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-
-namespace ASC.Mail.Models
+public class CrmContactData
 {
-    public class CrmContactData
-    {
-        public int Id { get; set; }
-        public EntityTypes Type { get; set; }
+    public int Id { get; set; }
+    public EntityTypes Type { get; set; }
 
-        public string EntityTypeName {
-            get
+    public string EntityTypeName
+    {
+        get
+        {
+            switch (Type)
             {
-                switch (Type)
-                {
-                    case EntityTypes.Contact:
-                        return CrmEntityTypeNames.CONTACT;
-                    case EntityTypes.Case:
-                        return CrmEntityTypeNames.CASE;
-                    case EntityTypes.Opportunity:
-                        return CrmEntityTypeNames.OPPORTUNITY;
-                    default:
-                        throw new ArgumentException(string.Format("Invalid CrmEntityType: {0}", Type));
-                }
+                case EntityTypes.Contact:
+                    return CrmEntityTypeNames.CONTACT;
+                case EntityTypes.Case:
+                    return CrmEntityTypeNames.CASE;
+                case EntityTypes.Opportunity:
+                    return CrmEntityTypeNames.OPPORTUNITY;
+                default:
+                    throw new ArgumentException(string.Format("Invalid CrmEntityType: {0}", Type));
             }
         }
+    }
 
-        public enum EntityTypes
-        {
-            Contact = 1,
-            Case = 2,
-            Opportunity = 3
-        }
+    public enum EntityTypes
+    {
+        Contact = 1,
+        Case = 2,
+        Opportunity = 3
+    }
 
-        public static class CrmEntityTypeNames
-        {
-            public const string CONTACT = "contact";
-            public const string CASE = "case";
-            public const string OPPORTUNITY = "opportunity";
-        }
+    public static class CrmEntityTypeNames
+    {
+        public const string CONTACT = "contact";
+        public const string CASE = "case";
+        public const string OPPORTUNITY = "opportunity";
     }
 }

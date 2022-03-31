@@ -23,146 +23,135 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ServerDao : BaseMailDao, IServerDao
 {
-    [Scope]
-    public class ServerDao : BaseMailDao, IServerDao
+    public ServerDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ServerDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    private const string SERVER_ALIAS = "ms";
+    private const string SERVER_X_TENANT_ALIAS = "st";
+
+    public Core.Entities.Server Get(int tenant)
+    {
+        var server = MailDbContext.MailServerServer
+            .AsNoTracking()
+            .Join(MailDbContext.MailServerServerXTenant, s => s.Id, x => x.IdServer,
+                (s, x) => new
+                {
+                    Server = s,
+                    Xtenant = x
+                })
+            .Where(o => o.Xtenant.IdTenant == tenant)
+            .Select(o => ToServer(o.Server))
+            .FirstOrDefault();
+
+        return server;
+    }
+
+    public List<Core.Entities.Server> GetList()
+    {
+        var list = MailDbContext.MailServerServer
+            .AsNoTracking()
+            .Select(ToServer)
+            .ToList();
+
+        return list;
+    }
+
+    public int Link(Core.Entities.Server server, int tenant)
+    {
+        var xItem = new MailServerServerXTenant
         {
-        }
+            IdServer = server.Id,
+            IdTenant = tenant
+        };
 
-        private const string SERVER_ALIAS = "ms";
-        private const string SERVER_X_TENANT_ALIAS = "st";
+        MailDbContext.AddOrUpdate(t => t.MailServerServerXTenant, xItem);
 
-        public Core.Entities.Server Get(int tenant)
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int UnLink(Core.Entities.Server server, int tenant)
+    {
+        var deleteItem = new MailServerServerXTenant
         {
-            var server = MailDbContext.MailServerServer
-                .AsNoTracking()
-                .Join(MailDbContext.MailServerServerXTenant, s => s.Id, x => x.IdServer,
-                    (s, x) => new
-                    {
-                        Server = s,
-                        Xtenant = x
-                    })
-                .Where(o => o.Xtenant.IdTenant == tenant)
-                .Select(o => ToServer(o.Server))
-                .FirstOrDefault();
+            IdServer = server.Id,
+            IdTenant = tenant
+        };
 
-            return server;
-        }
+        MailDbContext.MailServerServerXTenant.Remove(deleteItem);
 
-        public List<Core.Entities.Server> GetList()
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int Save(Core.Entities.Server server)
+    {
+        var mailServer = new MailServerServer
         {
-            var list = MailDbContext.MailServerServer
-                .AsNoTracking()
-                .Select(ToServer)
-                .ToList();
+            Id = server.Id,
+            MxRecord = server.MxRecord,
+            ConnectionString = server.ConnectionString,
+            ServerType = server.Type,
+            SmtpSettingsId = server.SmtpSettingsId,
+            ImapSettingsId = server.ImapSettingsId
+        };
 
-            return list;
-        }
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerServer, mailServer);
 
-        public int Link(Core.Entities.Server server, int tenant)
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var deleteItem = new MailServerServerXTenant
         {
-            var xItem = new MailServerServerXTenant
-            {
-                IdServer = server.Id,
-                IdTenant = tenant
-            };
+            IdServer = id
+        };
 
-            MailDbContext.AddOrUpdate(t => t.MailServerServerXTenant, xItem);
+        MailDbContext.MailServerServerXTenant.Remove(deleteItem);
 
-            var result = MailDbContext.SaveChanges();
+        MailDbContext.SaveChanges();
 
-            return result;
-        }
-
-        public int UnLink(Core.Entities.Server server, int tenant)
+        var mailServer = new MailServerServer
         {
-            var deleteItem = new MailServerServerXTenant
-            {
-                IdServer = server.Id,
-                IdTenant = tenant
-            };
+            Id = id
+        };
 
-            MailDbContext.MailServerServerXTenant.Remove(deleteItem);
+        MailDbContext.MailServerServer.Remove(mailServer);
 
-            var result = MailDbContext.SaveChanges();
+        var result = MailDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int Save(Core.Entities.Server server)
+    protected static Core.Entities.Server ToServer(MailServerServer r)
+    {
+        var s = new Core.Entities.Server
         {
-            var mailServer = new MailServerServer
-            {
-                Id = server.Id,
-                MxRecord = server.MxRecord,
-                ConnectionString = server.ConnectionString,
-                ServerType = server.Type,
-                SmtpSettingsId = server.SmtpSettingsId,
-                ImapSettingsId = server.ImapSettingsId
-            };
+            Id = r.Id,
+            MxRecord = r.MxRecord,
+            ConnectionString = r.ConnectionString,
+            Type = r.ServerType,
+            SmtpSettingsId = r.SmtpSettingsId,
+            ImapSettingsId = r.ImapSettingsId
+        };
 
-            var entry = MailDbContext.AddOrUpdate(t => t.MailServerServer, mailServer);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public int Delete(int id)
-        {
-            var deleteItem = new MailServerServerXTenant
-            {
-                IdServer = id
-            };
-
-            MailDbContext.MailServerServerXTenant.Remove(deleteItem);
-
-            MailDbContext.SaveChanges();
-
-            var mailServer = new MailServerServer
-            {
-                Id = id
-            };
-
-            MailDbContext.MailServerServer.Remove(mailServer);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected static Core.Entities.Server ToServer(MailServerServer r)
-        {
-            var s = new Core.Entities.Server
-            {
-                Id = r.Id,
-                MxRecord = r.MxRecord,
-                ConnectionString = r.ConnectionString,
-                Type = r.ServerType,
-                SmtpSettingsId = r.SmtpSettingsId,
-                ImapSettingsId = r.ImapSettingsId
-            };
-
-            return s;
-        }
+        return s;
     }
 }

@@ -23,23 +23,19 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Expressions.Message
+public interface IMessagesExp : IMessageExp
 {
-    public interface IMessagesExp : IMessageExp
-    {
-        string OrderBy { get; }
+    string OrderBy { get; }
 
-        bool? OrderAsc { get; }
+    bool? OrderAsc { get; }
 
-        int? StartIndex { get; }
+    int? StartIndex { get; }
 
-        int? Limit { get; }
+    int? Limit { get; }
 
-        List<int> TagIds { get; }
+    List<int> TagIds { get; }
 
-        int? UserFolderId { get; }
-    }
+    int? UserFolderId { get; }
 }

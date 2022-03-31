@@ -1,26 +1,22 @@
-﻿using MailKit;
-using MailKit.Net.Smtp;
-using MimeKit;
+﻿using SmtpClient = MailKit.Net.Smtp.SmtpClient;
+namespace ASC.Mail.Clients;
 
-namespace ASC.Mail.Clients
+public class DsnSmtpClient : SmtpClient
 {
-    public class DsnSmtpClient : SmtpClient
+    public DeliveryStatusNotification? Dsn { get; set; }
+
+    public DsnSmtpClient(IProtocolLogger protocolLogPath, DeliveryStatusNotification? dsn = null)
+        : base(protocolLogPath)
     {
-        public DeliveryStatusNotification? Dsn { get; set; }
+        Dsn = dsn;
+    }
 
-        public DsnSmtpClient(IProtocolLogger protocolLogPath, DeliveryStatusNotification? dsn = null)
-            : base(protocolLogPath)
-        {
-            Dsn = dsn;
-        }
-
-        protected override DeliveryStatusNotification? GetDeliveryStatusNotifications(MimeMessage message,
-            MailboxAddress mailbox)
-        {
-            /*return DeliveryStatusNotification.Delay | 
-                   DeliveryStatusNotification.Failure | 
-                   DeliveryStatusNotification.Success;*/
-            return Dsn;
-        }
+    protected override DeliveryStatusNotification? GetDeliveryStatusNotifications(MimeMessage message,
+        MailboxAddress mailbox)
+    {
+        /*return DeliveryStatusNotification.Delay | 
+               DeliveryStatusNotification.Failure | 
+               DeliveryStatusNotification.Success;*/
+        return Dsn;
     }
 }

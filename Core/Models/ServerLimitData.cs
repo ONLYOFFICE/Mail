@@ -23,17 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "Limits")]
+public class ServerLimitData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "Limits")]
-    public class ServerLimitData
-    {
-        [DataMember(IsRequired = true)]
-        public int MailboxMaxCountPerUser { get; set; }
-    }
+    [DataMember(IsRequired = true)]
+    public int MailboxMaxCountPerUser { get; set; }
 }

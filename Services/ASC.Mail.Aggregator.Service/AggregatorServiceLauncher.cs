@@ -1,71 +1,60 @@
-﻿using ASC.Common;
-using ASC.Mail.Aggregator.Service.Console;
-using ASC.Mail.Aggregator.Service.Service;
+﻿namespace ASC.Mail.Aggregator.Service;
 
-using Microsoft.Extensions.Hosting;
-
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace ASC.Mail.Aggregator.Service
+[Singletone]
+class AggregatorServiceLauncher : IHostedService
 {
-    [Singletone]
-    class AggregatorServiceLauncher : IHostedService
+    private readonly AggregatorService _aggregatorService;
+    private readonly ConsoleParameters _consoleParameters;
+    private ManualResetEvent _resetEvent;
+
+    private Task _aggregatorServiceTask;
+    private CancellationTokenSource _cts;
+
+    public AggregatorServiceLauncher(
+        AggregatorService aggregatorService,
+        ConsoleParser consoleParser)
     {
-        private AggregatorService AggregatorService { get; }
-        private ConsoleParameters ConsoleParameters { get; }
-        private ManualResetEvent ResetEvent;
+        _aggregatorService = aggregatorService;
+        _consoleParameters = consoleParser.GetParsedParameters();
 
-        private Task AggregatorServiceTask;
-        private CancellationTokenSource Cts;
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+    }
 
-        public AggregatorServiceLauncher(
-            AggregatorService aggregatorService,
-            ConsoleParser consoleParser)
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        if (_consoleParameters.IsConsole)
         {
-            AggregatorService = aggregatorService;
-            ConsoleParameters = consoleParser.GetParsedParameters();
-
-            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            _aggregatorServiceTask = _aggregatorService.StartTimer(_cts.Token, true);
+            _resetEvent = new ManualResetEvent(false);
+            System.Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
+            _resetEvent.WaitOne();
+        }
+        else
+        {
+            _aggregatorServiceTask = _aggregatorService.StartTimer(_cts.Token, true);
         }
 
-        private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        return _aggregatorServiceTask.IsCompleted ? _aggregatorServiceTask : Task.CompletedTask;
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            _aggregatorService.StopService(_cts);
+            await Task.WhenAll(_aggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
+        }
+        catch (TaskCanceledException)
         {
         }
-
-        public Task StartAsync(CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
-            if (ConsoleParameters.IsConsole)
-            {
-                AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
-                ResetEvent = new ManualResetEvent(false);
-                System.Console.CancelKeyPress += async (sender, e) => await StopAsync(cancellationToken);
-                ResetEvent.WaitOne();
-            }
-            else
-            {
-                AggregatorServiceTask = AggregatorService.StartTimer(Cts.Token, true);
-            }
-
-            return AggregatorServiceTask.IsCompleted ? AggregatorServiceTask : Task.CompletedTask;
-        }
-
-        public async Task StopAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                AggregatorService.StopService(Cts);
-                await Task.WhenAll(AggregatorServiceTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
-            }
-            catch (TaskCanceledException)
-            {
-            }
-            catch (Exception ex)
-            {
-            }
         }
     }
 }

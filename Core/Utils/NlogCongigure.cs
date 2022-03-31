@@ -1,48 +1,37 @@
-﻿using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Common.Utils;
+﻿namespace ASC.Mail.Core.Utils;
 
-using Microsoft.Extensions.Configuration;
-
-using NLog;
-
-using System.IO;
-
-namespace ASC.Mail.Core.Utils
+[Scope]
+public class NlogCongigure
 {
-    [Scope]
-    public class NlogCongigure
+    private IConfiguration _configuration;
+    private ConfigurationExtension _configurationExtension;
+
+    public NlogCongigure(
+        IConfiguration configuration,
+        ConfigurationExtension configurationExtension)
     {
-        private IConfiguration _configuration;
-        private ConfigurationExtension _configurationExtension;
+        _configuration = configuration;
+        _configurationExtension = configurationExtension;
+    }
 
-        public NlogCongigure(
-            IConfiguration configuration,
-            ConfigurationExtension configurationExtension)
+    public void Configure()
+    {
+        var fileName = CrossPlatform.PathCombine(_configuration["pathToConf"], "nlog.config");
+
+        LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(fileName);
+        LogManager.ThrowConfigExceptions = false;
+
+        var settings = _configurationExtension.GetSetting<NLogSettings>("log");
+        if (!string.IsNullOrEmpty(settings.Name))
         {
-            _configuration = configuration;
-            _configurationExtension = configurationExtension;
+            LogManager.Configuration.Variables["name"] = settings.Name;
         }
 
-        public void Configure()
+        if (!string.IsNullOrEmpty(settings.Dir))
         {
-            var fileName = CrossPlatform.PathCombine(_configuration["pathToConf"], "nlog.config");
-
-            LogManager.Configuration = new NLog.Config.XmlLoggingConfiguration(fileName);
-            LogManager.ThrowConfigExceptions = false;
-
-            var settings = _configurationExtension.GetSetting<NLogSettings>("log");
-            if (!string.IsNullOrEmpty(settings.Name))
-            {
-                LogManager.Configuration.Variables["name"] = settings.Name;
-            }
-
-            if (!string.IsNullOrEmpty(settings.Dir))
-            {
-                LogManager.Configuration.Variables["dir"] = settings.Dir.TrimEnd('/').TrimEnd('\\') + Path.DirectorySeparatorChar;
-            }
-
-            NLog.Targets.Target.Register<SelfCleaningTarget>("SelfCleaning");
+            LogManager.Configuration.Variables["dir"] = settings.Dir.TrimEnd('/').TrimEnd('\\') + Path.DirectorySeparatorChar;
         }
+
+        NLog.Targets.Target.Register<SelfCleaningTarget>("SelfCleaning");
     }
 }

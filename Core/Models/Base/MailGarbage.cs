@@ -1,8 +1,7 @@
-﻿namespace ASC.Mail.Models.Base
+﻿namespace ASC.Mail.Models.Base;
+
+public abstract class MailGarbage
 {
-    public abstract class MailGarbage
-    {
-        public abstract int Id { get; }
-        public abstract string Path { get; }
-    }
+    public abstract int Id { get; }
+    public abstract string Path { get; }
 }

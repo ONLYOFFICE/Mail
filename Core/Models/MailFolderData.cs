@@ -23,33 +23,29 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "Folder")]
+public class MailFolderData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "Folder")]
-    public class MailFolderData
-    {
-        [DataMember(IsRequired = true, Name = "id")]
-        public FolderType Id { get; set; }
+    [DataMember(IsRequired = true, Name = "id")]
+    public FolderType Id { get; set; }
 
-        [DataMember(IsRequired = true, Name = "unread")]
-        public int UnreadCount { get; set; }
+    [DataMember(IsRequired = true, Name = "unread")]
+    public int UnreadCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "unread_messages")]
-        public int UnreadMessagesCount { get; set; }
+    [DataMember(IsRequired = true, Name = "unread_messages")]
+    public int UnreadMessagesCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "total_count")]
-        public int TotalCount { get; set; }
+    [DataMember(IsRequired = true, Name = "total_count")]
+    public int TotalCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "total_messages_count")]
-        public int TotalMessgesCount { get; set; }
+    [DataMember(IsRequired = true, Name = "total_messages_count")]
+    public int TotalMessgesCount { get; set; }
 
-        [DataMember(IsRequired = true, Name = "time_modified")]
-        public DateTime TimeModified { get; set; }
-    }
+    [DataMember(IsRequired = true, Name = "time_modified")]
+    public DateTime TimeModified { get; set; }
 }

@@ -23,25 +23,21 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class MailBoxOutException : Exception
 {
-    public class MailBoxOutException: Exception
+    public enum Types
     {
-        public enum Types
-        {
-            Removed = 1,
-            Deactivated = 2
-        }
+        Removed = 1,
+        Deactivated = 2
+    }
 
-        public Types ErrorType { get; set; }
+    public Types ErrorType { get; set; }
 
-        public MailBoxOutException(Types type, string message)
-            : base(message)
-        {
-            ErrorType = type;
-        }
+    public MailBoxOutException(Types type, string message)
+        : base(message)
+    {
+        ErrorType = type;
     }
 }

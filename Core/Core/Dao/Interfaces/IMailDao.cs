@@ -23,31 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-using System.IO;
-
-using ASC.Common;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.Message;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailDao))]
+public interface IMailDao
 {
-    [Scope(typeof(MailDao))]
-    public interface IMailDao
-    {
-        int Save(Core.Entities.Mail mail);
+    int Save(Core.Entities.Mail mail);
 
-        Core.Entities.Mail GetMail(IMessageExp exp);
+    Core.Entities.Mail GetMail(IMessageExp exp);
 
-        Core.Entities.Mail GetNextMail(IMessageExp exp);
+    Core.Entities.Mail GetNextMail(IMessageExp exp);
 
-        List<string> GetExistingUidls(int mailboxId, List<string> uidlList);
+    List<string> GetExistingUidls(int mailboxId, List<string> uidlList);
 
-        int SetMessagesChanged(List<int> ids);
+    int SetMessagesChanged(List<int> ids);
 
-        string GetDocumentData(MailMail mail);
+    string GetDocumentData(MailMail mail);
 
-        Stream GetDocumentStream(MailMail mail);
-    }
+    Stream GetDocumentStream(MailMail mail);
 }

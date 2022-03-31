@@ -23,52 +23,44 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(AlertDao))]
+public interface IAlertDao
 {
-    [Scope(typeof(AlertDao))]
-    public interface IAlertDao
-    {
-        /// <summary>
-        ///     Get alert by id.
-        /// </summary>
-        /// <param name="id">id</param>
-        Alert GetAlert(long id);
+    /// <summary>
+    ///     Get alert by id.
+    /// </summary>
+    /// <param name="id">id</param>
+    Alert GetAlert(long id);
 
-        /// <summary>
-        ///     Get a list of alerts
-        /// </summary>
-        List<Alert> GetAlerts(int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty);
+    /// <summary>
+    ///     Get a list of alerts
+    /// </summary>
+    List<Alert> GetAlerts(int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty);
 
-        /// <summary>
-        ///     Save or update alert
-        /// </summary>
-        /// <param name="alert"></param>
-        /// <param name="unique"></param>
-        int SaveAlert(Alert alert, bool unique = false);
+    /// <summary>
+    ///     Save or update alert
+    /// </summary>
+    /// <param name="alert"></param>
+    /// <param name="unique"></param>
+    int SaveAlert(Alert alert, bool unique = false);
 
-        /// <summary>
-        ///     Delete alertс
-        /// </summary>
-        /// <param name="id">id</param>
-        int DeleteAlert(long id);
+    /// <summary>
+    ///     Delete alertс
+    /// </summary>
+    /// <param name="id">id</param>
+    int DeleteAlert(long id);
 
-        /// <summary>
-        ///     Delete all mailbox's alerts
-        /// </summary>
-        /// <param name="mailboxId">id mailbox</param>
-        int DeleteAlerts(int mailboxId);
+    /// <summary>
+    ///     Delete all mailbox's alerts
+    /// </summary>
+    /// <param name="mailboxId">id mailbox</param>
+    int DeleteAlerts(int mailboxId);
 
-        /// <summary>
-        ///     Delete alerts
-        /// </summary>
-        /// <param name="ids">list of id</param>
-        int DeleteAlerts(List<int> ids);
-    }
+    /// <summary>
+    ///     Delete alerts
+    /// </summary>
+    /// <param name="ids">list of id</param>
+    int DeleteAlerts(List<int> ids);
 }

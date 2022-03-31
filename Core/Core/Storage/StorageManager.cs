@@ -23,268 +23,248 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Common.Web;
-using ASC.Core;
-using ASC.Data.Storage;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
-using ASC.Web.Core.Files;
+namespace ASC.Mail.Storage;
 
-using HtmlAgilityPack;
-
-using Microsoft.Extensions.Options;
-
-using System;
-using System.Globalization;
-using System.IO;
-using System.Net;
-using System.Web;
-
-namespace ASC.Mail.Storage
+[Scope]
+public class StorageManager
 {
-    [Scope]
-    public class StorageManager
+    public const string CKEDITOR_IMAGES_DOMAIN = "mail";
+
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private string User => _securityContext.CurrentAccount.ID.ToString();
+
+    private readonly ILog _log;
+    private readonly SecurityContext _securityContext;
+    private readonly StorageFactory _storageFactory;
+    private readonly TenantManager _tenantManager;
+
+    public StorageManager(
+        SecurityContext securityContext,
+        StorageFactory storageFactory,
+        TenantManager tenantManager,
+        IOptionsMonitor<ILog> options)
     {
-        public const string CKEDITOR_IMAGES_DOMAIN = "mail";
+        _securityContext = securityContext;
+        _storageFactory = storageFactory;
+        _tenantManager = tenantManager;
+        _log = options.Get("ASC.Mail.StorageManager");
+    }
 
-        private int Tenant => TenantManager.GetCurrentTenant().TenantId;
-        private string User => SecurityContext.CurrentAccount.ID.ToString();
+    public IDataStore GetDataStoreForCkImages(int tenant)
+    {
+        return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "fckuploaders", null);
+    }
 
-        private ILog Log { get; }
-        private SecurityContext SecurityContext { get; }
-        private StorageFactory StorageFactory { get; }
-        private TenantManager TenantManager { get; }
+    public IDataStore GetDataStoreForAttachments(int tenant)
+    {
+        return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
+    }
 
-        public StorageManager(
-            SecurityContext securityContext,
-            StorageFactory storageFactory,
-            TenantManager tenantManager,
-            IOptionsMonitor<ILog> options)
+    public static byte[] LoadLinkData(string link, ILog log = null)
+    {
+        if (log == null)
+            log = new NullLog();
+
+        var data = new byte[] { };
+
+        try
         {
-            SecurityContext = securityContext;
-            StorageFactory = storageFactory;
-            TenantManager = tenantManager;
-            Log = options.Get("ASC.Mail.StorageManager");
-        }
-
-        public IDataStore GetDataStoreForCkImages(int tenant)
-        {
-            return StorageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "fckuploaders", null);
-        }
-
-        public IDataStore GetDataStoreForAttachments(int tenant)
-        {
-            return StorageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
-        }
-
-        public static byte[] LoadLinkData(string link, ILog log = null)
-        {
-            if (log == null)
-                log = new NullLog();
-
-            var data = new byte[] { };
-
-            try
+            using (var webClient = new WebClient())
             {
-                using (var webClient = new WebClient())
-                {
-                    data = webClient.DownloadData(link);
-                }
-            }
-            catch (Exception)
-            {
-                log.ErrorFormat("LoadLinkData(url='{0}')", link);
-            }
-
-            return data;
-        }
-
-        public static byte[] LoadDataStoreItemData(string domain, string fileLink, IDataStore storage)
-        {
-            using var stream = storage.GetReadStreamAsync(domain, fileLink).Result;
-            return stream.ReadToEnd();
-        }
-
-        public string ChangeEditorImagesLinks(string html, int mailboxId)
-        {
-            if (string.IsNullOrEmpty(html) || mailboxId < 1)
-                return html;
-
-            var newHtml = html;
-
-            var ckStorage = GetDataStoreForCkImages(Tenant);
-            var signatureStorage = GetDataStoreForAttachments(Tenant);
-            //todo: replace selector
-            var currentMailCkeditorUrl = ckStorage.GetUriAsync(CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
-
-            var xpathQuery = GetXpathQueryForCkImagesToResaving(currentMailCkeditorUrl);
-
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-
-            var linkNodes = doc.DocumentNode.SelectNodes(xpathQuery);
-
-            if (linkNodes != null)
-            {
-                foreach (var linkNode in linkNodes)
-                {
-                    try
-                    {
-                        var link = linkNode.Attributes["src"].Value;
-
-                        Log.InfoFormat("ChangeSignatureEditorImagesLinks() Original image link: {0}", link);
-
-                        var fileLink = HttpUtility.UrlDecode(link.Substring(currentMailCkeditorUrl.Length));
-
-                        var fileName = Path.GetFileName(fileLink);
-
-                        var bytes = LoadDataStoreItemData(CKEDITOR_IMAGES_DOMAIN, fileLink, ckStorage);
-
-                        var stableImageLink = StoreCKeditorImageWithoutQuota(mailboxId, fileName, bytes,
-                                                               signatureStorage);
-
-                        linkNode.SetAttributeValue("src", stableImageLink);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.ErrorFormat("ChangeSignatureEditorImagesLinks() failed with exception: {0}", ex.ToString());
-                    }
-                }
-
-                newHtml = doc.DocumentNode.OuterHtml;
-            }
-
-            return newHtml;
-        }
-
-        public string StoreCKeditorImageWithoutQuota(int mailboxId, string fileName, byte[] imageData, IDataStore storage)
-        {
-            try
-            {
-                if (imageData == null || imageData.Length == 0)
-                    throw new ArgumentNullException("imageData");
-
-                var ext = string.IsNullOrEmpty(fileName) ? ".jpg" : Path.GetExtension(fileName);
-
-                if (string.IsNullOrEmpty(ext))
-                    ext = ".jpg";
-
-                var storeName = imageData.GetMd5();
-                storeName = Path.ChangeExtension(storeName, ext);
-
-                var contentDisposition = ContentDispositionUtil.GetHeaderValue(storeName);
-                var contentType = MimeMapping.GetMimeMapping(ext);
-
-                var signatureImagePath = MailStoragePathCombiner.GerStoredSignatureImagePath(User, mailboxId, storeName);
-
-                using (var reader = new MemoryStream(imageData))
-                {
-                    var uploadUrl = storage.SaveAsync(string.Empty, signatureImagePath, reader, contentType, contentDisposition).Result;
-                    return MailStoragePathCombiner.GetStoredUrl(uploadUrl);
-                }
-            }
-            catch (Exception e)
-            {
-                Log.ErrorFormat("StoreCKeditorImageWithoutQuota(). filename: {0} Exception:\r\n{1}\r\n", fileName,
-                           e.ToString());
-
-                throw;
+                data = webClient.DownloadData(link);
             }
         }
-
-        public void StoreAttachmentWithoutQuota(MailAttachmentData mailAttachmentData)
+        catch (Exception)
         {
-            try
+            log.ErrorFormat("LoadLinkData(url='{0}')", link);
+        }
+
+        return data;
+    }
+
+    public static byte[] LoadDataStoreItemData(string domain, string fileLink, IDataStore storage)
+    {
+        using var stream = storage.GetReadStreamAsync(domain, fileLink).Result;
+        return stream.ReadToEnd();
+    }
+
+    public string ChangeEditorImagesLinks(string html, int mailboxId)
+    {
+        if (string.IsNullOrEmpty(html) || mailboxId < 1)
+            return html;
+
+        var newHtml = html;
+
+        var ckStorage = GetDataStoreForCkImages(Tenant);
+        var signatureStorage = GetDataStoreForAttachments(Tenant);
+        //todo: replace selector
+        var currentMailCkeditorUrl = ckStorage.GetUriAsync(CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
+
+        var xpathQuery = GetXpathQueryForCkImagesToResaving(currentMailCkeditorUrl);
+
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+
+        var linkNodes = doc.DocumentNode.SelectNodes(xpathQuery);
+
+        if (linkNodes != null)
+        {
+            foreach (var linkNode in linkNodes)
             {
-                if ((mailAttachmentData.dataStream == null || mailAttachmentData.dataStream.Length == 0)
-                    && (mailAttachmentData.data == null || mailAttachmentData.data.Length == 0))
+                try
                 {
-                    return;
+                    var link = linkNode.Attributes["src"].Value;
+
+                    _log.InfoFormat("ChangeSignatureEditorImagesLinks() Original image link: {0}", link);
+
+                    var fileLink = HttpUtility.UrlDecode(link.Substring(currentMailCkeditorUrl.Length));
+
+                    var fileName = Path.GetFileName(fileLink);
+
+                    var bytes = LoadDataStoreItemData(CKEDITOR_IMAGES_DOMAIN, fileLink, ckStorage);
+
+                    var stableImageLink = StoreCKeditorImageWithoutQuota(mailboxId, fileName, bytes,
+                                                           signatureStorage);
+
+                    linkNode.SetAttributeValue("src", stableImageLink);
                 }
-
-                if (string.IsNullOrEmpty(mailAttachmentData.fileName))
-                    mailAttachmentData.fileName = "attachment.ext";
-
-                var storage = StorageFactory.GetMailStorage(Tenant);
-
-                storage.QuotaController = null;
-
-                if (string.IsNullOrEmpty(mailAttachmentData.storedName))
+                catch (Exception ex)
                 {
-                    mailAttachmentData.storedName = MailUtil.CreateStreamId();
-
-                    var ext = Path.GetExtension(mailAttachmentData.fileName);
-
-                    if (!string.IsNullOrEmpty(ext))
-                        mailAttachmentData.storedName = Path.ChangeExtension(mailAttachmentData.storedName, ext);
+                    _log.ErrorFormat("ChangeSignatureEditorImagesLinks() failed with exception: {0}", ex.ToString());
                 }
+            }
 
-                mailAttachmentData.fileNumber =
-                    !string.IsNullOrEmpty(mailAttachmentData.contentId) //Upload hack: embedded attachment have to be saved in 0 folder
-                        ? 0
-                        : mailAttachmentData.fileNumber;
+            newHtml = doc.DocumentNode.OuterHtml;
+        }
 
-                var attachmentPath = MailStoragePathCombiner.GerStoredFilePath(mailAttachmentData);
+        return newHtml;
+    }
 
-                if (mailAttachmentData.data != null)
-                {
-                    using (var reader = new MemoryStream(mailAttachmentData.data))
-                    {
-                        var uploadUrl = (mailAttachmentData.needSaveToTemp)
-                            ? storage.SaveAsync("attachments_temp", attachmentPath, reader, mailAttachmentData.fileName).Result
-                            : storage.SaveAsync(attachmentPath, reader, mailAttachmentData.fileName).Result;
+    public string StoreCKeditorImageWithoutQuota(int mailboxId, string fileName, byte[] imageData, IDataStore storage)
+    {
+        try
+        {
+            if (imageData == null || imageData.Length == 0)
+                throw new ArgumentNullException("imageData");
 
-                        mailAttachmentData.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(uploadUrl);
-                    }
-                }
-                else
+            var ext = string.IsNullOrEmpty(fileName) ? ".jpg" : Path.GetExtension(fileName);
+
+            if (string.IsNullOrEmpty(ext))
+                ext = ".jpg";
+
+            var storeName = imageData.GetMd5();
+            storeName = Path.ChangeExtension(storeName, ext);
+
+            var contentDisposition = ContentDispositionUtil.GetHeaderValue(storeName);
+            var contentType = MimeMapping.GetMimeMapping(ext);
+
+            var signatureImagePath = MailStoragePathCombiner.GerStoredSignatureImagePath(User, mailboxId, storeName);
+
+            using (var reader = new MemoryStream(imageData))
+            {
+                var uploadUrl = storage.SaveAsync(string.Empty, signatureImagePath, reader, contentType, contentDisposition).Result;
+                return MailStoragePathCombiner.GetStoredUrl(uploadUrl);
+            }
+        }
+        catch (Exception e)
+        {
+            _log.ErrorFormat("StoreCKeditorImageWithoutQuota(). filename: {0} Exception:\r\n{1}\r\n", fileName,
+                       e.ToString());
+
+            throw;
+        }
+    }
+
+    public void StoreAttachmentWithoutQuota(MailAttachmentData mailAttachmentData)
+    {
+        try
+        {
+            if ((mailAttachmentData.dataStream == null || mailAttachmentData.dataStream.Length == 0)
+                && (mailAttachmentData.data == null || mailAttachmentData.data.Length == 0))
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(mailAttachmentData.fileName))
+                mailAttachmentData.fileName = "attachment.ext";
+
+            var storage = _storageFactory.GetMailStorage(Tenant);
+
+            storage.QuotaController = null;
+
+            if (string.IsNullOrEmpty(mailAttachmentData.storedName))
+            {
+                mailAttachmentData.storedName = MailUtil.CreateStreamId();
+
+                var ext = Path.GetExtension(mailAttachmentData.fileName);
+
+                if (!string.IsNullOrEmpty(ext))
+                    mailAttachmentData.storedName = Path.ChangeExtension(mailAttachmentData.storedName, ext);
+            }
+
+            mailAttachmentData.fileNumber =
+                !string.IsNullOrEmpty(mailAttachmentData.contentId) //Upload hack: embedded attachment have to be saved in 0 folder
+                    ? 0
+                    : mailAttachmentData.fileNumber;
+
+            var attachmentPath = MailStoragePathCombiner.GerStoredFilePath(mailAttachmentData);
+
+            if (mailAttachmentData.data != null)
+            {
+                using (var reader = new MemoryStream(mailAttachmentData.data))
                 {
                     var uploadUrl = (mailAttachmentData.needSaveToTemp)
-                        ? storage.SaveAsync("attachments_temp", attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result
-                        : storage.SaveAsync(attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result;
+                        ? storage.SaveAsync("attachments_temp", attachmentPath, reader, mailAttachmentData.fileName).Result
+                        : storage.SaveAsync(attachmentPath, reader, mailAttachmentData.fileName).Result;
 
                     mailAttachmentData.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(uploadUrl);
                 }
-
-                if (mailAttachmentData.needSaveToTemp)
-                {
-                    mailAttachmentData.tempStoredUrl = mailAttachmentData.storedFileUrl;
-                }
             }
-            catch (Exception e)
+            else
             {
-                Log.ErrorFormat("StoreAttachmentWithoutQuota(). filename: {0}, ctype: {1} Exception:\r\n{2}\r\n",
-                    mailAttachmentData.fileName,
-                    mailAttachmentData.contentType,
-                    e.ToString());
+                var uploadUrl = (mailAttachmentData.needSaveToTemp)
+                    ? storage.SaveAsync("attachments_temp", attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result
+                    : storage.SaveAsync(attachmentPath, mailAttachmentData.dataStream, mailAttachmentData.fileName).Result;
 
-                throw;
+                mailAttachmentData.storedFileUrl = MailStoragePathCombiner.GetStoredUrl(uploadUrl);
+            }
+
+            if (mailAttachmentData.needSaveToTemp)
+            {
+                mailAttachmentData.tempStoredUrl = mailAttachmentData.storedFileUrl;
             }
         }
-
-        public static string GetXpathQueryForAttachmentsToResaving(string thisMailFckeditorUrl,
-                                                                    string thisMailAttachmentFolderUrl,
-                                                                    string thisUserStorageUrl)
+        catch (Exception e)
         {
-            const string src_condition_format = "contains(@src,'{0}')";
-            var addedByUserToFck = string.Format(src_condition_format, thisMailFckeditorUrl);
-            var addedToThisMail = string.Format(src_condition_format, thisMailAttachmentFolderUrl);
-            var addedToThisUserMails = string.Format(src_condition_format, thisUserStorageUrl);
-            var xpathQuery = string.Format("//img[@src and ({0} or {1}) and not({2})]", addedByUserToFck,
-                                            addedToThisUserMails, addedToThisMail);
-            return xpathQuery;
-        }
+            _log.ErrorFormat("StoreAttachmentWithoutQuota(). filename: {0}, ctype: {1} Exception:\r\n{2}\r\n",
+                mailAttachmentData.fileName,
+                mailAttachmentData.contentType,
+                e.ToString());
 
-        public static string GetXpathQueryForCkImagesToResaving(string thisMailCkeditorUrl)
-        {
-            const string src_condition_format = "contains(@src,'{0}')";
-            var addedByUserToFck = string.Format(src_condition_format, thisMailCkeditorUrl);
-            var xpathQuery = string.Format("//img[@src and {0}]", addedByUserToFck);
-            return xpathQuery;
+            throw;
         }
+    }
+
+    public static string GetXpathQueryForAttachmentsToResaving(string thisMailFckeditorUrl,
+                                                                string thisMailAttachmentFolderUrl,
+                                                                string thisUserStorageUrl)
+    {
+        const string src_condition_format = "contains(@src,'{0}')";
+        var addedByUserToFck = string.Format(src_condition_format, thisMailFckeditorUrl);
+        var addedToThisMail = string.Format(src_condition_format, thisMailAttachmentFolderUrl);
+        var addedToThisUserMails = string.Format(src_condition_format, thisUserStorageUrl);
+        var xpathQuery = string.Format("//img[@src and ({0} or {1}) and not({2})]", addedByUserToFck,
+                                        addedToThisUserMails, addedToThisMail);
+        return xpathQuery;
+    }
+
+    public static string GetXpathQueryForCkImagesToResaving(string thisMailCkeditorUrl)
+    {
+        const string src_condition_format = "contains(@src,'{0}')";
+        var addedByUserToFck = string.Format(src_condition_format, thisMailCkeditorUrl);
+        var xpathQuery = string.Format("//img[@src and {0}]", addedByUserToFck);
+        return xpathQuery;
     }
 }

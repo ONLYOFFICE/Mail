@@ -23,26 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System.IO;
-
-namespace ASC.Mail.Extensions
+public static class StreamExtensions
 {
-    public static class StreamExtensions
+    public static byte[] ReadToEnd(this Stream input)
     {
-        public static byte[] ReadToEnd(this Stream input)
+        var buffer = new byte[4 * 1024];
+        using (var ms = new MemoryStream())
         {
-            var buffer = new byte[4 * 1024];
-            using (var ms = new MemoryStream())
+            int read;
+            while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
             {
-                int read;
-                while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                {
-                    ms.Write(buffer, 0, read);
-                }
-                return ms.ToArray();
+                ms.Write(buffer, 0, read);
             }
+            return ms.ToArray();
         }
-
     }
+
 }

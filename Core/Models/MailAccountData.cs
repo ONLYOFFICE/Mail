@@ -23,59 +23,54 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "Account")]
+public class MailAccountData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "Account")]
-    public class MailAccountData
-    {
-        [DataMember(IsRequired = false, Name = "mailboxId")]
-        public int MailboxId { get; set; }
+    [DataMember(IsRequired = false, Name = "mailboxId")]
+    public int MailboxId { get; set; }
 
-        [DataMember(IsRequired = true, Name = "email")]
-        public string Email { get; set; }
+    [DataMember(IsRequired = true, Name = "email")]
+    public string Email { get; set; }
 
-        [DataMember(IsRequired = true, Name = "enabled")]
-        public bool Enabled { get; set; }
+    [DataMember(IsRequired = true, Name = "enabled")]
+    public bool Enabled { get; set; }
 
-        [DataMember(IsRequired = true, Name = "name")]
-        public string Name { get; set; }
+    [DataMember(IsRequired = true, Name = "name")]
+    public string Name { get; set; }
 
-        [DataMember(IsRequired = true, Name = "oAuthConnection")]
-        public bool OAuthConnection { get; set; }
+    [DataMember(IsRequired = true, Name = "oAuthConnection")]
+    public bool OAuthConnection { get; set; }
 
-        [DataMember(IsRequired = true, Name = "signature")]
-        public MailSignatureData Signature { get; set; }
+    [DataMember(IsRequired = true, Name = "signature")]
+    public MailSignatureData Signature { get; set; }
 
-        [DataMember(IsRequired = true, Name = "autoreply")]
-        public MailAutoreplyData Autoreply { get; set; }
+    [DataMember(IsRequired = true, Name = "autoreply")]
+    public MailAutoreplyData Autoreply { get; set; }
 
-        [DataMember(IsRequired = true, Name = "eMailInFolder")]
-        public string EMailInFolder { get; set; }
+    [DataMember(IsRequired = true, Name = "eMailInFolder")]
+    public string EMailInFolder { get; set; }
 
-        [DataMember(IsRequired = true, Name = "quotaError")]
-        public bool QuotaError { get; set; }
+    [DataMember(IsRequired = true, Name = "quotaError")]
+    public bool QuotaError { get; set; }
 
-        [DataMember(IsRequired = true, Name = "authError")]
-        public bool AuthError { get; set; }
+    [DataMember(IsRequired = true, Name = "authError")]
+    public bool AuthError { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isGroup")]
-        public bool IsGroup { get; set; }
+    [DataMember(IsRequired = true, Name = "isGroup")]
+    public bool IsGroup { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isAlias")]
-        public bool IsAlias { get; set; }
+    [DataMember(IsRequired = true, Name = "isAlias")]
+    public bool IsAlias { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isTeamlabMailbox")]
-        public bool IsTeamlabMailbox { get; set; }
+    [DataMember(IsRequired = true, Name = "isTeamlabMailbox")]
+    public bool IsTeamlabMailbox { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isDefault")]
-        public bool IsDefault { get; set; }
+    [DataMember(IsRequired = true, Name = "isDefault")]
+    public bool IsDefault { get; set; }
 
-        [DataMember(IsRequired = true, Name = "isSharedDomainMailbox")]
-        public bool IsSharedDomainMailbox { get; set; }
-    }
+    [DataMember(IsRequired = true, Name = "isSharedDomainMailbox")]
+    public bool IsSharedDomainMailbox { get; set; }
 }

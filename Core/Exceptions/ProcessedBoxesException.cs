@@ -1,12 +1,10 @@
-﻿using System;
+﻿
+namespace ASC.Mail.Core.Exceptions;
 
-namespace ASC.Mail.Core.Exceptions
+public class ProcessedBoxesException : Exception
 {
-    public class ProcessedBoxesException : Exception
+    public ProcessedBoxesException(string message)
+        : base(message)
     {
-        public ProcessedBoxesException(string message)
-            : base(message)
-        {
-        }
     }
 }

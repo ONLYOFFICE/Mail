@@ -28,7 +28,7 @@ namespace ASC.Mail.Controllers
         [Read("accounts")]
         public IEnumerable<MailAccountData> GetAccounts()
         {
-            var accounts = AccountEngine.GetAccountInfoList();
+            var accounts = _accountEngine.GetAccountInfoList();
             return accounts.ToAccountData();
         }
 
@@ -44,7 +44,7 @@ namespace ASC.Mail.Controllers
         [Read(@"accounts/single")]
         public MailBoxData GetAccount(string email)
         {
-            var account = AccountEngine.GetAccount(email);
+            var account = _accountEngine.GetAccount(email);
 
             return account;
         }
@@ -60,7 +60,7 @@ namespace ASC.Mail.Controllers
         [Create("accounts")]
         public MailAccountData CreateAccount(AccountModel model)
         {
-            var accountInfo = AccountEngine.TryCreateAccount(model, out LoginResult loginResult);
+            var accountInfo = _accountEngine.TryCreateAccount(model, out LoginResult loginResult);
 
             if (accountInfo == null)
                 throw new LoginException(loginResult);
@@ -91,7 +91,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var account = AccountEngine.CreateAccountSimple(email, password, out List<LoginResult> loginResults);
+                var account = _accountEngine.CreateAccountSimple(email, password, out List<LoginResult> loginResults);
 
                 if (account != null)
                     return account.ToAccountData().FirstOrDefault();
@@ -142,7 +142,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var account = AccountEngine.CreateAccountOAuth(code, type);
+                var account = _accountEngine.CreateAccountOAuth(code, type);
                 return account.ToAccountData().FirstOrDefault();
             }
             catch (Exception imapException)
@@ -169,7 +169,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var accountInfo = AccountEngine.UpdateAccountOAuth(mailboxId, code, type);
+                var accountInfo = _accountEngine.UpdateAccountOAuth(mailboxId, code, type);
 
                 if (accountInfo != null)
                 {
@@ -225,7 +225,7 @@ namespace ASC.Mail.Controllers
 
             try
             {
-                var accountInfo = AccountEngine.UpdateAccount(mbox, out LoginResult loginResult);
+                var accountInfo = _accountEngine.UpdateAccount(mbox, out LoginResult loginResult);
 
                 if (accountInfo != null)
                 {
@@ -273,7 +273,7 @@ namespace ASC.Mail.Controllers
                 throw new ArgumentException(@"Email empty", "email");
 
             var mailbox =
-                MailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), TenantId,
+                _mailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), TenantId,
                     UserId));
 
             if (mailbox == null)
@@ -282,7 +282,7 @@ namespace ASC.Mail.Controllers
             if (mailbox.IsTeamlab)
                 throw new ArgumentException("Mailbox with specified email can't be deleted");
 
-            return OperationEngine.RemoveMailbox(mailbox, TranslateMailOperationStatus);
+            return _operationEngine.RemoveMailbox(mailbox, TranslateMailOperationStatus);
         }
 
         /// <summary>
@@ -303,7 +303,7 @@ namespace ASC.Mail.Controllers
 
             string errorText = null;
 
-            var mailboxId = AccountEngine.SetAccountEnable(new MailAddress(email), state, out LoginResult loginResult);
+            var mailboxId = _accountEngine.SetAccountEnable(new MailAddress(email), state, out LoginResult loginResult);
 
             if (loginResult != null)
             {
@@ -346,7 +346,7 @@ namespace ASC.Mail.Controllers
         [Update(@"accounts/default")]
         public string SetDefaultAccount(string email, bool isDefault)
         {
-            var result = AccountEngine.SetDefaultAccount(email, isDefault);
+            var result = _accountEngine.SetDefaultAccount(email, isDefault);
 
             return result;
         }
@@ -367,7 +367,7 @@ namespace ASC.Mail.Controllers
         [Read(@"accounts/setups")]
         public MailBoxData GetAccountDefaults(string email, string action)
         {
-            var result = AccountEngine.GetAccountDefaults(email, action);
+            var result = _accountEngine.GetAccountDefaults(email, action);
 
             return result;
         }
@@ -388,7 +388,7 @@ namespace ASC.Mail.Controllers
             if (mailbox_id < 0)
                 throw new ArgumentNullException("mailbox_id");
 
-            AccountEngine.SetAccountEmailInFolder(mailbox_id, email_in_folder);
+            _accountEngine.SetAccountEmailInFolder(mailbox_id, email_in_folder);
         }
 
         /// <summary>
@@ -399,7 +399,7 @@ namespace ASC.Mail.Controllers
         [Update(@"accounts/updateuseractivity")]
         public void UpdateUserActivity(bool userOnline)
         {
-            AccountEngine.SetAccountsActivity(userOnline);
+            _accountEngine.SetAccountsActivity(userOnline);
         }
 
         private static string GetFormattedTextError(Exception ex, ServerType mailServerType, bool timeoutFlag = true)

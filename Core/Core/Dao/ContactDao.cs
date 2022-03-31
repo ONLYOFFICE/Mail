@@ -23,62 +23,54 @@
  *
 */
 
+using Contact = ASC.Mail.Core.Entities.Contact;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using System.Collections.Generic;
-using System.Linq;
+namespace ASC.Mail.Core.Dao;
 
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ContactDao : BaseMailDao, IContactDao
 {
-    [Scope]
-    public class ContactDao : BaseMailDao, IContactDao
+    public ContactDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ContactDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public int SaveContact(Contact contact)
+    {
+        var mailContact = new MailContact
         {
-        }
+            Id = contact.Id,
+            IdUser = contact.User,
+            TenantId = contact.Tenant,
+            Name = contact.ContactName,
+            Address = contact.Address,
+            Description = contact.Description,
+            Type = (int)contact.Type,
+            HasPhoto = contact.HasPhoto
+        };
 
-        public int SaveContact(Contact contact)
-        {
-            var mailContact = new MailContact
-            {
-                Id = contact.Id,
-                IdUser = contact.User,
-                TenantId = contact.Tenant,
-                Name = contact.ContactName,
-                Address = contact.Address,
-                Description = contact.Description,
-                Type = (int)contact.Type,
-                HasPhoto = contact.HasPhoto
-            };
+        var entity = MailDbContext.AddOrUpdate(t => t.MailContacts, mailContact);
 
-           var entity = MailDbContext.AddOrUpdate(t => t.MailContacts, mailContact);
+        MailDbContext.SaveChanges();
 
-            MailDbContext.SaveChanges();
+        return (int)entity.Id;
+    }
 
-            return (int)entity.Id;
-        }
+    public int RemoveContacts(List<int> ids)
+    {
+        var queryDelete = MailDbContext.MailContactInfo
+            .Where(c => c.TenantId == Tenant
+                && c.IdUser == UserId
+                && ids.Contains((int)c.IdContact));
 
-        public int RemoveContacts(List<int> ids)
-        {
-            var queryDelete = MailDbContext.MailContactInfo
-                .Where(c => c.TenantId == Tenant 
-                    && c.IdUser == UserId 
-                    && ids.Contains((int)c.IdContact));
+        MailDbContext.MailContactInfo.RemoveRange(queryDelete);
 
-            MailDbContext.MailContactInfo.RemoveRange(queryDelete);
+        var result = MailDbContext.SaveChanges();
 
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
+        return result;
     }
 }

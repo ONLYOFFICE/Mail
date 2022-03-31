@@ -23,18 +23,15 @@
  *
 */
 
+using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
 
-using ASC.Common;
-using ASC.Mail.Server.Core.Entities;
+namespace ASC.Mail.Server.Core.Dao.Interfaces;
 
-namespace ASC.Mail.Server.Core.Dao.Interfaces
+[Scope(typeof(IMailboxDao))]
+public interface IMailboxDao
 {
-    [Scope(typeof(IMailboxDao))]
-    public interface IMailboxDao
-    {
-        int Save(Mailbox mailbox, bool deliver = true);
-        int Remove(string address);
-        int ChangePassword(string username, string newPassword);
-        int RemoveByDomain(string domain);
-    }
+    int Save(Mailbox mailbox, bool deliver = true);
+    int Remove(string address);
+    int ChangePassword(string username, string newPassword);
+    int RemoveByDomain(string domain);
 }

@@ -23,144 +23,130 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class AlertDao : BaseMailDao, IAlertDao
 {
-    [Scope]
-    public class AlertDao : BaseMailDao, IAlertDao
+    public AlertDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public AlertDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
-        {
-        }
-
-        public Alert GetAlert(long id)
-        {
-            var alert = MailDbContext.MailAlerts
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id)
-                .Select(r => new Alert
-                {
-                    Id = r.Id,
-                    MailboxId = r.IdMailbox,
-                    Type = r.Type,
-                    Data = r.Data
-                }).SingleOrDefault();
-
-            return alert;
-        }
-
-        public List<Alert> GetAlerts(int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty)
-        {
-            var alerts = MailDbContext.MailAlerts
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
-                .Select(r => new Alert
-                {
-                    Id = r.Id,
-                    MailboxId = r.IdMailbox,
-                    Type = r.Type,
-                    Data = r.Data
-                }).ToList();
-
-            return alerts;
-        }
-
-        public int SaveAlert(Alert alert, bool unique = false)
-        {
-            if (unique)
-            {
-                var alerts = GetAlerts(alert.MailboxId, alert.Type);
-
-                if (alerts.Any())
-                {
-                    var result = DeleteAlerts(alerts.Select(a => a.Id).ToList());
-
-                    if (result <= 0)
-                        throw new Exception("Delete old alerts failed");
-                }
-            }
-
-            using var tr = MailDbContext.Database.BeginTransaction();
-
-            var dbAlert = new MailAlert()
-            {
-                Id = alert.Id,
-                Tenant = Tenant,
-                IdUser = UserId,
-                IdMailbox = alert.MailboxId,
-                Type = alert.Type,
-                Data = alert.Data
-            };
-
-            var saveResult = MailDbContext.MailAlerts.Add(dbAlert).Entity;
-
-            MailDbContext.SaveChanges();
-
-            tr.Commit();
-
-            return saveResult.Id;
-        }
-
-        public int DeleteAlert(long id)
-        {
-            using var tr = MailDbContext.Database.BeginTransaction();
-
-            var range = MailDbContext.MailAlerts.Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id);
-
-            MailDbContext.MailAlerts.RemoveRange(range);
-
-            var count = MailDbContext.SaveChanges();
-
-            tr.Commit();
-
-            return count;
-        }
-
-        public int DeleteAlerts(int mailboxId)
-        {
-            var range = MailDbContext.MailAlerts
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMailbox == mailboxId);
-
-            MailDbContext.MailAlerts.RemoveRange(range);
-
-            var count = MailDbContext.SaveChanges();
-
-            return count;
-        }
-
-        public int DeleteAlerts(List<int> ids)
-        {
-            using var tr = MailDbContext.Database.BeginTransaction();
-
-            var range = MailDbContext.MailAlerts
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && ids.Contains(r.Id));
-
-            MailDbContext.MailAlerts.RemoveRange(range);
-
-            var count = MailDbContext.SaveChanges();
-
-            tr.Commit();
-
-            return count;
-        }
-
     }
+
+    public Alert GetAlert(long id)
+    {
+        var alert = MailDbContext.MailAlerts
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id)
+            .Select(r => new Alert
+            {
+                Id = r.Id,
+                MailboxId = r.IdMailbox,
+                Type = r.Type,
+                Data = r.Data
+            }).SingleOrDefault();
+
+        return alert;
+    }
+
+    public List<Alert> GetAlerts(int mailboxId = -1, MailAlertTypes type = MailAlertTypes.Empty)
+    {
+        var alerts = MailDbContext.MailAlerts
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
+            .Select(r => new Alert
+            {
+                Id = r.Id,
+                MailboxId = r.IdMailbox,
+                Type = r.Type,
+                Data = r.Data
+            }).ToList();
+
+        return alerts;
+    }
+
+    public int SaveAlert(Alert alert, bool unique = false)
+    {
+        if (unique)
+        {
+            var alerts = GetAlerts(alert.MailboxId, alert.Type);
+
+            if (alerts.Any())
+            {
+                var result = DeleteAlerts(alerts.Select(a => a.Id).ToList());
+
+                if (result <= 0)
+                    throw new Exception("Delete old alerts failed");
+            }
+        }
+
+        using var tr = MailDbContext.Database.BeginTransaction();
+
+        var dbAlert = new MailAlert()
+        {
+            Id = alert.Id,
+            Tenant = Tenant,
+            IdUser = UserId,
+            IdMailbox = alert.MailboxId,
+            Type = alert.Type,
+            Data = alert.Data
+        };
+
+        var saveResult = MailDbContext.MailAlerts.Add(dbAlert).Entity;
+
+        MailDbContext.SaveChanges();
+
+        tr.Commit();
+
+        return saveResult.Id;
+    }
+
+    public int DeleteAlert(long id)
+    {
+        using var tr = MailDbContext.Database.BeginTransaction();
+
+        var range = MailDbContext.MailAlerts.Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id);
+
+        MailDbContext.MailAlerts.RemoveRange(range);
+
+        var count = MailDbContext.SaveChanges();
+
+        tr.Commit();
+
+        return count;
+    }
+
+    public int DeleteAlerts(int mailboxId)
+    {
+        var range = MailDbContext.MailAlerts
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMailbox == mailboxId);
+
+        MailDbContext.MailAlerts.RemoveRange(range);
+
+        var count = MailDbContext.SaveChanges();
+
+        return count;
+    }
+
+    public int DeleteAlerts(List<int> ids)
+    {
+        using var tr = MailDbContext.Database.BeginTransaction();
+
+        var range = MailDbContext.MailAlerts
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && ids.Contains(r.Id));
+
+        MailDbContext.MailAlerts.RemoveRange(range);
+
+        var count = MailDbContext.SaveChanges();
+
+        tr.Commit();
+
+        return count;
+    }
+
 }

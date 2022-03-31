@@ -23,24 +23,18 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Collections.Generic;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "MailGroup")]
+public class ServerDomainGroupData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "MailGroup")]
-    public class ServerDomainGroupData
-    {
-        [DataMember(IsRequired = true)]
-        public int Id { get; set; }
+    [DataMember(IsRequired = true)]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public ServerDomainAddressData Address { get; set; }
+    [DataMember(IsRequired = true)]
+    public ServerDomainAddressData Address { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public List<ServerDomainAddressData> Addresses { get; set; }
-    }
+    [DataMember(IsRequired = true)]
+    public List<ServerDomainAddressData> Addresses { get; set; }
 }

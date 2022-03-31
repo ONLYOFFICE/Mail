@@ -23,115 +23,108 @@
  *
 */
 
+using FileShare = ASC.Files.Core.Security.FileShare;
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System.Collections.Generic;
-using System.Linq;
+namespace ASC.Mail.Models.Base;
 
-using ASC.Files.Core.Security;
-using ASC.Mail.Enums;
-using ASC.Mail.Exceptions;
-using ASC.Mail.Utils;
-
-namespace ASC.Mail.Models.Base
+public class MailComposeBase
 {
-    public class MailComposeBase
+    public string CalendarEventUid { get; private set; }
+
+    public string CalendarMethod { get; private set; }
+
+    private readonly string _calendarIcs;
+
+    public MailComposeBase(int id, MailBoxData mailBoxData, FolderType folder, string from, List<string> to, List<string> cc, List<string> bcc,
+                     string subject, string mimeMessageId, string mimeReplyToId, bool important,
+                     List<int> tags, string body, string streamId, List<MailAttachmentData> attachments, string calendarIcs = "")
     {
-        public string CalendarEventUid { get; private set; }
+        Id = id;
+        Mailbox = mailBoxData;
+        Folder = folder;
+        From = from;
+        To = to ?? new List<string>();
+        Cc = cc ?? new List<string>();
+        Bcc = bcc ?? new List<string>();
+        Subject = subject;
+        MimeMessageId = mimeMessageId;
+        MimeReplyToId = mimeReplyToId;
+        Important = important;
+        Labels = tags;
+        HtmlBody = body ?? "";
+        StreamId = streamId;
 
-        public string CalendarMethod { get; private set; }
+        var distinct = attachments == null ? new List<MailAttachmentData>() : attachments.Distinct().ToList();
 
-        private readonly string _calendarIcs;
+        if (distinct.Sum(a => a.size) > DefineConstants.ATTACHMENTS_TOTAL_SIZE_LIMIT)
+            throw new DraftException(DraftException.ErrorTypes.TotalSizeExceeded,
+                "Total size of all files exceeds limit!");
 
-        public MailComposeBase(int id, MailBoxData mailBoxData, FolderType folder, string from, List<string> to, List<string> cc, List<string> bcc,
-                         string subject, string mimeMessageId, string mimeReplyToId, bool important,
-                         List<int> tags, string body, string streamId, List<MailAttachmentData> attachments, string calendarIcs = "")
+        Attachments = distinct;
+        AttachmentsEmbedded = new List<MailAttachmentData>();
+
+        if (string.IsNullOrEmpty(calendarIcs))
+            return;
+
+        _calendarIcs = calendarIcs;
+
+        //TODO: Fix 
+        var calendar = MailUtil.ParseValidCalendar(_calendarIcs);
+        if (calendar != null)
         {
-            Id = id;
-            Mailbox = mailBoxData;
-            Folder = folder;
-            From = from;
-            To = to ?? new List<string>();
-            Cc = cc ?? new List<string>();
-            Bcc = bcc ?? new List<string>();
-            Subject = subject;
-            MimeMessageId = mimeMessageId;
-            MimeReplyToId = mimeReplyToId;
-            Important = important;
-            Labels = tags;
-            HtmlBody = body ?? "";
-            StreamId = streamId;
-
-            var distinct = attachments == null ? new List<MailAttachmentData>() : attachments.Distinct().ToList();
-
-            if (distinct.Sum(a => a.size) > DefineConstants.ATTACHMENTS_TOTAL_SIZE_LIMIT)
-                throw new DraftException(DraftException.ErrorTypes.TotalSizeExceeded,
-                    "Total size of all files exceeds limit!");
-
-            Attachments = distinct;
-            AttachmentsEmbedded = new List<MailAttachmentData>();
-
-            if (string.IsNullOrEmpty(calendarIcs))
-                return;
-
-            _calendarIcs = calendarIcs;
-
-            //TODO: Fix 
-            var calendar = MailUtil.ParseValidCalendar(_calendarIcs);
-            if (calendar != null)
-            {
-                CalendarMethod = calendar.Method;
-                CalendarEventUid = calendar.Events[0].Uid;
-            }
+            CalendarMethod = calendar.Method;
+            CalendarEventUid = calendar.Events[0].Uid;
         }
-
-        public int Id { get; set; }
-
-        public MailBoxData Mailbox { get; set; }
-
-        public FolderType Folder { get; set; }
-
-        public List<string> To { get; set; }
-
-        public List<string> Cc { get; set; }
-
-        public List<string> Bcc { get; set; }
-
-        public bool Important { get; set; }
-
-        public string From { get; set; }
-
-        public string Subject { get; set; }
-
-        public string HtmlBody { get; set; }
-
-        public List<MailAttachmentData> Attachments { get; set; }
-
-        public List<MailAttachmentData> AttachmentsEmbedded { get; set; }
-
-        public string StreamId { get; set; }
-
-        public int ReplyToId { get; set; }
-
-        public List<int> Labels { get; set; }
-
-        public string MimeMessageId { get; set; }
-
-        public string MimeReplyToId { get; set; }
-
-        public FileShare FileLinksShareMode { get; set; }
-
-        public bool AccountChanged
-        {
-            get { return Mailbox.MailBoxId != PreviousMailboxId; }
-        }
-
-        public int PreviousMailboxId { get; set; }
-
-        public string CalendarIcs
-        {
-            get { return _calendarIcs; }
-        }
-
-
     }
+
+    public int Id { get; set; }
+
+    public MailBoxData Mailbox { get; set; }
+
+    public FolderType Folder { get; set; }
+
+    public List<string> To { get; set; }
+
+    public List<string> Cc { get; set; }
+
+    public List<string> Bcc { get; set; }
+
+    public bool Important { get; set; }
+
+    public string From { get; set; }
+
+    public string Subject { get; set; }
+
+    public string HtmlBody { get; set; }
+
+    public List<MailAttachmentData> Attachments { get; set; }
+
+    public List<MailAttachmentData> AttachmentsEmbedded { get; set; }
+
+    public string StreamId { get; set; }
+
+    public int ReplyToId { get; set; }
+
+    public List<int> Labels { get; set; }
+
+    public string MimeMessageId { get; set; }
+
+    public string MimeReplyToId { get; set; }
+
+    public FileShare FileLinksShareMode { get; set; }
+
+    public bool AccountChanged
+    {
+        get { return Mailbox.MailBoxId != PreviousMailboxId; }
+    }
+
+    public int PreviousMailboxId { get; set; }
+
+    public string CalendarIcs
+    {
+        get { return _calendarIcs; }
+    }
+
+
 }

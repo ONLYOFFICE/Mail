@@ -23,187 +23,175 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 {
-    [Scope]
-    public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
+    public UserFolderXMailDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public UserFolderXMailDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public UserFolderXMail Get(int mailId)
+    {
+        var result = MailDbContext.MailUserFolderXMail
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMail == mailId)
+            .Select(ToUserFolderXMail)
+            .SingleOrDefault();
+
+        return result;
+    }
+
+    public List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null)
+    {
+        var query = MailDbContext.MailUserFolderXMail
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
+
+        if (folderId.HasValue)
         {
+            query.Where(r => r.IdFolder == folderId.Value);
         }
 
-        public UserFolderXMail Get(int mailId)
+        if (mailIds != null && mailIds.Any())
         {
-            var result = MailDbContext.MailUserFolderXMail
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMail == mailId)
-                .Select(ToUserFolderXMail)
-                .SingleOrDefault();
-
-            return result;
+            query.Where(r => mailIds.Contains(r.IdMail));
         }
 
-        public List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null)
-        {
-            var query = MailDbContext.MailUserFolderXMail
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
+        var list = query.Select(ToUserFolderXMail).ToList();
 
-            if (folderId.HasValue)
+        return list;
+    }
+
+    public List<int> GetMailIds(int folderId)
+    {
+        var list = MailDbContext.MailUserFolderXMail
+            .AsNoTracking()
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdFolder == folderId)
+            .Select(r => r.IdMail)
+            .ToList();
+
+        return list;
+    }
+
+    public void SetMessagesFolder(IEnumerable<int> messageIds, int folderId)
+    {
+        var idMessages = messageIds as IList<int> ?? messageIds.ToList();
+        if (!idMessages.Any())
+            return;
+
+        var items = new List<MailUserFolderXMail>();
+        int i, messagessLen;
+        for (i = 0, messagessLen = idMessages.Count; i < messagessLen; i++)
+        {
+            var messageId = idMessages[i];
+
+            items.Add(new MailUserFolderXMail
             {
-                query.Where(r => r.IdFolder == folderId.Value);
-            }
+                Tenant = Tenant,
+                IdUser = UserId,
+                IdMail = messageId,
+                IdFolder = folderId
+            });
 
-            if (mailIds != null && mailIds.Any())
+            if ((i % 100 != 0 || i == 0) && i + 1 != messagessLen)
+                continue;
+
+            MailDbContext.MailUserFolderXMail.AddRange(items);
+
+            MailDbContext.SaveChanges();
+
+            items = new List<MailUserFolderXMail>();
+        }
+    }
+
+    public int Save(UserFolderXMail item)
+    {
+        var newItem = new MailUserFolderXMail
+        {
+            Tenant = item.Tenant,
+            IdUser = item.User,
+            IdMail = item.MailId,
+            IdFolder = item.FolderId
+        };
+
+        MailDbContext.AddOrUpdate(t => t.MailUserFolderXMail, newItem);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int Remove(int? mailId = null, int? folderId = null)
+    {
+        var query = MailDbContext.MailUserFolderXMail
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
+
+        if (mailId.HasValue)
+        {
+            query.Where(r => r.IdMail == mailId.Value);
+        }
+
+        if (folderId.HasValue)
+        {
+            query.Where(r => r.IdFolder == folderId.Value);
+        }
+
+        MailDbContext.MailUserFolderXMail.RemoveRange(query);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int Remove(List<int> mailIds)
+    {
+        var query = MailDbContext.MailUserFolderXMail
+            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && mailIds.Contains(r.IdMail));
+
+        MailDbContext.MailUserFolderXMail.RemoveRange(query);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int RemoveByMailbox(int mailboxId)
+    {
+        var queryDelete = MailDbContext.MailUserFolderXMail
+            .Join(MailDbContext.MailMail, r => r.IdMail, r => r.Id, (ufxm, m) => new
             {
-                query.Where(r => mailIds.Contains(r.IdMail));
-            }
+                UserFoldertXMail = ufxm,
+                MailMail = m
+            })
+            .Where(o => o.MailMail.MailboxId == mailboxId && o.MailMail.TenantId == Tenant && o.MailMail.UserId == UserId)
+            .Select(o => o.UserFoldertXMail);
 
-            var list = query.Select(ToUserFolderXMail).ToList();
+        MailDbContext.MailUserFolderXMail.RemoveRange(queryDelete);
 
-            return list;
-        }
+        var result = MailDbContext.SaveChanges();
 
-        public List<int> GetMailIds(int folderId)
+        return result;
+    }
+
+    protected UserFolderXMail ToUserFolderXMail(MailUserFolderXMail r)
+    {
+        var folderXMail = new UserFolderXMail
         {
-            var list = MailDbContext.MailUserFolderXMail
-                .AsNoTracking()
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdFolder == folderId)
-                .Select(r => r.IdMail)
-                .ToList();
+            Tenant = r.Tenant,
+            User = r.IdUser,
+            MailId = r.IdMail,
+            FolderId = r.IdFolder,
+            TimeModified = r.TimeCreated
+        };
 
-            return list;
-        }
-
-        public void SetMessagesFolder(IEnumerable<int> messageIds, int folderId)
-        {
-            var idMessages = messageIds as IList<int> ?? messageIds.ToList();
-            if (!idMessages.Any())
-                return;
-
-            var items = new List<MailUserFolderXMail>();
-            int i, messagessLen;
-            for (i = 0, messagessLen = idMessages.Count; i < messagessLen; i++)
-            {
-                var messageId = idMessages[i];
-
-                items.Add(new MailUserFolderXMail
-                {
-                    Tenant = Tenant,
-                    IdUser = UserId,
-                    IdMail = messageId,
-                    IdFolder = folderId
-                });
-
-                if ((i % 100 != 0 || i == 0) && i + 1 != messagessLen)
-                    continue;
-
-                MailDbContext.MailUserFolderXMail.AddRange(items);
-
-                MailDbContext.SaveChanges();
-
-                items = new List<MailUserFolderXMail>();
-            }
-        }
-
-        public int Save(UserFolderXMail item)
-        {
-            var newItem = new MailUserFolderXMail
-            {
-                Tenant = item.Tenant,
-                IdUser = item.User,
-                IdMail = item.MailId,
-                IdFolder = item.FolderId
-            };
-
-            MailDbContext.AddOrUpdate(t => t.MailUserFolderXMail, newItem);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public int Remove(int? mailId = null, int? folderId = null)
-        {
-            var query = MailDbContext.MailUserFolderXMail
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
-
-            if (mailId.HasValue)
-            {
-                query.Where(r => r.IdMail == mailId.Value);
-            }
-
-            if (folderId.HasValue)
-            {
-                query.Where(r => r.IdFolder == folderId.Value);
-            }
-
-            MailDbContext.MailUserFolderXMail.RemoveRange(query);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public int Remove(List<int> mailIds)
-        {
-            var query = MailDbContext.MailUserFolderXMail
-                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && mailIds.Contains(r.IdMail));
-
-            MailDbContext.MailUserFolderXMail.RemoveRange(query);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public int RemoveByMailbox(int mailboxId)
-        {
-            var queryDelete = MailDbContext.MailUserFolderXMail
-                .Join(MailDbContext.MailMail, r => r.IdMail, r => r.Id, (ufxm, m) => new
-                {
-                    UserFoldertXMail = ufxm,
-                    MailMail = m
-                })
-                .Where(o => o.MailMail.MailboxId == mailboxId && o.MailMail.TenantId == Tenant && o.MailMail.UserId == UserId)
-                .Select(o => o.UserFoldertXMail);
-
-            MailDbContext.MailUserFolderXMail.RemoveRange(queryDelete);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected UserFolderXMail ToUserFolderXMail(MailUserFolderXMail r)
-        {
-            var folderXMail = new UserFolderXMail
-            {
-                Tenant = r.Tenant,
-                User = r.IdUser,
-                MailId = r.IdMail,
-                FolderId = r.IdFolder,
-                TimeModified = r.TimeCreated
-            };
-
-            return folderXMail;
-        }
+        return folderXMail;
     }
 }

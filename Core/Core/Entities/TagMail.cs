@@ -23,14 +23,12 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class TagMail
 {
-    public class TagMail
-    {
-        public int Tenant { get; set; }
-        public string UserId { get; set; }
-        public int MailId { get; set; }
-        public int TagId { get; set; }
-    }
+    public int Tenant { get; set; }
+    public string UserId { get; set; }
+    public int MailId { get; set; }
+    public int TagId { get; set; }
 }

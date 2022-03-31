@@ -23,28 +23,25 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class Folder
 {
-    public class Folder
-    {
-        public int Tenant { get; set; }
+    public int Tenant { get; set; }
 
-        public string UserId { get; set; }
+    public string UserId { get; set; }
 
-        public FolderType FolderType { get; set; }
+    public FolderType FolderType { get; set; }
 
-        public DateTime TimeModified { get; set; }
+    public DateTime TimeModified { get; set; }
 
-        public int TotalCount { get; set; }
+    public int TotalCount { get; set; }
 
-        public int UnreadCount { get; set; }
+    public int UnreadCount { get; set; }
 
-        public int TotalChainCount { get; set; }
+    public int TotalChainCount { get; set; }
 
-        public int UnreadChainCount { get; set; }
-    }
+    public int UnreadChainCount { get; set; }
 }

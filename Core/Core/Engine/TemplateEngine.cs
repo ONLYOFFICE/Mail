@@ -23,149 +23,127 @@
  *
 */
 
-
-using System;
-using System.Linq;
-using System.Net.Mail;
-
-using ASC.Common;
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Core.Notify.Signalr;
-using ASC.Data.Storage;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
-using ASC.Mail.Enums;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-using ASC.Mail.Utils;
-
-using Microsoft.Extensions.Options;
-
+using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
+using SecurityContext = ASC.Core.SecurityContext;
 
-namespace ASC.Mail.Core.Engine
+namespace ASC.Mail.Core.Engine;
+
+[Scope]
+public class TemplateEngine : ComposeEngineBase
 {
-    [Scope]
-    public class TemplateEngine : ComposeEngineBase
+    public TemplateEngine(
+        SecurityContext securityContext,
+        TenantManager tenantManager,
+        IMailDaoFactory mailDaoFactory,
+        AccountEngine accountEngine,
+        MailboxEngine mailboxEngine,
+        MessageEngine messageEngine,
+        QuotaEngine quotaEngine,
+        IndexEngine indexEngine,
+        StorageManager storageManager,
+        CoreSettings coreSettings,
+        StorageFactory storageFactory,
+        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
+        IOptionsMonitor<ILog> option,
+        MailSettings mailSettings,
+        DeliveryFailureMessageTranslates daemonLabels = null)
+        : base(
+        accountEngine,
+        mailboxEngine,
+        messageEngine,
+        quotaEngine,
+        indexEngine,
+        mailDaoFactory,
+        storageManager,
+        securityContext,
+        tenantManager,
+        coreSettings,
+        storageFactory,
+        optionsSnapshot,
+        option,
+        mailSettings,
+        daemonLabels)
     {
-        public TemplateEngine(
-            SecurityContext securityContext,
-            TenantManager tenantManager,
-            IMailDaoFactory mailDaoFactory,
-            AccountEngine accountEngine,
-            MailboxEngine mailboxEngine,
-            MessageEngine messageEngine,
-            QuotaEngine quotaEngine,
-            IndexEngine indexEngine,
-            FolderEngine folderEngine,
-            StorageManager storageManager,
-            CoreSettings coreSettings,
-            StorageFactory storageFactory,
-            IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-            IOptionsMonitor<ILog> option,
-            MailSettings mailSettings,
-            DeliveryFailureMessageTranslates daemonLabels = null)
-            : base(
-            accountEngine,
-            mailboxEngine,
-            messageEngine,
-            quotaEngine,
-            indexEngine,
-            folderEngine,
-            mailDaoFactory,
-            storageManager,
-            securityContext,
-            tenantManager,
-            coreSettings,
-            storageFactory,
-            optionsSnapshot,
-            option,
-            mailSettings,
-            daemonLabels)
+    }
+
+    public override MailMessage Save(MessageModel model, DeliveryFailureMessageTranslates translates = null)
+    {
+        var mailAddress = new MailAddress(model.From);
+
+        var accounts = _accountEngine.GetAccountInfoList().ToAccountData();
+
+        var account = accounts.FirstOrDefault(a => a.Email.ToLower().Equals(mailAddress.Address));
+
+        if (account == null)
+            throw new ArgumentException("Mailbox not found");
+
+        if (account.IsGroup)
+            throw new InvalidOperationException("Saving emails from a group address is forbidden");
+
+        var mbox = _mailboxEngine.GetMailboxData(
+            new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
+
+        if (mbox == null)
+            throw new ArgumentException("No such mailbox");
+
+        string mimeMessageId, streamId;
+
+        var previousMailboxId = mbox.MailBoxId;
+
+        if (model.Id > 0)
         {
-            Log = option.Get("ASC.Mail.TemplateEngine");
-        }
-
-        public override MailMessage Save(MessageModel model, DeliveryFailureMessageTranslates translates = null)
-        {
-            var mailAddress = new MailAddress(model.From);
-
-            var accounts = AccountEngine.GetAccountInfoList().ToAccountData();
-
-            var account = accounts.FirstOrDefault(a => a.Email.ToLower().Equals(mailAddress.Address));
-
-            if (account == null)
-                throw new ArgumentException("Mailbox not found");
-
-            if (account.IsGroup)
-                throw new InvalidOperationException("Saving emails from a group address is forbidden");
-
-            var mbox = MailboxEngine.GetMailboxData(
-                new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
-
-            if (mbox == null)
-                throw new ArgumentException("No such mailbox");
-
-            string mimeMessageId, streamId;
-
-            var previousMailboxId = mbox.MailBoxId;
-
-            if (model.Id > 0)
+            var message = _messageEngine.GetMessage(model.Id, new MailMessage.Options
             {
-                var message = MessageEngine.GetMessage(model.Id, new MailMessage.Options
-                {
-                    LoadImages = false,
-                    LoadBody = true,
-                    NeedProxyHttp = MailSettings.NeedProxyHttp,
-                    NeedSanitizer = false
-                });
+                LoadImages = false,
+                LoadBody = true,
+                NeedProxyHttp = _mailSettings.NeedProxyHttp,
+                NeedSanitizer = false
+            });
 
-                if (message.Folder != FolderType.Templates)
-                {
-                    throw new InvalidOperationException("Saving emails is permitted only in the Templates folder");
-                }
-
-                if (message.HtmlBody.Length > MailSettings.Defines.MaximumMessageBodySize)
-                {
-                    throw new InvalidOperationException("Message body exceeded limit (" + MailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
-                }
-
-                mimeMessageId = message.MimeMessageId;
-
-                streamId = message.StreamId;
-
-                /*
-                if (attachments != null && attachments.Any())
-                {
-                    foreach (var attachment in attachments)
-                    {
-                        attachment.streamId = streamId;
-                    }
-                }
-                 */
-
-                previousMailboxId = message.MailboxId;
-            }
-            else
+            if (message.Folder != FolderType.Templates)
             {
-                mimeMessageId = MailUtil.CreateMessageId(TenantManager, CoreSettings);
-                streamId = MailUtil.CreateStreamId();
+                throw new InvalidOperationException("Saving emails is permitted only in the Templates folder");
             }
 
-            var fromAddress = MailUtil.CreateFullEmail(mbox.Name, mbox.EMail.Address);
-
-            var template = new MailTemplateData(model.Id, mbox, fromAddress, model.To, model.Cc, model.Bcc, model.Subject,
-                    mimeMessageId, model.MimeReplyToId, model.Importance,
-                    model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
+            if (message.HtmlBody.Length > _mailSettings.Defines.MaximumMessageBodySize)
             {
-                PreviousMailboxId = previousMailboxId
-            };
+                throw new InvalidOperationException("Message body exceeded limit (" + _mailSettings.Defines.MaximumMessageBodySize / 1024 + " KB)");
+            }
 
-            DaemonLabels = translates ?? DeliveryFailureMessageTranslates.Defauilt;
+            mimeMessageId = message.MimeMessageId;
 
-            return Save(template);
+            streamId = message.StreamId;
+
+            /*
+            if (attachments != null && attachments.Any())
+            {
+                foreach (var attachment in attachments)
+                {
+                    attachment.streamId = streamId;
+                }
+            }
+             */
+
+            previousMailboxId = message.MailboxId;
         }
+        else
+        {
+            mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings);
+            streamId = MailUtil.CreateStreamId();
+        }
+
+        var fromAddress = MailUtil.CreateFullEmail(mbox.Name, mbox.EMail.Address);
+
+        var template = new MailTemplateData(model.Id, mbox, fromAddress, model.To, model.Cc, model.Bcc, model.Subject,
+                mimeMessageId, model.MimeReplyToId, model.Importance,
+                model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
+        {
+            PreviousMailboxId = previousMailboxId
+        };
+
+        DaemonLabels = translates ?? DeliveryFailureMessageTranslates.Defauilt;
+
+        return Save(template);
     }
 }

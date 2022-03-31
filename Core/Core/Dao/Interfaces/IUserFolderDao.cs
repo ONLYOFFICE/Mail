@@ -23,39 +23,31 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Dao.Expressions.UserFolder;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(UserFolderDao))]
+public interface IUserFolderDao
 {
-    [Scope(typeof(UserFolderDao))]
-    public interface IUserFolderDao
-    {
-        UserFolder Get(int id);
+    UserFolder Get(int id);
 
-        UserFolder GetByMail(uint mailId);
+    UserFolder GetByMail(uint mailId);
 
-        List<UserFolder> GetList(IUserFoldersExp exp);
+    List<UserFolder> GetList(IUserFoldersExp exp);
 
-        int Save(UserFolder folder);
+    int Save(UserFolder folder);
 
-        int Remove(int id);
+    int Remove(int id);
 
-        int Remove(IUserFoldersExp exp);
+    int Remove(IUserFoldersExp exp);
 
-        void RecalculateFoldersCount(int id);
+    void RecalculateFoldersCount(int id);
 
-        int SetFolderCounters(int folderId, int? unreadMess = null, int? totalMess = null,
-            int? unreadConv = null, int? totalConv = null);
+    int SetFolderCounters(int folderId, int? unreadMess = null, int? totalMess = null,
+        int? unreadConv = null, int? totalConv = null);
 
-        /// <summary>
-        ///     Update folder counters
-        /// </summary>
-        int ChangeFolderCounters(int folderId, int? unreadMessDiff = null, int? totalMessDiff = null,
-            int? unreadConvDiff = null, int? totalConvDiff = null);
-    }
+    /// <summary>
+    ///     Update folder counters
+    /// </summary>
+    int ChangeFolderCounters(int folderId, int? unreadMessDiff = null, int? totalMessDiff = null,
+        int? unreadConvDiff = null, int? totalConvDiff = null);
 }

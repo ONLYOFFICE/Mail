@@ -23,142 +23,128 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.UserFolder;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
 {
-    [Scope]
-    public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
+    public UserFolderTreeDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public UserFolderTreeDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
-        {
-        }
+    }
 
-        public List<UserFolderTreeItem> Get(IUserFoldersTreeExp exp)
-        {
-            var list = MailDbContext.MailUserFolderTree
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Select(ToUserFolderTreeItem)
-                .ToList();
+    public List<UserFolderTreeItem> Get(IUserFoldersTreeExp exp)
+    {
+        var list = MailDbContext.MailUserFolderTree
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Select(ToUserFolderTreeItem)
+            .ToList();
 
-            return list;
-        }
+        return list;
+    }
 
-        public int Save(UserFolderTreeItem item)
+    public int Save(UserFolderTreeItem item)
+    {
+        var tree = new MailUserFolderTree
         {
-            var tree = new MailUserFolderTree
+            FolderId = item.FolderId,
+            ParentId = item.ParentId,
+            Level = item.Level
+        };
+
+        MailDbContext.MailUserFolderTree.Add(tree);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int InsertFullPathToRoot(int folderId, int parentId)
+    {
+        var treeItems = MailDbContext.MailUserFolderTree
+            .AsNoTracking()
+            .Where(t => t.FolderId == parentId)
+            .Select(t => new MailUserFolderTree
             {
-                FolderId = item.FolderId,
-                ParentId = item.ParentId,
-                Level = item.Level
-            };
+                FolderId = folderId,
+                ParentId = t.ParentId,
+                Level = t.Level + 1
+            });
 
-            MailDbContext.MailUserFolderTree.Add(tree);
+        MailDbContext.AddRange(treeItems);
 
-            var result = MailDbContext.SaveChanges();
+        var result = MailDbContext.SaveChanges();
 
-            return result;
+        return result;
+    }
+
+    public int Remove(IUserFoldersTreeExp exp)
+    {
+        var deleteQuery = MailDbContext.MailUserFolderTree
+            .Where(exp.GetExpression());
+
+        MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public void Move(int folderId, int toFolderId)
+    {
+        var exp = SimpleUserFoldersTreeExp.CreateBuilder()
+            .SetParent(folderId)
+            .Build();
+
+        var subFolders = Get(exp)
+            .ToDictionary(r => r.FolderId, r => r.Level);
+
+        if (!subFolders.Any())
+        {
+            return;
         }
 
-        public int InsertFullPathToRoot(int folderId, int parentId)
+        var folderIds = subFolders.Keys;
+
+        var deleteQuery = MailDbContext.MailUserFolderTree
+            .Where(t => folderIds.Contains(t.FolderId) && !folderIds.Contains(t.ParentId));
+
+        MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
+        MailDbContext.SaveChanges();
+
+        foreach (var subFolder in subFolders)
         {
-            var treeItems = MailDbContext.MailUserFolderTree
+            var newTreeItems = MailDbContext.MailUserFolderTree
                 .AsNoTracking()
-                .Where(t => t.FolderId == parentId)
+                .Where(t => t.FolderId == toFolderId)
                 .Select(t => new MailUserFolderTree
                 {
-                    FolderId = folderId,
+                    FolderId = subFolder.Key,
                     ParentId = t.ParentId,
-                    Level = t.Level + 1
+                    Level = t.Level + 1 + subFolder.Value
                 });
 
-            MailDbContext.AddRange(treeItems);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
+            MailDbContext.MailUserFolderTree.AddRange(newTreeItems);
         }
 
-        public int Remove(IUserFoldersTreeExp exp)
+        MailDbContext.SaveChanges();
+    }
+
+    protected UserFolderTreeItem ToUserFolderTreeItem(MailUserFolderTree r)
+    {
+        var folder = new UserFolderTreeItem
         {
-            var deleteQuery = MailDbContext.MailUserFolderTree
-                .Where(exp.GetExpression());
+            FolderId = r.FolderId,
+            ParentId = r.ParentId,
+            Level = r.Level
+        };
 
-            MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        public void Move(int folderId, int toFolderId)
-        {
-            var exp = SimpleUserFoldersTreeExp.CreateBuilder()
-                .SetParent(folderId)
-                .Build();
-
-            var subFolders = Get(exp)
-                .ToDictionary(r => r.FolderId, r => r.Level);
-
-            if (!subFolders.Any())
-            {
-                return;
-            }
-
-            var folderIds = subFolders.Keys;
-
-            var deleteQuery = MailDbContext.MailUserFolderTree
-                .Where(t => folderIds.Contains(t.FolderId) && !folderIds.Contains(t.ParentId));
-
-            MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
-            MailDbContext.SaveChanges();
-
-            foreach (var subFolder in subFolders)
-            {
-                var newTreeItems = MailDbContext.MailUserFolderTree
-                    .AsNoTracking()
-                    .Where(t => t.FolderId == toFolderId)
-                    .Select(t => new MailUserFolderTree
-                    {
-                        FolderId = subFolder.Key,
-                        ParentId = t.ParentId,
-                        Level = t.Level + 1 + subFolder.Value
-                    });
-
-                MailDbContext.MailUserFolderTree.AddRange(newTreeItems);
-            }
-
-            MailDbContext.SaveChanges();
-        }
-
-        protected UserFolderTreeItem ToUserFolderTreeItem(MailUserFolderTree r)
-        {
-            var folder = new UserFolderTreeItem
-            {
-                FolderId = r.FolderId,
-                ParentId = r.ParentId,
-                Level = r.Level
-            };
-
-            return folder;
-        }
+        return folder;
     }
 }

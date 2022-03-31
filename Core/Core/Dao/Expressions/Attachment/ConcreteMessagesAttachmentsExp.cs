@@ -23,47 +23,40 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Attachment
+public class ConcreteMessagesAttachmentsExp : UserAttachmentsExp
 {
-    public class ConcreteMessagesAttachmentsExp : UserAttachmentsExp
+    public ConcreteMessagesAttachmentsExp(List<int> mailIds, int tenant, string user,
+        bool? isRemoved = false, bool? onlyEmbedded = false)
+        : base(tenant, user, isRemoved)
     {
-        public ConcreteMessagesAttachmentsExp(List<int> mailIds, int tenant, string user,
-            bool? isRemoved = false, bool? onlyEmbedded = false)
-            : base(tenant, user, isRemoved)
-        {
-            MailIds = mailIds;
-            OnlyEmbedded = onlyEmbedded;
-        }
+        MailIds = mailIds;
+        OnlyEmbedded = onlyEmbedded;
+    }
 
-        public List<int> MailIds { get; }
+    public List<int> MailIds { get; }
 
-        public bool? OnlyEmbedded { get; }
+    public bool? OnlyEmbedded { get; }
 
-        public override Expression<Func<MailAttachment, bool>> GetExpression()
-        {
-            var exp = base.GetExpression();
+    public override Expression<Func<MailAttachment, bool>> GetExpression()
+    {
+        var exp = base.GetExpression();
 
-            exp = exp.And(a => MailIds.Contains(a.IdMail));
+        exp = exp.And(a => MailIds.Contains(a.IdMail));
 
-            if (!OnlyEmbedded.HasValue)
-                return exp;
-
-            if (OnlyEmbedded.Value)
-            {
-                exp = exp.And(a => a.ContentId != null);
-            }
-            else
-            {
-                exp = exp.And(a => a.ContentId == null);
-            }
-
+        if (!OnlyEmbedded.HasValue)
             return exp;
+
+        if (OnlyEmbedded.Value)
+        {
+            exp = exp.And(a => a.ContentId != null);
         }
+        else
+        {
+            exp = exp.And(a => a.ContentId == null);
+        }
+
+        return exp;
     }
 }

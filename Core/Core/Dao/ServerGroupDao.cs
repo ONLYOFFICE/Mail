@@ -23,115 +23,103 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ServerGroupDao : BaseMailDao, IServerGroupDao
 {
-    [Scope]
-    public class ServerGroupDao : BaseMailDao, IServerGroupDao
+    public ServerGroupDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ServerGroupDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public ServerGroup Get(int id)
+    {
+        var group = MailDbContext.MailServerMailGroup
+            .AsNoTracking()
+            .Where(g => g.IdTenant == Tenant && g.Id == id)
+            .Select(ToServerGroup)
+            .SingleOrDefault();
+
+        return group;
+    }
+
+    public List<ServerGroup> GetList()
+    {
+        var groups = MailDbContext.MailServerMailGroup
+            .AsNoTracking()
+            .Where(g => g.IdTenant == Tenant)
+            .Select(ToServerGroup)
+            .ToList();
+
+        return groups;
+    }
+
+    public List<ServerGroup> GetList(int domainId)
+    {
+        var groups = MailDbContext.MailServerMailGroup
+            .AsNoTracking()
+            .Join(MailDbContext.MailServerAddress, g => g.IdAddress, a => a.Id,
+                (g, a) => new
+                {
+                    Group = g,
+                    Address = a
+                })
+            .Where(o => o.Group.IdTenant == Tenant && o.Address.IdDomain == domainId && o.Address.IsMailGroup)
+            .Select(o => ToServerGroup(o.Group))
+            .ToList();
+
+        return groups;
+    }
+
+    public int Save(ServerGroup @group)
+    {
+        var mailServerGroup = new MailServerMailGroup
         {
-        }
+            Id = group.Id,
+            IdTenant = group.Tenant,
+            Address = group.Address,
+            IdAddress = group.AddressId,
+            DateCreated = group.DateCreated
+        };
 
-        public ServerGroup Get(int id)
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerMailGroup, mailServerGroup);
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var mailServerGroup = new MailServerMailGroup
         {
-            var group = MailDbContext.MailServerMailGroup
-                .AsNoTracking()
-                .Where(g => g.IdTenant == Tenant && g.Id == id)
-                .Select(ToServerGroup)
-                .SingleOrDefault();
+            Id = id
+        };
 
-            return group;
-        }
+        MailDbContext.MailServerMailGroup.Remove(mailServerGroup);
 
-        public List<ServerGroup> GetList()
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected ServerGroup ToServerGroup(MailServerMailGroup r)
+    {
+        var group = new ServerGroup
         {
-            var groups = MailDbContext.MailServerMailGroup
-                .AsNoTracking()
-                .Where(g => g.IdTenant == Tenant)
-                .Select(ToServerGroup)
-                .ToList();
+            Id = r.Id,
+            Tenant = r.IdTenant,
+            AddressId = r.IdAddress,
+            Address = r.Address,
+            DateCreated = r.DateCreated
+        };
 
-            return groups;
-        }
-
-        public List<ServerGroup> GetList(int domainId)
-        {
-            var groups = MailDbContext.MailServerMailGroup
-                .AsNoTracking()
-                .Join(MailDbContext.MailServerAddress, g => g.IdAddress, a => a.Id,
-                    (g, a) => new
-                    {
-                        Group = g,
-                        Address = a
-                    })
-                .Where(o => o.Group.IdTenant == Tenant && o.Address.IdDomain == domainId && o.Address.IsMailGroup)
-                .Select(o => ToServerGroup(o.Group))
-                .ToList();
-
-            return groups;
-        }
-
-        public int Save(ServerGroup @group)
-        {
-            var mailServerGroup = new MailServerMailGroup
-            {
-                Id = group.Id,
-                IdTenant = group.Tenant,
-                Address = group.Address,
-                IdAddress = group.AddressId,
-                DateCreated = group.DateCreated
-            };
-
-            var entry = MailDbContext.AddOrUpdate(t => t.MailServerMailGroup, mailServerGroup);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public int Delete(int id)
-        {
-            var mailServerGroup = new MailServerMailGroup
-            {
-                Id = id
-            };
-
-            MailDbContext.MailServerMailGroup.Remove(mailServerGroup);
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected ServerGroup ToServerGroup(MailServerMailGroup r)
-        {
-            var group = new ServerGroup
-            {
-                Id = r.Id,
-                Tenant = r.IdTenant,
-                AddressId = r.IdAddress,
-                Address = r.Address,
-                DateCreated = r.DateCreated
-            };
-
-            return group;
-        }
+        return group;
     }
 }

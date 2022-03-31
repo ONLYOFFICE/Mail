@@ -23,150 +23,139 @@
  *
 */
 
+namespace ASC.Mail.Extensions;
 
-using System;
-using System.Linq;
-
-using ASC.Common.Utils;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Extensions
+public static class ServerDomainDnsExtensions
 {
-    public static class ServerDomainDnsExtensions
+    public static bool CheckDnsStatus(this ServerDomainDnsData dnsData, string domain)
     {
-        public static bool CheckDnsStatus(this ServerDomainDnsData dnsData, string domain)
+        if (string.IsNullOrEmpty(domain))
+            return false;
+
+        var dnsLookup = new DnsLookup();
+
+        var mxVerified = dnsLookup.IsDomainMxRecordExists(domain, dnsData.MxRecord.Host);
+
+        dnsData.MxRecord.IsVerified = mxVerified;
+
+        var spfVerified = dnsLookup.IsDomainTxtRecordExists(domain, dnsData.SpfRecord.Value);
+
+        dnsData.SpfRecord.IsVerified = spfVerified;
+
+        var dkimVerified = dnsLookup.IsDomainDkimRecordExists(domain, dnsData.DkimRecord.Selector,
+            dnsData.DkimRecord.PublicKey);
+
+        dnsData.DkimRecord.IsVerified = dkimVerified;
+
+        return mxVerified && spfVerified && dkimVerified;
+    }
+
+    public static bool UpdateMx(this ServerDns dns, string domain)
+    {
+        var utcNow = DateTime.UtcNow;
+        var hasChanges = false;
+
+        var dnsLookup = new DnsLookup();
+
+        if (dns.MxDateChecked.HasValue && dns.MxDateChecked.Value.AddSeconds(dns.MxTtl) >= utcNow)
+            return hasChanges;
+
+        var mxRecord =
+            dnsLookup
+                .GetDomainMxRecords(domain)
+                .FirstOrDefault(mx => mx.ExchangeDomainName.ToString().TrimEnd('.').Equals(dns.Mx));
+
+        dns.MxVerified = mxRecord != null;
+        dns.MxTtl = mxRecord != null ? mxRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;//DefineConstants.ServerDnsDefaultTtl;
+        dns.MxDateChecked = utcNow;
+
+        hasChanges = true;
+
+        return hasChanges;
+    }
+
+    public static bool UpdateSpf(this ServerDns dns, string domain)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        var dnsLookup = new DnsLookup();
+
+        if (dns.SpfDateChecked.HasValue && dns.SpfDateChecked.Value.AddSeconds(dns.SpfTtl) >= utcNow)
+            return false;
+
+        var txtRecords = dnsLookup
+            .GetDomainTxtRecords(domain);
+
+        var spfRecord = txtRecords.FirstOrDefault(
+            txt => txt.TextData.Trim('\"')
+                .Equals(dns.Spf, StringComparison.InvariantCultureIgnoreCase));
+
+        dns.SpfVerified = spfRecord != null;
+        dns.SpfTtl = spfRecord != null ? spfRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;
+        dns.SpfDateChecked = utcNow;
+
+        return true;
+    }
+
+    public static bool UpdateDkim(this ServerDns dns, string domain)
+    {
+        var utcNow = DateTime.UtcNow;
+
+        var dnsLookup = new DnsLookup();
+
+        if (dns.DkimDateChecked.HasValue && dns.DkimDateChecked.Value.AddSeconds(dns.DkimTtl) >= utcNow)
+            return false;
+
+        var dkimRecordName = string.Format("{0}._domainkey.{1}", dns.DkimSelector, domain);
+
+        var dkimRecord = dnsLookup
+            .GetDomainTxtRecords(dkimRecordName).FirstOrDefault(
+                txt => txt.TextData.Trim('\"')
+                    .Equals(dns.DkimPublicKey, StringComparison.InvariantCultureIgnoreCase));
+
+        dns.DkimVerified = dkimRecord != null;
+        dns.DkimTtl = dkimRecord != null ? dkimRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;
+        dns.DkimDateChecked = utcNow;
+
+        return true;
+    }
+
+    public static bool UpdateRecords(this ServerDns dns, OperationEngine operationEngine, string domain, bool force = false)
+    {
+        if (string.IsNullOrEmpty(domain) || dns == null)
+            return false;
+
+        var utcNow = DateTime.UtcNow;
+
+        var hasChanges = false;
+
+        if (force)
         {
-            if (string.IsNullOrEmpty(domain))
-                return false;
+            if (dns.UpdateMx(domain))
+            {
+                hasChanges = true;
+            }
 
-            var dnsLookup = new DnsLookup();
+            if (dns.UpdateSpf(domain))
+            {
+                hasChanges = true;
+            }
 
-            var mxVerified = dnsLookup.IsDomainMxRecordExists(domain, dnsData.MxRecord.Host);
-
-            dnsData.MxRecord.IsVerified = mxVerified;
-
-            var spfVerified = dnsLookup.IsDomainTxtRecordExists(domain, dnsData.SpfRecord.Value);
-
-            dnsData.SpfRecord.IsVerified = spfVerified;
-
-            var dkimVerified = dnsLookup.IsDomainDkimRecordExists(domain, dnsData.DkimRecord.Selector,
-                dnsData.DkimRecord.PublicKey);
-
-            dnsData.DkimRecord.IsVerified = dkimVerified;
-
-            return mxVerified && spfVerified && dkimVerified;
+            if (dns.UpdateDkim(domain))
+            {
+                hasChanges = true;
+            }
         }
-
-        public static bool UpdateMx(this ServerDns dns, string domain)
+        else
         {
-            var utcNow = DateTime.UtcNow;
-            var hasChanges = false;
-
-            var dnsLookup = new DnsLookup();
-
-            if (dns.MxDateChecked.HasValue && dns.MxDateChecked.Value.AddSeconds(dns.MxTtl) >= utcNow)
+            if (dns.MxDateChecked.HasValue && dns.MxDateChecked.Value.AddSeconds(dns.MxTtl) >= utcNow &&
+                dns.SpfDateChecked.HasValue && dns.SpfDateChecked.Value.AddSeconds(dns.SpfTtl) >= utcNow &&
+                dns.DkimDateChecked.HasValue && dns.DkimDateChecked.Value.AddSeconds(dns.DkimTtl) >= utcNow)
                 return hasChanges;
 
-            var mxRecord =
-                dnsLookup
-                    .GetDomainMxRecords(domain)
-                    .FirstOrDefault(mx => mx.ExchangeDomainName.ToString().TrimEnd('.').Equals(dns.Mx));
-
-            dns.MxVerified = mxRecord != null;
-            dns.MxTtl = mxRecord != null ? mxRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;//DefineConstants.ServerDnsDefaultTtl;
-            dns.MxDateChecked = utcNow;
-
-            hasChanges = true;
-
-            return hasChanges;
+            operationEngine.CheckDomainDns(domain, dns);
         }
 
-        public static bool UpdateSpf(this ServerDns dns, string domain)
-        {
-            var utcNow = DateTime.UtcNow;
-
-            var dnsLookup = new DnsLookup();
-
-            if (dns.SpfDateChecked.HasValue && dns.SpfDateChecked.Value.AddSeconds(dns.SpfTtl) >= utcNow)
-                return false;
-
-            var txtRecords = dnsLookup
-                .GetDomainTxtRecords(domain);
-
-            var spfRecord = txtRecords.FirstOrDefault(
-                txt => txt.TextData.Trim('\"')
-                    .Equals(dns.Spf, StringComparison.InvariantCultureIgnoreCase));
-
-            dns.SpfVerified = spfRecord != null;
-            dns.SpfTtl = spfRecord != null ? spfRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;
-            dns.SpfDateChecked = utcNow;
-
-            return true;
-        }
-
-        public static bool UpdateDkim(this ServerDns dns, string domain)
-        {
-            var utcNow = DateTime.UtcNow;
-
-            var dnsLookup = new DnsLookup();
-
-            if (dns.DkimDateChecked.HasValue && dns.DkimDateChecked.Value.AddSeconds(dns.DkimTtl) >= utcNow)
-                return false;
-
-            var dkimRecordName = string.Format("{0}._domainkey.{1}", dns.DkimSelector, domain);
-
-            var dkimRecord = dnsLookup
-                .GetDomainTxtRecords(dkimRecordName).FirstOrDefault(
-                    txt => txt.TextData.Trim('\"')
-                        .Equals(dns.DkimPublicKey, StringComparison.InvariantCultureIgnoreCase));
-
-            dns.DkimVerified = dkimRecord != null;
-            dns.DkimTtl = dkimRecord != null ? dkimRecord.TimeToLive : MailSettings.Current.Defines.ServerDnsDefaultTtl;
-            dns.DkimDateChecked = utcNow;
-
-            return true;
-        }
-
-        public static bool UpdateRecords(this ServerDns dns, OperationEngine operationEngine, string domain, bool force = false)
-        {
-            if (string.IsNullOrEmpty(domain) || dns == null)
-                return false;
-
-            var utcNow = DateTime.UtcNow;
-
-            var hasChanges = false;
-
-            if (force)
-            {
-                if (dns.UpdateMx(domain))
-                {
-                    hasChanges = true;
-                }
-
-                if (dns.UpdateSpf(domain))
-                {
-                    hasChanges = true;
-                }
-
-                if (dns.UpdateDkim(domain))
-                {
-                    hasChanges = true;
-                }
-            }
-            else
-            {
-                if (dns.MxDateChecked.HasValue && dns.MxDateChecked.Value.AddSeconds(dns.MxTtl) >= utcNow &&
-                    dns.SpfDateChecked.HasValue && dns.SpfDateChecked.Value.AddSeconds(dns.SpfTtl) >= utcNow &&
-                    dns.DkimDateChecked.HasValue && dns.DkimDateChecked.Value.AddSeconds(dns.DkimTtl) >= utcNow)
-                    return hasChanges;
-
-                operationEngine.CheckDomainDns(domain, dns);
-            }
-
-            return hasChanges;
-        }
+        return hasChanges;
     }
 }

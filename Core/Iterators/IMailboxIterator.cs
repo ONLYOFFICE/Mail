@@ -23,19 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Iterators;
 
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Iterators
+/// <summary>
+/// The 'Iterator' interface
+/// </summary>
+public interface IMailboxIterator
 {
-    /// <summary>
-    /// The 'Iterator' interface
-    /// </summary>
-    public interface IMailboxIterator
-    {
-        MailBoxData First();
-        MailBoxData Next();
-        bool IsDone { get; }
-        MailBoxData Current { get; }
-    }
+    MailBoxData First();
+    MailBoxData Next();
+    bool IsDone { get; }
+    MailBoxData Current { get; }
 }

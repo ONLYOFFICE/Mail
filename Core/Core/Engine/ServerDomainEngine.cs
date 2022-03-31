@@ -23,398 +23,377 @@
  *
 */
 
-
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Security;
-
-using ASC.Common;
-using ASC.Common.Utils;
-using ASC.Core;
-using ASC.Mail.Configuration;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Extensions;
-using ASC.Mail.Models;
-using ASC.Mail.Server.Utils;
-using ASC.Mail.Utils;
-using ASC.Web.Core;
-
 using SecurityContext = ASC.Core.SecurityContext;
 
-namespace ASC.Mail.Core.Engine
+namespace ASC.Mail.Core.Engine;
+
+[Scope]
+public class ServerDomainEngine : BaseEngine
 {
-    [Scope]
-    public class ServerDomainEngine : BaseEngine
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+
+    private string User => _securityContext.CurrentAccount.ID.ToString();
+
+    private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
+
+    private readonly SecurityContext _securityContext;
+    private readonly TenantManager _tenantManager;
+    private readonly CoreBaseSettings _coreBaseSettings;
+    private readonly WebItemSecurity _webItemSecurity;
+    private readonly IMailDaoFactory _mailDaoFactory;
+
+    public ServerDomainEngine(
+        SecurityContext securityContext,
+        TenantManager tenantManager,
+        IMailDaoFactory mailDaoFactory,
+        CoreBaseSettings coreBaseSettings,
+        WebItemSecurity webItemSecurity,
+        MailSettings mailSettings) : base(mailSettings)
     {
-        public int Tenant => TenantManager.GetCurrentTenant().TenantId;
+        _securityContext = securityContext;
+        _tenantManager = tenantManager;
+        _coreBaseSettings = coreBaseSettings;
+        _webItemSecurity = webItemSecurity;
+        _mailDaoFactory = mailDaoFactory;
+    }
 
-        public string User => SecurityContext.CurrentAccount.ID.ToString();
+    public ServerDomainData GetDomain(int id)
+    {
+        var serverDomain = _mailDaoFactory.GetServerDomainDao().GetDomain(id);
 
-        private bool IsAdmin => WebItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, SecurityContext.CurrentAccount.ID);
+        if (serverDomain == null)
+            throw new Exception("Domain not found");
 
-        private SecurityContext SecurityContext { get; }
-        private TenantManager TenantManager { get; }
-        private CoreBaseSettings CoreBaseSettings { get; }
-        private WebItemSecurity WebItemSecurity { get; }
-        private IMailDaoFactory MailDaoFactory { get; }
+        var dnsData = UpdateDnsStatus(serverDomain);
 
-        public ServerDomainEngine(
-            SecurityContext securityContext,
-            TenantManager tenantManager,
-            IMailDaoFactory mailDaoFactory,
-            CoreBaseSettings coreBaseSettings,
-            WebItemSecurity webItemSecurity,
-            MailSettings mailSettings) : base(mailSettings)
+        return ToServerDomainData(serverDomain, dnsData);
+    }
+
+    public List<ServerDomainData> GetDomains()
+    {
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
+
+        var listDomains = _mailDaoFactory.GetServerDomainDao().GetDomains();
+
+        if (!listDomains.Any())
+            return new List<ServerDomainData>();
+
+        var list = new List<ServerDomainData>();
+
+        foreach (var domain in listDomains)
         {
-            SecurityContext = securityContext;
-            TenantManager = tenantManager;
-            CoreBaseSettings = coreBaseSettings;
-            WebItemSecurity = webItemSecurity;
-            MailDaoFactory = mailDaoFactory;
+            var dnsData = UpdateDnsStatus(domain);
+
+            var serverDomain = ToServerDomainData(domain, dnsData);
+
+            list.Add(serverDomain);
         }
 
-        public ServerDomainData GetDomain(int id)
+        return list;
+    }
+
+    public List<ServerDomain> GetAllDomains()
+    {
+        var domains = _mailDaoFactory.GetServerDomainDao().GetAllDomains();
+
+        return domains;
+    }
+
+    public ServerDomainData GetCommonDomain()
+    {
+        var domainCommon = _mailDaoFactory.GetServerDomainDao().GetDomains()
+            .SingleOrDefault(x => x.Tenant == DefineConstants.SHARED_TENANT_ID);
+
+        if (domainCommon == null)
+            return null;
+
+        var serverDomain = ToServerDomainData(domainCommon, null);
+
+        return serverDomain;
+    }
+
+    public ServerDomainDnsData GetDnsData(int domainId)
+    {
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
+
+        if (domainId < 0)
+            throw new ArgumentException(@"Invalid domain id.", "domainId");
+
+        var domain = _mailDaoFactory.GetServerDomainDao().GetDomain(domainId);
+
+        if (domain == null)
+            return null;
+
+        var dnsData = UpdateDnsStatus(domain, true);
+
+        return dnsData;
+    }
+
+    public bool IsDomainExists(string name)
+    {
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
+
+        if (string.IsNullOrEmpty(name))
+            throw new ArgumentException(@"Invalid domain name.", "name");
+
+        if (name.Length > 255)
+            throw new ArgumentException(@"Domain name exceed limitation of 255 characters.", "name");
+
+        if (!Parser.IsDomainValid(name))
+            throw new ArgumentException(@"Incorrect domain name.", "name");
+
+        var domainName = name.ToLowerInvariant();
+
+        return _mailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
+    }
+
+    public ServerDomainDnsData GetOrCreateUnusedDnsData(Entities.Server server)
+    {
+        var dnsSettings = _mailDaoFactory.GetServerDnsDao().GetFree();
+
+        if (dnsSettings == null)
         {
-            var serverDomain = MailDaoFactory.GetServerDomainDao().GetDomain(id);
+            string privateKey, publicKey;
+            CryptoUtil.GenerateDkimKeys(out privateKey, out publicKey);
 
-            if (serverDomain == null)
-                throw new Exception("Domain not found");
+            var domainCheckValue = PasswordGenerator.GenerateNewPassword(16);
+            var domainCheck = MailSettings.Defines.ServerDnsDomainCheckPrefix + ": " + domainCheckValue;
 
-            var dnsData = UpdateDnsStatus(serverDomain);
-
-            return ToServerDomainData(serverDomain, dnsData);
-        }
-
-        public List<ServerDomainData> GetDomains()
-        {
-            if (!IsAdmin)
-                throw new SecurityException("Need admin privileges.");
-
-            var listDomains = MailDaoFactory.GetServerDomainDao().GetDomains();
-
-            if (!listDomains.Any())
-                return new List<ServerDomainData>();
-
-            var list = new List<ServerDomainData>();
-
-            foreach (var domain in listDomains)
-            {
-                var dnsData = UpdateDnsStatus(domain);
-
-                var serverDomain = ToServerDomainData(domain, dnsData);
-
-                list.Add(serverDomain);
-            }
-
-            return list;
-        }
-
-        public List<ServerDomain> GetAllDomains()
-        {
-            var domains = MailDaoFactory.GetServerDomainDao().GetAllDomains();
-
-            return domains;
-        }
-
-        public ServerDomainData GetCommonDomain()
-        {
-            var domainCommon = MailDaoFactory.GetServerDomainDao().GetDomains()
-                .SingleOrDefault(x => x.Tenant == DefineConstants.SHARED_TENANT_ID);
-
-            if (domainCommon == null)
-                return null;
-
-            var serverDomain = ToServerDomainData(domainCommon, null);
-
-            return serverDomain;
-        }
-
-        public ServerDomainDnsData GetDnsData(int domainId)
-        {
-            if (!IsAdmin)
-                throw new SecurityException("Need admin privileges.");
-
-            if (domainId < 0)
-                throw new ArgumentException(@"Invalid domain id.", "domainId");
-
-            var domain = MailDaoFactory.GetServerDomainDao().GetDomain(domainId);
-
-            if (domain == null)
-                return null;
-
-            var dnsData = UpdateDnsStatus(domain, true);
-
-            return dnsData;
-        }
-
-        public bool IsDomainExists(string name)
-        {
-            if (!IsAdmin)
-                throw new SecurityException("Need admin privileges.");
-
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentException(@"Invalid domain name.", "name");
-
-            if (name.Length > 255)
-                throw new ArgumentException(@"Domain name exceed limitation of 255 characters.", "name");
-
-            if (!Parser.IsDomainValid(name))
-                throw new ArgumentException(@"Incorrect domain name.", "name");
-
-            var domainName = name.ToLowerInvariant();
-
-            return MailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
-        }
-
-        public ServerDomainDnsData GetOrCreateUnusedDnsData(Entities.Server server)
-        {
-            var dnsSettings = MailDaoFactory.GetServerDnsDao().GetFree();
-
-            if (dnsSettings == null)
-            {
-                string privateKey, publicKey;
-                CryptoUtil.GenerateDkimKeys(out privateKey, out publicKey);
-
-                var domainCheckValue = PasswordGenerator.GenerateNewPassword(16);
-                var domainCheck = MailSettings.Defines.ServerDnsDomainCheckPrefix + ": " + domainCheckValue;
-
-                var serverDns = new ServerDns
-                {
-                    Id = 0,
-                    Tenant = Tenant,
-                    User = User,
-                    DomainId = DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID,
-                    DomainCheck = domainCheck,
-                    DkimSelector = MailSettings.Defines.ServerDnsDkimSelector,
-                    DkimPrivateKey = privateKey,
-                    DkimPublicKey = publicKey,
-                    DkimTtl = MailSettings.Defines.ServerDnsDefaultTtl,
-                    DkimVerified = false,
-                    DkimDateChecked = null,
-                    Spf = MailSettings.Defines.ServerDnsSpfRecordValue,
-                    SpfTtl = MailSettings.Defines.ServerDnsDefaultTtl,
-                    SpfVerified = false,
-                    SpfDateChecked = null,
-                    Mx = server.MxRecord,
-                    MxTtl = MailSettings.Defines.ServerDnsDefaultTtl,
-                    MxVerified = false,
-                    MxDateChecked = null,
-                    TimeModified = DateTime.UtcNow
-                };
-
-                serverDns.Id = MailDaoFactory.GetServerDnsDao().Save(serverDns);
-
-                dnsSettings = serverDns;
-            }
-
-            var dnsData = new ServerDomainDnsData
-            {
-                Id = dnsSettings.Id,
-                MxRecord = new ServerDomainMxRecordData
-                {
-                    Host = dnsSettings.Mx,
-                    IsVerified = false,
-                    Priority = (int)MailSettings.Defines.ServerDnsMxRecordPriority
-                },
-                DkimRecord = new ServerDomainDkimRecordData
-                {
-                    Selector = dnsSettings.DkimSelector,
-                    IsVerified = false,
-                    PublicKey = dnsSettings.DkimPublicKey
-                },
-                DomainCheckRecord = new ServerDomainDnsRecordData
-                {
-                    Name = DefineConstants.DNS_DEFAULT_ORIGIN,
-                    IsVerified = false,
-                    Value = dnsSettings.DomainCheck
-                },
-                SpfRecord = new ServerDomainDnsRecordData
-                {
-                    Name = DefineConstants.DNS_DEFAULT_ORIGIN,
-                    IsVerified = false,
-                    Value = dnsSettings.Spf
-                }
-            };
-
-            return dnsData;
-        }
-
-        public ServerDomainData AddDomain(string domain, int dnsId)
-        {
-            if (!IsAdmin)
-                throw new SecurityException("Need admin privileges.");
-
-            if (string.IsNullOrEmpty(domain))
-                throw new ArgumentException(@"Invalid domain name.", "domain");
-
-            if (domain.Length > 255)
-                throw new ArgumentException(@"Domain name exceed limitation of 255 characters.", "domain");
-
-            if (!Parser.IsDomainValid(domain))
-                throw new ArgumentException(@"Incorrect domain name.", "domain");
-
-            var domainName = domain.ToLowerInvariant();
-
-            var dnsLookup = new DnsLookup();
-
-            var server = MailDaoFactory.GetServerDao().Get(Tenant);
-
-            var freeDns = GetOrCreateUnusedDnsData(server);
-
-            if (freeDns.Id != dnsId)
-                throw new InvalidDataException("This dkim public key is already in use. Please reopen wizard again.");
-
-            if (!CoreBaseSettings.Standalone &&
-                !dnsLookup.IsDomainTxtRecordExists(domainName, freeDns.DomainCheckRecord.Value))
-            {
-                throw new InvalidOperationException("txt record is not correct.");
-            }
-
-            var isVerified = freeDns.CheckDnsStatus(domainName);
-
-            using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
-
-            var utcNow = DateTime.UtcNow;
-
-            var mailServerEngine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
-
-            var mailServerDomain = new Server.Core.Entities.Domain
-            {
-                DomainName = domainName,
-                Active = true,
-                Description = string.Format("Domain created in UtcTime: {0}, for tenant: {1}", utcNow, Tenant),
-                Created = utcNow,
-                Modified = utcNow
-            };
-
-            mailServerEngine.SaveDomain(mailServerDomain);
-
-            var serverDomain = new ServerDomain
+            var serverDns = new ServerDns
             {
                 Id = 0,
                 Tenant = Tenant,
-                Name = domainName,
-                IsVerified = isVerified,
-                DateAdded = utcNow,
-                DateChecked = utcNow
+                User = User,
+                DomainId = DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID,
+                DomainCheck = domainCheck,
+                DkimSelector = MailSettings.Defines.ServerDnsDkimSelector,
+                DkimPrivateKey = privateKey,
+                DkimPublicKey = publicKey,
+                DkimTtl = MailSettings.Defines.ServerDnsDefaultTtl,
+                DkimVerified = false,
+                DkimDateChecked = null,
+                Spf = MailSettings.Defines.ServerDnsSpfRecordValue,
+                SpfTtl = MailSettings.Defines.ServerDnsDefaultTtl,
+                SpfVerified = false,
+                SpfDateChecked = null,
+                Mx = server.MxRecord,
+                MxTtl = MailSettings.Defines.ServerDnsDefaultTtl,
+                MxVerified = false,
+                MxDateChecked = null,
+                TimeModified = DateTime.UtcNow
             };
 
-            serverDomain.Id = MailDaoFactory.GetServerDomainDao()
-                .Save(serverDomain);
+            serverDns.Id = _mailDaoFactory.GetServerDnsDao().Save(serverDns);
 
-            var serverDns = MailDaoFactory.GetServerDnsDao()
-                .GetById(freeDns.Id);
-
-            var mailServerDkim = new Server.Core.Entities.Dkim
-            {
-                DomainName = domainName,
-                Selector = serverDns.DkimSelector,
-                PrivateKey = serverDns.DkimPrivateKey,
-                PublicKey = serverDns.DkimPublicKey
-            };
-
-            mailServerEngine.SaveDkim(mailServerDkim);
-
-            serverDns.DomainId = serverDomain.Id;
-            serverDns.TimeModified = utcNow;
-
-            MailDaoFactory.GetServerDnsDao().Save(serverDns);
-
-            tx.Commit();
-
-            return ToServerDomainData(serverDomain, freeDns);
+            dnsSettings = serverDns;
         }
 
-        public MailOperationStatus RemoveDomain(int id)
+        var dnsData = new ServerDomainDnsData
         {
-            if (!IsAdmin)
-                throw new SecurityException("Need admin privileges.");
-
-            if (id < 0)
-                throw new ArgumentException(@"Invalid domain id.", "id");
-
-            var domain = GetDomain(id);
-
-            if (domain.IsSharedDomain)
-                throw new SecurityException("Can not remove shared domain.");
-
-            //TODO: Fix return OperationEngine.RemoveServerDomain(domain);
-
-            throw new NotImplementedException();
-        }
-
-        private ServerDomainDnsData UpdateDnsStatus(ServerDomain domain, bool force = false)
-        {
-            var serverDns = MailDaoFactory.GetServerDnsDao().Get(domain.Id);
-
-            //TODO fix
-            /*if (serverDns.UpdateRecords(OperationEngine, domain.Name, force))
+            Id = dnsSettings.Id,
+            MxRecord = new ServerDomainMxRecordData
             {
-                DaoFactory.ServerDnsDao.Save(serverDns);
-            }*/
-
-            var dnsData = ToServerDomainDnsData(serverDns);
-
-            if (dnsData != null && domain.IsVerified != dnsData.IsVerified)
+                Host = dnsSettings.Mx,
+                IsVerified = false,
+                Priority = (int)MailSettings.Defines.ServerDnsMxRecordPriority
+            },
+            DkimRecord = new ServerDomainDkimRecordData
             {
-                MailDaoFactory.GetServerDomainDao().SetVerified(domain.Id, dnsData.IsVerified);
+                Selector = dnsSettings.DkimSelector,
+                IsVerified = false,
+                PublicKey = dnsSettings.DkimPublicKey
+            },
+            DomainCheckRecord = new ServerDomainDnsRecordData
+            {
+                Name = DefineConstants.DNS_DEFAULT_ORIGIN,
+                IsVerified = false,
+                Value = dnsSettings.DomainCheck
+            },
+            SpfRecord = new ServerDomainDnsRecordData
+            {
+                Name = DefineConstants.DNS_DEFAULT_ORIGIN,
+                IsVerified = false,
+                Value = dnsSettings.Spf
             }
+        };
 
-            return dnsData;
-        }
+        return dnsData;
+    }
 
-        protected ServerDomainData ToServerDomainData(ServerDomain domain, ServerDomainDnsData dns)
+    public ServerDomainData AddDomain(string domain, int dnsId)
+    {
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
+
+        if (string.IsNullOrEmpty(domain))
+            throw new ArgumentException(@"Invalid domain name.", "domain");
+
+        if (domain.Length > 255)
+            throw new ArgumentException(@"Domain name exceed limitation of 255 characters.", "domain");
+
+        if (!Parser.IsDomainValid(domain))
+            throw new ArgumentException(@"Incorrect domain name.", "domain");
+
+        var domainName = domain.ToLowerInvariant();
+
+        var dnsLookup = new DnsLookup();
+
+        var server = _mailDaoFactory.GetServerDao().Get(Tenant);
+
+        var freeDns = GetOrCreateUnusedDnsData(server);
+
+        if (freeDns.Id != dnsId)
+            throw new InvalidDataException("This dkim public key is already in use. Please reopen wizard again.");
+
+        if (!_coreBaseSettings.Standalone &&
+            !dnsLookup.IsDomainTxtRecordExists(domainName, freeDns.DomainCheckRecord.Value))
         {
-            var serverDomain = new ServerDomainData
-            {
-                Id = domain.Id,
-                Name = domain.Name,
-                Dns = dns,
-                IsSharedDomain = domain.Tenant == DefineConstants.SHARED_TENANT_ID
-            };
-
-            return serverDomain;
+            throw new InvalidOperationException("txt record is not correct.");
         }
 
-        protected ServerDomainDnsData ToServerDomainDnsData(ServerDns serverDns)
+        var isVerified = freeDns.CheckDnsStatus(domainName);
+
+        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
+        var utcNow = DateTime.UtcNow;
+
+        var mailServerEngine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
+
+        var mailServerDomain = new Server.Core.Entities.Domain
         {
-            if (serverDns == null)
-                return null;
+            DomainName = domainName,
+            Active = true,
+            Description = string.Format("Domain created in UtcTime: {0}, for tenant: {1}", utcNow, Tenant),
+            Created = utcNow,
+            Modified = utcNow
+        };
 
-            var dnsData = new ServerDomainDnsData
-            {
-                Id = serverDns.Id,
-                MxRecord = new ServerDomainMxRecordData
-                {
-                    Host = serverDns.Mx,
-                    IsVerified = serverDns.MxVerified,
-                    Priority = (int)MailSettings.Defines.ServerDnsMxRecordPriority
-                },
-                SpfRecord = new ServerDomainDnsRecordData
-                {
-                    Name = DefineConstants.DNS_DEFAULT_ORIGIN,
-                    IsVerified = serverDns.SpfVerified,
-                    Value = serverDns.Spf
-                },
-                DkimRecord = new ServerDomainDkimRecordData
-                {
-                    Selector = serverDns.DkimSelector,
-                    IsVerified = serverDns.DkimVerified,
-                    PublicKey = serverDns.DkimPublicKey
-                },
-                DomainCheckRecord = new ServerDomainDnsRecordData
-                {
-                    Name = DefineConstants.DNS_DEFAULT_ORIGIN,
-                    IsVerified = true,
-                    Value = serverDns.DomainCheck
-                }
-            };
+        mailServerEngine.SaveDomain(mailServerDomain);
 
-            return dnsData;
+        var serverDomain = new ServerDomain
+        {
+            Id = 0,
+            Tenant = Tenant,
+            Name = domainName,
+            IsVerified = isVerified,
+            DateAdded = utcNow,
+            DateChecked = utcNow
+        };
+
+        serverDomain.Id = _mailDaoFactory.GetServerDomainDao()
+            .Save(serverDomain);
+
+        var serverDns = _mailDaoFactory.GetServerDnsDao()
+            .GetById(freeDns.Id);
+
+        var mailServerDkim = new Server.Core.Entities.Dkim
+        {
+            DomainName = domainName,
+            Selector = serverDns.DkimSelector,
+            PrivateKey = serverDns.DkimPrivateKey,
+            PublicKey = serverDns.DkimPublicKey
+        };
+
+        mailServerEngine.SaveDkim(mailServerDkim);
+
+        serverDns.DomainId = serverDomain.Id;
+        serverDns.TimeModified = utcNow;
+
+        _mailDaoFactory.GetServerDnsDao().Save(serverDns);
+
+        tx.Commit();
+
+        return ToServerDomainData(serverDomain, freeDns);
+    }
+
+    public MailOperationStatus RemoveDomain(int id)
+    {
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
+
+        if (id < 0)
+            throw new ArgumentException(@"Invalid domain id.", "id");
+
+        var domain = GetDomain(id);
+
+        if (domain.IsSharedDomain)
+            throw new SecurityException("Can not remove shared domain.");
+
+        //TODO: Fix return OperationEngine.RemoveServerDomain(domain);
+
+        throw new NotImplementedException();
+    }
+
+    private ServerDomainDnsData UpdateDnsStatus(ServerDomain domain, bool force = false)
+    {
+        var serverDns = _mailDaoFactory.GetServerDnsDao().Get(domain.Id);
+
+        //TODO fix
+        /*if (serverDns.UpdateRecords(OperationEngine, domain.Name, force))
+        {
+            DaoFactory.ServerDnsDao.Save(serverDns);
+        }*/
+
+        var dnsData = ToServerDomainDnsData(serverDns);
+
+        if (dnsData != null && domain.IsVerified != dnsData.IsVerified)
+        {
+            _mailDaoFactory.GetServerDomainDao().SetVerified(domain.Id, dnsData.IsVerified);
         }
+
+        return dnsData;
+    }
+
+    protected ServerDomainData ToServerDomainData(ServerDomain domain, ServerDomainDnsData dns)
+    {
+        var serverDomain = new ServerDomainData
+        {
+            Id = domain.Id,
+            Name = domain.Name,
+            Dns = dns,
+            IsSharedDomain = domain.Tenant == DefineConstants.SHARED_TENANT_ID
+        };
+
+        return serverDomain;
+    }
+
+    protected ServerDomainDnsData ToServerDomainDnsData(ServerDns serverDns)
+    {
+        if (serverDns == null)
+            return null;
+
+        var dnsData = new ServerDomainDnsData
+        {
+            Id = serverDns.Id,
+            MxRecord = new ServerDomainMxRecordData
+            {
+                Host = serverDns.Mx,
+                IsVerified = serverDns.MxVerified,
+                Priority = (int)MailSettings.Defines.ServerDnsMxRecordPriority
+            },
+            SpfRecord = new ServerDomainDnsRecordData
+            {
+                Name = DefineConstants.DNS_DEFAULT_ORIGIN,
+                IsVerified = serverDns.SpfVerified,
+                Value = serverDns.Spf
+            },
+            DkimRecord = new ServerDomainDkimRecordData
+            {
+                Selector = serverDns.DkimSelector,
+                IsVerified = serverDns.DkimVerified,
+                PublicKey = serverDns.DkimPublicKey
+            },
+            DomainCheckRecord = new ServerDomainDnsRecordData
+            {
+                Name = DefineConstants.DNS_DEFAULT_ORIGIN,
+                IsVerified = true,
+                Value = serverDns.DomainCheck
+            }
+        };
+
+        return dnsData;
     }
 }

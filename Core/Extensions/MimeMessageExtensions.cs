@@ -23,333 +23,317 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
-using ASC.Mail.Utils;
+namespace ASC.Mail.Extensions;
 
-using MimeKit;
-
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.IO;
-using System.Linq;
-using System.Net.Mail;
-using System.Text;
-
-namespace ASC.Mail.Extensions
+public static class MimeMessageExtensions
 {
-    public static class MimeMessageExtensions
+    public static void FixEncodingIssues(this MimeMessage mimeMessage, ILog logger = null)
     {
-        public static void FixEncodingIssues(this MimeMessage mimeMessage, ILog logger = null)
+        if (logger == null)
+            logger = new NullLog();
+
+        try
         {
-            if (logger == null)
-                logger = new NullLog();
-
-            try
+            foreach (var mimeEntity in mimeMessage.BodyParts)
             {
-                foreach (var mimeEntity in mimeMessage.BodyParts)
+                var textPart = mimeEntity as TextPart;
+
+                if (textPart == null ||
+                    textPart.Content == null ||
+                    textPart.Content.Encoding != ContentEncoding.Default)
                 {
-                    var textPart = mimeEntity as TextPart;
-
-                    if (textPart == null ||
-                        textPart.Content == null ||
-                        textPart.Content.Encoding != ContentEncoding.Default)
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        string charset;
-                        using (var stream = new MemoryStream())
-                        {
-                            textPart.Content.DecodeTo(stream);
-                            var bytes = stream.ToArray();
-                            charset = EncodingTools.DetectCharset(bytes);
-                        }
-
-                        if (!string.IsNullOrEmpty(charset) &&
-                            (textPart.ContentType == null ||
-                             string.IsNullOrEmpty(textPart.ContentType.Charset) ||
-                             textPart.ContentType.Charset != charset))
-                        {
-                            var encoding = EncodingTools.GetEncodingByCodepageName(charset);
-
-                            if (encoding == null)
-                                continue;
-
-                            var newText = textPart.GetText(charset);
-
-                            textPart.SetText(encoding, newText);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.WarnFormat("MimeMessage.FixEncodingIssues->ImproveBodyEncoding: {0}", ex.Message);
-                    }
+                    continue;
                 }
 
-                if (mimeMessage.Headers.Contains(HeaderId.From))
+                try
                 {
-                    var fromParsed = mimeMessage.From.FirstOrDefault();
-                    if (fromParsed != null && !string.IsNullOrEmpty(fromParsed.Name))
+                    string charset;
+                    using (var stream = new MemoryStream())
                     {
-                        var fromHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.From);
-                        fromHeader.FixEncodingIssues(logger);
+                        textPart.Content.DecodeTo(stream);
+                        var bytes = stream.ToArray();
+                        charset = EncodingTools.DetectCharset(bytes);
+                    }
+
+                    if (!string.IsNullOrEmpty(charset) &&
+                        (textPart.ContentType == null ||
+                         string.IsNullOrEmpty(textPart.ContentType.Charset) ||
+                         textPart.ContentType.Charset != charset))
+                    {
+                        var encoding = EncodingTools.GetEncodingByCodepageName(charset);
+
+                        if (encoding == null)
+                            continue;
+
+                        var newText = textPart.GetText(charset);
+
+                        textPart.SetText(encoding, newText);
                     }
                 }
-
-                if (!mimeMessage.Headers.Contains(HeaderId.Subject))
-                    return;
-
-                var subjectHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.Subject);
-                subjectHeader.FixEncodingIssues(logger);
-
-            }
-            catch (Exception ex)
-            {
-                logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
-            }
-        }
-
-        public static void FixEncodingIssues(this Header header, ILog logger = null)
-        {
-            if (logger == null)
-                logger = new NullLog();
-
-            try
-            {
-                var rawValueString = Encoding.UTF8.GetString(header.RawValue).Trim();
-                if (rawValueString.IndexOf("?q?", StringComparison.InvariantCultureIgnoreCase) > -1 ||
-                    rawValueString.IndexOf("?b?", StringComparison.InvariantCultureIgnoreCase) > -1)
+                catch (Exception ex)
                 {
-                    return;
-                }
-
-                var charset = EncodingTools.DetectCharset(header.RawValue);
-
-                if (string.IsNullOrEmpty(charset))
-                    return;
-
-                var newValue = header.GetValue(charset);
-
-                if (header.Value.Equals(newValue, StringComparison.InvariantCultureIgnoreCase))
-                    return;
-
-                var encoding = EncodingTools.GetEncodingByCodepageName(charset);
-                header.SetValue(encoding, newValue);
-            }
-            catch (Exception ex)
-            {
-                logger.WarnFormat("Header.FixEncodingIssues: {0}", ex.Message);
-            }
-        }
-
-        public static void FixDateIssues(this MimeMessage mimeMessage, DateTimeOffset? internalDate = null, ILog logger = null)
-        {
-            if (logger == null)
-                logger = new NullLog();
-
-            try
-            {
-                if (!mimeMessage.Headers.Contains(HeaderId.Date) || mimeMessage.Date > DateTimeOffset.UtcNow)
-                {
-                    mimeMessage.Date = internalDate ?? DateTimeOffset.UtcNow;
+                    logger.WarnFormat("MimeMessage.FixEncodingIssues->ImproveBodyEncoding: {0}", ex.Message);
                 }
             }
-            catch (Exception ex)
+
+            if (mimeMessage.Headers.Contains(HeaderId.From))
             {
-                logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+                var fromParsed = mimeMessage.From.FirstOrDefault();
+                if (fromParsed != null && !string.IsNullOrEmpty(fromParsed.Name))
+                {
+                    var fromHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.From);
+                    fromHeader.FixEncodingIssues(logger);
+                }
+            }
+
+            if (!mimeMessage.Headers.Contains(HeaderId.Subject))
+                return;
+
+            var subjectHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.Subject);
+            subjectHeader.FixEncodingIssues(logger);
+
+        }
+        catch (Exception ex)
+        {
+            logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+        }
+    }
+
+    public static void FixEncodingIssues(this Header header, ILog logger = null)
+    {
+        if (logger == null)
+            logger = new NullLog();
+
+        try
+        {
+            var rawValueString = Encoding.UTF8.GetString(header.RawValue).Trim();
+            if (rawValueString.IndexOf("?q?", StringComparison.InvariantCultureIgnoreCase) > -1 ||
+                rawValueString.IndexOf("?b?", StringComparison.InvariantCultureIgnoreCase) > -1)
+            {
+                return;
+            }
+
+            var charset = EncodingTools.DetectCharset(header.RawValue);
+
+            if (string.IsNullOrEmpty(charset))
+                return;
+
+            var newValue = header.GetValue(charset);
+
+            if (header.Value.Equals(newValue, StringComparison.InvariantCultureIgnoreCase))
+                return;
+
+            var encoding = EncodingTools.GetEncodingByCodepageName(charset);
+            header.SetValue(encoding, newValue);
+        }
+        catch (Exception ex)
+        {
+            logger.WarnFormat("Header.FixEncodingIssues: {0}", ex.Message);
+        }
+    }
+
+    public static void FixDateIssues(this MimeMessage mimeMessage, DateTimeOffset? internalDate = null, ILog logger = null)
+    {
+        if (logger == null)
+            logger = new NullLog();
+
+        try
+        {
+            if (!mimeMessage.Headers.Contains(HeaderId.Date) || mimeMessage.Date > DateTimeOffset.UtcNow)
+            {
+                mimeMessage.Date = internalDate ?? DateTimeOffset.UtcNow;
             }
         }
-
-        public static MailMessageData CreateMailMessage(this MimeMessage message,
-            TenantManager tenantManager, CoreSettings coreSettings,
-            int mailboxId = -1,
-            FolderType folder = FolderType.Inbox,
-            bool unread = false,
-            string chainId = "",
-            DateTime? chainDate = null,
-            string streamId = "",
-            ILog log = null)
+        catch (Exception ex)
         {
-            var mail = new MailMessageData();
+            logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+        }
+    }
 
-            if (message == null)
-                throw new ArgumentNullException("message");
+    public static MailMessageData CreateMailMessage(this MimeMessage message,
+        TenantManager tenantManager, CoreSettings coreSettings,
+        int mailboxId = -1,
+        FolderType folder = FolderType.Inbox,
+        bool unread = false,
+        string chainId = "",
+        DateTime? chainDate = null,
+        string streamId = "",
+        ILog log = null)
+    {
+        var mail = new MailMessageData();
 
-            log = log ?? new NullLog();
+        if (message == null)
+            throw new ArgumentNullException("message");
 
-            mail.MailboxId = mailboxId;
+        log = log ?? new NullLog();
 
-            var now = DateTime.UtcNow;
+        mail.MailboxId = mailboxId;
 
-            mail.Date = MailUtil.IsDateCorrect(message.Date.UtcDateTime) ? message.Date.UtcDateTime : now;
+        var now = DateTime.UtcNow;
 
-            mail.MimeMessageId = (string.IsNullOrEmpty(message.MessageId)
-                ? MailUtil.CreateMessageId(tenantManager, coreSettings)
-                : message.MessageId)
-                .Trim('<', '>');
+        mail.Date = MailUtil.IsDateCorrect(message.Date.UtcDateTime) ? message.Date.UtcDateTime : now;
 
-            mail.ChainId = string.IsNullOrEmpty(chainId) ? mail.MimeMessageId : chainId;
+        mail.MimeMessageId = (string.IsNullOrEmpty(message.MessageId)
+            ? MailUtil.CreateMessageId(tenantManager, coreSettings)
+            : message.MessageId)
+            .Trim('<', '>');
 
-            mail.ChainDate = chainDate ?? now;
+        mail.ChainId = string.IsNullOrEmpty(chainId) ? mail.MimeMessageId : chainId;
 
-            mail.MimeReplyToId = mail.ChainId.Equals(mail.MimeMessageId) || string.IsNullOrEmpty(message.InReplyTo)
-                ? null
-                : message.InReplyTo.Trim('<', '>');
+        mail.ChainDate = chainDate ?? now;
 
-            mail.ReplyTo = message.ReplyTo.ToString();
+        mail.MimeReplyToId = mail.ChainId.Equals(mail.MimeMessageId) || string.IsNullOrEmpty(message.InReplyTo)
+            ? null
+            : message.InReplyTo.Trim('<', '>');
 
-            mail.From = message.From.ToString();
+        mail.ReplyTo = message.ReplyTo.ToString();
 
-            mail.FromEmail = message.From != null && message.From.Mailboxes != null && message.From.Mailboxes.Any()
-                ? message.From.Mailboxes.First().Address
-                : "";
+        mail.From = message.From.ToString();
 
-            mail.ToList = message.To.Mailboxes.Select(s => new MailAddress(s.Address, s.Name)).ToList();
+        mail.FromEmail = message.From != null && message.From.Mailboxes != null && message.From.Mailboxes.Any()
+            ? message.From.Mailboxes.First().Address
+            : "";
 
-            mail.To = string.Join(", ", message.To.Mailboxes.Select(s => s.ToString()));
+        mail.ToList = message.To.Mailboxes.Select(s => new MailAddress(s.Address, s.Name)).ToList();
 
-            mail.CcList = message.Cc.Mailboxes.Select(s => new MailAddress(s.Address, s.Name)).ToList();
+        mail.To = string.Join(", ", message.To.Mailboxes.Select(s => s.ToString()));
 
-            mail.Cc = string.Join(", ", message.Cc.Mailboxes.Select(s => s.ToString()));
+        mail.CcList = message.Cc.Mailboxes.Select(s => new MailAddress(s.Address, s.Name)).ToList();
 
-            mail.Bcc = string.Join(", ", message.Bcc.Mailboxes.Select(s => s.ToString()));
+        mail.Cc = string.Join(", ", message.Cc.Mailboxes.Select(s => s.ToString()));
 
-            mail.Subject = message.Subject ?? string.Empty;
+        mail.Bcc = string.Join(", ", message.Bcc.Mailboxes.Select(s => s.ToString()));
 
-            mail.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent;
+        mail.Subject = message.Subject ?? string.Empty;
 
-            mail.TextBodyOnly = false;
+        mail.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent;
 
-            mail.Introduction = "";
+        mail.TextBodyOnly = false;
 
-            mail.Attachments = new List<MailAttachmentData>();
+        mail.Introduction = "";
 
-            mail.HtmlBodyStream = new MemoryStream();
+        mail.Attachments = new List<MailAttachmentData>();
 
-            mail.ExtractMainParts(message);
+        mail.HtmlBodyStream = new MemoryStream();
 
-            mail.Size = mail.HtmlBodyStream.Length > 0 ? mail.HtmlBodyStream.Length : mail.HtmlBody.Length;
+        mail.ExtractMainParts(message);
 
-            mail.HeaderFieldNames = new NameValueCollection();
+        mail.Size = mail.HtmlBodyStream.Length > 0 ? mail.HtmlBodyStream.Length : mail.HtmlBody.Length;
 
-            message.Headers
-                .ToList()
-                .ForEach(h => mail.HeaderFieldNames.Add(h.Field, h.Value));
+        mail.HeaderFieldNames = new NameValueCollection();
 
-            var headers = message.Headers.ToList();
+        message.Headers
+            .ToList()
+            .ForEach(h => mail.HeaderFieldNames.Add(h.Field, h.Value));
 
-            if (headers.Exists(h => h.Id == HeaderId.DispositionNotificationTo))
-                mail.ReadRequestStatus = true;
+        var headers = message.Headers.ToList();
 
-            mail.Folder = folder;
+        if (headers.Exists(h => h.Id == HeaderId.DispositionNotificationTo))
+            mail.ReadRequestStatus = true;
 
-            mail.IsNew = unread;
+        mail.Folder = folder;
 
-            mail.StreamId = string.IsNullOrEmpty(streamId) ? MailUtil.CreateStreamId() : streamId;
+        mail.IsNew = unread;
 
-            mail.LoadCalendarInfo(message, log);
+        mail.StreamId = string.IsNullOrEmpty(streamId) ? MailUtil.CreateStreamId() : streamId;
 
-            return mail;
+        mail.LoadCalendarInfo(message, log);
+
+        return mail;
+    }
+
+    public static MailMessageData CreateCorruptedMesage(this MimeMessage message,
+        TenantManager tenantManager, CoreSettings coreSettings,
+        FolderType folder = FolderType.Inbox,
+        bool unread = false,
+        string chainId = "",
+        string streamId = "")
+    {
+        var mailMessage = new MailMessageData
+        {
+            HasParseError = true
+        };
+
+        MailUtil.SkipErrors(() => mailMessage.Date = MailUtil.IsDateCorrect(message.Date.UtcDateTime)
+            ? message.Date.UtcDateTime
+            : DateTime.UtcNow);
+
+        MailUtil.SkipErrors(() => mailMessage.MimeMessageId = (string.IsNullOrEmpty(message.MessageId)
+            ? MailUtil.CreateMessageId(tenantManager, coreSettings)
+            : message.MessageId)
+                .Trim('<', '>'));
+
+        MailUtil.SkipErrors(() => mailMessage.ChainId = string.IsNullOrEmpty(chainId) ? mailMessage.MimeMessageId : chainId);
+
+        MailUtil.SkipErrors(() => mailMessage.MimeReplyToId = mailMessage.ChainId.Equals(mailMessage.MimeMessageId) ? null : message.InReplyTo.Trim('<', '>'));
+
+        MailUtil.SkipErrors(() => mailMessage.ReplyTo = message.ReplyTo.ToString());
+
+        MailUtil.SkipErrors(() => mailMessage.From = message.From.ToString());
+
+        MailUtil.SkipErrors(() =>
+            mailMessage.FromEmail =
+                message.From != null && message.From.Mailboxes != null && message.From.Mailboxes.Any()
+                    ? message.From.Mailboxes.First().Address
+                    : "");
+
+        MailUtil.SkipErrors(() => mailMessage.ToList = message.To.Mailboxes.Select(s => MailUtil.ExecuteSafe(() => new MailAddress(s.Address, s.Name))).ToList());
+
+        MailUtil.SkipErrors(() => mailMessage.To = string.Join(", ", message.To.Mailboxes.Select(s => s.ToString())));
+
+        MailUtil.SkipErrors(() => mailMessage.CcList = message.Cc.Mailboxes.Select(s => MailUtil.ExecuteSafe(() => new MailAddress(s.Address, s.Name))).ToList());
+
+        MailUtil.SkipErrors(() => mailMessage.Cc = string.Join(", ", message.Cc.Mailboxes.Select(s => s.ToString())));
+
+        MailUtil.SkipErrors(() => mailMessage.Bcc = string.Join(", ", message.Bcc.Mailboxes.Select(s => s.ToString())));
+
+        MailUtil.SkipErrors(() => mailMessage.Subject = message.Subject ?? string.Empty);
+
+        MailUtil.SkipErrors(() => mailMessage.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent);
+
+        mailMessage.HtmlBodyStream = new MemoryStream();
+
+        using (var sw = new StreamWriter(mailMessage.HtmlBodyStream, Encoding.UTF8, 1024, true))
+        {
+            sw.Write("<body><pre>&nbsp;</pre></body>");
+            sw.Flush();
         }
 
-        public static MailMessageData CreateCorruptedMesage(this MimeMessage message,
-            TenantManager tenantManager, CoreSettings coreSettings,
-            FolderType folder = FolderType.Inbox,
-            bool unread = false,
-            string chainId = "",
-            string streamId = "")
+        mailMessage.Size = mailMessage.HtmlBodyStream.Length;
+
+        mailMessage.HeaderFieldNames = new NameValueCollection();
+
+        message.Headers
+            .ToList()
+            .ForEach(h => MailUtil.SkipErrors(() => mailMessage.HeaderFieldNames.Add(h.Field, h.Value)));
+
+        mailMessage.Folder = folder;
+        mailMessage.IsNew = unread;
+        mailMessage.StreamId = string.IsNullOrEmpty(streamId) ? MailUtil.CreateStreamId() : streamId;
+        mailMessage.TextBodyOnly = true;
+        mailMessage.Introduction = "";
+        mailMessage.Attachments = new List<MailAttachmentData>();
+
+        MailUtil.SkipErrors(() =>
         {
-            var mailMessage = new MailMessageData
+            var mailAttach = new MailAttachmentData
             {
-                HasParseError = true
+                contentId = null,
+                fileName = "message.eml",
+                contentType = "message/rfc822",
+                contentLocation = null,
+                dataStream = new MemoryStream()
             };
 
-            MailUtil.SkipErrors(() => mailMessage.Date = MailUtil.IsDateCorrect(message.Date.UtcDateTime)
-                ? message.Date.UtcDateTime
-                : DateTime.UtcNow);
+            message.WriteTo(mailAttach.dataStream);
 
-            MailUtil.SkipErrors(() => mailMessage.MimeMessageId = (string.IsNullOrEmpty(message.MessageId)
-                ? MailUtil.CreateMessageId(tenantManager, coreSettings)
-                : message.MessageId)
-                    .Trim('<', '>'));
+            mailAttach.size = mailAttach.dataStream.Length;
 
-            MailUtil.SkipErrors(() => mailMessage.ChainId = string.IsNullOrEmpty(chainId) ? mailMessage.MimeMessageId : chainId);
+            mailMessage.Attachments.Add(mailAttach);
+        });
 
-            MailUtil.SkipErrors(() => mailMessage.MimeReplyToId = mailMessage.ChainId.Equals(mailMessage.MimeMessageId) ? null : message.InReplyTo.Trim('<', '>'));
-
-            MailUtil.SkipErrors(() => mailMessage.ReplyTo = message.ReplyTo.ToString());
-
-            MailUtil.SkipErrors(() => mailMessage.From = message.From.ToString());
-
-            MailUtil.SkipErrors(() =>
-                mailMessage.FromEmail =
-                    message.From != null && message.From.Mailboxes != null && message.From.Mailboxes.Any()
-                        ? message.From.Mailboxes.First().Address
-                        : "");
-
-            MailUtil.SkipErrors(() => mailMessage.ToList = message.To.Mailboxes.Select(s => MailUtil.ExecuteSafe(() => new MailAddress(s.Address, s.Name))).ToList());
-
-            MailUtil.SkipErrors(() => mailMessage.To = string.Join(", ", message.To.Mailboxes.Select(s => s.ToString())));
-
-            MailUtil.SkipErrors(() => mailMessage.CcList = message.Cc.Mailboxes.Select(s => MailUtil.ExecuteSafe(() => new MailAddress(s.Address, s.Name))).ToList());
-
-            MailUtil.SkipErrors(() => mailMessage.Cc = string.Join(", ", message.Cc.Mailboxes.Select(s => s.ToString())));
-
-            MailUtil.SkipErrors(() => mailMessage.Bcc = string.Join(", ", message.Bcc.Mailboxes.Select(s => s.ToString())));
-
-            MailUtil.SkipErrors(() => mailMessage.Subject = message.Subject ?? string.Empty);
-
-            MailUtil.SkipErrors(() => mailMessage.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent);
-
-            mailMessage.HtmlBodyStream = new MemoryStream();
-
-            using (var sw = new StreamWriter(mailMessage.HtmlBodyStream, Encoding.UTF8, 1024, true))
-            {
-                sw.Write("<body><pre>&nbsp;</pre></body>");
-                sw.Flush();
-            }
-
-            mailMessage.Size = mailMessage.HtmlBodyStream.Length;
-
-            mailMessage.HeaderFieldNames = new NameValueCollection();
-
-            message.Headers
-                .ToList()
-                .ForEach(h => MailUtil.SkipErrors(() => mailMessage.HeaderFieldNames.Add(h.Field, h.Value)));
-
-            mailMessage.Folder = folder;
-            mailMessage.IsNew = unread;
-            mailMessage.StreamId = string.IsNullOrEmpty(streamId) ? MailUtil.CreateStreamId() : streamId;
-            mailMessage.TextBodyOnly = true;
-            mailMessage.Introduction = "";
-            mailMessage.Attachments = new List<MailAttachmentData>();
-
-            MailUtil.SkipErrors(() =>
-            {
-                var mailAttach = new MailAttachmentData
-                {
-                    contentId = null,
-                    fileName = "message.eml",
-                    contentType = "message/rfc822",
-                    contentLocation = null,
-                    dataStream = new MemoryStream()
-                };
-
-                message.WriteTo(mailAttach.dataStream);
-
-                mailAttach.size = mailAttach.dataStream.Length;
-
-                mailMessage.Attachments.Add(mailAttach);
-            });
-
-            return mailMessage;
-        }
+        return mailMessage;
     }
 }

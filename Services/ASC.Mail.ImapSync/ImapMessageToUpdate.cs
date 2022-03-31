@@ -1,16 +1,13 @@
-﻿using MailKit;
+﻿namespace ASC.Mail.ImapSyncService;
 
-namespace ASC.Mail.ImapSyncService
+class ImapMessageToUpdate
 {
-    class ImapMessageToUpdate
-    {
-        public readonly IMailFolder imapMailFolder;
-        public readonly int index;
+    public readonly IMailFolder imapMailFolder;
+    public readonly int index;
 
-        public ImapMessageToUpdate(IMailFolder folder, int _index = -1)
-        {
-            imapMailFolder = folder;
-            index = _index;
-        }
+    public ImapMessageToUpdate(IMailFolder folder, int _index = -1)
+    {
+        imapMailFolder = folder;
+        index = _index;
     }
 }

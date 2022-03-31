@@ -23,70 +23,66 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.UserFolder;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Expressions.UserFolder
+public class UserFoldersTreeExpBuilder
 {
-    public class UserFoldersTreeExpBuilder
+    private readonly SimpleUserFoldersTreeExp _exp;
+
+    public UserFoldersTreeExpBuilder()
     {
-        private readonly SimpleUserFoldersTreeExp _exp;
+        _exp = new SimpleUserFoldersTreeExp();
+    }
 
-        public UserFoldersTreeExpBuilder()
-        {
-            _exp = new SimpleUserFoldersTreeExp();
-        }
+    public UserFoldersTreeExpBuilder SetIds(List<int> ids)
+    {
+        _exp.Ids = ids;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetIds(List<int> ids)
-        {
-            _exp.Ids = ids;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetParent(int parentId)
+    {
+        _exp.ParentId = parentId;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetParent(int parentId)
-        {
-            _exp.ParentId = parentId;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetLevel(uint level)
+    {
+        _exp.Level = level;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetLevel(uint level)
-        {
-            _exp.Level = level;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetOrderBy(string orderBy)
+    {
+        _exp.OrderBy = orderBy;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetOrderBy(string orderBy)
-        {
-            _exp.OrderBy = orderBy;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetOrderAsc(bool orderAsc)
+    {
+        _exp.OrderAsc = orderAsc;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetOrderAsc(bool orderAsc)
-        {
-            _exp.OrderAsc = orderAsc;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetStartIndex(int startIndex)
+    {
+        _exp.StartIndex = startIndex;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetStartIndex(int startIndex)
-        {
-            _exp.StartIndex = startIndex;
-            return this;
-        }
+    public UserFoldersTreeExpBuilder SetLimit(int limit)
+    {
+        _exp.Limit = limit;
+        return this;
+    }
 
-        public UserFoldersTreeExpBuilder SetLimit(int limit)
-        {
-            _exp.Limit = limit;
-            return this;
-        }
+    public SimpleUserFoldersTreeExp Build()
+    {
+        return _exp;
+    }
 
-        public SimpleUserFoldersTreeExp Build()
-        {
-            return _exp;
-        }
-
-        public static implicit operator SimpleUserFoldersTreeExp(UserFoldersTreeExpBuilder builder)
-        {
-            return builder._exp;
-        }
+    public static implicit operator SimpleUserFoldersTreeExp(UserFoldersTreeExpBuilder builder)
+    {
+        return builder._exp;
     }
 }

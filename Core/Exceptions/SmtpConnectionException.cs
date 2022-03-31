@@ -23,13 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class SmtpConnectionException : Exception
 {
-    public class SmtpConnectionException : Exception
-    {
-        public SmtpConnectionException(string message) : base(message) { }
-    }
+    public SmtpConnectionException(string message) : base(message) { }
 }

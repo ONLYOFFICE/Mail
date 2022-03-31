@@ -23,19 +23,13 @@
  *
 */
 
+using Contact = ASC.Mail.Core.Entities.Contact;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ContactDao))]
+public interface IContactDao
 {
-    [Scope(typeof(ContactDao))]
-    public interface IContactDao
-    {
-        int SaveContact(Contact contact);
+    int SaveContact(Contact contact);
 
-        int RemoveContacts(List<int> ids);
-    }
+    int RemoveContacts(List<int> ids);
 }

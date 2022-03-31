@@ -23,82 +23,78 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.UserFolder;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Expressions.UserFolder
+public class UserFoldersExpBuilder
 {
-    public class UserFoldersExpBuilder
+    private readonly SimpleUserFoldersExp _exp;
+
+    public UserFoldersExpBuilder(int tenant, string user)
     {
-        private readonly SimpleUserFoldersExp _exp;
+        _exp = new SimpleUserFoldersExp(tenant, user);
+    }
 
-        public UserFoldersExpBuilder(int tenant, string user)
-        {
-            _exp = new SimpleUserFoldersExp(tenant, user);
-        }
+    public UserFoldersExpBuilder SetIds(List<int> ids)
+    {
+        _exp.Ids = ids;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetIds(List<int> ids)
-        {
-            _exp.Ids = ids;
-            return this;
-        }
+    public UserFoldersExpBuilder SetParent(int parentId)
+    {
+        _exp.ParentId = parentId;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetParent(int parentId)
-        {
-            _exp.ParentId = parentId;
-            return this;
-        }
+    public UserFoldersExpBuilder SetName(string name)
+    {
+        _exp.Name = name;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetName(string name)
-        {
-            _exp.Name = name;
-            return this;
-        }
+    public UserFoldersExpBuilder SetHasFolders(bool hasFolders)
+    {
+        _exp.HasFolders = hasFolders;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetHasFolders(bool hasFolders)
-        {
-            _exp.HasFolders = hasFolders;
-            return this;
-        }
+    public UserFoldersExpBuilder SetHasMails(bool hasMails)
+    {
+        _exp.HasMails = hasMails;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetHasMails(bool hasMails)
-        {
-            _exp.HasMails = hasMails;
-            return this;
-        }
+    public UserFoldersExpBuilder SetOrderBy(string orderBy)
+    {
+        _exp.OrderBy = orderBy;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetOrderBy(string orderBy)
-        {
-            _exp.OrderBy = orderBy;
-            return this;
-        }
+    public UserFoldersExpBuilder SetOrderAsc(bool orderAsc)
+    {
+        _exp.OrderAsc = orderAsc;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetOrderAsc(bool orderAsc)
-        {
-            _exp.OrderAsc = orderAsc;
-            return this;
-        }
+    public UserFoldersExpBuilder SetStartIndex(int startIndex)
+    {
+        _exp.StartIndex = startIndex;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetStartIndex(int startIndex)
-        {
-            _exp.StartIndex = startIndex;
-            return this;
-        }
+    public UserFoldersExpBuilder SetLimit(int limit)
+    {
+        _exp.Limit = limit;
+        return this;
+    }
 
-        public UserFoldersExpBuilder SetLimit(int limit)
-        {
-            _exp.Limit = limit;
-            return this;
-        }
+    public SimpleUserFoldersExp Build()
+    {
+        return _exp;
+    }
 
-        public SimpleUserFoldersExp Build()
-        {
-            return _exp;
-        }
-
-        public static implicit operator SimpleUserFoldersExp(UserFoldersExpBuilder builder)
-        {
-            return builder._exp;
-        }
+    public static implicit operator SimpleUserFoldersExp(UserFoldersExpBuilder builder)
+    {
+        return builder._exp;
     }
 }

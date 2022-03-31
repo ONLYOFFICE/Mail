@@ -23,19 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(MailboxProviderDao))]
+public interface IMailboxProviderDao
 {
-    [Scope(typeof(MailboxProviderDao))]
-    public interface IMailboxProviderDao
-    {
-        MailboxProvider GetProvider(int id);
+    MailboxProvider GetProvider(int id);
 
-        MailboxProvider GetProvider(string providerName);
+    MailboxProvider GetProvider(string providerName);
 
-        int SaveProvider(MailboxProvider mailboxProvider);
-    }
+    int SaveProvider(MailboxProvider mailboxProvider);
 }

@@ -23,28 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Attachment
+public class SimpleAttachmentsExp : IAttachmentsExp
 {
-    public class SimpleAttachmentsExp : IAttachmentsExp
+    public SimpleAttachmentsExp(bool? isRemoved = false)
     {
-        public SimpleAttachmentsExp(bool? isRemoved = false)
-        {
-            IsRemoved = isRemoved;
-        }
+        IsRemoved = isRemoved;
+    }
 
-        public bool? IsRemoved { get; }
+    public bool? IsRemoved { get; }
 
-        public virtual Expression<Func<MailAttachment, bool>> GetExpression()
-        {
-            if (!IsRemoved.HasValue)
-                return att => true;
+    public virtual Expression<Func<MailAttachment, bool>> GetExpression()
+    {
+        if (!IsRemoved.HasValue)
+            return att => true;
 
-            return att => att.NeedRemove == IsRemoved;
-        }
+        return att => att.NeedRemove == IsRemoved;
     }
 }

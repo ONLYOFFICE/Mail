@@ -23,65 +23,61 @@
  *
 */
 
+using MailFolder = ASC.Mail.Models.MailFolder;
 
-using System;
-using ASC.Common.Logging;
-using ASC.Mail.Models;
+namespace ASC.Mail.Clients;
 
-namespace ASC.Mail.Clients
+/// <summary>Authenticated event arguments.</summary>
+/// <remarks>
+/// Some servers, such as GMail IMAP, will send some free-form text in
+/// the response to a successful login.
+/// </remarks>
+public class MailClientEventArgs : EventArgs
 {
-    /// <summary>Authenticated event arguments.</summary>
+    /// <summary>Get the free-form text sent by the server.</summary>
+    /// <remarks>Gets the free-form text sent by the server.</remarks>
+    /// <value>The free-form text sent by the server.</value>
+    public string Message { get; private set; }
+
+    public MailBoxData Mailbox { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="T:MailClientEventArgs" /> class.
+    /// </summary>
     /// <remarks>
-    /// Some servers, such as GMail IMAP, will send some free-form text in
-    /// the response to a successful login.
+    /// Creates a new <see cref="T:MailKit.AuthenticatedEventArgs" />.
     /// </remarks>
-    public class MailClientEventArgs : EventArgs
+    /// <param name="message">The free-form text.</param>
+    /// <param name="mailBoxData"></param>
+    public MailClientEventArgs(string message, MailBoxData mailBoxData)
     {
-        /// <summary>Get the free-form text sent by the server.</summary>
-        /// <remarks>Gets the free-form text sent by the server.</remarks>
-        /// <value>The free-form text sent by the server.</value>
-        public string Message { get; private set; }
-
-        public MailBoxData Mailbox { get; private set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="T:MailClientEventArgs" /> class.
-        /// </summary>
-        /// <remarks>
-        /// Creates a new <see cref="T:MailKit.AuthenticatedEventArgs" />.
-        /// </remarks>
-        /// <param name="message">The free-form text.</param>
-        /// <param name="mailBoxData"></param>
-        public MailClientEventArgs(string message, MailBoxData mailBoxData)
-        {
-            Message = message;
-            Mailbox = mailBoxData;
-        }
+        Message = message;
+        Mailbox = mailBoxData;
     }
+}
 
-    public class MailClientMessageEventArgs : EventArgs
+public class MailClientMessageEventArgs : EventArgs
+{
+    public MimeKit.MimeMessage Message { get; private set; }
+
+    public MailBoxData Mailbox { get; private set; }
+
+    public bool Unread { get; private set; }
+
+    public MailFolder Folder { get; private set; }
+
+    public string MessageUid { get; private set; }
+
+    public ILog Logger { get; private set; }
+
+    public MailClientMessageEventArgs(MimeKit.MimeMessage message, string messageUid, bool uread, MailFolder folder,
+        MailBoxData mailBoxData, ILog logger)
     {
-        public MimeKit.MimeMessage Message { get; private set; }
-
-        public MailBoxData Mailbox { get; private set; }
-
-        public bool Unread { get; private set; }
-
-        public MailFolder Folder { get; private set; }
-
-        public string MessageUid { get; private set; }
-
-        public ILog Logger { get; private set; }
-
-        public MailClientMessageEventArgs(MimeKit.MimeMessage message, string messageUid, bool uread, MailFolder folder,
-            MailBoxData mailBoxData, ILog logger)
-        {
-            Message = message;
-            Unread = uread;
-            Folder = folder;
-            Mailbox = mailBoxData;
-            MessageUid = messageUid;
-            Logger = logger;
-        }
+        Message = message;
+        Unread = uread;
+        Folder = folder;
+        Mailbox = mailBoxData;
+        MessageUid = messageUid;
+        Logger = logger;
     }
 }

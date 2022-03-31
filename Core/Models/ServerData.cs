@@ -23,30 +23,24 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "Server")]
+public class ServerData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "Server")]
-    public class ServerData
-    {
-        [DataMember(IsRequired = true)]
-        public int Id { get; set; }
+    [DataMember(IsRequired = true)]
+    public int Id { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public ServerDomainDnsData Dns { get; set; }
+    [DataMember(IsRequired = true)]
+    public ServerDomainDnsData Dns { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public ServerLimitData ServerLimits { get; set; }
+    [DataMember(IsRequired = true)]
+    public ServerLimitData ServerLimits { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public MailboxServer InServer { get; set; }
+    [DataMember(IsRequired = true)]
+    public MailboxServer InServer { get; set; }
 
-        [DataMember(IsRequired = true)]
-        public MailboxServer OutServer { get; set; }
-    }
+    [DataMember(IsRequired = true)]
+    public MailboxServer OutServer { get; set; }
 }

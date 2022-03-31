@@ -23,153 +23,140 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ServerDomainDao : BaseMailDao, IServerDomainDao
 {
-    [Scope]
-    public class ServerDomainDao : BaseMailDao, IServerDomainDao
+    public ServerDomainDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ServerDomainDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public int Save(ServerDomain domain)
+    {
+        var mailServerDomain = new MailServerDomain
         {
+            Id = domain.Id,
+            Name = domain.Name,
+            Tenant = domain.Tenant,
+            IsVerified = domain.IsVerified
+        };
+
+        if (domain.Id <= 0)
+        {
+            mailServerDomain.DateAdded = DateTime.UtcNow;
         }
 
-        public int Save(ServerDomain domain)
+        var entry = MailDbContext.MailServerDomain.Add(mailServerDomain).Entity;
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Delete(int id)
+    {
+        var domain = MailDbContext.MailServerDomain
+            .Where(d => d.Id == id && d.Tenant == Tenant)
+            .FirstOrDefault();
+
+        if (domain != null)
         {
-            var mailServerDomain = new MailServerDomain
-            {
-                Id = domain.Id,
-                Name = domain.Name,
-                Tenant = domain.Tenant,
-                IsVerified = domain.IsVerified
-            };
-
-            if (domain.Id <= 0)
-            {
-                mailServerDomain.DateAdded = DateTime.UtcNow;
-            }
-
-            var entry = MailDbContext.MailServerDomain.Add(mailServerDomain).Entity;
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
-        }
-
-        public int Delete(int id)
-        {
-            var domain = MailDbContext.MailServerDomain
-                .Where(d => d.Id == id && d.Tenant == Tenant)
-                .FirstOrDefault();
-
-            if (domain != null)
-            {
-                MailDbContext.MailServerDomain.Remove(domain);
-
-                var result = MailDbContext.SaveChanges();
-
-                var dns = MailDbContext.MailServerDns
-                .Where(d => d.IdDomain == id && d.Tenant == Tenant)
-                .FirstOrDefault();
-
-                MailDbContext.MailServerDns.Remove(dns);
-
-                MailDbContext.SaveChanges();
-
-                return result;
-            }
-
-            return 0;
-        }
-
-        public List<ServerDomain> GetDomains()
-        {
-            var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
-
-            var list = MailDbContext.MailServerDomain
-                .AsNoTracking()
-                .Where(d => tenants.Contains(d.Tenant))
-                .Select(ToServerDomain)
-                .ToList();
-
-            return list;
-        }
-
-        public List<ServerDomain> GetAllDomains()
-        {
-            var list = MailDbContext.MailServerDomain
-                .AsNoTracking()
-                .Select(ToServerDomain)
-                .ToList();
-
-            return list;
-        }
-
-        public ServerDomain GetDomain(int id)
-        {
-            var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
-
-            var domain = MailDbContext.MailServerDomain
-                .AsNoTracking()
-                .Where(d => tenants.Contains(d.Tenant) && d.Id == id)
-                .Select(ToServerDomain)
-                .SingleOrDefault();
-
-            return domain;
-        }
-
-        public bool IsDomainExists(string name)
-        {
-            var domain = MailDbContext.MailServerDomain
-                .AsNoTracking()
-                .Where(d => d.Name == name)
-                .Select(ToServerDomain)
-                .SingleOrDefault();
-
-            return domain != null;
-        }
-
-        public int SetVerified(int id, bool isVerified)
-        {
-            var domain = GetDomain(id);
-
-            domain.IsVerified = isVerified;
-            domain.DateChecked = DateTime.UtcNow;
+            MailDbContext.MailServerDomain.Remove(domain);
 
             var result = MailDbContext.SaveChanges();
+
+            var dns = MailDbContext.MailServerDns
+            .Where(d => d.IdDomain == id && d.Tenant == Tenant)
+            .FirstOrDefault();
+
+            MailDbContext.MailServerDns.Remove(dns);
+
+            MailDbContext.SaveChanges();
 
             return result;
         }
 
-        protected ServerDomain ToServerDomain(MailServerDomain r)
-        {
-            var d = new ServerDomain
-            {
-                Id = r.Id,
-                Tenant = r.Tenant,
-                Name = r.Name,
-                IsVerified = r.IsVerified,
-                DateAdded = r.DateAdded,
-                DateChecked = r.DateChecked
-            };
+        return 0;
+    }
 
-            return d;
-        }
+    public List<ServerDomain> GetDomains()
+    {
+        var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
+
+        var list = MailDbContext.MailServerDomain
+            .AsNoTracking()
+            .Where(d => tenants.Contains(d.Tenant))
+            .Select(ToServerDomain)
+            .ToList();
+
+        return list;
+    }
+
+    public List<ServerDomain> GetAllDomains()
+    {
+        var list = MailDbContext.MailServerDomain
+            .AsNoTracking()
+            .Select(ToServerDomain)
+            .ToList();
+
+        return list;
+    }
+
+    public ServerDomain GetDomain(int id)
+    {
+        var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
+
+        var domain = MailDbContext.MailServerDomain
+            .AsNoTracking()
+            .Where(d => tenants.Contains(d.Tenant) && d.Id == id)
+            .Select(ToServerDomain)
+            .SingleOrDefault();
+
+        return domain;
+    }
+
+    public bool IsDomainExists(string name)
+    {
+        var domain = MailDbContext.MailServerDomain
+            .AsNoTracking()
+            .Where(d => d.Name == name)
+            .Select(ToServerDomain)
+            .SingleOrDefault();
+
+        return domain != null;
+    }
+
+    public int SetVerified(int id, bool isVerified)
+    {
+        var domain = GetDomain(id);
+
+        domain.IsVerified = isVerified;
+        domain.DateChecked = DateTime.UtcNow;
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected ServerDomain ToServerDomain(MailServerDomain r)
+    {
+        var d = new ServerDomain
+        {
+            Id = r.Id,
+            Tenant = r.Tenant,
+            Name = r.Name,
+            IsVerified = r.IsVerified,
+            DateAdded = r.DateAdded,
+            DateChecked = r.DateChecked
+        };
+
+        return d;
     }
 }

@@ -23,21 +23,17 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using System;
-using System.Runtime.Serialization;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Models;
 
-namespace ASC.Mail.Models
+[Serializable]
+[DataContract(Namespace = "", Name = "FilterApplyToFolder")]
+public class MailSieveFilterApplyToFolderData
 {
-    [Serializable]
-    [DataContract(Namespace = "", Name = "FilterApplyToFolder")]
-    public class MailSieveFilterApplyToFolderData
-    {
-        [DataMember(IsRequired = true, Name = "type")]
-        public FolderType Type { get; set; }
+    [DataMember(IsRequired = true, Name = "type")]
+    public FolderType Type { get; set; }
 
-        [DataMember(IsRequired = false, Name = "userFolderId")]
-        public int? UserFolderId { get; set; }
-    }
+    [DataMember(IsRequired = false, Name = "userFolderId")]
+    public int? UserFolderId { get; set; }
 }

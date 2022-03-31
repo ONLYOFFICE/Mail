@@ -23,19 +23,17 @@
  *
 */
 
+namespace ASC.Mail.Enums;
 
-namespace ASC.Mail.Enums
+public enum ContactInfoType
 {
-    public enum ContactInfoType
-    {
-        Email = 1,
-        Phone
-    }
+    Email = 1,
+    Phone
+}
 
-    public enum ShareType
-    {
-        None = 0,
-        ReadWrite = 1,
-        Read = 2
-    }
+public enum ShareType
+{
+    None = 0,
+    ReadWrite = 1,
+    Read = 2
 }

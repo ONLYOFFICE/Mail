@@ -23,79 +23,71 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Conversation;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Conversation
+public class SimpleConversationsExp : IConversationsExp
 {
-    public class SimpleConversationsExp : IConversationsExp
+    public int Tenant { get; private set; }
+    public string User { get; private set; }
+
+    public List<int> FoldersIds { get; set; }
+    public List<string> ChainIds { get; set; }
+
+    public int? Folder { get; set; }
+    public int? MailboxId { get; set; }
+    public bool? Unread { get; set; }
+    public string ChainId { get; set; }
+
+    public SimpleConversationsExp(int tenant, string user)
     {
-        public int Tenant { get; private set; }
-        public string User { get; private set; }
+        Tenant = tenant;
+        User = user;
+    }
 
-        public List<int> FoldersIds { get; set; }
-        public List<string> ChainIds { get; set; }
+    public static ConversationsExpBuilder CreateBuilder(int tenant, string user)
+    {
+        return new ConversationsExpBuilder(tenant, user);
+    }
 
-        public int? Folder { get; set; }
-        public int? MailboxId { get; set; }
-        public bool? Unread { get; set; }
-        public string ChainId { get; set; }
+    public Expression<Func<MailChain, bool>> GetExpression()
+    {
+        Expression<Func<MailChain, bool>> exp = c => c.Tenant == Tenant;
 
-        public SimpleConversationsExp(int tenant, string user)
+        if (!string.IsNullOrEmpty(User))
         {
-            Tenant = tenant;
-            User = user;
+            exp = exp.And(c => c.IdUser == User);
         }
 
-        public static ConversationsExpBuilder CreateBuilder(int tenant, string user)
+        if (FoldersIds != null && FoldersIds.Any())
         {
-            return new ConversationsExpBuilder(tenant, user);
+            exp = exp.And(c => FoldersIds.Contains((int)c.Folder));
         }
-        
-        public Expression<Func<MailChain, bool>> GetExpression()
+
+        if (Folder.HasValue)
         {
-            Expression<Func<MailChain, bool>> exp = c => c.Tenant == Tenant;
-
-            if (!string.IsNullOrEmpty(User))
-            {
-                exp = exp.And(c => c.IdUser == User);
-            }
-
-            if (FoldersIds != null && FoldersIds.Any())
-            {
-                exp = exp.And(c => FoldersIds.Contains((int)c.Folder));
-            }
-
-            if (Folder.HasValue)
-            {
-                exp = exp.And(c => c.Folder == Folder.Value);
-            }
-
-            if (ChainIds != null && ChainIds.Any())
-            {
-                exp = exp.And(c => ChainIds.Contains(c.Id));
-            }
-
-            if (MailboxId.HasValue)
-            {
-                exp = exp.And(c => c.IdMailbox == MailboxId.Value);
-            }
-
-            if (!string.IsNullOrEmpty(ChainId))
-            {
-                exp = exp.And(c => c.Id == ChainId);
-            }
-
-            if (Unread.HasValue)
-            {
-                exp = exp.And(c => c.Unread == Unread.Value);
-            }
-
-            return exp;
+            exp = exp.And(c => c.Folder == Folder.Value);
         }
+
+        if (ChainIds != null && ChainIds.Any())
+        {
+            exp = exp.And(c => ChainIds.Contains(c.Id));
+        }
+
+        if (MailboxId.HasValue)
+        {
+            exp = exp.And(c => c.IdMailbox == MailboxId.Value);
+        }
+
+        if (!string.IsNullOrEmpty(ChainId))
+        {
+            exp = exp.And(c => c.Id == ChainId);
+        }
+
+        if (Unread.HasValue)
+        {
+            exp = exp.And(c => c.Unread == Unread.Value);
+        }
+
+        return exp;
     }
 }

@@ -23,52 +23,40 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class ImapFlagsDao : BaseMailDao, IImapFlagsDao
 {
-    [Scope]
-    public class ImapFlagsDao : BaseMailDao, IImapFlagsDao
+    public ImapFlagsDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public ImapFlagsDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public List<ImapFlag> GetImapFlags()
+    {
+        var list = MailDbContext.MailImapFlags
+            .AsNoTracking()
+            .Select(ToImapFlag)
+            .ToList();
+
+        return list;
+    }
+
+    protected ImapFlag ToImapFlag(MailImapFlags r)
+    {
+        var imapFlag = new ImapFlag
         {
-        }
+            FolderId = r.FolderId,
+            Name = r.Name,
+            Skip = r.Skip
+        };
 
-        public List<ImapFlag> GetImapFlags()
-        {
-            var list = MailDbContext.MailImapFlags
-                .AsNoTracking()
-                .Select(ToImapFlag)
-                .ToList();
-
-            return list;
-        }
-
-        protected ImapFlag ToImapFlag(MailImapFlags r)
-        {
-            var imapFlag = new ImapFlag
-            {
-                FolderId = r.FolderId,
-                Name = r.Name,
-                Skip = r.Skip
-            };
-
-            return imapFlag;
-        }
+        return imapFlag;
     }
 }

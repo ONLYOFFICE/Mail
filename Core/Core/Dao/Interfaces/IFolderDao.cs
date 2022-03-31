@@ -23,44 +23,38 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(FolderDao))]
+public interface IFolderDao
 {
-    [Scope(typeof(FolderDao))]
-    public interface IFolderDao
-    {
-        /// <summary>
-        ///     Get folder by id.
-        /// </summary>
-        Folder GetFolder(FolderType folder);
+    /// <summary>
+    ///     Get folder by id.
+    /// </summary>
+    Folder GetFolder(FolderType folder);
 
-        /// <summary>
-        ///     Get a list of folders.
-        /// </summary>
-        List<Folder> GetFolders(string userId);
+    /// <summary>
+    ///     Get a list of folders.
+    /// </summary>
+    List<Folder> GetFolders(string userId);
 
-        /// <summary>
-        ///     Get a list of folders.
-        /// </summary>
-        List<Folder> GetFolders();
+    /// <summary>
+    ///     Get a list of folders.
+    /// </summary>
+    List<Folder> GetFolders();
 
-        /// <summary>
-        ///     Save folder
-        /// </summary>
-        int Save(Folder folder);
+    /// <summary>
+    ///     Save folder
+    /// </summary>
+    int Save(Folder folder);
 
-        /// <summary>
-        ///     Update folder counters
-        /// </summary>
-        int ChangeFolderCounters(FolderType folder, int? unreadMessDiff = null, int? totalMessDiff = null,
-            int? unreadConvDiff = null, int? totalConvDiff = null);
+    /// <summary>
+    ///     Update folder counters
+    /// </summary>
+    int ChangeFolderCounters(FolderType folder, int? unreadMessDiff = null, int? totalMessDiff = null,
+        int? unreadConvDiff = null, int? totalConvDiff = null);
 
-        int Delete();
-    }
+    int Delete();
 }

@@ -22,7 +22,7 @@ namespace ASC.Mail.Controllers
         public MailAutoreplyData UpdateAutoreply(int mailboxId, bool turnOn, bool onlyContacts,
             bool turnOnToDate, DateTime fromDate, DateTime toDate, string subject, string html)
         {
-            var result = AutoreplyEngine
+            var result = _autoreplyEngine
                 .SaveAutoreply(mailboxId, turnOn, onlyContacts, turnOnToDate, fromDate, toDate, subject, html);
 
             return result;

@@ -23,19 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-
-namespace ASC.Mail.Models
+public class LoginResult
 {
-    public class LoginResult
-    {
-        public bool IngoingSuccess { get; set; }
-        public Exception IngoingException { get; set; }
+    public bool IngoingSuccess { get; set; }
+    public Exception IngoingException { get; set; }
 
-        public bool OutgoingSuccess { get; set; }
-        public Exception OutgoingException { get; set; }
+    public bool OutgoingSuccess { get; set; }
+    public Exception OutgoingException { get; set; }
 
-        public bool Imap { get; set; }
-    }
+    public bool Imap { get; set; }
 }

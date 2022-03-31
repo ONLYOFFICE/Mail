@@ -23,15 +23,13 @@
  *
 */
 
+namespace ASC.Mail.Server.Core.Entities;
 
-namespace ASC.Mail.Server.Core.Entities
+public class ServerApi
 {
-    public class ServerApi
-    {
-        public string server_ip;
-        public string protocol;
-        public int port;
-        public string version;
-        public string token;
-    }
+    public string server_ip;
+    public string protocol;
+    public int port;
+    public string version;
+    public string token;
 }

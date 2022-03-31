@@ -23,21 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ServerDao))]
+public interface IServerDao
 {
-    [Scope(typeof(ServerDao))]
-    public interface IServerDao
-    {
-        Core.Entities.Server Get(int tenant);
-        List<Core.Entities.Server> GetList();
-        int Link(Core.Entities.Server server, int tenant);
-        int UnLink(Core.Entities.Server server, int tenant);
-        int Save(Core.Entities.Server server);
-        int Delete(int id);
-    }
+    Core.Entities.Server Get(int tenant);
+    List<Core.Entities.Server> GetList();
+    int Link(Core.Entities.Server server, int tenant);
+    int UnLink(Core.Entities.Server server, int tenant);
+    int Save(Core.Entities.Server server);
+    int Delete(int id);
 }

@@ -23,37 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-using System.Net;
-
-namespace ASC.Mail.Exceptions
+public class ApiHelperException : Exception
 {
-    public class ApiHelperException : Exception
+    private readonly HttpStatusCode _statusCode;
+    private readonly string _response;
+
+    public HttpStatusCode StatusCode
     {
-        private readonly HttpStatusCode _statusCode;
-        private readonly string _response;
+        get { return _statusCode; }
+    }
 
-        public HttpStatusCode StatusCode {
-            get { return _statusCode; }
-        }
+    public string Response
+    {
+        get { return _response; }
+    }
 
-        public string Response
-        {
-            get { return _response; }
-        }
+    public ApiHelperException(string message, HttpStatusCode statusCode, string response)
+        : base(message)
+    {
+        _statusCode = statusCode;
+        _response = response;
+    }
 
-        public ApiHelperException(string message, HttpStatusCode statusCode, string response)
-            : base(message)
-        {
-            _statusCode = statusCode;
-            _response = response;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("Api error has been occurred: Message = '{0}' StatusCode = '{1}' Response = '{2}'",
-                Message, StatusCode, Response);
-        }
+    public override string ToString()
+    {
+        return string.Format("Api error has been occurred: Message = '{0}' StatusCode = '{1}' Response = '{2}'",
+            Message, StatusCode, Response);
     }
 }

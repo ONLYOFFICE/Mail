@@ -17,7 +17,7 @@ namespace ASC.Mail.Controllers
         [Read(@"settings")]
         public MailCommonSettings GetCommonSettings()
         {
-            return SettingEngine.GetCommonSettings();
+            return _settingEngine.GetCommonSettings();
         }
 
         /// <summary>
@@ -29,7 +29,7 @@ namespace ASC.Mail.Controllers
         [Read(@"settings/conversationsEnabled")]
         public bool GetEnableConversationFlag()
         {
-            return SettingEngine.GetEnableConversationFlag();
+            return _settingEngine.GetEnableConversationFlag();
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace ASC.Mail.Controllers
         [Update(@"settings/conversationsEnabled")]
         public void SetEnableConversationFlag(bool enabled)
         {
-            SettingEngine.SetEnableConversationFlag(enabled);
+            _settingEngine.SetEnableConversationFlag(enabled);
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace ASC.Mail.Controllers
         [Read(@"settings/alwaysDisplayImages")]
         public bool GetAlwaysDisplayImagesFlag()
         {
-            return SettingEngine.GetAlwaysDisplayImagesFlag();
+            return _settingEngine.GetAlwaysDisplayImagesFlag();
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace ASC.Mail.Controllers
         [Update(@"settings/alwaysDisplayImages")]
         public void SetAlwaysDisplayImagesFlag(bool enabled)
         {
-            SettingEngine.SetAlwaysDisplayImagesFlag(enabled);
+            _settingEngine.SetAlwaysDisplayImagesFlag(enabled);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace ASC.Mail.Controllers
         [Update(@"settings/cacheMessagesEnabled")]
         public void SetCacheUnreadMessagesFlag(bool enabled)
         {
-            SettingEngine.SetCacheUnreadMessagesFlag(enabled);
+            _settingEngine.SetCacheUnreadMessagesFlag(enabled);
         }
 
         /// <summary>
@@ -104,7 +104,7 @@ namespace ASC.Mail.Controllers
         [Read(@"settings/goNextAfterMoveEnabled")]
         public bool GetEnableGoNextAfterMoveFlag()
         {
-            return SettingEngine.GetEnableGoNextAfterMoveFlag();
+            return _settingEngine.GetEnableGoNextAfterMoveFlag();
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace ASC.Mail.Controllers
         [Update(@"settings/goNextAfterMoveEnabled")]
         public void SetEnableGoNextAfterMoveFlag(bool enabled)
         {
-            SettingEngine.SetEnableGoNextAfterMoveFlag(enabled);
+            _settingEngine.SetEnableGoNextAfterMoveFlag(enabled);
         }
 
         /// <summary>
@@ -128,7 +128,7 @@ namespace ASC.Mail.Controllers
         [Read(@"settings/replaceMessageBody")]
         public bool GetEnableReplaceMessageBodyFlag()
         {
-            return SettingEngine.GetEnableReplaceMessageBodyFlag();
+            return _settingEngine.GetEnableReplaceMessageBodyFlag();
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace ASC.Mail.Controllers
         [Update(@"settings/replaceMessageBody")]
         public void SetEnableReplaceMessageBodyFlag(bool enabled)
         {
-            SettingEngine.SetEnableReplaceMessageBodyFlag(enabled);
+            _settingEngine.SetEnableReplaceMessageBodyFlag(enabled);
         }
     }
 }

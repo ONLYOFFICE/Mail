@@ -23,29 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ServerDomainDao))]
+public interface IServerDomainDao
 {
-    [Scope(typeof(ServerDomainDao))]
-    public interface IServerDomainDao
-    {
-        int Save(ServerDomain domain);
+    int Save(ServerDomain domain);
 
-        int Delete(int id);
+    int Delete(int id);
 
-        List<ServerDomain> GetDomains();
+    List<ServerDomain> GetDomains();
 
-        List<ServerDomain> GetAllDomains();
+    List<ServerDomain> GetAllDomains();
 
-        ServerDomain GetDomain(int id);
+    ServerDomain GetDomain(int id);
 
-        bool IsDomainExists(string name);
+    bool IsDomainExists(string name);
 
-        int SetVerified(int id, bool isVerified);
-    }
+    int SetVerified(int id, bool isVerified);
 }

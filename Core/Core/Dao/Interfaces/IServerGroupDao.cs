@@ -23,21 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ServerGroupDao))]
+public interface IServerGroupDao
 {
-    [Scope(typeof(ServerGroupDao))]
-    public interface IServerGroupDao
-    {
-        ServerGroup Get(int id);
-        List<ServerGroup> GetList();
-        List<ServerGroup> GetList(int domainId);
-        int Save(ServerGroup group);
-        int Delete(int id);
-    }
+    ServerGroup Get(int id);
+    List<ServerGroup> GetList();
+    List<ServerGroup> GetList(int domainId);
+    int Save(ServerGroup group);
+    int Delete(int id);
 }

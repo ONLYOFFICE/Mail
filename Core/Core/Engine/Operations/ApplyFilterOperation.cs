@@ -23,102 +23,89 @@
  *
 */
 
+using ActionType = ASC.Mail.Enums.Filter.ActionType;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using System;
-using System.Linq;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Data.Storage;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Enums.Filter;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-
-using Microsoft.Extensions.Options;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class ApplyFilterOperation : MailOperation
 {
-    public class ApplyFilterOperation : MailOperation
+    public override MailOperationType OperationType
     {
-        public MailSieveFilterData Filter { get; set; }
+        get { return MailOperationType.ApplyFilter; }
+    }
 
-        public override MailOperationType OperationType
+    private readonly FilterEngine _filterEngine;
+    private readonly MessageEngine _messageEngine;
+    private readonly MailSieveFilterData _filter;
+
+    public ApplyFilterOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        FilterEngine filterEngine,
+        MessageEngine messageEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        StorageFactory storageFactory,
+        IOptionsMonitor<ILog> optionsMonitor,
+        int filterId)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
+    {
+        _filterEngine = filterEngine;
+        _messageEngine = messageEngine;
+        var filter = _filterEngine.Get(filterId);
+
+        _filter = filter ?? throw new ArgumentException("Filter not found");
+
+        SetSource(filter.Id.ToString());
+    }
+
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.ApplyFilter; }
-        }
+            SetProgress((int?)MailOperationApplyFilterProgress.Init, "Setup tenant and user");
 
-        public FilterEngine FilterEngine { get; }
-        public MessageEngine MessageEngine { get; }
+            TenantManager.SetCurrentTenant(CurrentTenant);
 
-        public ApplyFilterOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            FilterEngine filterEngine,
-            MessageEngine messageEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            StorageFactory storageFactory,
-            IOptionsMonitor<ILog> optionsMonitor,
-            int filterId)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
-        {
-            FilterEngine = filterEngine;
-            MessageEngine = messageEngine;
-            var filter = FilterEngine.Get(filterId);
+            SecurityContext.AuthenticateMe(CurrentUser);
 
-            Filter = filter ?? throw new ArgumentException("Filter not found");
+            SetProgress((int?)MailOperationApplyFilterProgress.Filtering, "Filtering");
 
-            SetSource(filter.Id.ToString());
-        }
+            const int size = 100;
+            var page = 0;
 
-        protected override void Do()
-        {
-            try
+            var messages = _messageEngine.GetFilteredMessages(_filter, page, size, out long total);
+
+            while (messages.Any())
             {
-                SetProgress((int?)MailOperationApplyFilterProgress.Init, "Setup tenant and user");
+                SetProgress((int?)MailOperationApplyFilterProgress.FilteringAndApplying, "Filtering and applying action");
 
-                TenantManager.SetCurrentTenant(CurrentTenant);
+                var ids = messages.Select(m => m.Id).ToList();
 
-                SecurityContext.AuthenticateMe(CurrentUser);
-
-                SetProgress((int?)MailOperationApplyFilterProgress.Filtering, "Filtering");
-
-                const int size = 100;
-                var page = 0;
-
-                var messages = MessageEngine.GetFilteredMessages(Filter, page, size, out long total);
-
-                while (messages.Any())
+                foreach (var action in _filter.Actions)
                 {
-                    SetProgress((int?)MailOperationApplyFilterProgress.FilteringAndApplying, "Filtering and applying action");
-
-                    var ids = messages.Select(m => m.Id).ToList();
-
-                    foreach (var action in Filter.Actions)
-                    {
-                        FilterEngine.ApplyAction(ids, action);
-                    }
-
-                    if (messages.Count < size)
-                        break;
-
-                    if (!Filter.Actions.Exists(a => a.Action == ActionType.DeleteForever || a.Action == ActionType.MoveTo))
-                    {
-                        page++;
-                    }
-
-                    messages = MessageEngine.GetFilteredMessages(Filter, page, size, out total);
+                    _filterEngine.ApplyAction(ids, action);
                 }
 
-                SetProgress((int?)MailOperationApplyFilterProgress.Finished);
+                if (messages.Count < size)
+                    break;
+
+                if (!_filter.Actions.Exists(a => a.Action == ActionType.DeleteForever || a.Action == ActionType.MoveTo))
+                {
+                    page++;
+                }
+
+                messages = _messageEngine.GetFilteredMessages(_filter, page, size, out total);
             }
-            catch (Exception e)
-            {
-                Logger.Error("Mail operation error -> Remove user folder: {0}", e);
-                Error = "InternalServerError";
-            }
+
+            SetProgress((int?)MailOperationApplyFilterProgress.Finished);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Error = "InternalServerError";
         }
     }
 }

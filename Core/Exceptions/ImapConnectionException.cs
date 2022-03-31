@@ -23,13 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using System;
-
-namespace ASC.Mail.Exceptions
+public class ImapConnectionException : Exception
 {
-    public class ImapConnectionException : Exception
-    {
-        public ImapConnectionException(string message) : base(message) { }
-    }
+    public ImapConnectionException(string message) : base(message) { }
 }

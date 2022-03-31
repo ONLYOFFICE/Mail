@@ -1,118 +1,112 @@
-﻿using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.Settings;
-using ASC.Mail.Models;
+﻿namespace ASC.Mail.Core.Engine;
 
-namespace ASC.Mail.Core.Engine
+[Scope]
+public class SettingEngine
 {
-    [Scope]
-    public class SettingEngine
+    private readonly SettingsManager _settingsManager;
+
+    public SettingEngine(SettingsManager settingsManager)
     {
-        private SettingsManager SettingsManager { get; }
+        _settingsManager = settingsManager;
+    }
 
-        public SettingEngine(SettingsManager settingsManager)
-        {
-            SettingsManager = settingsManager;
-        }
+    public MailCommonSettings GetCommonSettings()
+    {
+        var commonSettings = _settingsManager.LoadForCurrentUser<MailCommonSettings>();
 
-        public MailCommonSettings GetCommonSettings()
-        {
-            var commonSettings = SettingsManager.LoadForCurrentUser<MailCommonSettings>();
+        return commonSettings;
+    }
 
-            return commonSettings;
-        }
+    public bool GetEnableConversationFlag()
+    {
+        var settings = GetCommonSettings();
 
-        public bool GetEnableConversationFlag()
-        {
-            var settings = GetCommonSettings();
+        var value = settings.EnableConversationsSetting;
 
-            var value = settings.EnableConversationsSetting;
+        return value;
+    }
 
-            return value;
-        }
+    public void SetEnableConversationFlag(bool enabled)
+    {
+        var settings = GetCommonSettings();
 
-        public void SetEnableConversationFlag(bool enabled)
-        {
-            var settings = GetCommonSettings();
+        settings.EnableConversationsSetting = enabled;
 
-            settings.EnableConversationsSetting = enabled;
+        _settingsManager.SaveForCurrentUser(settings);
+    }
 
-            SettingsManager.SaveForCurrentUser(settings);
-        }
+    public bool GetAlwaysDisplayImagesFlag()
+    {
+        var settings = GetCommonSettings();
 
-        public bool GetAlwaysDisplayImagesFlag()
-        {
-            var settings = GetCommonSettings();
+        var value = settings.AlwaysDisplayImagesSetting;
 
-            var value = settings.AlwaysDisplayImagesSetting;
+        return value;
+    }
 
-            return value;
-        }
+    public void SetAlwaysDisplayImagesFlag(bool enabled)
+    {
+        var settings = GetCommonSettings();
 
-        public void SetAlwaysDisplayImagesFlag(bool enabled)
-        {
-            var settings = GetCommonSettings();
+        settings.AlwaysDisplayImagesSetting = enabled;
 
-            settings.AlwaysDisplayImagesSetting = enabled;
+        _settingsManager.SaveForCurrentUser(settings);
+    }
 
-            SettingsManager.SaveForCurrentUser(settings);
-        }
+    public bool GetCacheUnreadMessagesFlag()
+    {
+        //TODO: Change cache algoritnm and restore it back
+        /*var settings = GetCommonSettings();
 
-        public bool GetCacheUnreadMessagesFlag()
-        {
-            //TODO: Change cache algoritnm and restore it back
-            /*var settings = GetCommonSettings();
+        var value = settings.CacheUnreadMessagesSetting;
 
-            var value = settings.CacheUnreadMessagesSetting;
+        return value;*/
 
-            return value;*/
+        return false;
+    }
 
-            return false;
-        }
+    public void SetCacheUnreadMessagesFlag(bool enabled)
+    {
+        var settings = GetCommonSettings();
 
-        public void SetCacheUnreadMessagesFlag(bool enabled)
-        {
-            var settings = GetCommonSettings();
+        settings.CacheUnreadMessagesSetting = enabled;
 
-            settings.CacheUnreadMessagesSetting = enabled;
+        _settingsManager.SaveForCurrentUser(settings);
+    }
 
-            SettingsManager.SaveForCurrentUser(settings);
-        }
+    public bool GetEnableGoNextAfterMoveFlag()
+    {
+        var settings = GetCommonSettings();
 
-        public bool GetEnableGoNextAfterMoveFlag()
-        {
-            var settings = GetCommonSettings();
+        var value = settings.EnableGoNextAfterMoveSetting;
 
-            var value = settings.EnableGoNextAfterMoveSetting;
+        return value;
+    }
 
-            return value;
-        }
+    public void SetEnableGoNextAfterMoveFlag(bool enabled)
+    {
+        var settings = GetCommonSettings();
 
-        public void SetEnableGoNextAfterMoveFlag(bool enabled)
-        {
-            var settings = GetCommonSettings();
+        settings.EnableGoNextAfterMoveSetting = enabled;
 
-            settings.EnableGoNextAfterMoveSetting = enabled;
+        _settingsManager.SaveForCurrentUser(settings);
+    }
 
-            SettingsManager.SaveForCurrentUser(settings);
-        }
+    public bool GetEnableReplaceMessageBodyFlag()
+    {
+        var settings = GetCommonSettings();
 
-        public bool GetEnableReplaceMessageBodyFlag()
-        {
-            var settings = GetCommonSettings();
+        var value = settings.ReplaceMessageBodySetting;
 
-            var value = settings.ReplaceMessageBodySetting;
+        return value;
+    }
 
-            return value;
-        }
+    public void SetEnableReplaceMessageBodyFlag(bool enabled)
+    {
+        var settings = GetCommonSettings();
 
-        public void SetEnableReplaceMessageBodyFlag(bool enabled)
-        {
-            var settings = GetCommonSettings();
+        settings.ReplaceMessageBodySetting = enabled;
 
-            settings.ReplaceMessageBodySetting = enabled;
-
-            SettingsManager.SaveForCurrentUser(settings);
-        }
+        _settingsManager.SaveForCurrentUser(settings);
     }
 }

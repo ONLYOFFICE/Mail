@@ -23,13 +23,11 @@
  *
 */
 
+namespace ASC.Mail.Enums.Filter;
 
-namespace ASC.Mail.Enums.Filter
+public enum MatchMultiConditionsType
 {
-    public enum MatchMultiConditionsType
-    {
-        None = 0,
-        MatchAll = 1,
-        MatchAtLeastOne = 2
-    }
+    None = 0,
+    MatchAll = 1,
+    MatchAtLeastOne = 2
 }

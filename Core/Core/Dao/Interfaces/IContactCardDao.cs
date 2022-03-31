@@ -23,22 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-using ASC.Mail.Core.Dao.Expressions.Contact;
-using ASC.Mail.Core.Entities;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(ContactCardDao))]
+public interface IContactCardDao
 {
-    [Scope(typeof(ContactCardDao))]
-    public interface IContactCardDao
-    {
-        ContactCard GetContactCard(int id);
+    ContactCard GetContactCard(int id);
 
-        List<ContactCard> GetContactCards(IContactsExp exp);
+    List<ContactCard> GetContactCards(IContactsExp exp);
 
-        int GetContactCardsCount(IContactsExp exp);
-    }
+    int GetContactCardsCount(IContactsExp exp);
 }

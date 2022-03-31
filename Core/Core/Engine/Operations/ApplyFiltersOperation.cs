@@ -23,127 +23,115 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
+using MailFolder = ASC.Mail.Models.MailFolder;
+using SecurityContext = ASC.Core.SecurityContext;
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Enums;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-
-using Microsoft.Extensions.Options;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class ApplyFiltersOperation : MailOperation
 {
-    public class ApplyFiltersOperation : MailOperation
+    private readonly FilterEngine _filterEngine;
+    private readonly MessageEngine _messageEngine;
+    private readonly MailboxEngine _mailboxEngine;
+    private readonly List<int> _ids;
+
+    public override MailOperationType OperationType
     {
-        public FilterEngine FilterEngine { get; }
-        public MessageEngine MessageEngine { get; }
-        public MailboxEngine MailboxEngine { get; }
-        public List<int> Ids { get; private set; }
+        get { return MailOperationType.ApplyAnyFilters; }
+    }
 
-        public override MailOperationType OperationType
+    public ApplyFiltersOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        FilterEngine filterEngine,
+        MessageEngine messageEngine,
+        MailboxEngine mailboxEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        IOptionsMonitor<ILog> optionsMonitor,
+        List<int> ids)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+    {
+        _filterEngine = filterEngine;
+        _messageEngine = messageEngine;
+        _mailboxEngine = mailboxEngine;
+        _ids = ids;
+
+        if (ids == null || !ids.Any())
+            throw new ArgumentException("No ids");
+    }
+
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.ApplyAnyFilters; }
-        }
+            SetProgress((int?)MailOperationApplyFilterProgress.Init, "Setup tenant and user");
 
-        public ApplyFiltersOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            FilterEngine filterEngine,
-            MessageEngine messageEngine,
-            MailboxEngine mailboxEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> optionsMonitor,
-            List<int> ids)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
-        {
-            FilterEngine = filterEngine;
-            MessageEngine = messageEngine;
-            MailboxEngine = mailboxEngine;
-            Ids = ids;
+            TenantManager.SetCurrentTenant(CurrentTenant);
 
-            if (ids == null || !ids.Any())
-                throw new ArgumentException("No ids");
-        }
+            SecurityContext.AuthenticateMe(CurrentUser);
 
-        protected override void Do()
-        {
-            try
+            SetProgress((int?)MailOperationApplyFilterProgress.Filtering, "Filtering");
+
+            var filters = _filterEngine.GetList();
+
+            if (!filters.Any())
             {
-                SetProgress((int?)MailOperationApplyFilterProgress.Init, "Setup tenant and user");
+                SetProgress((int?)MailOperationApplyFilterProgress.Finished);
 
-                TenantManager.SetCurrentTenant(CurrentTenant);
+                return;
+            }
 
-                SecurityContext.AuthenticateMe(CurrentUser);
+            SetProgress((int?)MailOperationApplyFilterProgress.FilteringAndApplying, "Filtering and applying action");
 
-                SetProgress((int?)MailOperationApplyFilterProgress.Filtering, "Filtering");
+            var mailboxes = new List<MailBoxData>();
 
-                var filters = FilterEngine.GetList();
+            var index = 0;
+            var max = _ids.Count;
 
-                if (!filters.Any())
+            foreach (var id in _ids)
+            {
+                var progressState = string.Format("Message id = {0} ({1}/{2})", id, ++index, max);
+
+                try
                 {
-                    SetProgress((int?)MailOperationApplyFilterProgress.Finished);
+                    SetSource(progressState);
 
-                    return;
-                }
+                    var message = _messageEngine.GetMessage(id, new MailMessageData.Options());
 
-                SetProgress((int?)MailOperationApplyFilterProgress.FilteringAndApplying, "Filtering and applying action");
+                    if (message.Folder != FolderType.Spam && message.Folder != FolderType.Sent && message.Folder != FolderType.Inbox)
+                        continue;
 
-                var mailboxes = new List<MailBoxData>();
+                    var mailbox = mailboxes.FirstOrDefault(mb => mb.MailBoxId == message.MailboxId);
 
-                var index = 0;
-                var max = Ids.Count;
-
-                foreach (var id in Ids)
-                {
-                    var progressState = string.Format("Message id = {0} ({1}/{2})", id, ++index, max);
-
-                    try
+                    if (mailbox == null)
                     {
-                        SetSource(progressState);
-
-                        var message = MessageEngine.GetMessage(id, new MailMessageData.Options());
-
-                        if (message.Folder != FolderType.Spam && message.Folder != FolderType.Sent && message.Folder != FolderType.Inbox)
-                            continue;
-
-                        var mailbox = mailboxes.FirstOrDefault(mb => mb.MailBoxId == message.MailboxId);
+                        mailbox =
+                            _mailboxEngine.GetMailboxData(new ConcreteSimpleMailboxExp(message.MailboxId));
 
                         if (mailbox == null)
-                        {
-                            mailbox =
-                                MailboxEngine.GetMailboxData(new ConcreteSimpleMailboxExp(message.MailboxId));
+                            continue;
 
-                            if (mailbox == null)
-                                continue;
-
-                            mailboxes.Add(mailbox);
-                        }
-
-                        FilterEngine.ApplyFilters(message, mailbox, new MailFolder(message.Folder, ""), filters);
-
+                        mailboxes.Add(mailbox);
                     }
-                    catch (Exception ex)
-                    {
-                        Logger.ErrorFormat("Error processing: {0}. Exception: {1}", progressState, ex);
-                    }
+
+                    _filterEngine.ApplyFilters(message, mailbox, new MailFolder(message.Folder, ""), filters);
+
                 }
+                catch (Exception ex)
+                {
+                    Logger.ErrorFormat("Error processing: {0}. Exception: {1}", progressState, ex);
+                }
+            }
 
-                SetProgress((int?)MailOperationApplyFilterProgress.Finished);
-            }
-            catch (Exception e)
-            {
-                Logger.Error("Mail operation error -> Remove user folder: {0}", e);
-                Error = "InternalServerError";
-            }
+            SetProgress((int?)MailOperationApplyFilterProgress.Finished);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Error = "InternalServerError";
         }
     }
 }

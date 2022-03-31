@@ -23,53 +23,48 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System;
-using System.Runtime.Serialization;
-
-namespace ASC.Mail.Models
+[DataContract(Namespace = "")]
+public class MailAutoreplyData
 {
-    [DataContract(Namespace = "")]
-    public class MailAutoreplyData
+    public MailAutoreplyData(int mailboxId, int tenant, bool turnOn,
+        bool onlyContacts, bool turnOnToDate, DateTime from, DateTime to, string subject, string html)
     {
-        public MailAutoreplyData(int mailboxId, int tenant, bool turnOn,
-            bool onlyContacts, bool turnOnToDate, DateTime from, DateTime to, string subject, string html)
-        {
-            Tenant = tenant;
-            MailboxId = mailboxId;
-            TurnOn = turnOn;
-            TurnOnToDate = turnOnToDate;
-            OnlyContacts = onlyContacts;
-            FromDate = from;
-            ToDate = to;
-            Subject = subject;
-            Html = html;
-        }
-
-        public int Tenant { get; private set; }
-
-        [DataMember(Name = "mailboxId")]
-        public int MailboxId { get; private set; }
-
-        [DataMember(Name = "turnOn")]
-        public bool TurnOn { get; set; }
-
-        [DataMember(Name = "onlyContacts")]
-        public bool OnlyContacts { get; private set; }
-
-        [DataMember(Name = "turnOnToDate")]
-        public bool TurnOnToDate { get; private set; }
-
-        [DataMember(Name = "fromDate")]
-        public DateTime FromDate { get; private set; }
-
-        [DataMember(Name = "toDate")]
-        public DateTime ToDate { get; private set; }
-
-        [DataMember(Name = "subject")]
-        public string Subject { get; private set; }
-
-        [DataMember(Name = "html")]
-        public string Html { get; private set; }
+        Tenant = tenant;
+        MailboxId = mailboxId;
+        TurnOn = turnOn;
+        TurnOnToDate = turnOnToDate;
+        OnlyContacts = onlyContacts;
+        FromDate = from;
+        ToDate = to;
+        Subject = subject;
+        Html = html;
     }
+
+    public int Tenant { get; private set; }
+
+    [DataMember(Name = "mailboxId")]
+    public int MailboxId { get; private set; }
+
+    [DataMember(Name = "turnOn")]
+    public bool TurnOn { get; set; }
+
+    [DataMember(Name = "onlyContacts")]
+    public bool OnlyContacts { get; private set; }
+
+    [DataMember(Name = "turnOnToDate")]
+    public bool TurnOnToDate { get; private set; }
+
+    [DataMember(Name = "fromDate")]
+    public DateTime FromDate { get; private set; }
+
+    [DataMember(Name = "toDate")]
+    public DateTime ToDate { get; private set; }
+
+    [DataMember(Name = "subject")]
+    public string Subject { get; private set; }
+
+    [DataMember(Name = "html")]
+    public string Html { get; private set; }
 }

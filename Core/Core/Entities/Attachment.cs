@@ -23,24 +23,22 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class Attachment
 {
-    public class Attachment
-    {
-        public int Id { get; set; }
-        public int MailId { get; set; }
-        public string Name { get; set; }
-        public string StoredName { get; set; }
-        public string Type { get; set; }
-        public long Size { get; set; }
-        public bool IsRemoved { get; set; }
-        public int FileNumber { get; set; }
-        public string ContentId { get; set; }
-        public int Tenant { get; set; }
-        public int MailboxId { get; set; }
+    public int Id { get; set; }
+    public int MailId { get; set; }
+    public string Name { get; set; }
+    public string StoredName { get; set; }
+    public string Type { get; set; }
+    public long Size { get; set; }
+    public bool IsRemoved { get; set; }
+    public int FileNumber { get; set; }
+    public string ContentId { get; set; }
+    public int Tenant { get; set; }
+    public int MailboxId { get; set; }
 
-        public string Stream { get; set; }
-        public string User { get; set; }
-    }
+    public string Stream { get; set; }
+    public string User { get; set; }
 }

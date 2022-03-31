@@ -23,120 +23,108 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
 {
-    [Scope]
-    public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
+    public MailboxSignatureDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public MailboxSignatureDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public MailboxSignature GetSignature(int mailboxId)
+    {
+        var query = MailDbContext.MailMailboxSignature
+            .AsNoTracking()
+            .Join(MailDbContext.MailMailbox,
+                s => s.IdMailbox,
+                mb => (int)mb.Id,
+                (s, mb) => new MailboxSignature
+                {
+                    MailboxId = (int)mb.Id,
+                    Tenant = mb.Tenant,
+                    Html = s.Html,
+                    IsActive = s.IsActive
+
+                })
+            .Where(r => r.MailboxId == mailboxId).FirstOrDefault();
+
+        if (query == null)
         {
-        }
-
-        public MailboxSignature GetSignature(int mailboxId)
-        {
-            var query = MailDbContext.MailMailboxSignature
-                .AsNoTracking()
-                .Join(MailDbContext.MailMailbox,
-                    s => s.IdMailbox,
-                    mb => (int)mb.Id,
-                    (s, mb) => new MailboxSignature
-                    {
-                        MailboxId = (int)mb.Id,
-                        Tenant = mb.Tenant,
-                        Html = s.Html,
-                        IsActive = s.IsActive
-
-                    })
-                .Where(r => r.MailboxId == mailboxId).FirstOrDefault();
-
-            if (query == null)
+            return new MailboxSignature
             {
-                return new MailboxSignature
+                MailboxId = mailboxId,
+                Tenant = Tenant,
+                Html = "",
+                IsActive = false
+            };
+        }
+        return query;
+    }
+
+    public List<MailboxSignature> GetSignatures(List<int> mailboxIds)
+    {
+        var query = MailDbContext.MailMailboxSignature
+            .AsNoTracking()
+            .Join(MailDbContext.MailMailbox,
+                s => s.IdMailbox,
+                mb => (int)mb.Id,
+                (s, mb) => new MailboxSignature
+                {
+                    MailboxId = (int)mb.Id,
+                    Tenant = mb.Tenant,
+                    Html = s.Html,
+                    IsActive = s.IsActive
+
+                })
+            .Where(r => mailboxIds.Contains(r.MailboxId));
+
+        return (from mailboxId in mailboxIds
+                let sig = query.FirstOrDefault(s => s.MailboxId == mailboxId)
+                select sig ?? new MailboxSignature
                 {
                     MailboxId = mailboxId,
                     Tenant = Tenant,
                     Html = "",
                     IsActive = false
-                };
-            }
-            return query;
-        }
+                })
+                .ToList();
+    }
 
-        public List<MailboxSignature> GetSignatures(List<int> mailboxIds)
+    public int SaveSignature(MailboxSignature signature)
+    {
+        var dbSignature = new MailMailboxSignature()
         {
-            var query = MailDbContext.MailMailboxSignature
-                .AsNoTracking()
-                .Join(MailDbContext.MailMailbox,
-                    s => s.IdMailbox,
-                    mb => (int)mb.Id,
-                    (s, mb) => new MailboxSignature
-                    {
-                        MailboxId = (int)mb.Id,
-                        Tenant = mb.Tenant,
-                        Html = s.Html,
-                        IsActive = s.IsActive
+            Html = signature.Html,
+            IsActive = signature.IsActive,
+            Tenant = signature.Tenant,
+            IdMailbox = signature.MailboxId
+        };
 
-                    })
-                .Where(r => mailboxIds.Contains(r.MailboxId));
+        MailDbContext.MailMailboxSignature.Add(dbSignature);
 
-            return (from mailboxId in mailboxIds
-                    let sig = query.FirstOrDefault(s => s.MailboxId == mailboxId)
-                    select sig ?? new MailboxSignature
-                    {
-                        MailboxId = mailboxId,
-                        Tenant = Tenant,
-                        Html = "",
-                        IsActive = false
-                    })
-                    .ToList();
-        }
+        var result = MailDbContext.Entry(dbSignature);
 
-        public int SaveSignature(MailboxSignature signature)
-        {
-            var dbSignature = new MailMailboxSignature()
-            {
-                Html = signature.Html,
-                IsActive = signature.IsActive,
-                Tenant = signature.Tenant,
-                IdMailbox = signature.MailboxId
-            };
+        result.State = dbSignature.IdMailbox == 0
+            ? EntityState.Added
+            : EntityState.Modified;
 
-            MailDbContext.MailMailboxSignature.Add(dbSignature);
+        return MailDbContext.SaveChanges();
+    }
 
-            var result = MailDbContext.Entry(dbSignature);
+    public int DeleteSignature(int mailboxId)
+    {
+        var query = MailDbContext.MailMailboxSignature
+            .Where(r => r.Tenant == Tenant && r.IdMailbox == mailboxId);
 
-            result.State = dbSignature.IdMailbox == 0
-                ? EntityState.Added
-                : EntityState.Modified;
+        MailDbContext.MailMailboxSignature.RemoveRange(query);
 
-            return MailDbContext.SaveChanges();
-        }
-
-        public int DeleteSignature(int mailboxId)
-        {
-            var query = MailDbContext.MailMailboxSignature
-                .Where(r => r.Tenant == Tenant && r.IdMailbox == mailboxId);
-
-            MailDbContext.MailMailboxSignature.RemoveRange(query);
-
-            return MailDbContext.SaveChanges();
-        }
+        return MailDbContext.SaveChanges();
     }
 }

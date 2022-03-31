@@ -23,17 +23,9 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.Conversation;
 
-
-
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.Conversation
+public interface IConversationsExp
 {
-    public interface IConversationsExp
-    {
-        Expression<Func<MailChain, bool>> GetExpression();
-    }
+    Expression<Func<MailChain, bool>> GetExpression();
 }

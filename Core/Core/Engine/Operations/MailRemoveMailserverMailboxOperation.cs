@@ -23,97 +23,86 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using System;
+namespace ASC.Mail.Core.Engine.Operations;
 
-using ASC.Common.Logging;
-using ASC.Core;
-using ASC.Mail.Core.Engine.Operations.Base;
-using ASC.Mail.Models;
-using ASC.Mail.Storage;
-
-using Microsoft.Extensions.Options;
-
-namespace ASC.Mail.Core.Engine.Operations
+public class MailRemoveMailserverMailboxOperation : MailOperation
 {
-    public class MailRemoveMailserverMailboxOperation : MailOperation
+    public override MailOperationType OperationType
     {
-        private readonly MailBoxData _mailBox;
+        get { return MailOperationType.RemoveMailbox; }
+    }
 
-        public override MailOperationType OperationType
+    private readonly MailBoxData _mailBox;
+    private readonly ServerMailboxEngine _serverMailboxEngine;
+    private readonly OperationEngine _operationEngine;
+    private readonly CacheEngine _cacheEngine;
+    private readonly IndexEngine _indexEngine;
+
+    public MailRemoveMailserverMailboxOperation(
+        TenantManager tenantManager,
+        SecurityContext securityContext,
+        IMailDaoFactory mailDaoFactory,
+        ServerMailboxEngine serverMailboxEngine,
+        OperationEngine operationEngine,
+        CacheEngine cacheEngine,
+        IndexEngine indexEngine,
+        CoreSettings coreSettings,
+        StorageManager storageManager,
+        IOptionsMonitor<ILog> optionsMonitor,
+        MailBoxData mailBox)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+    {
+        _serverMailboxEngine = serverMailboxEngine;
+        _operationEngine = operationEngine;
+        _cacheEngine = cacheEngine;
+        _indexEngine = indexEngine;
+        _mailBox = mailBox;
+        SetSource(_mailBox.MailBoxId.ToString());
+    }
+
+    protected override void Do()
+    {
+        try
         {
-            get { return MailOperationType.RemoveMailbox; }
-        }
+            SetProgress((int?)MailOperationRemoveMailboxProgress.Init, "Setup tenant and user");
 
-        public ServerMailboxEngine ServerMailboxEngine { get; }
-        public OperationEngine OperationEngine { get; }
-        public CacheEngine CacheEngine { get; }
-        public IndexEngine IndexEngine { get; }
+            var tenant = _mailBox.TenantId;
+            var user = _mailBox.UserId;
 
-        public MailRemoveMailserverMailboxOperation(
-            TenantManager tenantManager,
-            SecurityContext securityContext,
-            IMailDaoFactory mailDaoFactory,
-            ServerMailboxEngine serverMailboxEngine,
-            OperationEngine operationEngine,
-            CacheEngine cacheEngine,
-            IndexEngine indexEngine,
-            CoreSettings coreSettings,
-            StorageManager storageManager,
-            IOptionsMonitor<ILog> optionsMonitor,
-            MailBoxData mailBox)
-            : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
-        {
-            ServerMailboxEngine = serverMailboxEngine;
-            OperationEngine = operationEngine;
-            CacheEngine = cacheEngine;
-            IndexEngine = indexEngine;
-            _mailBox = mailBox;
-            SetSource(_mailBox.MailBoxId.ToString());
-        }
+            TenantManager.SetCurrentTenant(tenant);
 
-        protected override void Do()
-        {
             try
             {
-                SetProgress((int?)MailOperationRemoveMailboxProgress.Init, "Setup tenant and user");
-
-                var tenant = _mailBox.TenantId;
-                var user = _mailBox.UserId;
-
-                TenantManager.SetCurrentTenant(tenant);
-
-                try
-                {
-                    SecurityContext.AuthenticateMe(new Guid(user));
-                }
-                catch
-                {
-                    // User was removed
-                    SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
-                }
-
-                SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveFromDb, "Remove mailbox from Db");
-
-                ServerMailboxEngine.RemoveMailbox(_mailBox);
-
-                SetProgress((int?)MailOperationRemoveMailboxProgress.RecalculateFolder, "Recalculate folders counters");
-
-                OperationEngine.RecalculateFolders();
-
-                SetProgress((int?)MailOperationRemoveMailboxProgress.ClearCache, "Clear accounts cache");
-
-                CacheEngine.Clear(user);
-
-                SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveIndex, "Remove Elastic Search index by messages");
-
-                IndexEngine.Remove(_mailBox);
+                SecurityContext.AuthenticateMe(new Guid(user));
             }
-            catch (Exception e)
+            catch
             {
-                Logger.Error("Mail operation error -> Remove mailbox: {0}", e);
-                Error = "InternalServerError";
+                // User was removed
+                SecurityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
             }
+
+            SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveFromDb, "Remove mailbox from Db");
+
+            _serverMailboxEngine.RemoveMailbox(_mailBox);
+
+            SetProgress((int?)MailOperationRemoveMailboxProgress.RecalculateFolder, "Recalculate folders counters");
+
+            _operationEngine.RecalculateFolders();
+
+            SetProgress((int?)MailOperationRemoveMailboxProgress.ClearCache, "Clear accounts cache");
+
+            _cacheEngine.Clear(user);
+
+            SetProgress((int?)MailOperationRemoveMailboxProgress.RemoveIndex, "Remove Elastic Search index by messages");
+
+            _indexEngine.Remove(_mailBox);
+        }
+        catch (Exception e)
+        {
+            Logger.Error("Mail operation error -> Remove mailbox: {0}", e);
+            Error = "InternalServerError";
         }
     }
 }

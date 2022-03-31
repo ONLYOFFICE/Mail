@@ -23,21 +23,15 @@
  *
 */
 
+namespace ASC.Mail.Server.Core.Dao;
 
-using System;
-
-using ASC.Core.Common.EF;
-
-namespace ASC.Mail.Server.Core.Dao
+public abstract class BaseServerDao
 {
-    public abstract class BaseServerDao
-    {
-        public Lazy<MailServerDbContext> LazyMailServerDbContext { get; }
-        public MailServerDbContext MailServerDbContext => LazyMailServerDbContext.Value;
+    public Lazy<MailServerDbContext> LazyMailServerDbContext { get; }
+    public MailServerDbContext MailServerDbContext => LazyMailServerDbContext.Value;
 
-        protected BaseServerDao(DbContextManager<MailServerDbContext> dbContext)
-        {
-            LazyMailServerDbContext = new Lazy<MailServerDbContext>(() => dbContext.Get("mailServer"));
-        }
+    protected BaseServerDao(DbContextManager<MailServerDbContext> dbContext)
+    {
+        LazyMailServerDbContext = new Lazy<MailServerDbContext>(() => dbContext.Get("mailServer"));
     }
 }

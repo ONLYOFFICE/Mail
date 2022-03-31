@@ -23,54 +23,47 @@
  *
 */
 
+using Alias = ASC.Mail.Server.Core.Entities.Alias;
 
-using System.Linq;
+namespace ASC.Mail.Server.Core.Dao;
 
-using ASC.Common;
-using ASC.Core.Common.EF;
-using ASC.Mail.Server.Core.Dao.Interfaces;
-using ASC.Mail.Server.Core.Entities;
-
-namespace ASC.Mail.Server.Core.Dao
+[Scope]
+public class AliasDao : BaseServerDao, IAliasDao
 {
-    [Scope]
-    public class AliasDao : BaseServerDao, IAliasDao
+    public AliasDao(DbContextManager<MailServerDbContext> dbContext)
+        : base(dbContext)
     {
-        public AliasDao(DbContextManager<MailServerDbContext> dbContext)
-            : base(dbContext)
-        {
-        }
+    }
 
-        public int Save(Alias alias)
-        {
-            MailServerDbContext.Alias.Add(alias);
+    public int Save(Alias alias)
+    {
+        MailServerDbContext.Alias.Add(alias);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int Remove(string address)
-        {
-            var query = MailServerDbContext.Alias.Where(a =>
-                a.Address.Equals(address, System.StringComparison.InvariantCultureIgnoreCase));
+    public int Remove(string address)
+    {
+        var query = MailServerDbContext.Alias.Where(a =>
+            a.Address.Equals(address, System.StringComparison.InvariantCultureIgnoreCase));
 
-            MailServerDbContext.RemoveRange(query);
+        MailServerDbContext.RemoveRange(query);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
+    }
 
-        public int RemoveByDomain(string domain)
-        {
-            var query = MailServerDbContext.Alias.Where(a => a.Domain.ToLower() == domain.ToLower());
+    public int RemoveByDomain(string domain)
+    {
+        var query = MailServerDbContext.Alias.Where(a => a.Domain.ToLower() == domain.ToLower());
 
-            MailServerDbContext.Alias.RemoveRange(query);
+        MailServerDbContext.Alias.RemoveRange(query);
 
-            var result = MailServerDbContext.SaveChanges();
+        var result = MailServerDbContext.SaveChanges();
 
-            return result;
-        }
+        return result;
     }
 }

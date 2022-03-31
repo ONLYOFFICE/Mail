@@ -23,38 +23,33 @@
  *
 */
 
+namespace ASC.Mail.Exceptions;
 
-using ASC.Mail.Models;
-using System;
-
-namespace ASC.Mail.Exceptions
+public class LoginException : Exception
 {
-    public class LoginException : Exception
+    public LoginResult LoginResult { get; }
+
+    public LoginException(LoginResult loginResult)
+        : base(ToMessage(loginResult))
     {
-        public LoginResult LoginResult { get; }
+        LoginResult = loginResult;
+    }
 
-        public LoginException(LoginResult loginResult)
-            : base(ToMessage(loginResult))
-        {
-            LoginResult = loginResult;
-        }
+    public static string ToMessage(LoginResult loginResult)
+    {
+        return string.Format("Login errors: " +
+            $"Imap: {0}" +
+            $"Smtp: {1}",
+            loginResult.IngoingSuccess
+                ? "Success"
+                : loginResult.IngoingException?.Message,
+            loginResult.OutgoingSuccess
+                ? "Success"
+                : loginResult.OutgoingException?.Message);
+    }
 
-        public static string ToMessage(LoginResult loginResult)
-        {
-            return string.Format("Login errors: " +
-                $"Imap: {0}" +
-                $"Smtp: {1}",
-                loginResult.IngoingSuccess
-                    ? "Success"
-                    : loginResult.IngoingException?.Message,
-                loginResult.OutgoingSuccess
-                    ? "Success"
-                    : loginResult.OutgoingException?.Message);
-        }
-
-        public override string ToString()
-        {
-            return string.Format("Login error has been occurred: Message = '{0}'", Message);
-        }
+    public override string ToString()
+    {
+        return string.Format("Login error has been occurred: Message = '{0}'", Message);
     }
 }

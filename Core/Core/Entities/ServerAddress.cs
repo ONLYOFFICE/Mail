@@ -23,20 +23,16 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class ServerAddress
 {
-    public class ServerAddress
-    {
-        public int Id { get; set; }
-        public string AddressName { get; set; }
-        public int Tenant { get; set; }
-        public int DomainId { get; set; }
-        public int MailboxId { get; set; }
-        public bool IsMailGroup { get; set; }
-        public bool IsAlias { get; set; }
-        public DateTime DateCreated { get; set; }
-    }
+    public int Id { get; set; }
+    public string AddressName { get; set; }
+    public int Tenant { get; set; }
+    public int DomainId { get; set; }
+    public int MailboxId { get; set; }
+    public bool IsMailGroup { get; set; }
+    public bool IsAlias { get; set; }
+    public DateTime DateCreated { get; set; }
 }

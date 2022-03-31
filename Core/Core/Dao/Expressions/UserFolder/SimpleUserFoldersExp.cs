@@ -23,76 +23,68 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Expressions.UserFolder;
 
-using ASC.Mail.Core.Dao.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-
-namespace ASC.Mail.Core.Dao.Expressions.UserFolder
+public class SimpleUserFoldersExp : IUserFoldersExp
 {
-    public class SimpleUserFoldersExp : IUserFoldersExp
+    public int Tenant { get; private set; }
+    public string User { get; private set; }
+
+    public List<int> Ids { get; set; }
+    public int? ParentId { get; set; }
+    public string Name { get; set; }
+    public bool? HasMails { get; set; }
+    public bool? HasFolders { get; set; }
+
+    public string OrderBy { get; set; }
+    public bool? OrderAsc { get; set; }
+    public int? StartIndex { get; set; }
+    public int? Limit { get; set; }
+
+    public SimpleUserFoldersExp(int tenant, string user)
     {
-        public int Tenant { get; private set; }
-        public string User { get; private set; }
+        Tenant = tenant;
+        User = user;
+    }
 
-        public List<int> Ids { get; set; }
-        public int? ParentId { get; set; }
-        public string Name { get; set; }
-        public bool? HasMails { get; set; }
-        public bool? HasFolders { get; set; }
+    public static UserFoldersExpBuilder CreateBuilder(int tenant, string user)
+    {
+        return new UserFoldersExpBuilder(tenant, user);
+    }
 
-        public string OrderBy { get; set; }
-        public bool? OrderAsc { get; set; }
-        public int? StartIndex { get; set; }
-        public int? Limit { get; set; }
+    public Expression<Func<MailUserFolder, bool>> GetExpression()
+    {
+        Expression<Func<MailUserFolder, bool>> exp = f => f.TenantId == Tenant && f.IdUser == User;
 
-        public SimpleUserFoldersExp(int tenant, string user)
+        if (Ids != null && Ids.Any())
         {
-            Tenant = tenant;
-            User = user;
+            exp = exp.And(f => Ids.Contains(f.Id));
         }
 
-        public static UserFoldersExpBuilder CreateBuilder(int tenant, string user)
+        if (ParentId.HasValue)
         {
-            return new UserFoldersExpBuilder(tenant, user);
+            exp = exp.And(f => f.ParentId == ParentId.Value);
         }
 
-        public Expression<Func<MailUserFolder, bool>> GetExpression()
+        if (!string.IsNullOrEmpty(Name))
         {
-            Expression<Func<MailUserFolder, bool>> exp = f => f.TenantId == Tenant && f.IdUser == User;
-
-            if (Ids != null && Ids.Any())
-            {
-                exp = exp.And(f => Ids.Contains(f.Id));
-            }
-
-            if (ParentId.HasValue)
-            {
-                exp = exp.And(f => f.ParentId == ParentId.Value);
-            }
-
-            if (!string.IsNullOrEmpty(Name))
-            {
-                exp = exp.And(f => f.Name == Name);
-            }
-
-            if (HasMails.HasValue)
-            {
-                exp = HasMails.Value
-                    ?  exp.And(f => f.TotalMessagesCount > 0)
-                    :  exp.And(f => f.TotalMessagesCount == 0);
-            }
-
-            if (HasFolders.HasValue)
-            {
-                exp = HasFolders.Value
-                    ? exp.And(f => f.FoldersCount > 0)
-                    : exp.And(f => f.FoldersCount == 0);
-            }
-
-            return exp;
+            exp = exp.And(f => f.Name == Name);
         }
+
+        if (HasMails.HasValue)
+        {
+            exp = HasMails.Value
+                ? exp.And(f => f.TotalMessagesCount > 0)
+                : exp.And(f => f.TotalMessagesCount == 0);
+        }
+
+        if (HasFolders.HasValue)
+        {
+            exp = HasFolders.Value
+                ? exp.And(f => f.FoldersCount > 0)
+                : exp.And(f => f.FoldersCount == 0);
+        }
+
+        return exp;
     }
 }

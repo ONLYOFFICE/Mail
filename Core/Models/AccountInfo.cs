@@ -23,64 +23,60 @@
  *
 */
 
+namespace ASC.Mail.Models;
 
-using System.Collections.Generic;
-
-namespace ASC.Mail.Models
+public class AccountInfo
 {
-    public class AccountInfo
+    public int Id { get; set; }
+
+    public string Email { get; set; }
+
+    public bool Enabled { get; set; }
+
+    public bool QuotaError { get; set; }
+
+    public bool AuthError { get; set; }
+
+    public bool OAuthConnection { get; set; }
+
+    public string Name { get; set; }
+
+    public string EMailInFolder { get; set; }
+
+    public bool IsTeamlabMailbox { get; set; }
+
+    public MailSignatureData Signature { get; set; }
+
+    public MailAutoreplyData Autoreply { get; set; }
+
+    public List<MailAddressInfo> Aliases { get; set; }
+
+    public List<MailAddressInfo> Groups { get; set; }
+
+    public bool IsSharedDomainMailbox { get; set; }
+
+    public override string ToString()
     {
-        public int Id { get; set; }
+        return Name + " <" + Email + ">";
+    }
 
-        public string Email { get; set; }
-
-        public bool Enabled { get; set; }
-
-        public bool QuotaError { get; set; }
-
-        public bool AuthError { get; set; }
-
-        public bool OAuthConnection { get; set; }
-
-        public string Name { get; set; }
-
-        public string EMailInFolder { get; set; }
-
-        public bool IsTeamlabMailbox { get; set; }
-
-        public MailSignatureData Signature { get; set; }
-
-        public MailAutoreplyData Autoreply { get; set; }
-
-        public List<MailAddressInfo> Aliases { get; set; }
-
-        public List<MailAddressInfo> Groups { get; set; }
-
-        public bool IsSharedDomainMailbox { get; set; }
-
-        public override string ToString()
-        {
-            return Name + " <" + Email + ">";
-        }
-
-        public AccountInfo(int id, string address, string name, bool enabled,
-            bool quotaError, MailBoxData.AuthProblemType authError, MailSignatureData signature, MailAutoreplyData autoreply,
-            bool oauthConnection, string emailInFolder, bool isTeamlabMailbox, bool isSharedDomainMailbox)
-        {
-            Id = id;
-            Email = address;
-            Name = name;
-            Enabled = enabled;
-            QuotaError = quotaError;
-            AuthError = authError > MailBoxData.AuthProblemType.NoProblems;
-            Autoreply = autoreply;
-            Signature = signature;
-            Aliases = new List<MailAddressInfo>();
-            Groups = new List<MailAddressInfo>();
-            OAuthConnection = oauthConnection;
-            EMailInFolder = emailInFolder;
-            IsTeamlabMailbox = isTeamlabMailbox;
-            IsSharedDomainMailbox = isSharedDomainMailbox;
-        }
+    public AccountInfo(int id, string address, string name, bool enabled,
+        bool quotaError, MailBoxData.AuthProblemType authError, MailSignatureData signature, MailAutoreplyData autoreply,
+        bool oauthConnection, string emailInFolder, bool isTeamlabMailbox, bool isSharedDomainMailbox)
+    {
+        Id = id;
+        Email = address;
+        Name = name;
+        Enabled = enabled;
+        QuotaError = quotaError;
+        AuthError = authError > MailBoxData.AuthProblemType.NoProblems;
+        Autoreply = autoreply;
+        Signature = signature;
+        Aliases = new List<MailAddressInfo>();
+        Groups = new List<MailAddressInfo>();
+        OAuthConnection = oauthConnection;
+        EMailInFolder = emailInFolder;
+        IsTeamlabMailbox = isTeamlabMailbox;
+        IsSharedDomainMailbox = isSharedDomainMailbox;
     }
 }

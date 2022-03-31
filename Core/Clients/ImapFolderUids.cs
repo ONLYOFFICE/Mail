@@ -23,72 +23,67 @@
  *
 */
 
+namespace ASC.Mail.Clients.Imap;
 
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Clients.Imap
+public class ImapFolderUids
 {
-    public class ImapFolderUids
+    public int BeginDateUid { get; set; }
+    public uint? UidValidity { get; set; }
+    public List<int> UnhandledUidIntervals { get; set; }
+
+    public ImapFolderUids(IEnumerable<int> uidIntervals, int beginDateUid, uint? uidValidity = null)
     {
-        public int BeginDateUid { get; set; }
-        public uint? UidValidity { get; set; }
-        public List<int> UnhandledUidIntervals { get; set; }
+        if (uidIntervals == null)
+            uidIntervals = new List<int>();
 
-        public ImapFolderUids(IEnumerable<int> uidIntervals, int beginDateUid, uint? uidValidity = null)
+        UnhandledUidIntervals = new List<int>(uidIntervals);
+        BeginDateUid = beginDateUid;
+        UidValidity = uidValidity;
+    }
+
+    public static bool operator ==(ImapFolderUids a, ImapFolderUids b)
+    {
+        // If both are null, or both are same instance, return true.
+        if (ReferenceEquals(a, b))
         {
-            if (uidIntervals == null)
-                uidIntervals = new List<int>();
-
-            UnhandledUidIntervals = new List<int>(uidIntervals);
-            BeginDateUid = beginDateUid;
-            UidValidity = uidValidity;
+            return true;
         }
 
-        public static bool operator ==(ImapFolderUids a, ImapFolderUids b)
+        // If one is null, but not both, return false.
+        if (((object)a == null) || ((object)b == null))
         {
-            // If both are null, or both are same instance, return true.
-            if (ReferenceEquals(a, b))
-            {
-                return true;
-            }
-
-            // If one is null, but not both, return false.
-            if (((object)a == null) || ((object)b == null))
-            {
-                return false;
-            }
-
-            // Return true if the fields match:
-            return a.Equals(b);
+            return false;
         }
 
-        public static bool operator !=(ImapFolderUids a, ImapFolderUids b)
+        // Return true if the fields match:
+        return a.Equals(b);
+    }
+
+    public static bool operator !=(ImapFolderUids a, ImapFolderUids b)
+    {
+        return !(a == b);
+    }
+
+    public override bool Equals(object obj)
+    {
+        var p = obj as ImapFolderUids;
+        return (object)p != null && Equals(p);
+    }
+
+    public bool Equals(ImapFolderUids p)
+    {
+        // If parameter is null return false:
+        if ((object)p == null)
         {
-            return !(a == b);
+            return false;
         }
 
-        public override bool Equals(object obj)
-        {
-            var p = obj as ImapFolderUids;
-            return (object)p != null && Equals(p);
-        }
+        // Return true if the fields match:
+        return BeginDateUid == p.BeginDateUid && UnhandledUidIntervals.SequenceEqual(p.UnhandledUidIntervals) && UidValidity == p.UidValidity;
+    }
 
-        public bool Equals(ImapFolderUids p)
-        {
-            // If parameter is null return false:
-            if ((object)p == null)
-            {
-                return false;
-            }
-
-            // Return true if the fields match:
-            return BeginDateUid == p.BeginDateUid && UnhandledUidIntervals.SequenceEqual(p.UnhandledUidIntervals) && UidValidity == p.UidValidity;
-        }
-
-        public override int GetHashCode()
-        {
-            return BeginDateUid ^ UnhandledUidIntervals.GetHashCode() ^ UidValidity.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return BeginDateUid ^ UnhandledUidIntervals.GetHashCode() ^ UidValidity.GetHashCode();
     }
 }

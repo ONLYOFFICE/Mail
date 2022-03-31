@@ -23,90 +23,83 @@
  *
 */
 
+namespace ASC.Mail.Iterators;
 
-using ASC.Mail.Core;
-using ASC.Mail.Core.Dao.Expressions.Message;
-using ASC.Mail.Core.Engine;
-using ASC.Mail.Models;
-
-namespace ASC.Mail.Iterators
+/// <summary>
+/// The 'Iterator' interface
+/// </summary>
+internal interface IMailboxMessagesIterator
 {
-    /// <summary>
-    /// The 'Iterator' interface
-    /// </summary>
-    internal interface IMailboxMessagesIterator
+    MailMessageData First(bool unremoved = false);
+    MailMessageData Next(bool unremoved = false);
+    bool IsDone { get; }
+    MailMessageData Current { get; }
+}
+
+/// <summary>
+/// The 'ConcreteIterator' class
+/// </summary>
+public class MailboxMessagesIterator : IMailboxMessagesIterator
+{
+    private readonly int _minMessageId;
+    private readonly int _maxMessageId;
+
+    // Constructor
+    public MailboxMessagesIterator(MessageEngine messageEngine, MailBoxData mailBoxData)
     {
-        MailMessageData First(bool unremoved = false);
-        MailMessageData Next(bool unremoved = false);
-        bool IsDone { get; }
-        MailMessageData Current { get; }
+
+        var range = MessageEngine
+            .GetRangeMessages(
+                SimpleMessagesExp.CreateBuilder(mailBoxData.TenantId)
+                    .SetMailboxId(mailBoxData.MailBoxId)
+                    .Build());
+
+        _minMessageId = range.Item1;
+        _maxMessageId = range.Item2;
+        MessageEngine = messageEngine;
     }
 
-    /// <summary>
-    /// The 'ConcreteIterator' class
-    /// </summary>
-    public class MailboxMessagesIterator : IMailboxMessagesIterator
+    // Gets first item
+    public MailMessageData First(bool onlyUnremoved = false)
     {
-        private readonly int _minMessageId;
-        private readonly int _maxMessageId;
+        Current = MessageEngine.GetMessage(_minMessageId,
+            new MailMessageData.Options
+            {
+                LoadImages = false,
+                LoadBody = false,
+                NeedProxyHttp = false,
+                OnlyUnremoved = onlyUnremoved
+            });
 
-        // Constructor
-        public MailboxMessagesIterator(MessageEngine messageEngine, MailBoxData mailBoxData)
-        {
-
-            var range = MessageEngine
-                .GetRangeMessages(
-                    SimpleMessagesExp.CreateBuilder(mailBoxData.TenantId)
-                        .SetMailboxId(mailBoxData.MailBoxId)
-                        .Build());
-
-            _minMessageId = range.Item1;
-            _maxMessageId = range.Item2;
-            MessageEngine = messageEngine;
-        }
-
-        // Gets first item
-        public MailMessageData First(bool onlyUnremoved = false)
-        {
-            Current = MessageEngine.GetMessage(_minMessageId,
-                new MailMessageData.Options
-                {
-                    LoadImages = false,
-                    LoadBody = false,
-                    NeedProxyHttp = false,
-                    OnlyUnremoved = onlyUnremoved
-                });
-
-            return Current;
-        }
-
-        // Gets next item
-        public MailMessageData Next(bool onlyUnremoved = false)
-        {
-            if (IsDone) 
-                return null;
-
-            Current = MessageEngine.GetNextMessage(Current.Id,
-                new MailMessageData.Options
-                {
-                    LoadImages = false,
-                    LoadBody = false,
-                    NeedProxyHttp = false,
-                    OnlyUnremoved = onlyUnremoved
-                });
-
-            return Current;
-        }
-
-        // Gets current iterator item
-        public MailMessageData Current { get; private set; }
-
-        // Gets whether iteration is complete
-        public bool IsDone
-        {
-            get { return _minMessageId == 0 || _maxMessageId < _minMessageId || Current == null || Current.Id > _maxMessageId; }
-        }
-
-        public MessageEngine MessageEngine { get; }
+        return Current;
     }
+
+    // Gets next item
+    public MailMessageData Next(bool onlyUnremoved = false)
+    {
+        if (IsDone)
+            return null;
+
+        Current = MessageEngine.GetNextMessage(Current.Id,
+            new MailMessageData.Options
+            {
+                LoadImages = false,
+                LoadBody = false,
+                NeedProxyHttp = false,
+                OnlyUnremoved = onlyUnremoved
+            });
+
+        return Current;
+    }
+
+    // Gets current iterator item
+    public MailMessageData Current { get; private set; }
+
+    // Gets whether iteration is complete
+    public bool IsDone
+    {
+        get { return _minMessageId == 0 || _maxMessageId < _minMessageId || Current == null || Current.Id > _maxMessageId; }
+    }
+
+    public MessageEngine MessageEngine { get; }
 }

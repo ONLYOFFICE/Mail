@@ -23,60 +23,56 @@
  *
 */
 
+namespace ASC.Mail.Core.Entities;
 
-using System;
-
-namespace ASC.Mail.Core.Entities
+public class UserFolder : IEquatable<UserFolder>
 {
-    public class UserFolder : IEquatable<UserFolder>
+    public int Id { get; set; }
+    public int ParentId { get; set; }
+    public string User { get; set; }
+    public int Tenant { get; set; }
+    public string Name { get; set; }
+    public int FolderCount { get; set; }
+    public int UnreadCount { get; set; }
+    public int TotalCount { get; set; }
+    public int UnreadChainCount { get; set; }
+    public int TotalChainCount { get; set; }
+    public DateTime TimeModified { get; set; }
+
+    public bool Equals(UserFolder other)
     {
-        public int Id { get; set; }
-        public int ParentId { get; set; }
-        public string User { get; set; }
-        public int Tenant { get; set; }
-        public string Name { get; set; }
-        public int FolderCount { get; set; }
-        public int UnreadCount { get; set; }
-        public int TotalCount { get; set; }
-        public int UnreadChainCount { get; set; }
-        public int TotalChainCount { get; set; }
-        public DateTime TimeModified { get; set; }
+        if (other == null) return false;
+        return string.Equals(User, other.User, StringComparison.InvariantCultureIgnoreCase)
+               && Tenant == other.Tenant
+               && Id == other.Id
+               && ParentId == other.ParentId
+               && string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase)
+               && FolderCount == other.FolderCount
+               && UnreadCount == other.UnreadCount
+               && TotalCount == other.TotalCount
+               && UnreadChainCount == other.UnreadChainCount
+               && TotalChainCount == other.TotalChainCount;
+    }
 
-        public bool Equals(UserFolder other)
-        {
-            if (other == null) return false;
-            return string.Equals(User, other.User, StringComparison.InvariantCultureIgnoreCase)
-                   && Tenant == other.Tenant
-                   && Id == other.Id
-                   && ParentId == other.ParentId
-                   && string.Equals(Name, other.Name, StringComparison.InvariantCultureIgnoreCase)
-                   && FolderCount == other.FolderCount
-                   && UnreadCount == other.UnreadCount
-                   && TotalCount == other.TotalCount
-                   && UnreadChainCount == other.UnreadChainCount
-                   && TotalChainCount == other.TotalChainCount;
-        }
+    public override bool Equals(object obj)
+    {
+        if (ReferenceEquals(null, obj)) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals(obj as UserFolder);
+    }
 
-        public override bool Equals(object obj)
-        {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals(obj as UserFolder);
-        }
-
-        public override int GetHashCode()
-        {
-            return Tenant.GetHashCode()
-                   ^ User.GetHashCode()
-                   ^ Id.GetHashCode()
-                   ^ ParentId.GetHashCode()
-                   ^ Name.GetHashCode()
-                   ^ FolderCount.GetHashCode()
-                   ^ UnreadCount.GetHashCode()
-                   ^ TotalCount.GetHashCode()
-                   ^ UnreadChainCount.GetHashCode()
-                   ^ TotalChainCount.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Tenant.GetHashCode()
+               ^ User.GetHashCode()
+               ^ Id.GetHashCode()
+               ^ ParentId.GetHashCode()
+               ^ Name.GetHashCode()
+               ^ FolderCount.GetHashCode()
+               ^ UnreadCount.GetHashCode()
+               ^ TotalCount.GetHashCode()
+               ^ UnreadChainCount.GetHashCode()
+               ^ TotalChainCount.GetHashCode();
     }
 }

@@ -23,344 +23,331 @@
  *
 */
 
+using SecurityContext = ASC.Core.SecurityContext;
 
-using ASC.Common;
-using ASC.Core;
-using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Entities;
-using ASC.Mail.Core.Dao.Expressions.UserFolder;
-using ASC.Mail.Core.Dao.Interfaces;
-using ASC.Mail.Core.Entities;
+namespace ASC.Mail.Core.Dao;
 
-using Microsoft.EntityFrameworkCore;
-
-using System.Collections.Generic;
-using System.Linq;
-
-namespace ASC.Mail.Core.Dao
+[Scope]
+public class UserFolderDao : BaseMailDao, IUserFolderDao
 {
-    [Scope]
-    public class UserFolderDao : BaseMailDao, IUserFolderDao
+    public UserFolderDao(
+         TenantManager tenantManager,
+         SecurityContext securityContext,
+         DbContextManager<MailDbContext> dbContext)
+        : base(tenantManager, securityContext, dbContext)
     {
-        public UserFolderDao(
-             TenantManager tenantManager,
-             SecurityContext securityContext,
-             DbContextManager<MailDbContext> dbContext)
-            : base(tenantManager, securityContext, dbContext)
+    }
+
+    public UserFolder Get(int id)
+    {
+        var userFolder = MailDbContext.MailUserFolder
+            .AsNoTracking()
+            .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Id == id)
+            .Select(ToUserFolder)
+            .SingleOrDefault();
+
+        return userFolder;
+    }
+
+    public UserFolder GetByMail(uint mailId)
+    {
+        var folderId = MailDbContext.MailUserFolderXMail
+            .AsNoTracking()
+            .Where(ufxm => ufxm.IdMail == mailId)
+            .Select(ufxm => ufxm.IdFolder)
+            .Distinct()
+            .SingleOrDefault();
+
+        if (folderId == 0)
+            return null;
+
+        var userFolder = MailDbContext.MailUserFolder
+            .Where(f => f.Id == folderId)
+            .Select(ToUserFolder)
+            .SingleOrDefault();
+
+        return userFolder;
+    }
+
+    public List<UserFolder> GetList(IUserFoldersExp exp)
+    {
+        var query = MailDbContext.MailUserFolder
+            .AsNoTracking()
+            .Where(exp.GetExpression())
+            .Select(ToUserFolder);
+
+        if (exp.StartIndex.HasValue)
         {
+            query.Skip(exp.StartIndex.Value);
         }
 
-        public UserFolder Get(int id)
+        if (exp.Limit.HasValue)
         {
-            var userFolder = MailDbContext.MailUserFolder
-                .AsNoTracking()
-                .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Id == id)
-                .Select(ToUserFolder)
-                .SingleOrDefault();
-
-            return userFolder;
+            query.Take(exp.Limit.Value);
         }
 
-        public UserFolder GetByMail(uint mailId)
+        if (!string.IsNullOrEmpty(exp.OrderBy))
         {
-            var folderId = MailDbContext.MailUserFolderXMail
-                .AsNoTracking()
-                .Where(ufxm => ufxm.IdMail == mailId)
-                .Select(ufxm => ufxm.IdFolder)
-                .Distinct()
-                .SingleOrDefault();
-
-            if (folderId == 0)
-                return null;
-
-            var userFolder = MailDbContext.MailUserFolder
-                .Where(f => f.Id == folderId)
-                .Select(ToUserFolder)
-                .SingleOrDefault();
-
-            return userFolder;
-        }
-
-        public List<UserFolder> GetList(IUserFoldersExp exp)
-        {
-            var query = MailDbContext.MailUserFolder
-                .AsNoTracking()
-                .Where(exp.GetExpression())
-                .Select(ToUserFolder);
-
-            if (exp.StartIndex.HasValue)
+            if (exp.OrderAsc != null && exp.OrderAsc.Value)
             {
-                query.Skip(exp.StartIndex.Value);
-            }
-
-            if (exp.Limit.HasValue)
-            {
-                query.Take(exp.Limit.Value);
-            }
-
-            if (!string.IsNullOrEmpty(exp.OrderBy))
-            {
-                if (exp.OrderAsc != null && exp.OrderAsc.Value)
-                {
-                    if (exp.OrderBy == "timeModified")
-                        query.OrderBy(uf => uf.TimeModified);
-                    else
-                        query.OrderBy(uf => uf.Name);
-                }
+                if (exp.OrderBy == "timeModified")
+                    query.OrderBy(uf => uf.TimeModified);
                 else
-                {
-                    if (exp.OrderBy == "timeModified")
-                        query.OrderByDescending(uf => uf.TimeModified);
-                    else
-                        query.OrderByDescending(uf => uf.Name);
-                }
+                    query.OrderBy(uf => uf.Name);
             }
-
-            var list = query.ToList();
-
-            return list;
+            else
+            {
+                if (exp.OrderBy == "timeModified")
+                    query.OrderByDescending(uf => uf.TimeModified);
+                else
+                    query.OrderByDescending(uf => uf.Name);
+            }
         }
 
-        public UserFolder GetRootFolder(int folderId)
+        var list = query.ToList();
+
+        return list;
+    }
+
+    public UserFolder GetRootFolder(int folderId)
+    {
+        var parentId = MailDbContext.MailUserFolderTree
+            .AsNoTracking()
+            .Where(t => t.FolderId == folderId)
+            .OrderByDescending(t => t.Level)
+            .Select(t => t.ParentId)
+            .Take(1)
+            .SingleOrDefault();
+
+        if (parentId == 0)
+            return null;
+
+        var userFolder = MailDbContext.MailUserFolder
+            .Where(f => f.Id == parentId)
+            .Select(ToUserFolder)
+            .SingleOrDefault();
+
+        return userFolder;
+    }
+
+    public UserFolder GetRootFolderByMailId(int mailId)
+    {
+        var folderId = MailDbContext.MailUserFolderXMail
+            .AsNoTracking()
+            .Where(ufxm => ufxm.IdMail == mailId)
+            .Select(ufxm => ufxm.IdFolder)
+            .Distinct()
+            .SingleOrDefault();
+
+        if (folderId == 0)
+            return null;
+
+        return GetRootFolder(folderId);
+    }
+
+    public List<UserFolder> GetParentFolders(int folderId)
+    {
+        var list = MailDbContext.MailUserFolder
+            .AsNoTracking()
+            .Join(MailDbContext.MailUserFolderTree, uf => uf.Id, t => t.ParentId,
+            (uf, t) => new
+            {
+                UserFolder = uf,
+                UserFolderTree = t
+            })
+            .Where(o => o.UserFolderTree.FolderId == folderId)
+            .OrderByDescending(o => o.UserFolderTree.Level)
+            .Select(o => ToUserFolder(o.UserFolder))
+            .ToList();
+
+        return list;
+    }
+
+    public int Save(UserFolder folder)
+    {
+        var mailUserFolder = new MailUserFolder
         {
-            var parentId = MailDbContext.MailUserFolderTree
-                .AsNoTracking()
-                .Where(t => t.FolderId == folderId)
-                .OrderByDescending(t => t.Level)
+            Id = folder.Id,
+            ParentId = folder.ParentId,
+            TenantId = folder.Tenant,
+            IdUser = folder.User,
+            Name = folder.Name,
+            FoldersCount = (uint)folder.FolderCount,
+            UnreadMessagesCount = (uint)folder.UnreadCount,
+            TotalMessagesCount = (uint)folder.TotalCount,
+            UnreadConversationsCount = (uint)folder.UnreadChainCount,
+            TotalConversationsCount = (uint)folder.TotalCount,
+            ModifiedOn = folder.TimeModified
+        };
+
+        var entry = MailDbContext.AddOrUpdate(t => t.MailUserFolder, mailUserFolder);
+
+        MailDbContext.SaveChanges();
+
+        return entry.Id;
+    }
+
+    public int Remove(int id)
+    {
+        var mailUserFolder = new MailUserFolder
+        {
+            Id = id,
+            TenantId = Tenant,
+            IdUser = UserId,
+        };
+
+        MailDbContext.MailUserFolder.Remove(mailUserFolder);
+
+        var count = MailDbContext.SaveChanges();
+
+        return count;
+    }
+
+    public int Remove(IUserFoldersExp exp)
+    {
+        var deleteQuery = MailDbContext.MailUserFolder.Where(exp.GetExpression());
+
+        MailDbContext.MailUserFolder.RemoveRange(deleteQuery);
+
+        var count = MailDbContext.SaveChanges();
+
+        return count;
+    }
+
+    public void RecalculateFoldersCount(int id)
+    {
+        var toUpdate = MailDbContext.MailUserFolder
+            .Where(uf => MailDbContext.MailUserFolderTree
+                .Where(t => t.FolderId == id)
                 .Select(t => t.ParentId)
-                .Take(1)
-                .SingleOrDefault();
+                .Any(pId => pId == uf.Id)
+            )
+            .ToList();
 
-            if (parentId == 0)
-                return null;
-
-            var userFolder = MailDbContext.MailUserFolder
-                .Where(f => f.Id == parentId)
-                .Select(ToUserFolder)
-                .SingleOrDefault();
-
-            return userFolder;
-        }
-
-        public UserFolder GetRootFolderByMailId(int mailId)
+        foreach (var f in toUpdate)
         {
-            var folderId = MailDbContext.MailUserFolderXMail
-                .AsNoTracking()
-                .Where(ufxm => ufxm.IdMail == mailId)
-                .Select(ufxm => ufxm.IdFolder)
-                .Distinct()
-                .SingleOrDefault();
+            var count = MailDbContext.MailUserFolderTree
+                .Where(r => r.ParentId == f.Id)
+                .Count() - 1;
 
-            if (folderId == 0)
-                return null;
-
-            return GetRootFolder(folderId);
+            f.FoldersCount = (uint)count;
         }
 
-        public List<UserFolder> GetParentFolders(int folderId)
+        var result = MailDbContext.SaveChanges();
+    }
+
+    public int SetFolderCounters(int folderId, int? unreadMess = null, int? totalMess = null,
+        int? unreadConv = null, int? totalConv = null)
+    {
+        if (!unreadMess.HasValue
+            && !totalMess.HasValue
+            && !unreadConv.HasValue
+            && !totalConv.HasValue)
         {
-            var list = MailDbContext.MailUserFolder
-                .AsNoTracking()
-                .Join(MailDbContext.MailUserFolderTree, uf => uf.Id, t => t.ParentId,
-                (uf, t) => new
-                {
-                    UserFolder = uf,
-                    UserFolderTree = t
-                })
-                .Where(o => o.UserFolderTree.FolderId == folderId)
-                .OrderByDescending(o => o.UserFolderTree.Level)
-                .Select(o => ToUserFolder(o.UserFolder))
-                .ToList();
-
-            return list;
+            return -1;
         }
 
-        public int Save(UserFolder folder)
+        var userFolder = MailDbContext.MailUserFolder
+            .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
+            .SingleOrDefault();
+
+        if (userFolder == null)
+            return -1;
+
+        if (unreadMess.HasValue)
+            userFolder.UnreadMessagesCount = (uint)unreadMess.Value;
+
+        if (totalMess.HasValue)
+            userFolder.TotalMessagesCount = (uint)totalMess.Value;
+
+        if (unreadConv.HasValue)
+            userFolder.UnreadConversationsCount = (uint)unreadConv.Value;
+
+        if (totalConv.HasValue)
+            userFolder.TotalConversationsCount = (uint)totalConv.Value;
+
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    public int ChangeFolderCounters(int folderId, int? unreadMessDiff = null, int? totalMessDiff = null,
+        int? unreadConvDiff = null, int? totalConvDiff = null)
+    {
+        if (!unreadMessDiff.HasValue
+            && !totalMessDiff.HasValue
+            && !unreadConvDiff.HasValue
+            && !totalConvDiff.HasValue)
         {
-            var mailUserFolder = new MailUserFolder
-            {
-                Id = folder.Id,
-                ParentId = folder.ParentId,
-                TenantId = folder.Tenant,
-                IdUser = folder.User,
-                Name = folder.Name,
-                FoldersCount = (uint)folder.FolderCount,
-                UnreadMessagesCount = (uint)folder.UnreadCount,
-                TotalMessagesCount = (uint)folder.TotalCount,
-                UnreadConversationsCount = (uint)folder.UnreadChainCount,
-                TotalConversationsCount = (uint)folder.TotalCount,
-                ModifiedOn = folder.TimeModified
-            };
-
-            var entry = MailDbContext.AddOrUpdate(t => t.MailUserFolder, mailUserFolder);
-
-            MailDbContext.SaveChanges();
-
-            return entry.Id;
+            return -1;
         }
 
-        public int Remove(int id)
+        var userFolder = MailDbContext.MailUserFolder
+            .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
+            .SingleOrDefault();
+
+        if (userFolder == null)
+            return -1;
+
+        if (unreadMessDiff.HasValue)
         {
-            var mailUserFolder = new MailUserFolder
-            {
-                Id = id,
-                TenantId = Tenant,
-                IdUser = UserId,
-            };
-
-            MailDbContext.MailUserFolder.Remove(mailUserFolder);
-
-            var count = MailDbContext.SaveChanges();
-
-            return count;
+            if (unreadMessDiff.Value == 0)
+                userFolder.UnreadMessagesCount = (uint)unreadMessDiff.Value;
+            else
+                userFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
         }
 
-        public int Remove(IUserFoldersExp exp)
+        if (totalMessDiff.HasValue)
         {
-            var deleteQuery = MailDbContext.MailUserFolder.Where(exp.GetExpression());
-
-            MailDbContext.MailUserFolder.RemoveRange(deleteQuery);
-
-            var count = MailDbContext.SaveChanges();
-
-            return count;
+            if (totalMessDiff.Value == 0)
+                userFolder.TotalMessagesCount = (uint)totalMessDiff.Value;
+            else
+                userFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
         }
 
-        public void RecalculateFoldersCount(int id)
+        if (unreadConvDiff.HasValue)
         {
-            var toUpdate = MailDbContext.MailUserFolder
-                .Where(uf => MailDbContext.MailUserFolderTree
-                    .Where(t => t.FolderId == id)
-                    .Select(t => t.ParentId)
-                    .Any(pId => pId == uf.Id)
-                )
-                .ToList();
-
-            foreach (var f in toUpdate)
-            {
-                var count = MailDbContext.MailUserFolderTree
-                    .Where(r => r.ParentId == f.Id)
-                    .Count() - 1;
-
-                f.FoldersCount = (uint)count;
-            }
-
-            var result = MailDbContext.SaveChanges();
+            if (unreadConvDiff.Value == 0)
+                userFolder.UnreadConversationsCount = (uint)unreadConvDiff.Value;
+            else
+                userFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
         }
 
-        public int SetFolderCounters(int folderId, int? unreadMess = null, int? totalMess = null,
-            int? unreadConv = null, int? totalConv = null)
+        if (totalConvDiff.HasValue)
         {
-            if (!unreadMess.HasValue
-                && !totalMess.HasValue
-                && !unreadConv.HasValue
-                && !totalConv.HasValue)
-            {
-                return -1;
-            }
-
-            var userFolder = MailDbContext.MailUserFolder
-                .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
-                .SingleOrDefault();
-
-            if (userFolder == null)
-                return -1;
-
-            if (unreadMess.HasValue)
-                userFolder.UnreadMessagesCount = (uint)unreadMess.Value;
-
-            if (totalMess.HasValue)
-                userFolder.TotalMessagesCount = (uint)totalMess.Value;
-
-            if (unreadConv.HasValue)
-                userFolder.UnreadConversationsCount = (uint)unreadConv.Value;
-
-            if (totalConv.HasValue)
-                userFolder.TotalConversationsCount = (uint)totalConv.Value;
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
+            if (totalConvDiff.Value == 0)
+                userFolder.TotalConversationsCount = (uint)totalConvDiff.Value;
+            else
+                userFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
         }
 
-        public int ChangeFolderCounters(int folderId, int? unreadMessDiff = null, int? totalMessDiff = null,
-            int? unreadConvDiff = null, int? totalConvDiff = null)
+        var result = MailDbContext.SaveChanges();
+
+        return result;
+    }
+
+    protected UserFolder ToUserFolder(MailUserFolder r)
+    {
+        var folder = new UserFolder
         {
-            if (!unreadMessDiff.HasValue
-                && !totalMessDiff.HasValue
-                && !unreadConvDiff.HasValue
-                && !totalConvDiff.HasValue)
-            {
-                return -1;
-            }
+            Id = r.Id,
+            ParentId = r.ParentId,
 
-            var userFolder = MailDbContext.MailUserFolder
-                .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
-                .SingleOrDefault();
+            Tenant = r.TenantId,
+            User = r.IdUser,
 
-            if (userFolder == null)
-                return -1;
+            Name = r.Name,
+            FolderCount = (int)r.FoldersCount,
 
-            if (unreadMessDiff.HasValue)
-            {
-                if (unreadMessDiff.Value == 0)
-                    userFolder.UnreadMessagesCount = (uint)unreadMessDiff.Value;
-                else
-                    userFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
-            }
+            UnreadCount = (int)r.UnreadMessagesCount,
+            TotalCount = (int)r.TotalMessagesCount,
 
-            if (totalMessDiff.HasValue)
-            {
-                if (totalMessDiff.Value == 0)
-                    userFolder.TotalMessagesCount = (uint)totalMessDiff.Value;
-                else
-                    userFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
-            }
+            UnreadChainCount = (int)r.UnreadConversationsCount,
+            TotalChainCount = (int)r.TotalConversationsCount,
 
-            if (unreadConvDiff.HasValue)
-            {
-                if (unreadConvDiff.Value == 0)
-                    userFolder.UnreadConversationsCount = (uint)unreadConvDiff.Value;
-                else
-                    userFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
-            }
+            TimeModified = r.ModifiedOn
+        };
 
-            if (totalConvDiff.HasValue)
-            {
-                if (totalConvDiff.Value == 0)
-                    userFolder.TotalConversationsCount = (uint)totalConvDiff.Value;
-                else
-                    userFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
-            }
-
-            var result = MailDbContext.SaveChanges();
-
-            return result;
-        }
-
-        protected UserFolder ToUserFolder(MailUserFolder r)
-        {
-            var folder = new UserFolder
-            {
-                Id = r.Id,
-                ParentId = r.ParentId,
-
-                Tenant = r.TenantId,
-                User = r.IdUser,
-
-                Name = r.Name,
-                FolderCount = (int)r.FoldersCount,
-
-                UnreadCount = (int)r.UnreadMessagesCount,
-                TotalCount = (int)r.TotalMessagesCount,
-
-                UnreadChainCount = (int)r.UnreadConversationsCount,
-                TotalChainCount = (int)r.TotalConversationsCount,
-
-                TimeModified = r.ModifiedOn
-            };
-
-            return folder;
-        }
+        return folder;
     }
 }

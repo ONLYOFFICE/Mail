@@ -23,22 +23,20 @@
  *
 */
 
+using FolderType = ASC.Mail.Enums.FolderType;
 
-using ASC.Mail.Enums;
+namespace ASC.Mail.Core.Entities;
 
-namespace ASC.Mail.Core.Entities
+public class Chain
 {
-    public class Chain
-    {
-        public string Id { get; set; }
-        public int MailboxId { get; set; }
-        public int Tenant { get; set; }
-        public string User { get; set; }
-        public FolderType Folder { get; set; }
-        public int Length { get; set; }
-        public bool Unread { get; set; }
-        public bool HasAttachments { get; set; }
-        public bool Importance { get; set; }
-        public string Tags { get; set; }
-    }
+    public string Id { get; set; }
+    public int MailboxId { get; set; }
+    public int Tenant { get; set; }
+    public string User { get; set; }
+    public FolderType Folder { get; set; }
+    public int Length { get; set; }
+    public bool Unread { get; set; }
+    public bool HasAttachments { get; set; }
+    public bool Importance { get; set; }
+    public string Tags { get; set; }
 }

@@ -24,11 +24,10 @@
 */
 
 
-namespace ASC.Mail.Authorization
+namespace ASC.Mail.Authorization;
+
+public enum AuthorizationServiceType
 {
-    public enum AuthorizationServiceType
-    {
-        None = 0,
-        Google
-    };
-}
+    None = 0,
+    Google
+};

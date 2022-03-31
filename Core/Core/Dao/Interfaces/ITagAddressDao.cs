@@ -23,20 +23,14 @@
  *
 */
 
+namespace ASC.Mail.Core.Dao.Interfaces;
 
-using System.Collections.Generic;
-
-using ASC.Common;
-
-namespace ASC.Mail.Core.Dao.Interfaces
+[Scope(typeof(TagAddressDao))]
+public interface ITagAddressDao
 {
-    [Scope(typeof(TagAddressDao))]
-    public interface ITagAddressDao
-    {
-        List<int> GetTagIds(string email);
-        List<string> GetTagAddresses(int tagId);
-        int Save(int tagId, string email);
-        int Delete(int tagId, string email = null);
-        int DeleteAll();
-    }
+    List<int> GetTagIds(string email);
+    List<string> GetTagAddresses(int tagId);
+    int Save(int tagId, string email);
+    int Delete(int tagId, string email = null);
+    int DeleteAll();
 }
