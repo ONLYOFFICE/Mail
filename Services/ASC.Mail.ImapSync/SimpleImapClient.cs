@@ -6,15 +6,15 @@ public class SimpleImapClient : IDisposable
     public int CheckServerAliveMitutes { get; set; } = 1;
     private Task CurentTask { get; set; }
 
-        public List<MessageDescriptor> ImapMessagesList { get; set; }
-        public IMailFolder ImapWorkFolder { get; private set; }
-        public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
-        public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
-        public FolderType Folder => MailWorkFolder.Folder;
-        public int FolderTypeInt => (int)MailWorkFolder.Folder;
-        public bool IsRootFolder => ImapWorkFolder.Name == ImapWorkFolder.FullName;
-        public IMailFolder GetImapFolderByType(int folderType) => GetImapFolderByType((FolderType)folderType);
-        public IMailFolder GetImapFolderByType(FolderType folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == folderType).Key;
+    public List<MessageDescriptor> ImapMessagesList { get; set; }
+    public IMailFolder ImapWorkFolder { get; private set; }
+    public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
+    public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
+    public FolderType Folder => MailWorkFolder.Folder;
+    public int FolderTypeInt => (int)MailWorkFolder.Folder;
+    public bool IsRootFolder => ImapWorkFolder.Name == ImapWorkFolder.FullName;
+    public IMailFolder GetImapFolderByType(int folderType) => GetImapFolderByType((FolderType)folderType);
+    public IMailFolder GetImapFolderByType(FolderType folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == folderType).Key;
 
     private readonly ILog _log;
     private readonly MailSettings _mailSettings;
@@ -418,7 +418,21 @@ public class SimpleImapClient : IDisposable
             }
         }
 
-        deleteList.ForEach(x => ImapMessagesList.Remove(x));
+        deleteList.ForEach(x => 
+        {
+            ImapAction imapAction = new ImapAction()
+            {
+                FolderAction = MailUserAction.SetAsDeleted,
+                MessageFolderName = ImapWorkFolderFullName,
+                MessageUniqueId = x.UniqueId,
+                MessageFolderType = Folder,
+                MailBoxId = Account.MailBoxId,
+                MessageIdInDB = x.MessageIdInDB
+            };
+            NewActionFromImap(this, imapAction);
+
+            ImapMessagesList.Remove(x);
+        });
 
         foreach (var message in newMessageDescriptors)
         {
@@ -644,9 +658,9 @@ public class SimpleImapClient : IDisposable
             return;
         }
 
-            if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
-            {
-                _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder.FullName}.");
+        if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
+        {
+            _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder.FullName}.");
 
             OnCriticalError?.Invoke(this, false);
         }

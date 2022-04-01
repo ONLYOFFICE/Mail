@@ -496,17 +496,23 @@ public class MailImapClient : IDisposable
 
         _enginesFactorySemaphore.Wait();
 
-            try
-            {
-                var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-                                            .SetMailboxId(simpleImapClient.Account.MailBoxId)
-                                            .SetFolder(simpleImapClient.FolderTypeInt);
+        try
+        {
+            
+
+            var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
+                                        .SetMailboxId(simpleImapClient.Account.MailBoxId)
+                                        .SetFolder(simpleImapClient.FolderTypeInt);
 
             if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
             {
                 var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
 
                 exp.SetTagIds(tags);
+            }
+            else
+            {
+
             }
 
             var workFolderMails = _mailInfoDao.GetMailInfoList(exp.Build());
@@ -600,42 +606,42 @@ public class MailImapClient : IDisposable
 
         _enginesFactorySemaphore.Wait();
 
-            message.FixDateIssues(imap_message?.InternalDate, _log);
+        message.FixDateIssues(imap_message?.InternalDate, _log);
 
-            bool unread = false, important = false;
+        bool unread = false, important = false;
 
-            if ((imap_message != null) && imap_message.Flags.HasValue)
+        if ((imap_message != null) && imap_message.Flags.HasValue)
+        {
+            unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
+            important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
+        }
+
+        message.FixEncodingIssues(_log);
+
+        var folder = simpleImapClient.MailWorkFolder;
+        var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
+
+        _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
+
+        try
+        {
+            var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, null)
+                        .SetMailboxId(simpleImapClient.Account.MailBoxId)
+                        .SetFolder(simpleImapClient.FolderTypeInt)
+                        .SetMimeMessageId(message.MessageId);
+
+            if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
             {
-                unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
-                important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
+                var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
+
+                exp.SetTagIds(tags);
             }
 
-            message.FixEncodingIssues(_log);
+            var findedMessages = _mailInfoDao.GetMailInfoList(exp.Build());
 
-            var folder = simpleImapClient.MailWorkFolder;
-            var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
-
-            _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
-
-            try
+            if (findedMessages.Count == 0)
             {
-                var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, null)
-                            .SetMailboxId(simpleImapClient.Account.MailBoxId)
-                            .SetFolder(simpleImapClient.FolderTypeInt)
-                            .SetMimeMessageId(message.MessageId);
-
-                if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
-                {
-                    var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
-
-                    exp.SetTagIds(tags);
-                }
-
-                var findedMessages = _mailInfoDao.GetMailInfoList(exp.Build());
-
-                if (findedMessages.Count == 0)
-                {
-                    var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log);
+                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
@@ -655,7 +661,7 @@ public class MailImapClient : IDisposable
                 return true;
             }
 
-                var messageInfo = findedMessages[0];
+            var messageInfo = findedMessages[0];
 
             imap_message.MessageIdInDB = messageInfo.Id;
 
@@ -916,7 +922,7 @@ public class MailImapClient : IDisposable
     {
         IsReady = false;
 
-            var allAccounts = simpleImapClients.GroupBy(x => x.Account).Select(x => x.Key).ToList();
+        var allAccounts = simpleImapClients.GroupBy(x => x.Account).Select(x => x.Key).ToList();
 
         aliveTimer.Stop();
         aliveTimer.Elapsed -= AliveTimer_Elapsed;

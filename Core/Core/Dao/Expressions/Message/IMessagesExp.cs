@@ -37,5 +37,7 @@ public interface IMessagesExp : IMessageExp
 
     List<int> TagIds { get; }
 
+    List<int> ExcludeTagIds { get; }
+
     int? UserFolderId { get; }
 }

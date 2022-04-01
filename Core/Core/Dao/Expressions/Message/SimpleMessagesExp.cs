@@ -44,6 +44,7 @@ public class SimpleMessagesExp : IMessagesExp
     public List<int> FoldersIds { get; set; }
     public List<string> ChainIds { get; set; }
     public List<int> TagIds { get; set; }
+    public List<int> ExcludeTagIds { get; set; }
     public int? UserFolderId { get; set; }
 
     public string OrderBy { get; set; }

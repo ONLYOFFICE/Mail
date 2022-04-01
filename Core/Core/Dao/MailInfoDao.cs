@@ -49,7 +49,12 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         {
             query = query.Where(m =>
                 MailDbContext.MailTagMail
-                    .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId && exp.TagIds.Contains(t.IdTag))
+                    .Where(t => t.IdMail == m.Id
+                    && t.Tenant == Tenant
+                    && t.IdUser == UserId
+                    && exp.TagIds.Contains(t.IdTag)
+                    && (exp.ExcludeTagIds!=null)
+                    && (!exp.ExcludeTagIds.Contains(t.IdTag)))
                     .FirstOrDefault() != null);
         }
 
