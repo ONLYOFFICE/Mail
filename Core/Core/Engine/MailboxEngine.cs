@@ -47,6 +47,7 @@ public class MailboxEngine : BaseEngine
     private readonly CacheEngine _cacheEngine;
     private readonly IndexEngine _indexEngine;
     private readonly IServiceProvider _serviceProvider;
+    private static OAuth20TokenHelper _oauth20TokenHelper;
 
     public MailboxEngine(
         TenantManager tenantManager,
@@ -59,7 +60,8 @@ public class MailboxEngine : BaseEngine
         IndexEngine indexEngine,
         IOptionsMonitor<ILog> option,
         IServiceProvider serviceProvider,
-        MailSettings mailSettings) : base(mailSettings)
+        MailSettings mailSettings,
+        OAuth20TokenHelper oAuth20TokenHelper) : base(mailSettings)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
@@ -72,6 +74,8 @@ public class MailboxEngine : BaseEngine
         _quotaEngine = quotaEngine;
         _cacheEngine = cacheEngine;
         _indexEngine = indexEngine;
+
+        _oauth20TokenHelper = oAuth20TokenHelper;
 
         _log = option.Get("ASC.Mail.MailboxEngine");
 
@@ -897,7 +901,7 @@ public class MailboxEngine : BaseEngine
             inServer.SocketType.ToEncryptionType(), inServer.Authentication.ToSaslMechanism(), mailbox.Imap,
             address.ToLogin(outServer.Username), mailbox.SmtpPassword, outServerOldFormat,
             outServer.SocketType.ToEncryptionType(), outServer.Authentication.ToSaslMechanism(),
-            Convert.ToByte(mailbox.OAuthType), mailbox.OAuthToken)
+            Convert.ToByte(mailbox.OAuthType), mailbox.OAuthToken, _oauth20TokenHelper)
         {
             Size = mailbox.SizeLast,
             MessagesCount = mailbox.MsgCountLast,
