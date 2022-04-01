@@ -30,33 +30,35 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
 {
     private readonly ILog log;
 
-    private readonly T loginProvider;
+    private readonly T _loginProvider;
+    private readonly OAuth20TokenHelper _oAuth20TokenHelper;
     private ConsumerFactory ConsumerFactory;
 
-    public string ClientId => loginProvider.ClientID;
+    public string ClientId => _loginProvider.ClientID;
 
-    public string ClientSecret => loginProvider.ClientSecret;
+    public string ClientSecret => _loginProvider.ClientSecret;
 
-    public string RedirectUrl => loginProvider.RedirectUri;
+    public string RedirectUrl => _loginProvider.RedirectUri;
 
-    public string RefreshUrl => loginProvider.AccessTokenUrl;
+    public string RefreshUrl => _loginProvider.AccessTokenUrl;
 
-    public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory)
+    public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory, OAuth20TokenHelper oAuth20TokenHelper)
     {
         ConsumerFactory = consumerFactory;
+        _oAuth20TokenHelper = oAuth20TokenHelper;
 
         this.log = log;
-        loginProvider = ConsumerFactory.Get<T>();
+        _loginProvider = ConsumerFactory.Get<T>();
 
         try
         {
-            if (String.IsNullOrEmpty(loginProvider.ClientID))
+            if (String.IsNullOrEmpty(_loginProvider.ClientID))
                 throw new ArgumentNullException("ClientId");
 
-            if (String.IsNullOrEmpty(loginProvider.ClientSecret))
+            if (String.IsNullOrEmpty(_loginProvider.ClientSecret))
                 throw new ArgumentNullException("ClientSecret");
 
-            if (String.IsNullOrEmpty(loginProvider.RedirectUri))
+            if (String.IsNullOrEmpty(_loginProvider.RedirectUri))
                 throw new ArgumentNullException("RedirectUrl");
         }
         catch (Exception ex)
@@ -77,7 +79,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
 
         try
         {
-            return OAuth20TokenHelper.RefreshToken<T>(ConsumerFactory, token);
+            return _oAuth20TokenHelper.RefreshToken<T>(ConsumerFactory, token);
         }
         catch (Exception ex)
         {

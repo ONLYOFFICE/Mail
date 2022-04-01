@@ -259,10 +259,10 @@ public class MailBoxData : IEquatable<MailBoxData>
                 //_token = OAuth20TokenHelper.RefreshToken<GoogleLoginProvider>(_token);
                 //break;
                 case AuthorizationServiceType.None:
-                    _token = OAuth20TokenHelper.RefreshToken("", _token);
+                    _token = _oAuth20TokenHelper.RefreshToken("", _token);
                     break;
                 default:
-                    _token = OAuth20TokenHelper.RefreshToken("", _token);
+                    _token = _oAuth20TokenHelper.RefreshToken("", _token);
                     break;
             }
 
@@ -345,6 +345,9 @@ public class MailBoxData : IEquatable<MailBoxData>
     [IgnoreDataMember]
     public bool LastSignalrNotifySkipped { get; set; }
 
+    [IgnoreDataMember]
+    private OAuth20TokenHelper _oAuth20TokenHelper;
+
     public MailBoxData()
     {
         ServerLoginDelay = DefaultServerLoginDelay; //This value can be changed in test mailbox connection
@@ -356,7 +359,7 @@ public class MailBoxData : IEquatable<MailBoxData>
         EncryptionType encryption, SaslMechanism authentication, bool imap,
         string smtpAccount, string smtpPassword, string smtpServer,
         EncryptionType smtpEncryption, SaslMechanism smtpAuthentication,
-        byte oAuthType, string oAuthToken)
+        byte oAuthType, string oAuthToken, OAuth20TokenHelper oAuth20TokenHelper)
     {
         if (string.IsNullOrEmpty(user)) throw new ArgumentNullException("user");
         if (email == null) throw new ArgumentNullException("email");
@@ -397,6 +400,8 @@ public class MailBoxData : IEquatable<MailBoxData>
         BeginDate = MailBeginTimestamp;
 
         ImapIntervals = new Dictionary<string, ImapFolderUids>();
+
+        _oAuth20TokenHelper = oAuth20TokenHelper;
     }
 
     public override string ToString()
