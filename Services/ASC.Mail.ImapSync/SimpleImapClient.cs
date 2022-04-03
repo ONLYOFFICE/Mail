@@ -15,6 +15,23 @@ public class SimpleImapClient : IDisposable
     public bool IsRootFolder => ImapWorkFolder.Name == ImapWorkFolder.FullName;
     public IMailFolder GetImapFolderByType(int folderType) => GetImapFolderByType((FolderType)folderType);
     public IMailFolder GetImapFolderByType(FolderType folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == folderType).Key;
+    public string[] ExcludeTags
+    {
+        get
+        {
+            List<string> result = new List<string>();
+
+            foreach (var item in foldersDictionary)
+            {
+                if(item.Key!= ImapWorkFolder)
+                {
+                    result.AddRange(item.Value.Tags);
+                }
+            }
+
+            return result.ToArray();
+        }
+    }
 
     private readonly ILog _log;
     private readonly MailSettings _mailSettings;

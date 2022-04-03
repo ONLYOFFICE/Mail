@@ -498,8 +498,6 @@ public class MailImapClient : IDisposable
 
         try
         {
-            
-
             var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
                                         .SetMailboxId(simpleImapClient.Account.MailBoxId)
                                         .SetFolder(simpleImapClient.FolderTypeInt);
@@ -510,10 +508,10 @@ public class MailImapClient : IDisposable
 
                 exp.SetTagIds(tags);
             }
-            else
-            {
 
-            }
+            var excludetags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.ExcludeTags);
+
+            exp.SetExcludeTagIds(excludetags);
 
             var workFolderMails = _mailInfoDao.GetMailInfoList(exp.Build());
 
@@ -543,19 +541,17 @@ public class MailImapClient : IDisposable
                 SetMessageFlagsFromImap(imap_message, db_message);
             }
 
-            //if (!simpleImapClient.IsRootFolder)
-            //{
-            //    List<int> messagesToRemove = new List<int>();
+            List<int> messagesToRemove = new List<int>();
 
-            //    foreach (var dbMessage in workFolderMails)
-            //    {
-            //        if (uidlInIMAP.Contains(dbMessage.Uidl)) continue;
+            foreach (var dbMessage in workFolderMails)
+            {
+                if (uidlInIMAP.Contains(dbMessage.Uidl)) continue;
 
-            //        messagesToRemove.Add(dbMessage.Id);
-            //    }
+                messagesToRemove.Add(dbMessage.Id);
+            }
 
-            //    _mailEnginesFactory.MessageEngine.SetRemoved(messagesToRemove);
-            //}
+            _mailEnginesFactory.MessageEngine.SetRemoved(messagesToRemove);
+
         }
         catch (Exception ex)
         {
