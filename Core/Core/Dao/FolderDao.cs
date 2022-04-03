@@ -148,6 +148,12 @@ public class FolderDao : BaseMailDao, IFolderDao
             else
                 mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
         }
+
+        if (mailFolder.UnreadMessagesCount < 0) mailFolder.UnreadMessagesCount = 0;
+        if (mailFolder.TotalMessagesCount < 0) mailFolder.TotalMessagesCount = 0;
+        if (mailFolder.UnreadConversationsCount < 0) mailFolder.UnreadConversationsCount = 0;
+        if (mailFolder.TotalConversationsCount < 0) mailFolder.TotalConversationsCount = 0;
+
         var result = MailDbContext.SaveChanges();
 
         return result;
