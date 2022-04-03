@@ -47,15 +47,28 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
         if (exp.TagIds != null && exp.TagIds.Any())
         {
-            query = query.Where(m =>
-                MailDbContext.MailTagMail
-                    .Where(t => t.IdMail == m.Id
-                    && t.Tenant == Tenant
-                    && t.IdUser == UserId
-                    && exp.TagIds.Contains(t.IdTag)
-                    && (exp.ExcludeTagIds!=null)
-                    && (!exp.ExcludeTagIds.Contains(t.IdTag)))
+            if (exp.ExcludeTagIds != null && exp.ExcludeTagIds.Any())
+            {
+                query = query.Where(m =>
+                    MailDbContext.MailTagMail
+                        .Where(t => t.IdMail == m.Id
+                        && t.Tenant == Tenant
+                        && t.IdUser == UserId
+                        && exp.TagIds.Contains(t.IdTag)
+                        && (exp.ExcludeTagIds != null)
+                        && (!exp.ExcludeTagIds.Contains(t.IdTag)))
+                        .FirstOrDefault() != null);
+            }
+            else
+            {
+                query = query.Where(m =>
+                    MailDbContext.MailTagMail
+                    .Where(t => t.IdMail == m.Id 
+                    && t.Tenant == Tenant 
+                    && t.IdUser == UserId 
+                    && exp.TagIds.Contains(t.IdTag))
                     .FirstOrDefault() != null);
+            }
         }
 
         if (exp.UserFolderId.HasValue)

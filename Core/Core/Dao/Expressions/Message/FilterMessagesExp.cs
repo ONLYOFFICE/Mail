@@ -55,6 +55,8 @@ public class FilterMessagesExp : IMessagesExp
         get { return Filter.UserFolderId; }
     }
 
+    public List<int> ExcludeTagIds => null;
+
     public FilterMessagesExp(List<int> ids, int tenant, string user, MailSearchFilterData filter)
     {
         Filter = filter;

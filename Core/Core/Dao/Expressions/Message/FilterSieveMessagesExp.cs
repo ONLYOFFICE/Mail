@@ -35,6 +35,8 @@ public class FilterSieveMessagesExp : IMessagesExp
         get { return null; }
     }
 
+    public List<int> ExcludeTagIds => null;
+
     public FilterSieveMessagesExp(List<int> ids, int tenant, string user, MailSieveFilterData filter, int page,
         int pageSize,
         FactoryIndexer<MailMail> factoryIndexer,

@@ -105,6 +105,12 @@ public class MessagesExpBuilder
         return this;
     }
 
+    public MessagesExpBuilder SetExcludeTagIds(List<int> tagIds)
+    {
+        _exp.ExcludeTagIds = tagIds;
+        return this;
+    }
+
     public MessagesExpBuilder SetOrderBy(string orderBy)
     {
         _exp.OrderBy = orderBy;
