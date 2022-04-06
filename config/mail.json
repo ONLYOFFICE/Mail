@@ -55,6 +55,7 @@
       "SslCertificatesErrorsPermit": false,
       "DefaultApiSchema": "http",
       "DefaultServerLoginDelay": 30,
+      "DefaultServerLoginDelayAfterError": 60,
       "AutoreplyDaysInterval": 1,
       "WebHub": "",
       "WebHubInternal": "http://localhost:9899",

@@ -208,42 +208,67 @@ internal class MailboxHandler : IDisposable
         }
         catch (TimeoutException tEx)
         {
-            _log.Warn($"LOGIN IMAP [TIMEOUT]\r\n{_boxInfo}\r\n{tEx}");
+            _log.Warn($"AT LOGIN IMAP/POP3 [TIMEOUT]\r\n{_boxInfo}\r\n{tEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (ImapProtocolException iEx)
         {
-            _log.Error($"LOGIN IMAP [IMAP PROTOCOL]\r\n{_boxInfo}\r\n{iEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [IMAP PROTOCOL]\r\n{_boxInfo}\r\n{iEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (OperationCanceledException ocEx)
         {
-            _log.Info($"LOGIN IMAP [OPERATION CANCEL]\r\n{_boxInfo}\r\n{ocEx}");
+            _log.Info($"AT LOGIN IMAP/POP3 [OPERATION CANCEL]\r\n{_boxInfo}\r\n{ocEx}");
 
             stopClient = true;
         }
         catch (AuthenticationException aEx)
         {
-            _log.Error($"LOGIN IMAP [AUTHENTICATION]\r\n{_boxInfo}\r\n{aEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [AUTHENTICATION]\r\n{_boxInfo}\r\n{aEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (WebException wEx)
         {
-            _log.Error($"LOGIN IMAP [WEB]\r\n{_boxInfo}\r\n{wEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [WEB]\r\n{_boxInfo}\r\n{wEx}");
 
             connectError = true;
             stopClient = true;
         }
+        catch (SslHandshakeException sslEx)
+        {
+            if (sslEx.Message.Contains("The remote certificate was rejected") || sslEx.Message.Contains("certificate has expired"))
+            {
+                _log.Error($"AT LOGIN IMAP/POP3 [Certificate has expired EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
+                connectError = true;
+            }
+            else
+            {
+                _log.Error($"AT LOGIN IMAP/POP3 [SSL EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
+            }
+
+            stopClient = true;
+        }
         catch (Exception ex)
         {
-            _log.ErrorFormat("LOGIN IMAP [UNREGISTERED EXCEPTION]\r\n{0}\r\n{1}",
-                _boxInfo, ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
+            if (ex is System.Net.Sockets.SocketException)
+            {
+                if (ex.Message.Contains("Error_11001"))
+                {
+                    _log.Error($"AT LOGIN IMAP/POP3 [Could not resolve host EXCEPTION]\r\n{_boxInfo}\r\n{ex}");
+                    connectError = true;
+                }
+            }
+            else
+            {
+                _log.ErrorFormat("AT LOGIN IMAP/POP3 [UNREGISTERED EXCEPTION]\r\n{0}\r\n{1}",
+                    _boxInfo, ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
+            }
 
             stopClient = true;
         }
