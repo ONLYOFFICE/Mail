@@ -23,7 +23,7 @@ public class SimpleImapClient : IDisposable
 
             foreach (var item in foldersDictionary)
             {
-                if(item.Key!= ImapWorkFolder)
+                if (item.Key != ImapWorkFolder)
                 {
                     result.AddRange(item.Value.Tags);
                 }
@@ -232,6 +232,13 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
+    public void ReSync()
+    {
+        ImapMessagesList = null;
+
+        UpdateMessagesList();
+    }
+
     internal bool Init(string FullName)
     {
         if (string.IsNullOrEmpty(FullName))
@@ -435,7 +442,7 @@ public class SimpleImapClient : IDisposable
             }
         }
 
-        deleteList.ForEach(x => 
+        deleteList.ForEach(x =>
         {
             ImapAction imapAction = new ImapAction()
             {
@@ -787,4 +794,6 @@ public class SimpleImapClient : IDisposable
 
         this.Dispose();
     }
+
+    public bool IsMessageTracked(int id) => ImapMessagesList.Any(x => x.MessageIdInDB == id);
 }

@@ -485,8 +485,6 @@ public class MailImapClient : IDisposable
 
     private void UpdateDbFolder(SimpleImapClient simpleImapClient)
     {
-        List<string> uidlInIMAP = new List<string>();
-
         if (simpleImapClient.ImapMessagesList == null)
         {
             _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
@@ -498,22 +496,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-                                        .SetMailboxId(simpleImapClient.Account.MailBoxId)
-                                        .SetFolder(simpleImapClient.FolderTypeInt);
-
-            if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
-            {
-                var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
-
-                exp.SetTagIds(tags);
-            }
-
-            var excludetags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.ExcludeTags);
-
-            exp.SetExcludeTagIds(excludetags);
-
-            var workFolderMails = _mailInfoDao.GetMailInfoList(exp.Build());
+            var workFolderMails = GetMailFolderMessages(simpleImapClient);
 
             _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={workFolderMails.Count}.");
 
@@ -523,9 +506,7 @@ public class MailImapClient : IDisposable
 
                 var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
-                uidlInIMAP.Add(uidl);
-
-                var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl);
+                var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl && (!simpleImapClient.IsMessageTracked(x.Id)));
 
                 if (db_message == null)
                 {
@@ -539,18 +520,11 @@ public class MailImapClient : IDisposable
                 imap_message.MessageIdInDB = db_message.Id;
 
                 SetMessageFlagsFromImap(imap_message, db_message);
+
+                workFolderMails.Remove(db_message);
             }
 
-            List<int> messagesToRemove = new List<int>();
-
-            foreach (var dbMessage in workFolderMails)
-            {
-                if (uidlInIMAP.Contains(dbMessage.Uidl)) continue;
-
-                messagesToRemove.Add(dbMessage.Id);
-            }
-
-            _mailEnginesFactory.MessageEngine.SetRemoved(messagesToRemove);
+            _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x=>x.Id).ToList());
 
         }
         catch (Exception ex)
@@ -621,19 +595,9 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, null)
-                        .SetMailboxId(simpleImapClient.Account.MailBoxId)
-                        .SetFolder(simpleImapClient.FolderTypeInt)
-                        .SetMimeMessageId(message.MessageId);
+            var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, null);
 
-            if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
-            {
-                var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
-
-                exp.SetTagIds(tags);
-            }
-
-            var findedMessages = _mailInfoDao.GetMailInfoList(exp.Build());
+            findedMessages.RemoveAll(x => simpleImapClient.IsMessageTracked(x.Id));
 
             if (findedMessages.Count == 0)
             {
@@ -657,7 +621,18 @@ public class MailImapClient : IDisposable
                 return true;
             }
 
-            var messageInfo = findedMessages[0];
+            MailInfo messageInfo = findedMessages.FirstOrDefault(x => x.IsRemoved == false);
+
+            if (messageInfo==null)
+            {
+                messageInfo = findedMessages[0];
+
+                var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
+                                                    .SetMessageId(messageInfo.Id)
+                                                    .Build();
+
+                if (_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
+            }
 
             imap_message.MessageIdInDB = messageInfo.Id;
 
@@ -669,21 +644,9 @@ public class MailImapClient : IDisposable
                             .SetMessageId(messageInfo.Id)
                             .Build();
 
-                _mailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
-            }
+                int resultSetFieldValue = _mailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
 
-            if (messageInfo.Folder != simpleImapClient.Folder)
-            {
-                _mailEnginesFactory.MessageEngine.SetFolder(new List<int>() { messageInfo.Id }, simpleImapClient.Folder);
-            }
-
-            if (messageInfo.IsRemoved)
-            {
-                var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
-                    .SetMessageId(messageInfo.Id)
-                    .Build();
-
-                if (_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
+                if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
             }
 
             _log.Info($"Message updated (id: {messageInfo.Id}, Folder: '{simpleImapClient.Folder}'), Subject: '{messageInfo.Subject}'");
@@ -715,6 +678,28 @@ public class MailImapClient : IDisposable
         }
 
         return result;
+    }
+
+    private List<MailInfo> GetMailFolderMessages(SimpleImapClient simpleImapClient, string mimeMessageId = null, bool? isRemoved=false)
+    {
+        var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
+            .SetMailboxId(simpleImapClient.Account.MailBoxId)
+            .SetFolder(simpleImapClient.FolderTypeInt);
+
+        if (!string.IsNullOrEmpty(mimeMessageId)) exp.SetMimeMessageId(mimeMessageId);
+
+        if (simpleImapClient.MailWorkFolder.Tags.Length > 0)
+        {
+            var tags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
+
+            exp.SetTagIds(tags);
+        }
+
+        var excludetags = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.ExcludeTags);
+
+        exp.SetExcludeTagIds(excludetags);
+
+        return _mailInfoDao.GetMailInfoList(exp.Build());
     }
 
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
