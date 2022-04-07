@@ -344,13 +344,15 @@ public class FilterEngine
         return false;
     }
 
-    public void ApplyFilters(MailMessageData message, MailBoxData mailbox, MailFolder folder,
+    public List<MailSieveFilterActionData> ApplyFilters(MailMessageData message, MailBoxData mailbox, MailFolder folder,
         List<MailSieveFilterData> filters)
     {
         var listAppliedFilters = new List<MailSieveFilterData>();
 
+        List<MailSieveFilterActionData> filterAppliedSuccessfull = new List<MailSieveFilterActionData>();
+
         if (!filters.Any())
-            return;
+            return filterAppliedSuccessfull;
 
         foreach (var filter in filters)
         {
@@ -419,7 +421,12 @@ public class FilterEngine
                             ? " id=" + action.Data
                             : "");
 
-                    ApplyAction(new List<int> { message.Id }, action);
+                    if(ApplyAction(new List<int> { message.Id }, action))
+                    {
+                        filterAppliedSuccessfull.Add(action);
+                    }
+
+
                 }
                 catch (NotFoundFilterDataException ex)
                 {
@@ -440,17 +447,23 @@ public class FilterEngine
                 }
             }
         }
+
+        return filterAppliedSuccessfull;
     }
 
-    public void ApplyAction(List<int> ids, MailSieveFilterActionData action)
+    public bool ApplyAction(List<int> ids, MailSieveFilterActionData action)
     {
+        bool result = false;
+
         switch (action.Action)
         {
             case ActionType.DeleteForever:
                 _messageEngine.SetRemoved(ids);
+                result=true;
                 break;
             case ActionType.MarkAsRead:
                 _messageEngine.SetUnread(ids, false);
+                result = true;
                 break;
             case ActionType.MoveTo:
                 var dataJson = JObject.Parse(action.Data);
@@ -485,6 +498,8 @@ public class FilterEngine
 
                 _messageEngine.SetFolder(ids, folderType,
                     folderType == FolderType.UserFolder ? folderId : null);
+
+                result = true;
                 break;
             case ActionType.MarkTag:
                 var tagId = Convert.ToInt32(action.Data);
@@ -500,10 +515,13 @@ public class FilterEngine
                 break;
             case ActionType.MarkAsImportant:
                 _messageEngine.SetImportant(ids, true);
+                result = true;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
+
+        return result;
     }
 
     protected MailSieveFilterData ToFilterData(Filter filter)

@@ -24,8 +24,6 @@ public class MailImapClient : IDisposable
 
     public bool IsReady { get; private set; } = false;
 
-    public ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; }
-
     private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
     private List<SimpleImapClient> simpleImapClients;
 
@@ -106,8 +104,6 @@ public class MailImapClient : IDisposable
         {
             throw new Exception($"No redis connection. UserName={UserName}");
         }
-
-        Filters = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
 
         tenantManager = clientScope.GetService<TenantManager>();
         tenantManager.SetCurrentTenant(tenant);
@@ -612,7 +608,7 @@ public class MailImapClient : IDisposable
 
                 imap_message.MessageIdInDB = messageDB.Id;
 
-                DoOptionalOperations(messageDB, message, simpleImapClient.Account, folder, _log, _mailEnginesFactory);
+                DoOptionalOperations(messageDB, message, simpleImapClient);
 
                 _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
 
@@ -738,26 +734,26 @@ public class MailImapClient : IDisposable
         return true;
     }
 
-    private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, MailBoxData mailbox, ASC.Mail.Models.MailFolder folder, ILog log, MailEnginesFactory mailFactory)
+    private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, SimpleImapClient simpleImapClient)
     {
         try
         {
             var tagIds = new List<int>();
 
-            if (folder.Tags.Any())
+            if (simpleImapClient.MailWorkFolder.Tags.Any())
             {
-                log.Debug("DoOptionalOperations -> GetOrCreateTags()");
+                _log.Debug("DoOptionalOperations -> GetOrCreateTags()");
 
-                tagIds = mailFactory.TagEngine.GetOrCreateTags(mailbox.TenantId, mailbox.UserId, folder.Tags);
+                tagIds = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
             }
 
-            log.Debug("DoOptionalOperations -> IsCrmAvailable()");
+            _log.Debug("DoOptionalOperations -> IsCrmAvailable()");
 
             if (crmAvailable)
             {
-                log.Debug("DoOptionalOperations -> GetCrmTags()");
+                _log.Debug("DoOptionalOperations -> GetCrmTags()");
 
-                var crmTagIds = mailFactory.TagEngine.GetCrmTags(message.FromEmail);
+                var crmTagIds = _mailEnginesFactory.TagEngine.GetCrmTags(message.FromEmail);
 
                 if (crmTagIds.Any())
                 {
@@ -778,94 +774,95 @@ public class MailImapClient : IDisposable
                 message.TagIds = message.TagIds.Distinct().ToList();
             }
 
-            log.Debug("DoOptionalOperations -> AddMessageToIndex()");
+            _log.Debug("DoOptionalOperations -> AddMessageToIndex()");
 
-            var mailMail = message.ToMailMail(mailbox.TenantId, new Guid(mailbox.UserId));
+            var mailMail = message.ToMailMail(Tenant, new Guid(UserName));
 
-            mailFactory.IndexEngine.Add(mailMail);
+            _mailEnginesFactory.IndexEngine.Add(mailMail);
 
             foreach (var tagId in tagIds)
             {
                 try
                 {
-                    log.DebugFormat($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
+                    _log.DebugFormat($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
 
-                    mailFactory.TagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
+                    _mailEnginesFactory.TagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
                 }
                 catch (Exception e)
                 {
-                    log.ErrorFormat(
+                    _log.ErrorFormat(
                         "SetMessagesTag(tenant={0}, userId='{1}', messageId={2}, tagid = {3})\r\nException:{4}\r\n",
-                        mailbox.TenantId, mailbox.UserId, message.Id, e.ToString(),
+                        Tenant, UserName, message.Id, e.ToString(),
                         tagIds != null ? string.Join(",", tagIds) : "null");
                 }
             }
 
-            log.Debug("DoOptionalOperations -> AddRelationshipEventForLinkedAccounts()");
+            _log.Debug("DoOptionalOperations -> AddRelationshipEventForLinkedAccounts()");
 
-            mailFactory.CrmLinkEngine.AddRelationshipEventForLinkedAccounts(mailbox, message);
+            _mailEnginesFactory.CrmLinkEngine.AddRelationshipEventForLinkedAccounts(simpleImapClient.Account, message);
 
-            log.Debug("DoOptionalOperations -> SaveEmailInData()");
+            _log.Debug("DoOptionalOperations -> SaveEmailInData()");
 
-            mailFactory.EmailInEngine.SaveEmailInData(mailbox, message, _mailSettings.Defines.DefaultApiSchema);
+            _mailEnginesFactory.EmailInEngine.SaveEmailInData(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema);
 
-            log.Debug("DoOptionalOperations -> SendAutoreply()");
+            _log.Debug("DoOptionalOperations -> SendAutoreply()");
 
-            mailFactory.AutoreplyEngine.SendAutoreply(mailbox, message, _mailSettings.Defines.DefaultApiSchema, log);
+            _mailEnginesFactory.AutoreplyEngine.SendAutoreply(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema, _log);
 
-            log.Debug("DoOptionalOperations -> UploadIcsToCalendar()");
+            _log.Debug("DoOptionalOperations -> UploadIcsToCalendar()");
 
-            if (folder.Folder != Enums.FolderType.Spam)
+            if (simpleImapClient.MailWorkFolder.Folder != Enums.FolderType.Spam)
             {
-                mailFactory.CalendarEngine
-                    .UploadIcsToCalendar(mailbox, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
+                _mailEnginesFactory.CalendarEngine
+                    .UploadIcsToCalendar(simpleImapClient.Account, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
                         message.CalendarEventCharset, message.CalendarEventMimeType);
             }
 
             if (_mailSettings.Defines.SaveOriginalMessage)
             {
-                log.Debug("DoOptionalOperations -> StoreMailEml()");
-                StoreMailEml(mailbox.TenantId, mailbox.UserId, message.StreamId, mimeMessage, log);
+                _log.Debug("DoOptionalOperations -> StoreMailEml()");
+                StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage, _log);
             }
 
-            log.Debug("DoOptionalOperations -> ApplyFilters()");
+            _log.Debug("DoOptionalOperations -> ApplyFilters()");
 
-            var filters = GetFilters(mailFactory, log);
+            var filters = _mailEnginesFactory.FilterEngine.GetList(); 
 
-            mailFactory.FilterEngine.ApplyFilters(message, mailbox, folder, filters);
+            var filtersAppliedSuccessfull= _mailEnginesFactory.FilterEngine.ApplyFilters(message, simpleImapClient.Account, simpleImapClient.MailWorkFolder, filters);
 
-            log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
+            foreach(var filterAppliedSuccessfull in filtersAppliedSuccessfull)
+            {
+                switch (filterAppliedSuccessfull.Action)
+                {
+                    case Enums.Filter.ActionType.MarkAsImportant:
+                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsImportant, 0);
+                        break;
+                    case Enums.Filter.ActionType.MarkAsRead:
+                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsRead, 0);
+                        break;
+                    case Enums.Filter.ActionType.DeleteForever:
+                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsDeleted, 0);
+                        break;
+                    case Enums.Filter.ActionType.MoveTo:
+                        string destination = new String(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
+                        if (int.TryParse(destination, out int result))
+                        {
+                            simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.MoveTo, result);
+                        }
+                        break;
+                    case Enums.Filter.ActionType.MarkTag:
+                        break;
+                }
+            }
+
+            _log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
         }
         catch (Exception ex)
         {
-            log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
+            _log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
         }
 
         needUserUpdate = true;
-    }
-
-    private List<MailSieveFilterData> GetFilters(MailEnginesFactory factory, ILog log)
-    {
-        var user = factory.UserId;
-
-        if (string.IsNullOrEmpty(user)) return new List<MailSieveFilterData>();
-
-        try
-        {
-            if (Filters.ContainsKey(user)) return Filters[user];
-
-            var filters = factory.FilterEngine.GetList();
-
-            Filters.TryAdd(user, filters);
-
-            return filters;
-        }
-        catch (Exception ex)
-        {
-            log.Error("GetFilters failed", ex);
-        }
-
-        return new List<MailSieveFilterData>();
     }
 
     public string StoreMailEml(int tenant, string userId, string streamId, MimeMessage message, ILog log)

@@ -145,6 +145,8 @@ public class SimpleImapClient : IDisposable
 
         var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB));
 
+        if (!messagesOfThisClient.Any()) return;
+
         var messagesUids = messagesOfThisClient.Select(x => x.UniqueId).ToList();
 
         if ((FolderType)destination == FolderType.Trash)
