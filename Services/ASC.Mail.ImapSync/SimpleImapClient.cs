@@ -87,7 +87,27 @@ public class SimpleImapClient : IDisposable
     {
         _log.Debug($"ImapFolderMessageExpunged {ImapWorkFolder?.Name} Index={e?.Index}.");
 
-        AddTask(new Task(() => UpdateMessagesList()));
+        MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
+
+        if(messageSummary==null)
+        {
+            AddTask(new Task(() => UpdateMessagesList()));
+
+            return;
+        }
+
+        ImapAction imapAction = new ImapAction()
+        {
+            FolderAction = MailUserAction.SetAsDeleted,
+            MessageFolderName = ImapWorkFolderFullName,
+            MessageUniqueId = messageSummary.UniqueId,
+            MessageFolderType = Folder,
+            MailBoxId = Account.MailBoxId,
+            MessageIdInDB = messageSummary.MessageIdInDB
+        };
+        NewActionFromImap(this, imapAction);
+
+        ImapMessagesList?.Remove(messageSummary);
     }
 
     #endregion
@@ -397,7 +417,14 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            newMessageDescriptors = ImapWorkFolder.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags).ToMessageDescriptorList();
+            if (ImapWorkFolder.Count > 0)
+            {
+                newMessageDescriptors = ImapWorkFolder.Fetch(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags).ToMessageDescriptorList();
+            }
+            else
+            {
+                newMessageDescriptors = null;
+            }
         }
         catch (Exception ex)
         {

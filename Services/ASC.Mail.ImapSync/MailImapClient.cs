@@ -357,7 +357,7 @@ public class MailImapClient : IDisposable
                         result = _mailEnginesFactory.MessageEngine.SetImportant(uids, false);
                         break;
                     case MailUserAction.SetAsDeleted:
-                        _mailEnginesFactory.MessageEngine.DeleteConversations(Tenant, UserName, uids);
+                        _mailEnginesFactory.MessageEngine.SetRemoved(uids);
                         break;
                     case MailUserAction.RemovedFromFolder:
                         break;
@@ -524,7 +524,7 @@ public class MailImapClient : IDisposable
                 workFolderMails.Remove(db_message);
             }
 
-            _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x=>x.Id).ToList());
+            if(workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x=>x.Id).ToList());
 
         }
         catch (Exception ex)
