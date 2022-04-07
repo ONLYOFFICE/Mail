@@ -42,6 +42,7 @@ public class SimpleImapClient : IDisposable
     public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
+    public event EventHandler<string> OnNewFolderCreate;
 
     private CancellationTokenSource DoneToken { get; set; }
     private CancellationTokenSource CancelToken { get; set; }
@@ -89,7 +90,7 @@ public class SimpleImapClient : IDisposable
 
         MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e.Index);
 
-        if(messageSummary==null)
+        if (messageSummary == null)
         {
             AddTask(new Task(() => UpdateMessagesList()));
 
@@ -135,6 +136,8 @@ public class SimpleImapClient : IDisposable
         };
 
         imap.Disconnected += Imap_Disconnected;
+
+        imap.FolderCreated += Imap_FolderCreated;
 
         if (Authenticate()) LoadFoldersFromIMAP();
     }
@@ -279,6 +282,16 @@ public class SimpleImapClient : IDisposable
         return IsReady;
     }
 
+    private void Imap_FolderCreated(object sender, FolderCreatedEventArgs e)
+    {
+        if(e.Folder!=null&&ImapFolderFilter(e.Folder))
+        {
+            AddImapFolderToDictionary(e.Folder);
+
+            OnNewFolderCreate?.Invoke(this, e.Folder.FullName);
+        }
+    }
+
     private void CriticalError(string message, bool IsAuthenticationError = false)
     {
         IsReady = false;
@@ -300,26 +313,9 @@ public class SimpleImapClient : IDisposable
 
             var subfolders = GetImapSubFolders(rootFolder);
 
-            var imapFoldersList = subfolders.Where(x => !_mailSettings.SkipImapFlags.Contains(x.Name.ToLowerInvariant()))
-                .Where(x => !x.Attributes.HasFlag(FolderAttributes.NoSelect))
-                .Where(x => !x.Attributes.HasFlag(FolderAttributes.NonExistent))
-                .ToList();
+            var imapFoldersList = subfolders.Where(ImapFolderFilter).ToList();
 
-            imapFoldersList.ForEach(x =>
-            {
-                var mailFolder = DetectFolder(x);
-
-                if (mailFolder == null)
-                {
-                    _log.Debug($"LoadFoldersFromIMAP-> Skip folder {x.Name}.");
-                }
-                else
-                {
-                    foldersDictionary.Add(x, mailFolder);
-
-                    _log.Debug($"LoadFoldersFromIMAP-> Detect folder {x.Name}.");
-                }
-            });
+            imapFoldersList.ForEach(AddImapFolderToDictionary);
 
             _log.Debug($"Find {foldersDictionary.Count} folders in IMAP.");
         }
@@ -739,6 +735,12 @@ public class SimpleImapClient : IDisposable
             ImapWorkFolder.MessageExpunged -= ImapWorkFolder_MessageExpunged;
         }
 
+        if(imap!=null)
+        {
+            imap.Disconnected -= Imap_Disconnected;
+            imap.FolderCreated -= Imap_FolderCreated;
+        }
+
         DoneToken?.Cancel();
         DoneToken?.Dispose();
 
@@ -825,4 +827,32 @@ public class SimpleImapClient : IDisposable
     }
 
     public bool IsMessageTracked(int id) => ImapMessagesList.Any(x => x.MessageIdInDB == id);
+
+    private bool ImapFolderFilter(IMailFolder folder)
+    {
+        if (_mailSettings.SkipImapFlags.Contains(folder.Name.ToLowerInvariant())) return false;
+
+        if (folder.Attributes.HasFlag(FolderAttributes.NoSelect)) return false;
+
+        if (folder.Attributes.HasFlag(FolderAttributes.NonExistent)) return false;
+
+        return true;
+    }
+
+    private void AddImapFolderToDictionary(IMailFolder folder)
+    {
+        var mailFolder = DetectFolder(folder);
+
+        if (mailFolder == null)
+        {
+            _log.Debug($"LoadFoldersFromIMAP-> Skip folder {folder.Name}.");
+        }
+        else
+        {
+            foldersDictionary.Add(folder, mailFolder);
+
+            _log.Debug($"LoadFoldersFromIMAP-> Detect folder {folder.Name}.");
+        }
+    }
+
 }

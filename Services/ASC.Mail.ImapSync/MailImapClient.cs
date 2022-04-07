@@ -227,15 +227,11 @@ public class MailImapClient : IDisposable
 
             rootSimpleImapClient.Init("");
 
+            rootSimpleImapClient.OnNewFolderCreate += RootSimpleImapClient_OnNewFolderCreate;
+
             foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
             {
-                var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
-
-                if (!SetEvents(simpleImapClient)) continue;
-
-                simpleImapClients.Add(simpleImapClient);
-
-                simpleImapClient.Init(folder);
+                CreateSimpleImapClient(mailbox, folder);
             }
 
             _enginesFactorySemaphore.Wait();
@@ -252,6 +248,25 @@ public class MailImapClient : IDisposable
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
+    }
+
+    private void RootSimpleImapClient_OnNewFolderCreate(object sender, string e)
+    {
+        if (sender is SimpleImapClient simpleImapClient)
+        {
+            CreateSimpleImapClient(simpleImapClient.Account, e);
+        }
+    }
+
+    private void CreateSimpleImapClient(MailBoxData mailbox, string folderName)
+    {
+        var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+
+        if (!SetEvents(simpleImapClient)) return;
+
+        simpleImapClients.Add(simpleImapClient);
+
+        simpleImapClient.Init(folderName);
     }
 
     private bool SetEvents(SimpleImapClient simpleImapClient)
@@ -274,6 +289,7 @@ public class MailImapClient : IDisposable
         simpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
         simpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
         simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError;
+        simpleImapClient.OnNewFolderCreate-= RootSimpleImapClient_OnNewFolderCreate;
 
         return true;
     }
