@@ -332,18 +332,18 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var uids = new List<int>();
+            var ids = new List<int>();
 
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
-                uids.Add(imapAction.MessageIdInDB);
+                ids.Add(imapAction.MessageIdInDB);
 
                 if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
                 {
                     if (imapAction.IsSameImapFolderAndAction(nextImapAction)) continue;
                 }
 
-                if (uids.Count() == 0)
+                if (ids.Count == 0)
                 {
                     _log.Debug($"CompareFlags: No messages in DB.");
 
@@ -357,19 +357,20 @@ public class MailImapClient : IDisposable
                     case MailUserAction.Nothing:
                         break;
                     case MailUserAction.SetAsRead:
-                        result = _mailEnginesFactory.MessageEngine.SetUnread(uids, false);
+                        result = _mailEnginesFactory.MessageEngine.SetUnread(ids, false);
                         break;
                     case MailUserAction.SetAsUnread:
-                        result = _mailEnginesFactory.MessageEngine.SetUnread(uids, true);
+                        result = _mailEnginesFactory.MessageEngine.SetUnread(ids, true);
                         break;
                     case MailUserAction.SetAsImportant:
-                        result = _mailEnginesFactory.MessageEngine.SetImportant(uids, true);
+                        result = _mailEnginesFactory.MessageEngine.SetImportant(ids, true);
                         break;
                     case MailUserAction.SetAsNotImpotant:
-                        result = _mailEnginesFactory.MessageEngine.SetImportant(uids, false);
+                        result = _mailEnginesFactory.MessageEngine.SetImportant(ids, false);
                         break;
                     case MailUserAction.SetAsDeleted:
-                        _mailEnginesFactory.MessageEngine.SetRemoved(uids);
+                        _mailEnginesFactory.MessageEngine.SetRemoved(ids);
+                        result=true;
                         break;
                     case MailUserAction.RemovedFromFolder:
                         break;
@@ -381,15 +382,15 @@ public class MailImapClient : IDisposable
 
                 if (result) needUserUpdate = true;
 
-                _log.Debug($"ProcessActionFromImapTimer_Elapsed Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {uids.Count} messages.");
+                _log.Debug($"ProcessActionFromImapTimer_Elapsed Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {ids.Count} messages.");
 
                 StringBuilder sb = new StringBuilder();
 
-                uids.ForEach(x => sb.Append(x.ToString() + ", "));
+                ids.ForEach(x => sb.Append(x.ToString() + ", "));
 
                 _log.Debug($"ProcessActionFromImapTimer_Elapsed ids: {sb.ToString()}");
 
-                uids.Clear();
+                ids.Clear();
             }
         }
         catch (Exception ex)
