@@ -1,13 +1,4 @@
-﻿using ASC.Common;
-using ASC.Common.Utils;
-using ASC.Mail.Models;
-using ASC.Web.Studio.Core;
-
-using Microsoft.Extensions.Configuration;
-
-using System;
-using System.Collections.Generic;
-
+﻿
 using static System.TimeSpan;
 
 namespace ASC.Mail.Configuration
@@ -240,9 +231,11 @@ namespace ASC.Mail.Configuration
 
         public class ImapSyncConfig
         {
-            public string RedisConnectionString { get; set; }
-
             public int? AliveTimeInMinutes { get; set; }
+
+            public bool SynchronizeTresh { get; set; } = false;
+
+            public bool WriteIMAPLog { get; set; } = false;
 
             public ImapSyncMode Mode { get; set; }
 
@@ -259,9 +252,11 @@ namespace ASC.Mail.Configuration
             }
             public ImapSyncConfig(ImapSyncConfig imapSync)
             {
-                RedisConnectionString = string.IsNullOrEmpty(imapSync.RedisConnectionString) ? "localhost:6379" : imapSync.RedisConnectionString;
-
                 AliveTimeInMinutes = imapSync.AliveTimeInMinutes ?? 1;
+
+                SynchronizeTresh = imapSync.SynchronizeTresh;
+
+                WriteIMAPLog = imapSync.WriteIMAPLog;
             }
 
         }

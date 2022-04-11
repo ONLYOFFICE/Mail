@@ -58,10 +58,7 @@ public class MailImapClient : IDisposable
     {
         needUserMailBoxUpdate = true;
 
-        if (folderActivity == -1)
-        {
-            userActivityDetected = true;
-        }
+        userActivityDetected = true;
 
         int iterationCount = 0;
 
@@ -260,7 +257,7 @@ public class MailImapClient : IDisposable
 
     private void CreateSimpleImapClient(MailBoxData mailbox, string folderName)
     {
-        var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+        var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>(), folderName);
 
         if (!SetEvents(simpleImapClient)) return;
 
@@ -289,7 +286,7 @@ public class MailImapClient : IDisposable
         simpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
         simpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
         simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError;
-        simpleImapClient.OnNewFolderCreate-= RootSimpleImapClient_OnNewFolderCreate;
+        simpleImapClient.OnNewFolderCreate -= RootSimpleImapClient_OnNewFolderCreate;
 
         return true;
     }
@@ -370,7 +367,7 @@ public class MailImapClient : IDisposable
                         break;
                     case MailUserAction.SetAsDeleted:
                         _mailEnginesFactory.MessageEngine.SetRemoved(ids);
-                        result=true;
+                        result = true;
                         break;
                     case MailUserAction.RemovedFromFolder:
                         break;
@@ -537,7 +534,7 @@ public class MailImapClient : IDisposable
                 workFolderMails.Remove(db_message);
             }
 
-            if(workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x=>x.Id).ToList());
+            if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList());
 
         }
         catch (Exception ex)
@@ -636,7 +633,7 @@ public class MailImapClient : IDisposable
 
             MailInfo messageInfo = findedMessages.FirstOrDefault(x => x.IsRemoved == false);
 
-            if (messageInfo==null)
+            if (messageInfo == null)
             {
                 messageInfo = findedMessages[0];
 
@@ -693,7 +690,7 @@ public class MailImapClient : IDisposable
         return result;
     }
 
-    private List<MailInfo> GetMailFolderMessages(SimpleImapClient simpleImapClient, string mimeMessageId = null, bool? isRemoved=false)
+    private List<MailInfo> GetMailFolderMessages(SimpleImapClient simpleImapClient, string mimeMessageId = null, bool? isRemoved = false)
     {
         var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
             .SetMailboxId(simpleImapClient.Account.MailBoxId)
@@ -843,11 +840,11 @@ public class MailImapClient : IDisposable
 
             _log.Debug("DoOptionalOperations -> ApplyFilters()");
 
-            var filters = _mailEnginesFactory.FilterEngine.GetList(); 
+            var filters = _mailEnginesFactory.FilterEngine.GetList();
 
-            var filtersAppliedSuccessfull= _mailEnginesFactory.FilterEngine.ApplyFilters(message, simpleImapClient.Account, simpleImapClient.MailWorkFolder, filters);
+            var filtersAppliedSuccessfull = _mailEnginesFactory.FilterEngine.ApplyFilters(message, simpleImapClient.Account, simpleImapClient.MailWorkFolder, filters).OrderByDescending(x => x.Action).ToList();
 
-            foreach(var filterAppliedSuccessfull in filtersAppliedSuccessfull)
+            foreach (var filterAppliedSuccessfull in filtersAppliedSuccessfull)
             {
                 switch (filterAppliedSuccessfull.Action)
                 {

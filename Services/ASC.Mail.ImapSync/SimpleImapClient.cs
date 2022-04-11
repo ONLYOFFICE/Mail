@@ -12,7 +12,6 @@ public class SimpleImapClient : IDisposable
     public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
     public FolderType Folder => MailWorkFolder.Folder;
     public int FolderTypeInt => (int)MailWorkFolder.Folder;
-    public bool IsRootFolder => ImapWorkFolder.Name == ImapWorkFolder.FullName;
     public IMailFolder GetImapFolderByType(int folderType) => GetImapFolderByType((FolderType)folderType);
     public IMailFolder GetImapFolderByType(FolderType folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == folderType).Key;
     public string[] ExcludeTags
@@ -113,16 +112,19 @@ public class SimpleImapClient : IDisposable
 
     #endregion
 
-    public SimpleImapClient(MailBoxData mailbox, CancellationToken cancelToken, MailSettings mailSettings, ILog log)
+    public SimpleImapClient(MailBoxData mailbox, CancellationToken cancelToken, MailSettings mailSettings, ILog log, string folderName = "INBOX")
     {
         Account = mailbox;
         _mailSettings = mailSettings;
         _log = log;
 
-        _log.Name = $"ASC.Mail.SimpleImap_{Account.MailBoxId}";
+        _log.Name = $"ASC.Mail.SImap_{Account.MailBoxId}";
 
-        var protocolLogger = string.IsNullOrEmpty(_mailSettings.Aggregator.ProtocolLogPath) ? (IProtocolLogger)new NullProtocolLogger() :
-            new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}.log", true);
+        folderName = folderName.Replace('/', '_');
+
+        var protocolLogger = mailSettings.ImapSync.WriteIMAPLog ?
+            new ProtocolLogger(_log.LogDirectory + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
+            (IProtocolLogger)new NullProtocolLogger();
 
         CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -144,32 +146,40 @@ public class SimpleImapClient : IDisposable
 
     internal void ExecuteUserAction(IEnumerable<int> clientMessages, MailUserAction action, int destination)
     {
-        if (!clientMessages.Any()) return;
+        if (!clientMessages.Any() || ImapMessagesList == null) return;
 
-        var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB));
-
-        if (!messagesOfThisClient.Any()) return;
-
-        var messagesUids = messagesOfThisClient.Select(x => x.UniqueId).ToList();
-
-        if ((FolderType)destination == FolderType.Trash)
+        try
         {
-            AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, _trashFolder)));
 
-            return;
+            var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB));
+
+            if (!messagesOfThisClient.Any()) return;
+
+            var messagesUids = messagesOfThisClient.Select(x => x.UniqueId).ToList();
+
+            if ((FolderType)destination == FolderType.Trash && !_mailSettings.ImapSync.SynchronizeTresh)
+            {
+                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, _trashFolder)));
+
+                return;
+            }
+
+            if (action == MailUserAction.MoveTo)
+            {
+                var imapDestinationFolder = GetImapFolderByType(destination);
+
+                if (imapDestinationFolder == null) return;
+
+                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, imapDestinationFolder)));
+            }
+            else
+            {
+                AddTask(new Task(() => SetFlagsInImap(messagesUids, action)));
+            }
         }
-
-        if (action == MailUserAction.MoveTo)
+        catch (Exception ex)
         {
-            var imapDestinationFolder = GetImapFolderByType(destination);
-
-            if (imapDestinationFolder == null) return;
-
-            AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesUids, imapDestinationFolder)));
-        }
-        else
-        {
-            AddTask(new Task(() => SetFlagsInImap(messagesUids, action)));
+            _log.Error($"ExecuteUserAction exception: {ex.Message}");
         }
     }
 
@@ -269,12 +279,16 @@ public class SimpleImapClient : IDisposable
         if (string.IsNullOrEmpty(FullName))
         {
             SetNewImapWorkFolder(imap.Inbox);
+
+            _log.Name = $"ASC.Mail.SImap_{Account.MailBoxId}_INBOX";
         }
         else
         {
             var folder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == FullName);
 
             if (folder != null) SetNewImapWorkFolder(folder);
+
+            _log.Name = $"ASC.Mail.SImap_{Account.MailBoxId}_{FullName}";
         }
 
         TaskManager(Task.CompletedTask);
@@ -284,7 +298,7 @@ public class SimpleImapClient : IDisposable
 
     private void Imap_FolderCreated(object sender, FolderCreatedEventArgs e)
     {
-        if(e.Folder!=null&&ImapFolderFilter(e.Folder))
+        if (e.Folder != null && ImapFolderFilter(e.Folder))
         {
             AddImapFolderToDictionary(e.Folder);
 
@@ -309,13 +323,7 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            var rootFolder = imap.GetFolder(imap.PersonalNamespaces[0].Path);
-
-            var subfolders = GetImapSubFolders(rootFolder);
-
-            var imapFoldersList = subfolders.Where(ImapFolderFilter).ToList();
-
-            imapFoldersList.ForEach(AddImapFolderToDictionary);
+            GetIMAPFolders().ForEach(x=>AddImapFolderToDictionary(x));
 
             _log.Debug($"Find {foldersDictionary.Count} folders in IMAP.");
         }
@@ -326,6 +334,39 @@ public class SimpleImapClient : IDisposable
                 throw aggEx.InnerException;
             }
             throw new Exception("LoadFoldersFromIMAP failed", aggEx);
+        }
+    }
+
+    private List<IMailFolder> GetIMAPFolders()
+    {
+
+        var rootFolder = imap.GetFolder(imap.PersonalNamespaces[0].Path);
+
+        var subfolders = GetImapSubFolders(rootFolder);
+
+        var imapFoldersList = subfolders.Where(ImapFolderFilter).ToList();
+
+        return imapFoldersList;
+
+    }
+
+    private void UpdateIMAPFolders()
+    {
+        try
+        {
+            var newFoldersList = GetIMAPFolders().Where(x=>!foldersDictionary.Keys.Any(y=>y.FullName==x.FullName)).ToList();
+
+            foreach(var newFolder in newFoldersList)
+            {
+                if(AddImapFolderToDictionary(newFolder))
+                {
+                    OnNewFolderCreate?.Invoke(this, newFolder.FullName);
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            _log.Error($"UpdateIMAPFolders exception: {ex.Message}");
         }
     }
 
@@ -513,6 +554,8 @@ public class SimpleImapClient : IDisposable
 
     private async Task<bool> SetIdle()
     {
+        UpdateIMAPFolders();
+
         try
         {
             if (imap.Capabilities.HasFlag(ImapCapabilities.Idle))
@@ -709,7 +752,7 @@ public class SimpleImapClient : IDisposable
 
         if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
         {
-            _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder.FullName}.");
+            _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder?.FullName}.");
 
             OnCriticalError?.Invoke(this, false);
         }
@@ -723,7 +766,14 @@ public class SimpleImapClient : IDisposable
     {
         asyncTasks.Enqueue(task);
 
-        DoneToken?.Cancel();
+        try
+        {
+            DoneToken?.Cancel();
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"AddTask exception: {ex.Message}");
+        }
     }
 
     public void Dispose()
@@ -735,16 +785,22 @@ public class SimpleImapClient : IDisposable
             ImapWorkFolder.MessageExpunged -= ImapWorkFolder_MessageExpunged;
         }
 
-        if(imap!=null)
+        if (imap != null)
         {
             imap.Disconnected -= Imap_Disconnected;
             imap.FolderCreated -= Imap_FolderCreated;
         }
+        try
+        {
+            DoneToken?.Cancel();
+            DoneToken?.Dispose();
 
-        DoneToken?.Cancel();
-        DoneToken?.Dispose();
-
-        imap?.Dispose();
+            imap?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"Dispose exception: {ex.Message}");
+        }
     }
 
     private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
@@ -777,7 +833,14 @@ public class SimpleImapClient : IDisposable
         {
             _trashFolder = folder;
 
-            return null;
+            if (_mailSettings.ImapSync.SynchronizeTresh)
+            {
+                return new ASC.Mail.Models.MailFolder(FolderType.Trash, folder.Name);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         if ((folder.Attributes &
@@ -821,7 +884,14 @@ public class SimpleImapClient : IDisposable
 
     public void Stop()
     {
-        CancelToken.Cancel();
+        try
+        {
+            CancelToken.Cancel();
+        }
+        catch (Exception ex)
+        {
+            _log.Warn($"Stop exception: {ex.Message}");
+        }
 
         this.Dispose();
     }
@@ -839,19 +909,21 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private void AddImapFolderToDictionary(IMailFolder folder)
+    private bool AddImapFolderToDictionary(IMailFolder folder)
     {
         var mailFolder = DetectFolder(folder);
 
         if (mailFolder == null)
         {
-            _log.Debug($"LoadFoldersFromIMAP-> Skip folder {folder.Name}.");
+            return false;
         }
         else
         {
             foldersDictionary.Add(folder, mailFolder);
 
             _log.Debug($"LoadFoldersFromIMAP-> Detect folder {folder.Name}.");
+
+            return true;
         }
     }
 

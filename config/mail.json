@@ -16,7 +16,7 @@
       "InactiveMailboxesRatio": 25,
       "TenantOverdueDays": 10,
       "TenantMinQuotaBalance": 26214400,
-      "ProtocolLogPath": "",
+      "ProtocolLogPath": "/Logs",
       "CollectStatistics": true,
       "MailDaemonEmail": "mail-daemon@onlyoffice.com",
       "RecalculateFoldersTimeout": 99999,
@@ -27,6 +27,8 @@
       "MaxMessageSizeLimit": 67108864
     },
 	"ImapSync": {
+		"SynchronizeTresh": true,
+		"WriteIMAPLog": true,
       	"Redis": {
 			"AllowAdmin": true,
 			"Ssl": false,
