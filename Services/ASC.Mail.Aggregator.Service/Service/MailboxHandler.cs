@@ -449,7 +449,7 @@ internal class MailboxHandler : IDisposable
             _log.Debug($"Optional operations: ApplyFilters");
 
             var filters = GetFilters(filterEngine, box.UserId);
-            filterEngine.ApplyFilters(message, box, boxSaveInfo.Folder, filters);
+            _ = filterEngine.ApplyFilters(message, box, boxSaveInfo.Folder, filters);
 
             _log.Debug($"Optional operations: NotifySocketIO");
 
