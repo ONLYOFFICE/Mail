@@ -286,7 +286,6 @@ public class MailImapClient : IDisposable
         simpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
         simpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
         simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError;
-        simpleImapClient.OnNewFolderCreate -= RootSimpleImapClient_OnNewFolderCreate;
 
         return true;
     }
@@ -495,7 +494,7 @@ public class MailImapClient : IDisposable
 
     private void UpdateDbFolder(SimpleImapClient simpleImapClient)
     {
-        if (simpleImapClient.ImapMessagesList == null)
+        if (simpleImapClient.ImapMessagesList == null && simpleImapClient.ImapWorkFolder.Count>0)
         {
             _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
 
@@ -510,28 +509,31 @@ public class MailImapClient : IDisposable
 
             _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={workFolderMails.Count}.");
 
-            foreach (var imap_message in simpleImapClient.ImapMessagesList)
+            if(simpleImapClient.ImapMessagesList!=null)
             {
-                _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id}.");
-
-                var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
-
-                var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl && (!simpleImapClient.IsMessageTracked(x.Id)));
-
-                if (db_message == null)
+                foreach (var imap_message in simpleImapClient.ImapMessagesList)
                 {
-                    _log.Debug($"UpdateDbFolder: imap_message_Uidl={uidl} not found in DB.");
+                    _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id}.");
 
-                    simpleImapClient.TryGetNewMessage(imap_message);
+                    var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
-                    continue;
+                    var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl && (!simpleImapClient.IsMessageTracked(x.Id)));
+
+                    if (db_message == null)
+                    {
+                        _log.Debug($"UpdateDbFolder: imap_message_Uidl={uidl} not found in DB.");
+
+                        simpleImapClient.TryGetNewMessage(imap_message);
+
+                        continue;
+                    }
+
+                    imap_message.MessageIdInDB = db_message.Id;
+
+                    SetMessageFlagsFromImap(imap_message, db_message);
+
+                    workFolderMails.Remove(db_message);
                 }
-
-                imap_message.MessageIdInDB = db_message.Id;
-
-                SetMessageFlagsFromImap(imap_message, db_message);
-
-                workFolderMails.Remove(db_message);
             }
 
             if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList());
