@@ -1,7 +1,4 @@
-﻿using ASC.Mail.Enums;
-using MailKit;
-
-namespace ASC.Mail.ImapSync
+﻿namespace ASC.Mail.ImapSync
 {
     public class ImapAction
     {
@@ -15,7 +12,7 @@ namespace ASC.Mail.ImapSync
         public bool IsSameImapFolderAndAction(ImapAction imapAction)
         {
             if (imapAction == null) return false;
-            if(MailBoxId!= imapAction.MailBoxId) return false;
+            if (MailBoxId != imapAction.MailBoxId) return false;
             if (MessageFolderType != imapAction.MessageFolderType) return false;
             if (FolderAction != imapAction.FolderAction) return false;
             if (!MessageFolderName.Equals(imapAction.MessageFolderName)) return false;

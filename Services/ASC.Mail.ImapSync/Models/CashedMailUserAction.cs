@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace ASC.Mail.ImapSync
+﻿namespace ASC.Mail.ImapSync
 {
     public class CashedMailUserAction
     {

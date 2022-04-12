@@ -17,13 +17,3 @@ public class MessageDescriptor
         MessageIdInDB = -1;
     }
 }
-
-public static class MessageDescriptorExtention
-{
-    public static List<MessageDescriptor> ToMessageDescriptorList(this IList<IMessageSummary> messages)
-    {
-        List<MessageDescriptor> result = messages.Select(x => new MessageDescriptor(x)).ToList();
-
-        return result;
-    }
-}

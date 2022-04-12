@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace ASC.Mail.ImapSync
+﻿namespace ASC.Mail.ImapSync
 {
     [Serializable]
     public class CachedTenantUserMailBox
