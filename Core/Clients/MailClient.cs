@@ -446,11 +446,11 @@ public class MailClient : IDisposable
         {
             case EncryptionType.StartTLS:
                 secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.SSL:
                 secureSocketOptions = SecureSocketOptions.SslOnConnect;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.None:
                 secureSocketOptions = SecureSocketOptions.None;
@@ -1106,11 +1106,11 @@ public class MailClient : IDisposable
         {
             case EncryptionType.StartTLS:
                 secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.SSL:
                 secureSocketOptions = SecureSocketOptions.SslOnConnect;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.None:
                 secureSocketOptions = SecureSocketOptions.None;

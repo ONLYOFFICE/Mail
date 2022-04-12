@@ -54,7 +54,7 @@ public class IndexEngine
 
         if (!_factoryIndexerMailMail.Support(service))
         {
-            _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer<MailWrapper>.Support == false");
+            _log.Info($"[SKIP INDEX] \"${service.IndexName}\". Support == false");
             return false;
         }
 
