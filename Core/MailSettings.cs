@@ -80,6 +80,7 @@ namespace ASC.Mail.Configuration
             public TimeSpan QueueLifetime { get; set; }
             public bool SaveOriginalMessage { get; set; }
             public bool SslCertificatesErrorsPermit { get; set; }
+            public bool CheckCertificateRevocation { get; set; }
             public string DefaultApiSchema { get; set; }
             public int DefaultServerLoginDelay { get; set; }
             public int DefaultServerLoginDelayAfterError { get; set; }
@@ -125,6 +126,7 @@ namespace ASC.Mail.Configuration
                 AuthErrorDisableMailboxTimeout = config.AuthErrorDisableMailboxTimeout == Zero ? FromDays(3) : config.AuthErrorDisableMailboxTimeout;
                 SaveOriginalMessage = config.SaveOriginalMessage;
                 SslCertificatesErrorsPermit = config.SslCertificatesErrorsPermit;
+                CheckCertificateRevocation = config.CheckCertificateRevocation;
                 DefaultApiSchema = config.DefaultApiSchema == "https" ? config.DefaultApiSchema : Uri.UriSchemeHttp;
                 DefaultServerLoginDelay = config.DefaultServerLoginDelay == default(int) ? 30 : config.DefaultServerLoginDelay;
                 DefaultServerLoginDelayAfterError = config.DefaultServerLoginDelayAfterError == default(int) ? 60 : config.DefaultServerLoginDelayAfterError;

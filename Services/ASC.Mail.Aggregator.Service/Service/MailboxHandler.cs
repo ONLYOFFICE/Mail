@@ -196,6 +196,7 @@ internal class MailboxHandler : IDisposable
                 _box, _tokenSource.Token, _serverFolderAccessInfo,
                 _settings.Aggregator.TcpTimeout,
                 _box.IsTeamlab || _settings.Defines.SslCertificatesErrorsPermit,
+                _settings.Defines.CheckCertificateRevocation,
                 _settings.Aggregator.ProtocolLogPath, _log, true);
 
             if (!_box.Imap)
