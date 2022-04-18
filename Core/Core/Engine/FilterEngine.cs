@@ -371,6 +371,14 @@ public class FilterEngine
                 continue;
             }
 
+            if ((filter.Options.ApplyTo.WithAttachments == ApplyToAttachmentsType.WithAttachments &&
+                message.Attachments.Count == 0) ||
+                (filter.Options.ApplyTo.WithAttachments == ApplyToAttachmentsType.WithoutAttachments &&
+                message.Attachments.Count > 0))
+            {
+                continue;
+            }
+
             var appliedCount = filter.Conditions.Count(c =>
             {
                 var success = IsConditionSucceed(c, message);
@@ -421,7 +429,7 @@ public class FilterEngine
                             ? " id=" + action.Data
                             : "");
 
-                    if(ApplyAction(new List<int> { message.Id }, action))
+                    if (ApplyAction(new List<int> { message.Id }, action))
                     {
                         filterAppliedSuccessfull.Add(action);
                     }
@@ -459,7 +467,7 @@ public class FilterEngine
         {
             case ActionType.DeleteForever:
                 _messageEngine.SetRemoved(ids);
-                result=true;
+                result = true;
                 break;
             case ActionType.MarkAsRead:
                 _messageEngine.SetUnread(ids, false);
