@@ -113,7 +113,8 @@ public class MailClient : IDisposable
         CancellationToken cancelToken,
         List<ServerFolderAccessInfo> serverFolderAccessInfos,
         int tcpTimeout = 30000,
-        bool certificatePermit = false, string protocolLogPath = "",
+        bool certificatePermit = false, bool checkCertificateRevocation = true,
+        string protocolLogPath = "",
         ILog log = null, bool skipSmtp = false, bool enableDsn = false)
     {
         var protocolLogger = !string.IsNullOrEmpty(protocolLogPath)
@@ -130,7 +131,8 @@ public class MailClient : IDisposable
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, _stopTokenSource.Token).Token;
 
-        Log.Debug($"MailClient: Constructor -> CertificatePermit: {CertificatePermit}.");
+        Log.Debug($"MailClient: Constructor -> Certificate Permit: {CertificatePermit}.");
+        Log.Debug($"MailClient: Constructor -> Check Certificate Revocation: {checkCertificateRevocation}.");
 
         if (Account.Imap)
         {
@@ -140,6 +142,7 @@ public class MailClient : IDisposable
             };
 
             Imap.ServerCertificateValidationCallback = CertificateValidationCallback;
+            Imap.CheckCertificateRevocation = checkCertificateRevocation;
 
             Pop = null;
         }
@@ -149,6 +152,10 @@ public class MailClient : IDisposable
             {
                 Timeout = tcpTimeout
             };
+
+            Pop.ServerCertificateValidationCallback = CertificateValidationCallback;
+            Pop.CheckCertificateRevocation = checkCertificateRevocation;
+
             Imap = null;
         }
 

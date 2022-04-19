@@ -38,6 +38,7 @@
       "QueueLifetime": "00:01:00",
       "SaveOriginalMessage": false,
       "SslCertificatesErrorsPermit": false,
+      "CheckCertificateRevocation": true,
       "DefaultApiSchema": "http",
       "DefaultServerLoginDelay": 30,
       "DefaultServerLoginDelayAfterError": 60,
