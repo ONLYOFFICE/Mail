@@ -41,6 +41,8 @@ public class MailImapClient : IDisposable
     private readonly ApiHelper _apiHelper;
     private readonly TenantManager tenantManager;
     private readonly SecurityContext securityContext;
+    private readonly System.Timers.Timer aliveTimer;
+    private readonly System.Timers.Timer processActionFromImapTimer;
 
     private bool crmAvailable;
     private bool needUserUpdate;
@@ -50,9 +52,6 @@ public class MailImapClient : IDisposable
     private readonly CancellationTokenSource _cancelToken;
 
     public EventHandler OnCriticalError;
-
-    private readonly System.Timers.Timer aliveTimer;
-    private readonly System.Timers.Timer processActionFromImapTimer;
 
     public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
     {
@@ -120,7 +119,7 @@ public class MailImapClient : IDisposable
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
 
-        _log.Name = $"ASC.Mail.MailUser_{userName}";
+        _log.Name = $"ASC.Mail.User_{userName}";
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -137,7 +136,10 @@ public class MailImapClient : IDisposable
 
         processActionFromImapTimer.Enabled = true;
 
-        UpdateSimplImapClients();
+        if (!UpdateSimplImapClients())
+        {
+            throw new Exception($"No MailBoxes. UserName={UserName}");
+        }
 
         aliveTimer.Enabled = true;
 
@@ -147,39 +149,40 @@ public class MailImapClient : IDisposable
 
     private List<MailBoxData> GetUserMailBoxes()
     {
-        List<MailBoxData> mailboxes;
         _enginesFactorySemaphore.Wait();
 
         try
         {
             var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, onlyTeamlab: true);
 
-            mailboxes = _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp);
+            return _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp).Where(x => x.Enabled).ToList();
         }
         catch (Exception ex)
         {
-            mailboxes = new List<MailBoxData>();
-
             _log.Error($"GetUserMailBoxes exception: {ex}");
+
+            return null;
         }
         finally
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
-
-        return mailboxes.Where(x => x.Enabled).ToList();
     }
 
     private bool IsUserOnLine()
     {
         var mailboxes = GetUserMailBoxes();
 
+        if (mailboxes == null) return false;
+
         return mailboxes.Any(x => x.Active);
     }
 
-    private void UpdateSimplImapClients()
+    private bool UpdateSimplImapClients()
     {
         var mailBoxes = GetUserMailBoxes();
+
+        if (mailBoxes == null) return false;
 
         foreach (var mailBox in mailBoxes)
         {
@@ -205,6 +208,8 @@ public class MailImapClient : IDisposable
         crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
 
         needUserMailBoxUpdate = false;
+
+        return true;
     }
 
     private void CreateSimpleImapClients(MailBoxData mailbox)
@@ -224,8 +229,6 @@ public class MailImapClient : IDisposable
 
             rootSimpleImapClient.Init("");
 
-            rootSimpleImapClient.OnNewFolderCreate += RootSimpleImapClient_OnNewFolderCreate;
-
             foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
             {
                 CreateSimpleImapClient(mailbox, folder);
@@ -235,11 +238,11 @@ public class MailImapClient : IDisposable
 
             string isLocked = _mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
 
-            _log.Debug($"CreateSimpleImapClient: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
+            _log.Debug($"CreateSimpleImapClients: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
         }
         catch (Exception ex)
         {
-            _log.Error($"CreateSimpleImapClient exception: {ex}");
+            _log.Error($"CreateSimpleImapClients exception: {ex}");
         }
         finally
         {
@@ -247,23 +250,22 @@ public class MailImapClient : IDisposable
         }
     }
 
-    private void RootSimpleImapClient_OnNewFolderCreate(object sender, string e)
-    {
-        if (sender is SimpleImapClient simpleImapClient)
-        {
-            CreateSimpleImapClient(simpleImapClient.Account, e);
-        }
-    }
-
     private void CreateSimpleImapClient(MailBoxData mailbox, string folderName)
     {
-        var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>(), folderName);
+        try
+        {
+            var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>(), folderName);
 
-        if (!SetEvents(simpleImapClient)) return;
+            if (!SetEvents(simpleImapClient)) return;
 
-        simpleImapClients.Add(simpleImapClient);
+            simpleImapClients.Add(simpleImapClient);
 
-        simpleImapClient.Init(folderName);
+            simpleImapClient.Init(folderName);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"CreateSimpleImapClient {mailbox.Name}.{folderName} exception: {ex}");
+        }
     }
 
     private bool SetEvents(SimpleImapClient simpleImapClient)
@@ -290,25 +292,28 @@ public class MailImapClient : IDisposable
         return true;
     }
 
+    private void DeleteSimpleImapClient(SimpleImapClient simpleImapClient)
+    {
+        UnSetEvents(simpleImapClient);
+
+        simpleImapClient.Stop();
+
+        simpleImapClients.Remove(simpleImapClient);
+    }
+
     private void DeleteSimpleImapClients(MailBoxData mailBoxData)
     {
-        int deletedClientCount = 0;
-
-        var deletedSimpleImapClients = simpleImapClients.Where(x => x.Account.MailBoxId == mailBoxData.MailBoxId).ToList();
-
-        deletedSimpleImapClients.ForEach(x => UnSetEvents(x));
-
-        deletedSimpleImapClients.ForEach(x => x.Stop());
-
-        simpleImapClients.RemoveAll(x => x.Account.MailBoxId == mailBoxData.MailBoxId);
-
-        _enginesFactorySemaphore.Wait();
-
         try
         {
+            var deletedSimpleImapClients = simpleImapClients.Where(x => x.Account.MailBoxId == mailBoxData.MailBoxId).ToList();
+
+            deletedSimpleImapClients.ForEach(DeleteSimpleImapClient);
+
+            _enginesFactorySemaphore.Wait();
+
             string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailBoxData, _mailSettings) ? "unlocked" : "didn`t unlock";
 
-            _log.Debug($"DeleteSimpleImapClients: {deletedClientCount} clients with MailboxId={mailBoxData.MailBoxId} removed and {isLocked}.");
+            _log.Debug($"DeleteSimpleImapClients: {deletedSimpleImapClients.Count} clients with MailboxId={mailBoxData.MailBoxId} removed and {isLocked}.");
         }
         catch (Exception ex)
         {
@@ -322,7 +327,10 @@ public class MailImapClient : IDisposable
 
     private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
     {
-        if (IsReady && needUserMailBoxUpdate) UpdateSimplImapClients();
+        if (IsReady && needUserMailBoxUpdate)
+        {
+            if (!UpdateSimplImapClients()) return;
+        }
 
         _enginesFactorySemaphore.Wait();
 
@@ -337,13 +345,6 @@ public class MailImapClient : IDisposable
                 if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
                 {
                     if (imapAction.IsSameImapFolderAndAction(nextImapAction)) continue;
-                }
-
-                if (ids.Count == 0)
-                {
-                    _log.Debug($"CompareFlags: No messages in DB.");
-
-                    return;
                 }
 
                 bool result = false;
@@ -423,8 +424,12 @@ public class MailImapClient : IDisposable
             {
                 SetMailboxAuthError(simpleImapClient);
             }
+            else
+            {
+                CreateSimpleImapClient(simpleImapClient.Account, simpleImapClient.ImapWorkFolderFullName);
+            }
 
-            CreateSimpleImapClients(simpleImapClient.Account);
+            DeleteSimpleImapClient(simpleImapClient);
         }
     }
 
@@ -447,8 +452,6 @@ public class MailImapClient : IDisposable
     {
         if (sender is SimpleImapClient simpleImapClient)
         {
-            _log.Debug($"NewMessage: {e.Item2.UniqueId}");
-
             CreateMessageInDB(simpleImapClient, e.Item1, e.Item2);
         }
     }
@@ -475,26 +478,9 @@ public class MailImapClient : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _log.Info("Dispose.");
-
-        try
-        {
-            _cancelToken?.Cancel();
-
-            aliveTimer.Dispose();
-            processActionFromImapTimer.Dispose();
-        }
-        catch (Exception ex)
-        {
-            _log.Error($"Dispose(Tenant={Tenant} UserName: '{UserName}') Exception: {ex.Message}");
-        }
-    }
-
     private void UpdateDbFolder(SimpleImapClient simpleImapClient)
     {
-        if (simpleImapClient.ImapMessagesList == null && simpleImapClient.ImapWorkFolder.Count>0)
+        if (simpleImapClient.ImapMessagesList == null && simpleImapClient.ImapWorkFolder.Count > 0)
         {
             _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
 
@@ -509,7 +495,7 @@ public class MailImapClient : IDisposable
 
             _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={workFolderMails.Count}.");
 
-            if(simpleImapClient.ImapMessagesList!=null)
+            if (simpleImapClient.ImapMessagesList != null)
             {
                 foreach (var imap_message in simpleImapClient.ImapMessagesList)
                 {
@@ -541,7 +527,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"UpdateDbFolder(IMailFolder->{ex.Message}");
+            _log.Error($"UpdateDbFolder {simpleImapClient.ImapWorkFolderFullName} exception {ex.Message}.");
         }
         finally
         {
@@ -576,6 +562,8 @@ public class MailImapClient : IDisposable
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
     {
+        _log.Debug($"NewMessage: Folder={simpleImapClient.ImapFoldersFullName} Uidl={imap_message.UniqueId}.");
+
         bool result = true;
 
         Stopwatch watch = null;
@@ -590,12 +578,12 @@ public class MailImapClient : IDisposable
 
         message.FixDateIssues(imap_message?.InternalDate, _log);
 
-        bool unread = false, important = false;
+        bool unread = false, impotant = false;
 
         if ((imap_message != null) && imap_message.Flags.HasValue)
         {
             unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
-            important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
+            impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
         }
 
         message.FixEncodingIssues(_log);
@@ -613,7 +601,7 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log);
+                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
@@ -837,7 +825,7 @@ public class MailImapClient : IDisposable
             if (_mailSettings.Defines.SaveOriginalMessage)
             {
                 _log.Debug("DoOptionalOperations -> StoreMailEml()");
-                StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage, _log);
+                StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage);
             }
 
             _log.Debug("DoOptionalOperations -> ApplyFilters()");
@@ -881,7 +869,7 @@ public class MailImapClient : IDisposable
         needUserUpdate = true;
     }
 
-    public string StoreMailEml(int tenant, string userId, string streamId, MimeMessage message, ILog log)
+    public string StoreMailEml(int tenant, string userId, string streamId, MimeMessage message)
     {
         if (message == null)
             return string.Empty;
@@ -893,20 +881,19 @@ public class MailImapClient : IDisposable
 
         try
         {
-            using (var stream = new MemoryStream())
-            {
-                message.WriteTo(stream);
+            using var stream = new MemoryStream();
 
-                var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
+            message.WriteTo(stream);
 
-                log.InfoFormat($"StoreMailEml() Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
+            var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
 
-                return res;
-            }
+            _log.InfoFormat($"StoreMailEml: Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
+
+            return res;
         }
         catch (Exception ex)
         {
-            log.Error($"StoreMailEml Exception: {ex}");
+            _log.Error($"StoreMailEml exception: {ex}");
         }
 
         return string.Empty;
@@ -915,17 +902,28 @@ public class MailImapClient : IDisposable
     public void Stop()
     {
         IsReady = false;
+        try
+        {
+            var mailBoxes= simpleImapClients.Select(x=>x.Account).Distinct().ToList();
 
-        var allAccounts = simpleImapClients.GroupBy(x => x.Account).Select(x => x.Key).ToList();
+            mailBoxes.ForEach(DeleteSimpleImapClients);
 
-        aliveTimer.Stop();
-        aliveTimer.Elapsed -= AliveTimer_Elapsed;
+            aliveTimer.Stop();
+            aliveTimer.Elapsed -= AliveTimer_Elapsed;
 
-        processActionFromImapTimer.Stop();
-        processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
+            processActionFromImapTimer.Stop();
+            processActionFromImapTimer.Elapsed -= ProcessActionFromImapTimer_Elapsed;
 
-        _cancelToken?.Cancel();
+            _cancelToken?.Cancel();
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"Stop exception: {ex}");
+        }
+    }
 
-        allAccounts.ForEach(x => DeleteSimpleImapClients(x));
+    public void Dispose()
+    {
+        _log.Info($"Dispose");
     }
 }

@@ -53,41 +53,35 @@ public class SimpleImapClient : IDisposable
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e)
     {
-        _log.Debug($"ImapMessageFlagsChanged. Index={e?.Index}. ImapMessagesList.Count={ImapMessagesList?.Count}");
+        DoneToken?.Cancel();
+        //    _log.Debug($"ImapMessageFlagsChanged. Index={e?.Index}. ImapMessagesList.Count={ImapMessagesList?.Count}");
 
-        MessageDescriptor messageDescriptor = ImapMessagesList?.FirstOrDefault(x => x.Index == e?.Index);
+        //    MessageDescriptor messageDescriptor = ImapMessagesList?.FirstOrDefault(x => x.Index == e?.Index);
 
-        if (messageDescriptor == null)
-        {
-            _log.Warn($"ImapMessageFlagsChanged. Message summary didn't found.");
+        //    if (messageDescriptor == null)
+        //    {
+        //        _log.Warn($"ImapMessageFlagsChanged. Message summary didn't found.");
 
-            return;
-        }
+        //        return;
+        //    }
 
-        CompareImapFlags(messageDescriptor, e.Flags);
+        //    CompareImapFlags(messageDescriptor, e.Flags);
     }
 
     private void ImapFolderCountChanged(object sender, EventArgs e)
     {
-        _log.Debug($"ImapFolderCountChanged {ImapWorkFolder?.Name} Count={ImapWorkFolder?.Count}.");
+        DoneToken?.Cancel();
+        //_log.Debug($"ImapFolderCountChanged {ImapWorkFolder?.Name} Count={ImapWorkFolder?.Count}.");
 
-        AddTask(new Task(() => UpdateMessagesList()));
+        //AddTask(new Task(() => UpdateMessagesList()));
     }
 
     private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e)
     {
-        _log.Debug($"ImapFolderMessageExpunged {ImapWorkFolder?.Name} Index={e?.Index}.");
+        DoneToken?.Cancel();
+        //_log.Debug($"ImapFolderMessageExpunged {ImapWorkFolder?.Name} Index={e?.Index}.");
 
-        MessageDescriptor messageSummary = ImapMessagesList?.FirstOrDefault(x => x.Index == e?.Index);
-
-        if (messageSummary == null)
-        {
-            AddTask(new Task(() => UpdateMessagesList()));
-        }
-        else
-        {
-            InvokeImapDeleteAction(messageSummary);
-        }
+        //AddTask(new Task(() => UpdateMessagesList()));
     }
 
     #endregion
@@ -465,6 +459,8 @@ public class SimpleImapClient : IDisposable
                     oldMessage.Index = newMessage.Index;
                 }
 
+                CompareImapFlags(oldMessage, newMessage);
+
                 newMessageDescriptors.Remove(newMessage);
             }
         }
@@ -505,13 +501,13 @@ public class SimpleImapClient : IDisposable
         {
             if (imap.Capabilities.HasFlag(ImapCapabilities.Idle))
             {
-                DoneToken = new CancellationTokenSource(new TimeSpan(0, CheckServerAliveMitutes, 0));
+                DoneToken = new CancellationTokenSource(new TimeSpan(0, CheckServerAliveMitutes, 10));
 
                 await imap.IdleAsync(DoneToken.Token);
             }
             else
             {
-                await Task.Delay(new TimeSpan(0, CheckServerAliveMitutes, 0));
+                await Task.Delay(new TimeSpan(0, CheckServerAliveMitutes, 10));
                 await imap.NoOpAsync();
             }
         }
@@ -611,49 +607,48 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private void CompareImapFlags(MessageDescriptor messageDescriptor, MessageFlags newFlag)
+    private void CompareImapFlags(MessageDescriptor oldMessageDescriptor, MessageDescriptor newMessageDescriptor)
     {
-        if (!messageDescriptor.Flags.HasValue)
+        if (!(oldMessageDescriptor.Flags.HasValue && oldMessageDescriptor.Flags.HasValue))
         {
-            _log.Debug($"CompareImapFlags: No flags in MessageDescriptor.");
+            _log.Error($"CompareImapFlags: No flags in MessageDescriptor.");
         }
 
-        if (newFlag == messageDescriptor.Flags)
+        if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags)
         {
             _log.Debug($"CompareImapFlags: flag is equal.");
 
             return;
         }
 
-        _log.Debug($"CompareImapFlags: Old flags=({messageDescriptor.Flags}). New flags {newFlag}.");
+        _log.Debug($"CompareImapFlags: Old flags=({oldMessageDescriptor.Flags}). New flags {newMessageDescriptor.Flags}.");
 
         try
         {
-            bool oldSeen = messageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-            bool newSeen = newFlag.HasFlag(MessageFlags.Seen);
+            bool oldSeen = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
+            bool newSeen = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
 
-            bool oldImportant = messageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-            bool newImportant = newFlag.HasFlag(MessageFlags.Flagged);
+            bool oldImportant = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
+            bool newImportant = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
 
             if (oldSeen != newSeen)
             {
                 InvokeImapAction(oldSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
-                    messageDescriptor);
+                    oldMessageDescriptor);
             }
 
             if (oldImportant != newImportant)
             {
                 InvokeImapAction(oldImportant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
-                    messageDescriptor);
-
+                    oldMessageDescriptor);
             }
         }
         catch (Exception ex)
         {
-            _log.Error($"CompareImapFlags Uidl={messageDescriptor.UniqueId} exception: {ex.Message}");
+            _log.Error($"CompareImapFlags Uidl={newMessageDescriptor.UniqueId} exception: {ex.Message}");
         }
 
-        messageDescriptor.Flags = newFlag;
+        oldMessageDescriptor.Flags = newMessageDescriptor.Flags;
     }
 
     private void TaskManager(Task previosTask)
@@ -664,6 +659,8 @@ public class SimpleImapClient : IDisposable
         }
 
         if (CancelToken.IsCancellationRequested) return;
+
+        UpdateMessagesList();
 
         if (asyncTasks.TryDequeue(out var task))
         {
@@ -717,6 +714,9 @@ public class SimpleImapClient : IDisposable
         {
             DoneToken?.Cancel();
             DoneToken?.Dispose();
+
+            CancelToken?.Cancel();
+            CancelToken?.Dispose();
 
             imap?.Dispose();
         }
@@ -802,7 +802,8 @@ public class SimpleImapClient : IDisposable
     {
         try
         {
-            CancelToken.Cancel();
+            DoneToken?.Cancel();
+            CancelToken?.Cancel();
         }
         catch (Exception ex)
         {
