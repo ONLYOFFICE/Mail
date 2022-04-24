@@ -25,7 +25,7 @@ public class MailImapClient : IDisposable
     public bool IsReady { get; private set; } = false;
 
     private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
-    private List<SimpleImapClient> simpleImapClients;
+    private readonly List<SimpleImapClient> simpleImapClients;
 
     private readonly SemaphoreSlim _enginesFactorySemaphore;
 
@@ -53,7 +53,7 @@ public class MailImapClient : IDisposable
 
     public EventHandler OnCriticalError;
 
-    public async Task CheckRedis(int folderActivity, IEnumerable<int> tags)
+    public async Task CheckRedis()
     {
         needUserMailBoxUpdate = true;
 
@@ -82,7 +82,7 @@ public class MailImapClient : IDisposable
         _log.Debug($"CheckRedis: {iterationCount} keys readed. User have {simpleImapClients.Count} clients");
     }
 
-    public MailImapClient(string userName, int tenant, CancellationToken cancelToken, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient)
+    public MailImapClient(string userName, int tenant, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient, CancellationToken cancelToken)
     {
         _mailSettings = mailSettings;
 
@@ -221,7 +221,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var rootSimpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>());
+            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), "", _cancelToken.Token);
 
             if (!SetEvents(rootSimpleImapClient)) return;
 
@@ -254,7 +254,7 @@ public class MailImapClient : IDisposable
     {
         try
         {
-            var simpleImapClient = new SimpleImapClient(mailbox, _cancelToken.Token, _mailSettings, clientScope.GetService<ILog>(), folderName);
+            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), folderName, _cancelToken.Token);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -381,11 +381,11 @@ public class MailImapClient : IDisposable
 
                 _log.Debug($"ProcessActionFromImapTimer_Elapsed Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {ids.Count} messages.");
 
-                StringBuilder sb = new StringBuilder();
+                StringBuilder sb = new();
 
                 ids.ForEach(x => sb.Append(x.ToString() + ", "));
 
-                _log.Debug($"ProcessActionFromImapTimer_Elapsed ids: {sb.ToString()}");
+                _log.Debug($"ProcessActionFromImapTimer_Elapsed ids: {sb}");
 
                 ids.Clear();
             }
@@ -480,7 +480,7 @@ public class MailImapClient : IDisposable
 
     private void UpdateDbFolder(SimpleImapClient simpleImapClient)
     {
-        if (simpleImapClient.ImapMessagesList == null && simpleImapClient.ImapWorkFolder.Count > 0)
+        if (simpleImapClient.ImapMessagesList == null)
         {
             _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
 
@@ -848,7 +848,7 @@ public class MailImapClient : IDisposable
                         simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsDeleted, 0);
                         break;
                     case Enums.Filter.ActionType.MoveTo:
-                        string destination = new String(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
+                        string destination = new(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
                         if (int.TryParse(destination, out int result))
                         {
                             simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.MoveTo, result);
@@ -924,6 +924,10 @@ public class MailImapClient : IDisposable
 
     public void Dispose()
     {
+        Stop();
+
         _log.Info($"Dispose");
+
+        GC.SuppressFinalize(this);
     }
 }

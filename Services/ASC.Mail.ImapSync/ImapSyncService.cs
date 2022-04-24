@@ -102,7 +102,7 @@ public class ImapSyncService : IHostedService
             }
             else
             {
-                await clients[cashedTenantUserMailBox.UserName]?.CheckRedis(cashedTenantUserMailBox.Folder, cashedTenantUserMailBox.Tags);
+                await clients[cashedTenantUserMailBox.UserName]?.CheckRedis();
             }
             return;
         }
@@ -119,7 +119,7 @@ public class ImapSyncService : IHostedService
 
             try
             {
-                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _cancelTokenSource.Token, _mailSettings, _serviceProvider, _signalrServiceClient);
+                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _mailSettings, _serviceProvider, _signalrServiceClient, _cancelTokenSource.Token);
 
                 if (client == null)
                 {
