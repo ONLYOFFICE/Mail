@@ -655,6 +655,9 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             return;
 
         using var scope = _serviceProvider.CreateScope();
+        var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
+        tenantManager.SetCurrentTenant(mailbox.TenantId);
+        log.Debug($"RemoveTeamlabMailbox. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
 
         var serverMailboxEngine = scope.ServiceProvider.GetService<ServerMailboxEngine>();
 
