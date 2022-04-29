@@ -144,6 +144,8 @@ public class SimpleImapClient : IDisposable
     {
         if (imap.IsAuthenticated) return true;
 
+        _log.Info($"Authenticate: {Account.Name}");
+
         var secureSocketOptions = SecureSocketOptions.Auto;
         var sslProtocols = SslProtocols.None;
 
@@ -314,12 +316,12 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"SetNewImapWorkFolder {imapFolder.Name}: {ex.Message}");
+            _log.Error($"SetNewImapWorkFolder {imapFolder.FullName}: {ex.Message}");
 
             IsReady = false;
         }
 
-        _log.Debug($"SetNewImapWorkFolder: Work folder changed to {imapFolder.Name}.");
+        _log.Debug($"SetNewImapWorkFolder: Work folder changed to {imapFolder.FullName}.");
     }
 
     private async Task UpdateMessagesList()

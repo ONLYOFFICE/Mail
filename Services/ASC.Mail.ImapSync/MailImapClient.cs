@@ -562,7 +562,7 @@ public class MailImapClient : IDisposable
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
     {
-        _log.Debug($"NewMessage: Folder={simpleImapClient.ImapFoldersFullName} Uidl={imap_message.UniqueId}.");
+        _log.Debug($"NewMessage: Folder={simpleImapClient.ImapWorkFolderFullName} Uidl={imap_message.UniqueId}.");
 
         bool result = true;
 

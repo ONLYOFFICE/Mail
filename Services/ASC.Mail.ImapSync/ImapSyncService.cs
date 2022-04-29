@@ -92,6 +92,8 @@ public class ImapSyncService : IHostedService
 
         var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 
+        if (cashedTenantUserMailBox == null) return;
+
         if (string.IsNullOrEmpty(cashedTenantUserMailBox.UserName)) return;
 
         if (clients.ContainsKey(cashedTenantUserMailBox.UserName))
