@@ -208,7 +208,7 @@ public static class MimeMessageExtensions
 
         mail.Subject = message.Subject ?? string.Empty;
 
-        mail.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent;
+        mail.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent || message.XPriority == XMessagePriority.Highest;
 
         mail.TextBodyOnly = false;
 
