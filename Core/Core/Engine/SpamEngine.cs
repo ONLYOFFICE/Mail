@@ -84,7 +84,7 @@ public class SpamEngine
         var streamList = new Dictionary<int, string>();
 
         var tlMailboxes =
-            _mailDaoFactory.GetMailboxDao().GetMailBoxes(new UserMailboxesExp(tenant, user, false, true));
+            _mailDaoFactory.GetMailboxDao().GetMailBoxes(new UserMailboxesExp(tenant, user, DateTime.MinValue, false, true));
 
         var tlMailboxesIds = tlMailboxes.ConvertAll(mb => mb.Id);
 

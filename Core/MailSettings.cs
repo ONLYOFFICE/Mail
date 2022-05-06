@@ -68,6 +68,7 @@ namespace ASC.Mail.Configuration
         }
         public class DefinesConfig
         {
+            public DateTime? ImapSyncStartDate { get; set; }
             public TimeSpan AuthErrorWarningTimeout { get; set; }
             public TimeSpan AuthErrorDisableMailboxTimeout { get; set; }
             public TimeSpan CheckTimerInterval { get; set; }
@@ -106,6 +107,7 @@ namespace ASC.Mail.Configuration
             public DefinesConfig() { }
             public DefinesConfig(DefinesConfig config)
             {
+                ImapSyncStartDate = config.ImapSyncStartDate.HasValue ? config.ImapSyncStartDate.Value : DateTime.MaxValue;
                 DefaultServerLoginDelayStr = config.DefaultServerLoginDelay.ToString();
                 WebHub = config.WebHub ?? "";
                 WebHubInternal = config.WebHubInternal == string.Empty ? "http://localhost:9899" : config.WebHubInternal;

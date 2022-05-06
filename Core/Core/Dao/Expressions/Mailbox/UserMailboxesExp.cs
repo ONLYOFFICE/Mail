@@ -29,12 +29,14 @@ public class UserMailboxesExp : TenantMailboxesExp
 {
     private readonly string _user;
     private readonly bool? _onlyTeamlab;
+    private readonly DateTime _imapStartSince;
 
-    public UserMailboxesExp(int tenant, string user, bool? isRemoved = false, bool? onlyTeamlab = null)
+    public UserMailboxesExp(int tenant, string user, DateTime imapStartSince, bool? isRemoved = false, bool? onlyTeamlab = null)
         : base(tenant, isRemoved)
     {
         _user = user;
         _onlyTeamlab = onlyTeamlab;
+        _imapStartSince = imapStartSince;
     }
 
     public override Expression<Func<MailMailbox, bool>> GetExpression()
@@ -46,6 +48,7 @@ public class UserMailboxesExp : TenantMailboxesExp
         if (_onlyTeamlab.HasValue)
         {
             exp = exp.And(mb => mb.IsServerMailbox == _onlyTeamlab.Value);
+            exp = exp.And(mb => mb.DateCreated >= _imapStartSince);
         }
 
         return exp;

@@ -63,6 +63,11 @@ public class MailboxesForProcessingExp : IMailboxesExp
             exp = exp.And(mb => mb.IsServerMailbox == (_mailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
         }
 
+        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.External)
+        {
+            exp = exp.And(mb => !mb.IsServerMailbox || mb.DateCreated < _mailSettings.Defines.ImapSyncStartDate);
+        }
+
         if (_mailSettings.Aggregator.EnableSignalr)
         {
             exp = exp.And(mb => mb.UserOnline == _onlyActive);

@@ -153,7 +153,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, onlyTeamlab: true);
+            var userMailboxesExp = new UserMailboxesExp(Tenant, UserName, _mailSettings.Defines.ImapSyncStartDate.Value, onlyTeamlab: true);
 
             return _mailEnginesFactory.MailboxEngine.GetMailboxDataList(userMailboxesExp).Where(x => x.Enabled).ToList();
         }
@@ -904,7 +904,7 @@ public class MailImapClient : IDisposable
         IsReady = false;
         try
         {
-            var mailBoxes= simpleImapClients.Select(x=>x.Account).Distinct().ToList();
+            var mailBoxes = simpleImapClients.Select(x => x.Account).Distinct().ToList();
 
             mailBoxes.ForEach(DeleteSimpleImapClients);
 
