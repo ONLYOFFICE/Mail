@@ -4,10 +4,10 @@ namespace ASC.Mail.Core.Dao.Entities;
 public static class Tables
 {
     public const string Mail = "mail_mail";
-    public const string Contact = "contact";
-    public const string ContactInfo = "contact_info";
-    public const string Tag = "tag";
-    public const string UserFolder = "user_folder";
+    public const string Contact = "mail_contacts";
+    public const string ContactInfo = "mail_contact_info";
+    public const string Tag = "mail_tag_mail";
+    public const string UserFolder = "mail_user_folder_x_mail";
 
 }
 
@@ -15,59 +15,115 @@ public static class Tables
 [ElasticsearchType(RelationName = Tables.Mail)]
 public partial class MailMail : BaseEntity, ISearchItemDocument
 {
-    public int Id { get; set; }        
-    public int MailboxId { get; set; }
-    public string UserId { get; set; } 
     public int TenantId { get; set; } 
-    public string Uidl { get; set; }
-    public string Md5 { get; set; }
-    public string Address { get; set; }
-    public string FromText { get; set; }
-    public string ToText { get; set; }
-    public string ReplyTo { get; set; }
-    public string Cc { get; set; }
-    public string Bcc { get; set; }
-    public string Subject { get; set; }
-    public string Introduction { get; set; }
-    public bool Importance { get; set; }
-    public DateTime DateReceived { get; set; }
-    public DateTime DateSent { get; set; }
-    public int Size { get; set; }
-    [Ignore]
-    public int AttachmentsCount { get; set; }
-    public bool Unread { get; set; }
-    public bool IsAnswered { get; set; }
-    public bool IsForwarded { get; set; }
-    public bool IsFromCrm { get; set; }
-    public bool IsFromTl { get; set; }
-    public bool IsTextBodyOnly { get; set; }  
-    public bool HasParseError { get; set; }
-    public string CalendarUid { get; set; }
-    public string Stream { get; set; }
-    public int Folder { get; set; }
-    public int FolderRestore { get; set; }
-    public bool Spam { get; set; }
-    public bool ReadRequestStatus { get; set; }
+
     public DateTime LastModifiedOn { get; set; }
-    public bool IsRemoved { get; set; }
-    public string MimeMessageId { get; set; }
-    public string MimeInReplyTo { get; set; }
+
+    public string FromText { get; set; }
+
+    public string ToText { get; set; }
+
+    public string Cc { get; set; }
+
+    public string Bcc { get; set; }
+
+    public string Subject { get; set; }
+
+    public string UserId { get; set; } 
+
+    public DateTime DateSent { get; set; }
+
+    public int Folder { get; set; }
+
     public string ChainId { get; set; }
+
     public DateTime ChainDate { get; set; }
 
-    [Nested]
-    public List<MailAttachment> Attachments { get; set; }
-    
-    [Nested]
-    public List<MailUserFolder> UserFolders { get; set; }
-    
-    [Nested]
-    public ICollection<MailTag> Tags { get; set; }
-    
+    public int MailboxId { get; set; }
+
+    public bool IsRemoved { get; set; }
+
+    public bool Unread { get; set; }
+
+    public bool Importance { get; set; }
+
     public bool HasAttachments { get; set; }
-    
+
+    [Nested]
+    public List<MailUserFolderXMail> UserFolders { get; set; }
+
     public bool WithCalendar { get; set; }
 
+    [Nested]
+    public List<MailTagMail> Tags { get; set; }
+
+    public string Introduction { get; set; }
+
+    [Ignore]
+    public string Stream { get; set; }
+
+    [Ignore]
+    public int Id { get; set; }
+
+    [Ignore]
+    public string Uidl { get; set; }
+
+    [Ignore]
+    public string Md5 { get; set; }
+
+    [Ignore]
+    public string Address { get; set; }
+
+    [Ignore]
+    public string ReplyTo { get; set; }
+
+    [Ignore]
+    public DateTime DateReceived { get; set; }
+
+    [Ignore]
+    public int Size { get; set; }
+
+    [Ignore]
+    public int AttachmentsCount { get; set; }
+
+    [Ignore]
+    public bool IsAnswered { get; set; }
+
+    [Ignore]
+    public bool IsForwarded { get; set; }
+
+    [Ignore]
+    public bool IsFromCrm { get; set; }
+
+    [Ignore]
+    public bool IsFromTl { get; set; }
+
+    [Ignore]
+    public bool IsTextBodyOnly { get; set; }
+
+    [Ignore]
+    public bool HasParseError { get; set; }
+
+    [Ignore]
+    public string CalendarUid { get; set; }
+
+    [Ignore]
+    public int FolderRestore { get; set; }
+
+    [Ignore]
+    public bool Spam { get; set; }
+
+    [Ignore]
+    public bool ReadRequestStatus { get; set; }
+
+    [Ignore]
+    public string MimeMessageId { get; set; }
+
+    [Ignore]
+    public string MimeInReplyTo { get; set; }
+
+    public List<MailAttachment> Attachments { get; set; }
+    
     public Document Document { get; set; }
    
     [Ignore]
@@ -80,7 +136,11 @@ public partial class MailMail : BaseEntity, ISearchItemDocument
 
     public Expression<Func<ISearchItem, object[]>> GetSearchContentFields(SearchSettingsHelper searchSettings)
     {
-        return (a) => new[] { Subject, FromText, ToText, Cc, Bcc, Document.Attachment.Content };
+        if (searchSettings.CanSearchByContent(GetType()))
+        {
+            return (a) => new[] { Subject, FromText, ToText, Cc, Bcc, Document.Attachment.Content };
+        }
+        return (a) => new[] { Subject, FromText, ToText, Cc, Bcc };
     }
 }
 
@@ -322,7 +382,7 @@ public static class MailMailExtension
 
             entity.Property(e => e.ReadRequestStatus)
                 .HasColumnName("read_request_status")
-                .HasColumnType("int(10)");
+                .HasColumnType("tinyint(1) unsigned");
         });
 
         return modelBuilder;

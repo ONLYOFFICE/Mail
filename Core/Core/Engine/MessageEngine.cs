@@ -617,14 +617,14 @@ public class MessageEngine : BaseEngine
         {
             Folder = (byte)folder,
             UserFolders = userFolderId.HasValue
-                ? new List<MailUserFolder>
+                ? new List<MailUserFolderXMail>
                 {
-                    new MailUserFolder
+                    new MailUserFolderXMail
                     {
-                        Id = userFolderId.Value
+                        IdFolder = userFolderId.Value
                     }
                 }
-                : new List<MailUserFolder>()
+                : new List<MailUserFolderXMail>()
         };
 
         Expression<Func<Selector<MailMail>, Selector<MailMail>>> exp =
@@ -1960,14 +1960,14 @@ public class MessageEngine : BaseEngine
         {
             Folder = (byte)folder,
             UserFolders = userFolderId.HasValue
-                ? new List<MailUserFolder>
+                ? new List<MailUserFolderXMail>
                 {
-                    new MailUserFolder
+                    new MailUserFolderXMail
                     {
-                        Id = userFolderId.Value
+                        IdFolder = userFolderId.Value
                     }
                 }
-                : new List<MailUserFolder>()
+                : new List<MailUserFolderXMail>()
         };
 
         Expression<Func<Selector<MailMail>, Selector<MailMail>>> exp =

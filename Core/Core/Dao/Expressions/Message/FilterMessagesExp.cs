@@ -253,7 +253,7 @@ public class FilterMessagesExp : IMessagesExp
 
         if (filter.PrimaryFolder == FolderType.UserFolder && filter.UserFolderId.HasValue)
         {
-            selector.InAll(s => s.UserFolders.Select(f => f.Id), new[] { filter.UserFolderId.Value });
+            selector.InAll(s => s.UserFolders.Select(f => f.IdFolder), new[] { filter.UserFolderId.Value });
         }
 
         if (filter.WithCalendar.HasValue)
@@ -275,7 +275,7 @@ public class FilterMessagesExp : IMessagesExp
 
         if (filter.CustomLabels != null && filter.CustomLabels.Any())
         {
-            selector.InAll(r => r.Tags.Select(t => t.Id), filter.CustomLabels.ToArray());
+            selector.InAll(r => r.Tags.Select(t => t.IdTag), filter.CustomLabels.ToArray());
         }
 
         if (filter.PeriodFrom.HasValue && filter.PeriodTo.HasValue)

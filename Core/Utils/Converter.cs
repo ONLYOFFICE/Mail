@@ -211,30 +211,30 @@ public static class Converter
 
         if (message.Folder == FolderType.UserFolder && message.UserFolderId.HasValue)
         {
-            mail.UserFolders = new List<MailUserFolder>
+            mail.UserFolders = new List<MailUserFolderXMail>
             {
-                new MailUserFolder
+                new MailUserFolderXMail
                 {
-                    Id = message.UserFolderId.Value
+                    IdFolder = message.UserFolderId.Value
                 }
             };
         }
         else
         {
-            mail.UserFolders = new List<MailUserFolder>();
+            mail.UserFolders = new List<MailUserFolderXMail>();
         }
 
         if (message.TagIds != null && message.TagIds.Any())
         {
-            mail.Tags = message.TagIds.ConvertAll(tagId => new MailTag
+            mail.Tags = message.TagIds.ConvertAll(tagId => new MailTagMail
             {
-                Id = tagId,
-                TenantId = tenant
+                IdTag = tagId,
+                Tenant = tenant
             });
         }
         else
         {
-            mail.Tags = new List<MailTag>();
+            mail.Tags = new List<MailTagMail>();
         }
 
         return mail;
