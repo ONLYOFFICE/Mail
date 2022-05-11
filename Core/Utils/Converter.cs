@@ -195,6 +195,7 @@ public static class Converter
             Cc = message.Cc,
             Bcc = message.Bcc,
             Subject = message.Subject,
+            Introduction = message.Introduction,
             Folder = (byte)message.Folder,
             DateSent = message.Date,
             MailboxId = message.MailboxId,

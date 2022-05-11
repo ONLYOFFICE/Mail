@@ -15,8 +15,13 @@ public static class Tables
 [ElasticsearchType(RelationName = Tables.Mail)]
 public partial class MailMail : BaseEntity, ISearchItemDocument
 {
-    public int TenantId { get; set; } 
+    [Nest.PropertyName("id")]
+    public int Id { get; set; }
 
+    [Nest.PropertyName("tenantId")]
+    public int TenantId { get; set; }
+
+    [Nest.PropertyName("lastModifiedOn")]
     public DateTime LastModifiedOn { get; set; }
 
     public string FromText { get; set; }
@@ -61,9 +66,6 @@ public partial class MailMail : BaseEntity, ISearchItemDocument
 
     [Ignore]
     public string Stream { get; set; }
-
-    [Ignore]
-    public int Id { get; set; }
 
     [Ignore]
     public string Uidl { get; set; }
