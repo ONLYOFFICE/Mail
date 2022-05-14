@@ -822,4 +822,19 @@ public class SimpleImapClient : IDisposable
             ImapWorkFolder.MessageExpunged -= ImapWorkFolder_MessageExpunged;
         }
     }
+
+    public void TryCreateFolderInIMAP(string name) => AddTask(new Task(() => CreateFolderInIMAP(name)));
+
+    private bool CreateFolderInIMAP(string name)
+    {
+        var rootFolder = imap.GetFolder(imap.PersonalNamespaces[0].Path);
+
+        var newFolder=rootFolder.Create(name, true);
+
+        if (newFolder == null) return false;
+
+        AddImapFolderToDictionary(newFolder);
+
+        return true;
+    }
 }
