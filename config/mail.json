@@ -28,7 +28,7 @@
     },
 	"ImapSync": {
 		"SynchronizeTresh": true,
-		"WriteIMAPLog": true,
+		"WriteIMAPLog": false,
       	"Redis": {
 			"AllowAdmin": true,
 			"Ssl": false,
