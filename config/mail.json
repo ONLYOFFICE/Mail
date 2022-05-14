@@ -55,7 +55,7 @@
       "TenantCachingPeriod": "1:00:00:00",
       "QueueLifetime": "00:00:30",
       "SaveOriginalMessage": false,
-      "SslCertificatesErrorsPermit": false,
+      "SslCertificatesErrorsPermit": true,
       "CheckCertificateRevocation": true,
       "DefaultApiSchema": "http",
       "DefaultServerLoginDelay": 30,
