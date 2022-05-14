@@ -82,6 +82,22 @@ public class MailImapClient : IDisposable
         _log.Debug($"CheckRedis: {iterationCount} keys readed. User have {simpleImapClients.Count} clients");
     }
 
+    public async Task<int> ClearUserRedis()
+    {
+        int result = 0;
+
+        while (true)
+        {
+            var actionFromCache = await _redisClient.PopFromQueue<CashedMailUserAction>(RedisKey);
+
+            if (actionFromCache == null) break;
+
+            result++;
+        }
+
+        return result;
+    }
+
     public MailImapClient(string userName, int tenant, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient, CancellationToken cancelToken)
     {
         _mailSettings = mailSettings;

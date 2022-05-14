@@ -1,4 +1,7 @@
-﻿namespace ASC.Mail.ImapSync;
+﻿using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+
+namespace ASC.Mail.ImapSync;
 
 public class SimpleImapClient : IDisposable
 {
@@ -78,9 +81,25 @@ public class SimpleImapClient : IDisposable
             Timeout = _mailSettings.Aggregator.TcpTimeout
         };
 
+        imap.ServerCertificateValidationCallback = CertificateValidationCallback;
+        imap.CheckCertificateRevocation = true;
+
         imap.Disconnected += Imap_Disconnected;
 
         if (Authenticate()) LoadFoldersFromIMAP();
+    }
+
+    bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+    {
+        _log.Debug($"CertificateValidationCallback(). Certificate callback: {certificate.Subject}.");
+
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            _log.Debug("CertificateValidationCallback(). No Ssl policy errors...");
+            return true;
+        }
+
+        return _mailSettings.Defines.SslCertificatesErrorsPermit;
     }
 
     internal void ExecuteUserAction(List<int> clientMessages, MailUserAction action, int destination)
@@ -153,11 +172,11 @@ public class SimpleImapClient : IDisposable
         {
             case EncryptionType.StartTLS:
                 secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.SSL:
                 secureSocketOptions = SecureSocketOptions.SslOnConnect;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
                 break;
             case EncryptionType.None:
                 secureSocketOptions = SecureSocketOptions.None;
