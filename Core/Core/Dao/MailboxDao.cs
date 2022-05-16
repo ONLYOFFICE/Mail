@@ -319,16 +319,24 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool SetMailboxInProcess(int id)
     {
-        var box = MailDbContext.MailMailbox
-            .Where(b => b.Id == id && b.IsProcessed == false && b.IsRemoved == false)
-            .FirstOrDefault();
+        int result = 0;
+        try
+        {
+            var box = MailDbContext.MailMailbox
+                .Where(b => b.Id == id && b.IsProcessed == false && b.IsRemoved == false)
+                .FirstOrDefault();
 
-        if (box == null) return false;
+            if (box == null) return false;
 
-        box.IsProcessed = true;
-        box.DateChecked = DateTime.UtcNow;
+            box.IsProcessed = true;
+            box.DateChecked = DateTime.UtcNow;
 
-        var result = MailDbContext.SaveChanges();
+            result = MailDbContext.SaveChanges();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            return false;
+        }
 
         return (result > 0);
     }

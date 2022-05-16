@@ -10,6 +10,8 @@ public partial class MailMailbox : BaseEntity
     public string Name { get; set; }
     public bool Enabled { get; set; }
     public bool IsRemoved { get; set; }
+
+    [ConcurrencyCheck]
     public bool IsProcessed { get; set; }
     public bool IsServerMailbox { get; set; }
     public bool Imap { get; set; }
