@@ -1,0 +1,22 @@
+{
+  "mail": {
+    "Aggregator": {
+      "UseDump": false,
+      "TaskCheckState": "00:01:00",
+      "MaxTasksAtOnce": 10,
+      "MaxMessagesPerSession": 25,
+      "CollectStatistics": false,
+      "EnableSignalr": true,
+      "AggregateModeValue": "all"
+    },
+    "Defines": {
+      "ImapSyncStartDate":"9999-12-31",
+      "QueueLifetime": "00:00:30",
+      "SslCertificatesErrorsPermit": true,
+      "DefaultApiSchema": "http"
+    },
+    "Cleaner": {
+      "MaxTasksAtOnce": 1
+    },
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "storage": {
+    "handler": {
+      "property": {
+        "value": "/var/www/onlyoffice/Data/"
+      }
+    }
+  }
+}
