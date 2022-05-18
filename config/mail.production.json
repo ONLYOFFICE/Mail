@@ -10,7 +10,7 @@
       "AggregateModeValue": "all"
     },
     "Defines": {
-      "ImapSyncStartDate":"9999-12-31",
+      "ImapSyncStartDate": "",
       "QueueLifetime": "00:00:30",
       "SslCertificatesErrorsPermit": true,
       "DefaultApiSchema": "http"
