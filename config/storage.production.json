@@ -1,10 +1,14 @@
 {
   "storage": {
-    "handler": {
-      "property": {
-        "name": "$STORAGE_ROOT",
-        "value": "/var/www/onlyoffice/Data/"
+    "handler": [
+      {
+        "property": [
+          {
+            "name": "$STORAGE_ROOT",
+            "value": "/var/www/onlyoffice/Data/"
+          }
+        ]
       }
-    }
+    ]
   }
 }
