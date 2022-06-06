@@ -31,7 +31,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class AutoreplyEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly SecurityContext _securityContext;

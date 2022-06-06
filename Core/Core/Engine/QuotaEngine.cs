@@ -28,7 +28,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class QuotaEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private readonly ILog _log;
     private readonly TenantManager _tenantManager;
 

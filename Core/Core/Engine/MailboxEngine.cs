@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 using SaslMechanism = ASC.Mail.Enums.SaslMechanism;
@@ -33,12 +35,12 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class MailboxEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILog _log;
+    private readonly ILogger<MailboxEngine> _log;
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly AlertEngine _alertEngine;
@@ -58,7 +60,7 @@ public class MailboxEngine : BaseEngine
         QuotaEngine quotaEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
-        IOptionsMonitor<ILog> option,
+        ILogger<MailboxEngine> log,
         IServiceProvider serviceProvider,
         MailSettings mailSettings,
         OAuth20TokenHelper oAuth20TokenHelper) : base(mailSettings)
@@ -77,7 +79,7 @@ public class MailboxEngine : BaseEngine
 
         _oauth20TokenHelper = oAuth20TokenHelper;
 
-        _log = option.Get("ASC.Mail.MailboxEngine");
+        _log = log;
 
         _serviceProvider = serviceProvider;
     }
@@ -146,7 +148,7 @@ public class MailboxEngine : BaseEngine
 
             if (tuple == null)
             {
-                _log.WarnFormat("Mailbox id = {0} is not well-formated.", mailbox.Id);
+                _log.WarnMailboxEngineNotWellFormated(mailbox.Id);
 
                 mailBoxData = null;
                 failedId = mailbox.Id;
@@ -158,7 +160,7 @@ public class MailboxEngine : BaseEngine
         }
         catch (Exception ex)
         {
-            _log.Error("TryGetNextMailboxData failed", ex);
+            _log.ErrorMailboxEngineGetMailboxData(ex.ToString());
         }
 
         mailBoxData = null;
@@ -488,7 +490,7 @@ public class MailboxEngine : BaseEngine
 
         foreach (var box in mailboxes)
         {
-            _log.Debug($"Address: {box.EMail.Address} | Id: {box.MailBoxId} | IsEnabled: {box.Enabled} | IsRemoved: {box.IsRemoved} | Tenant: {box.TenantId} | Id: {box.UserId}");
+            _log.DebugMailboxEngineGetMailboxes(box.EMail.Address, box.MailBoxId, box.Enabled, box.IsRemoved, box.TenantId, box.UserId);
         }
 
         return mailboxes;
@@ -627,7 +629,7 @@ public class MailboxEngine : BaseEngine
 
             freedQuotaSize = RemoveMailBoxInfo(mailbox);
 
-            _log.Debug($"Free quota size: {freedQuotaSize}");
+            _log.DebugMailboxEngineFreeQuota(freedQuotaSize);
 
             _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
@@ -664,7 +666,7 @@ public class MailboxEngine : BaseEngine
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
         tenantManager.SetCurrentTenant(mailBoxData.TenantId);
-        _log.Debug($"RemoveMailboxInfo. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+        _log.DebugMailboxEngineRemoveMailboxTenant(tenantManager.GetCurrentTenant().Id);
 
         using (var tx = factory.BeginTransaction())
         {
@@ -752,11 +754,11 @@ public class MailboxEngine : BaseEngine
         if (tasksLimit <= 0)
             return new List<MailBoxData>();
 
-        _log.Debug("GetActiveMailboxForProcessing()");
+        _log.DebugMailboxEngineGetActiveMailbox();
 
         var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, true));
 
-        _log.Debug($"Found {mailboxes.Count} active tasks");
+        _log.DebugMailboxEngineFoundedTasks(mailboxes.Count);
 
         return mailboxes;
     }
@@ -766,11 +768,11 @@ public class MailboxEngine : BaseEngine
         if (tasksLimit <= 0)
             return new List<MailBoxData>();
 
-        _log.Debug("GetInactiveMailboxForProcessing()");
+        _log.DebugMailboxEngineGetInactiveMailbox();
 
         var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, false));
 
-        _log.Debug($"Found {mailboxes.Count} inactive tasks");
+        _log.DebugMailboxEngineFoundedInactiveTasks(mailboxes.Count);
 
         return mailboxes;
     }

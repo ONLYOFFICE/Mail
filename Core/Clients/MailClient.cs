@@ -38,7 +38,7 @@ public class MailClient : IDisposable
     public List<ServerFolderAccessInfo> ServerFolderAccessInfos { get; }
     public bool CertificatePermit { get; }
     public FolderEngine FolderEngine { get; }
-    public ILog Log { get; set; }
+    public ILogger Log { get; set; }
 
     public ImapClient Imap { get; private set; }
     public Pop3Client Pop { get; private set; }
@@ -115,7 +115,7 @@ public class MailClient : IDisposable
         int tcpTimeout = 30000,
         bool certificatePermit = false, bool checkCertificateRevocation = true,
         string protocolLogPath = "",
-        ILog log = null, bool skipSmtp = false, bool enableDsn = false)
+        ILogger<AccountEngine> _log = null, bool skipSmtp = false, bool enableDsn = false)
     {
         var protocolLogger = !string.IsNullOrEmpty(protocolLogPath)
             ? (IProtocolLogger)

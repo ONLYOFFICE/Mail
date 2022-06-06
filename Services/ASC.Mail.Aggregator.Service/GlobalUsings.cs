@@ -2,7 +2,6 @@
 global using ASC.Common;
 global using ASC.Common.Caching;
 global using ASC.Common.DependencyInjection;
-global using ASC.Common.Logging;
 global using ASC.Common.Mapping;
 global using ASC.Common.Utils;
 global using ASC.Core;
@@ -43,7 +42,7 @@ global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
-global using Microsoft.Extensions.Options;
+global using Microsoft.Extensions.Logging;
 
 global using MimeKit;
 
@@ -58,6 +57,7 @@ global using System.Net;
 global using System.Reflection;
 global using System.Runtime.Caching;
 global using System.Runtime.InteropServices;
-global using System.Security.Authentication;
 global using System.Threading;
 global using System.Threading.Tasks;
+
+global using ILogger = Microsoft.Extensions.Logging.ILogger;

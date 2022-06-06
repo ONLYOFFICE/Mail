@@ -23,12 +23,14 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
 public class EmailInEngine
 {
-    private readonly ILog _log;
+    private readonly ILogger<EmailInEngine> _log;
     private readonly AccountEngine _accountEngine;
     private readonly AlertEngine _alertEngine;
     private readonly StorageFactory _storageFactory;
@@ -39,7 +41,7 @@ public class EmailInEngine
         AlertEngine alertEngine,
         StorageFactory storageFactory,
         ApiHelper apiHelper,
-        IOptionsMonitor<ILog> option
+        ILogger<EmailInEngine> log
         )
     {
         _accountEngine = accountEngine;
@@ -47,7 +49,7 @@ public class EmailInEngine
         _storageFactory = storageFactory;
         _apiHelper = apiHelper;
 
-        _log = option.Get("ASC.Mail.EmailInEngine");
+        _log = log;
     }
 
     public void SaveEmailInData(MailBoxData mailbox, MailMessageData message, string httpContextScheme = null)
@@ -61,11 +63,11 @@ public class EmailInEngine
             {
                 if (attachment.dataStream != null)
                 {
-                    _log.Debug($"SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{attachment.fileName}', folderId: {mailbox.EMailInFolder})");
+                    _log.DebugEmailInEngineUploadToDocuments(attachment.fileName, mailbox.EMailInFolder);
 
                     attachment.dataStream.Seek(0, SeekOrigin.Begin);
 
-                    UploadToDocuments(attachment.dataStream, attachment.fileName, attachment.contentType, mailbox, httpContextScheme, _log);
+                    UploadToDocuments(attachment.dataStream, attachment.fileName, attachment.contentType, mailbox);
                 }
                 else
                 {
@@ -73,9 +75,9 @@ public class EmailInEngine
 
                     using (var file = attachment.ToAttachmentStream(storage))
                     {
-                        _log.Debug($"SaveEmailInData->ApiHelper.UploadToDocuments(fileName: '{file.FileName}', folderId: {mailbox.EMailInFolder})");
+                        _log.DebugEmailInEngineUploadToDocuments(file.FileName, mailbox.EMailInFolder);
 
-                        UploadToDocuments(file.FileStream, file.FileName, attachment.contentType, mailbox, httpContextScheme, _log);
+                        UploadToDocuments(file.FileStream, file.FileName, attachment.contentType, mailbox);
                     }
                 }
             }
@@ -83,31 +85,23 @@ public class EmailInEngine
         }
         catch (Exception e)
         {
-            _log.ErrorFormat("SaveEmailInData(tenant={0}, userId='{1}', messageId={2}) Exception:\r\n{3}\r\n",
-                       mailbox.TenantId, mailbox.UserId, message.Id, e.ToString());
+            _log.ErrorEmailInEngineSaveEmailInData(mailbox.TenantId, mailbox.UserId, message.Id, e.ToString());
         }
     }
 
-    private void UploadToDocuments(Stream fileStream, string fileName, string contentType, MailBoxData mailbox, string httpContextScheme, ILog log = null)
+    private void UploadToDocuments(Stream fileStream, string fileName, string contentType, MailBoxData mailbox)
     {
-        if (log == null)
-            log = new NullLog();
-
         try
         {
             var uploadedFileId = _apiHelper.UploadToDocuments(fileStream, fileName, contentType, mailbox.EMailInFolder, true);
 
-            log.InfoFormat(
-                "EmailInEngine->UploadToDocuments(): file '{0}' has been uploaded to document folder '{1}' uploadedFileId = {2}",
-                fileName, mailbox.EMailInFolder, uploadedFileId);
+            _log.InfoEmailInEngineFileUploaded(fileName, mailbox.EMailInFolder, uploadedFileId);
         }
         catch (ApiHelperException ex)
         {
             if (ex.StatusCode == HttpStatusCode.NotFound || ex.StatusCode == HttpStatusCode.Forbidden)
             {
-                log.InfoFormat(
-                    "EmailInEngine->UploadToDocuments() EMailIN folder '{0}' is unreachable. Try to unlink EMailIN...",
-                    mailbox.EMailInFolder);
+                _log.InfoEmailInEngineEmailInIsUnreachable(mailbox.EMailInFolder);
 
                 _accountEngine.SetAccountEmailInFolder(mailbox.MailBoxId, null);
 
@@ -124,8 +118,7 @@ public class EmailInEngine
                 throw;
             }
 
-            log.ErrorFormat("EmailInEngine->UploadToDocuments(fileName: '{0}', folderId: {1}) Exception:\r\n{2}\r\n",
-                                  fileName, mailbox.EMailInFolder, ex.ToString());
+            _log.ErrorEmailInEngineUploadToDocuments(fileName, mailbox.EMailInFolder, ex.ToString());
         }
     }
 }

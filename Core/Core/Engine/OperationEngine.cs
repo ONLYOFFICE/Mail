@@ -469,7 +469,7 @@ public class OperationEngine
 
     public List<MailOperationStatus> GetMailOperations(Func<DistributedTask, string> translateMailOperationStatus = null)
     {
-        var tenant = _tenantManager.GetCurrentTenant().TenantId;
+        var tenant = _tenantManager.GetCurrentTenant().Id;
 
         var operations = _mailOperations.GetTasks().Where(
                 o =>
@@ -516,7 +516,7 @@ public class OperationEngine
             _mailOperations.RemoveTask(o.Id);
         }
 
-        var tenant = _tenantManager.GetCurrentTenant().TenantId;
+        var tenant = _tenantManager.GetCurrentTenant().Id;
 
         var operation = operations
             .FirstOrDefault(

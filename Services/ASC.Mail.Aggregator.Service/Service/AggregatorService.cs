@@ -14,16 +14,16 @@ public class AggregatorService
     private bool _isFirstTime = true;
     private Timer _aggregatorTimer;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
+    private readonly ILogger _logOptions;
+    private static ILogger _logStat;
     private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfo;
-    private readonly IOptionsMonitor<ILog> _logOptions;
     private readonly MailSettings _settings;
     private readonly ConsoleParameters _consoleParameters;
     private readonly IServiceProvider _serviceProvider;
     private readonly QueueManager _queueManager;
 
     internal static SocketIoNotifier SignalrWorker { get; private set; }
-    private static ILog _logStat;
 
     public static ConcurrentDictionary<string, bool> UserCrmAvailabeDictionary { get; set; } = new ConcurrentDictionary<string, bool>();
     public static ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; } = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
@@ -34,7 +34,7 @@ public class AggregatorService
     public AggregatorService(
         QueueManager queueManager,
         ConsoleParser consoleParser,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILogger logger,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
         SocketIoNotifier signalrWorker,
@@ -48,10 +48,10 @@ public class AggregatorService
         _consoleParameters = consoleParser.GetParsedParameters();
         _queueManager = queueManager;
 
-        _logOptions = optionsMonitor;
+        _logOptions = logger;
 
-        _log = optionsMonitor.Get("ASC.Mail.MainThread");
-        _logStat = optionsMonitor.Get("ASC.Mail.Stat");
+        _log = logger;
+        _logStat = logger;
 
         _settings = mailSettings;
 
@@ -75,7 +75,7 @@ public class AggregatorService
                 .GetImapSpecialMailboxDao()
                 .GetServerFolderAccessInfoList();
 
-        _log.Info("Service is ready.");
+        _log.LogInformation("Service is ready.");
     }
 
     #region methods
@@ -92,7 +92,7 @@ public class AggregatorService
 
                 if (_queueManager.ProcessingCount > 0)
                 {
-                    _log.InfoFormat("Found {0} tasks to release", _queueManager.ProcessingCount);
+                    _log.LogInformation("Found {0} tasks to release", _queueManager.ProcessingCount);
 
                     _queueManager.ReleaseAllProcessingMailboxes(true);
                 }
@@ -104,7 +104,7 @@ public class AggregatorService
 
             if (cancelToken.IsCancellationRequested)
             {
-                _log.Debug("Aggregator work: IsCancellationRequested. Quit.");
+                _log.LogDebug("Aggregator work: IsCancellationRequested. Quit.");
                 return;
             }
 
@@ -123,7 +123,7 @@ public class AggregatorService
                 }
                 else
                 {
-                    _log.InfoFormat("Task.WaitAny timeout. Tasks count = {0}\r\nTasks:\r\n{1}", tasks.Count,
+                    _log.LogInformation("Task.WaitAny timeout. Tasks count = {0}\r\nTasks:\r\n{1}", tasks.Count,
                         string.Join("\r\n", tasks.Select(t =>
                                     $"Id: {t.Task.Id} Status: {t.Task.Status}, MailboxId: {t.Mailbox.MailBoxId} Address: '{t.Mailbox.EMail}'")));
                 }
@@ -137,7 +137,7 @@ public class AggregatorService
 
                 if (tasks2Free.Any())
                 {
-                    _log.InfoFormat("Need free next tasks = {0}: ({1})", tasks2Free.Count,
+                    _log.LogInformation("Need free next tasks = {0}: ({1})", tasks2Free.Count,
                               string.Join(",",
                                           tasks2Free.Select(t => t.Task.Id.ToString(CultureInfo.InvariantCulture))));
 
@@ -152,11 +152,11 @@ public class AggregatorService
 
                 tasks.AddRange(newTasks);
 
-                _log.InfoFormat("Total tasks count = {0} ({1}).", tasks.Count,
+                _log.LogInformation("Total tasks count = {0} ({1}).", tasks.Count,
                           string.Join(",", tasks.Select(t => t.Task.Id)));
             }
 
-            _log.Info("All mailboxes were processed. Go back to timer.");
+            _log.LogInformation("All mailboxes were processed. Go back to timer.");
         }
         catch (Exception ex) //Exceptions while boxes in process
         {
@@ -167,7 +167,7 @@ public class AggregatorService
 
             if (ex is TaskCanceledException || ex is OperationCanceledException)
             {
-                _log.Info("Execution was canceled.");
+                _log.LogInformation("Execution was canceled.");
 
                 _queueManager.ReleaseAllProcessingMailboxes();
 
@@ -176,7 +176,7 @@ public class AggregatorService
                 return;
             }
 
-            _log.ErrorFormat("Aggregator work exception:\r\n{0}\r\n", ex.ToString());
+            _log.LogError("Aggregator work exception:\r\n{0}\r\n", ex.ToString());
 
             if (_queueManager.ProcessingCount != 0)
             {
@@ -194,7 +194,7 @@ public class AggregatorService
         if (_aggregatorTimer == null)
             _aggregatorTimer = new Timer(AggregatorWork, token, Timeout.Infinite, Timeout.Infinite);
 
-        _log.Debug($"Setup Work timer to {_settings.Defines.CheckTimerInterval.TotalSeconds} seconds");
+        _log.LogDebug($"Setup Work timer to {_settings.Defines.CheckTimerInterval.TotalSeconds} seconds");
 
         if (immediately)
         {
@@ -213,7 +213,7 @@ public class AggregatorService
         if (_aggregatorTimer == null)
             return;
 
-        _log.Debug("Setup Work timer to Timeout.Infinite");
+        _log.LogDebug("Setup Work timer to Timeout.Infinite");
         _aggregatorTimer.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -248,7 +248,7 @@ public class AggregatorService
 
     public List<TaskData> CreateTasks(int needCount, CancellationToken cancelToken)
     {
-        _log.InfoFormat($"Create tasks (need {needCount}).");
+        _log.LogInformation($"Create tasks (need {needCount}).");
 
         var mailboxes = _queueManager.GetLockedMailboxes(needCount).ToList();
 
@@ -266,20 +266,20 @@ public class AggregatorService
             tasks.Add(new TaskData(mailbox, task));
         }
 
-        if (tasks.Any()) _log.InfoFormat("Created {0} tasks.", tasks.Count);
-        else _log.Info("No more mailboxes for processing.");
+        if (tasks.Any()) _log.LogInformation("Created {0} tasks.", tasks.Count);
+        else _log.LogInformation("No more mailboxes for processing.");
 
         return tasks;
     }
 
-    private void ProcessMailbox(MailBoxData mailBox, ILog log, CancellationTokenSource cTSource)
+    private void ProcessMailbox(MailBoxData mailBox, ILogger log, CancellationTokenSource cTSource)
     {
         using var handler = new MailboxHandler(_serviceProvider, mailBox, _settings, log, cTSource, _serverFolderAccessInfo);
 
         handler.DoProcess();
     }
 
-    internal static void NotifySocketIO(MailBoxData mailbox, ILog log)
+    internal static void NotifySocketIO(MailBoxData mailbox, ILogger log)
     {
         var now = DateTime.UtcNow;
 
@@ -289,7 +289,7 @@ public class AggregatorService
                 !((now - mailbox.LastSignalrNotify.Value).TotalSeconds > SIGNALR_WAIT_SECONDS))
             {
                 mailbox.LastSignalrNotifySkipped = true;
-                log.InfoFormat($"Skip NotifySignalrIfNeed: last notification has occurend less then {SIGNALR_WAIT_SECONDS} seconds ago");
+                log.LogInformation($"Skip NotifySignalrIfNeed: last notification has occurend less then {SIGNALR_WAIT_SECONDS} seconds ago");
                 return;
             }
 
@@ -298,12 +298,12 @@ public class AggregatorService
 
             SignalrWorker.AddMailbox(mailbox);
 
-            log.InfoFormat("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) has been succeeded",
+            log.LogInformation("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) has been succeeded",
                 mailbox.UserId, mailbox.TenantId);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) Exception: {2}", mailbox.UserId,
+            log.LogError("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) Exception: {2}", mailbox.UserId,
                 mailbox.TenantId, ex.ToString());
         }
 
@@ -315,10 +315,10 @@ public class AggregatorService
     {
         try
         {
-            _log.Debug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
+            _log.LogDebug($"End Task {taskData.Task.Id} with status = '{taskData.Task.Status}'.");
 
             if (!tasks.Remove(taskData))
-                _log.Error("Task not exists in tasks array.");
+                _log.LogError("Task not exists in tasks array.");
 
             ReleaseMailbox(taskData.Mailbox);
 
@@ -326,7 +326,7 @@ public class AggregatorService
         }
         catch (Exception ex)
         {
-            _log.Error($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
+            _log.LogError($"FreeTask(Id: {taskData.Mailbox.MailBoxId}, Email: {taskData.Mailbox.EMail}):\r\nException:{ex}\r\n");
         }
     }
 
@@ -346,7 +346,7 @@ public class AggregatorService
         List<MailSieveFilterData> filters;
         if (!Filters.TryRemove(mailbox.UserId, out filters))
         {
-            _log.Error("Try forget Filters for user failed");
+            _log.LogError("Try forget Filters for user failed");
         }
     }
 

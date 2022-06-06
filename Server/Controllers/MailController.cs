@@ -1,6 +1,5 @@
 ﻿using ASC.Api.Core;
 using ASC.Common;
-using ASC.Common.Logging;
 using ASC.Common.Threading;
 using ASC.Core;
 using ASC.Mail.Configuration;
@@ -24,7 +23,7 @@ namespace ASC.Mail.Controllers
     [Scope]
     public partial class MailController : ControllerBase
     {
-        private int TenantId => _tenantManager.GetCurrentTenant().TenantId;
+        private int TenantId => _tenantManager.GetCurrentTenant().Id;
 
         private string UserId => _securityContext.CurrentAccount.ID.ToString();
 

@@ -57,7 +57,7 @@ public class MessageEngine : BaseEngine
     private readonly FileConverter _fileConverter;
     private readonly ILog _log;
 
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
     private IDataStore Storage => _storageFactory.GetMailStorage(Tenant);
 

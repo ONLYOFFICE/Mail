@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -30,7 +32,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class CalendarEngine
 {
-    private readonly ILog _log;
+    private readonly ILogger<CalendarEngine> _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
@@ -38,12 +40,12 @@ public class CalendarEngine
     public CalendarEngine(SecurityContext securityContext,
         TenantManager tenantManager,
         ApiHelper apiHelper,
-        IOptionsMonitor<ILog> option)
+        ILogger<CalendarEngine> log)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _apiHelper = apiHelper;
-        _log = option.Get("ASC.Mail.CalendarEngine");
+        _log = log;
     }
 
     public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
@@ -103,20 +105,12 @@ public class CalendarEngine
                 _apiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
             }
 
-            _log.Info("CalendarEngine->UploadIcsToCalendar() has been succeeded");
+            _log.InfoCalendarSucceededUploadIcs();
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("CalendarEngine->UploadIcsToCalendar with \r\n" +
-                      "calendarId: {0}\r\n" +
-                      "calendarEventUid: '{1}'\r\n" +
-                      "calendarIcs: '{2}'\r\n" +
-                      "calendarCharset: '{3}'\r\n" +
-                      "calendarContentType: '{4}'\r\n" +
-                      "calendarEventReceiveEmail: '{5}'\r\n" +
-                      "Exception:\r\n{6}\r\n",
-                calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
-                mailBoxData.EMail.Address, ex.ToString());
+            _log.ErrorUploadIcsToCalendar(calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
+                mailBoxData.EMail.Address, ex);
         }
     }
 }

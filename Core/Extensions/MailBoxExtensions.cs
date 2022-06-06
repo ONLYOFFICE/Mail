@@ -22,6 +22,7 @@
  * Pursuant to Section 7 § 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
+using Microsoft.Extensions.Logging.Abstractions;
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -30,10 +31,8 @@ namespace ASC.Mail.Extensions;
 public static class MailBoxExtensions
 {
     public static bool IsUserTerminated(this MailBoxData mailbox,
-        TenantManager tenantManager, UserManager userManager, ILog log = null)
+        TenantManager tenantManager, UserManager userManager, ILogger log)
     {
-        log = log ?? new NullLog();
-
         try
         {
             tenantManager.SetCurrentTenant(mailbox.TenantId);
@@ -88,9 +87,9 @@ public static class MailBoxExtensions
 
     public static DefineConstants.TariffType GetTenantStatus(this MailBoxData mailbox,
         TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-        int tenantOverdueDays, ILog log = null)
+        int tenantOverdueDays, ILogger log = null)
     {
-        log = log ?? new NullLog();
+        log = log ?? NullLogger.Instance;
 
         DefineConstants.TariffType type;
 
@@ -118,7 +117,7 @@ public static class MailBoxExtensions
                 securityContext.AuthenticateMe(new Guid(mailbox.UserId));
             }
 
-            type = apiHelper.GetTenantTariffLogged(tenantOverdueDays, log);
+            type = apiHelper.GetTenantTariff(tenantOverdueDays);
         }
         catch (Exception ex)
         {

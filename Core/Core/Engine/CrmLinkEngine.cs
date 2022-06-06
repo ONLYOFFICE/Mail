@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -31,10 +33,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class CrmLinkEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger<CrmLinkEngine> _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
@@ -51,7 +53,7 @@ public class CrmLinkEngine
         IMailDaoFactory mailDaoFactory,
         MessageEngine messageEngine,
         StorageFactory storageFactory,
-        IOptionsMonitor<ILog> option,
+        ILogger<CrmLinkEngine> log,
         CrmSecurity crmSecurity,
         IServiceProvider serviceProvider)
     {
@@ -66,7 +68,7 @@ public class CrmLinkEngine
 
         _serviceProvider = serviceProvider;
 
-        _log = option.Get("ASC.Mail.CrmLinkEngine");
+        _log = log;
     }
 
     public List<CrmContactData> GetLinkedCrmEntitiesId(int messageId)
@@ -203,7 +205,7 @@ public class CrmLinkEngine
         }
         catch (Exception ex)
         {
-            _log.Warn(string.Format("Problem with adding history event to CRM. mailId={0}", messageItem.Id), ex);
+            _log.WarnCrmLinkEngineAddingHistoryEvent(messageItem.Id, ex);
         }
     }
 
@@ -274,9 +276,7 @@ public class CrmLinkEngine
 
             _apiHelper.AddToCrmHistory(message, contactEntity, fileIds);
 
-            _log.InfoFormat(
-                "CrmLinkEngine->AddRelationshipEvents(): message with id = {0} has been linked successfully to contact with id = {1}",
-                message.Id, contactEntity.Id);
+            _log.InfoCrmLinkEngineAddRelationshipEvents(message.Id, contactEntity.Id);
         }
     }
 }

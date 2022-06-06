@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
@@ -32,20 +34,20 @@ public class IndexEngine
     private readonly FactoryIndexer _factoryIndexerCommon;
     private readonly IServiceProvider _serviceProvider;
     private readonly IMailDaoFactory _mailDaoFactory;
-    private readonly ILog _log;
+    private readonly ILogger<IndexEngine> _log;
 
     public IndexEngine(
         FactoryIndexerMailMail factoryIndexerMailMail,
         FactoryIndexer factoryIndexerCommon,
         IServiceProvider serviceProvider,
         IMailDaoFactory mailDaoFactory,
-        IOptionsMonitor<ILog> option)
+        ILogger<IndexEngine> log)
     {
         _factoryIndexerMailMail = factoryIndexerMailMail;
         _factoryIndexerCommon = factoryIndexerCommon;
         _serviceProvider = serviceProvider;
         _mailDaoFactory = mailDaoFactory;
-        _log = option.Get("ASC.Mail.IndexEngine");
+        _log = log;
     }
 
     public bool IsIndexAvailable()
@@ -54,13 +56,13 @@ public class IndexEngine
 
         if (!_factoryIndexerMailMail.Support(service))
         {
-            _log.Info($"[SKIP INDEX] \"${service.IndexName}\". Support == false");
+            _log.InfoIndexEngineSupportFalse(service.IndexName);
             return false;
         }
 
         if (!_factoryIndexerCommon.CheckState(false))
         {
-            _log.Info("[SKIP INDEX] IsIndexAvailable->FactoryIndexer.CheckState(false) == false");
+            _log.InfoIndexEngineCheckStateFalse();
             return false;
         }
 
@@ -94,11 +96,11 @@ public class IndexEngine
                 //?? some other entities with index
             }
 
-            _log.InfoFormat("IndexEngine->Add<{0}>(mail Id = {1}) success", typeof(T), data == null ? -1 : data.Id);
+            _log.InfoIndexEngineAddSuccess(typeof(T), data == null ? -1 : data.Id);
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Add<{0}>(mail Id = {1}) error: {2}", typeof(T), data == null ? -1 : data.Id, ex.ToString());
+            _log.ErrorIndexEngineAdd(typeof(T), data == null ? -1 : data.Id, ex.ToString());
         }
     }
 
@@ -141,11 +143,11 @@ public class IndexEngine
         }
         catch (FileNotFoundException e)
         {
-            _log.Error("InitDocument FileNotFoundException", e);
+            _log.ErrorIndexEngineFileNotFound(e.ToString());
         }
         catch (Exception e)
         {
-            _log.Error("InitDocument", e);
+            _log.ErrorIndexEngine(e.ToString());
         }
 
         return mail;
@@ -167,8 +169,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Update(count = {0}) error: {1}", mails == null ? 0 : mails.Count,
-                ex.ToString());
+            _log.ErrorIndexEngineUpdate(mails == null ? 0 : mails.Count, ex.ToString());
         }
     }
 
@@ -192,7 +193,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
+            _log.ErrorIndexEngineUpdate(ex.ToString());
         }
     }
 
@@ -216,7 +217,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Update() error: {0}", ex.ToString());
+            _log.ErrorIndexEngineUpdate(ex.ToString());
         }
     }
 
@@ -238,7 +239,7 @@ public class IndexEngine
         {
             var typeParameterType = typeof(T);
 
-            _log.ErrorFormat("IndexEngine->Update<{0}>(mail Id = {1}) error: {2}", typeParameterType, list == null ? 0 : list.Count, ex.ToString());
+            _log.ErrorIndexEngineUpdate(typeParameterType, list == null ? 0 : list.Count, ex.ToString());
         }
     }
 
@@ -263,7 +264,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Remove(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
+            _log.ErrorIndexEngineRemoveIds(ids == null ? 0 : ids.Count, ex.ToString());
         }
     }
 
@@ -288,7 +289,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->Remove(mailboxId = {0}) error: {1}", mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
+            _log.ErrorIndexEngineRemoveId(mailBox == null ? -1 : mailBox.MailBoxId, ex.ToString());
         }
     }
 
@@ -312,7 +313,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("IndexEngine->RemoveContacts(count = {0}) error: {1}", ids == null ? 0 : ids.Count, ex.ToString());
+            _log.ErrorIndexEngineRemoveContacts(ids == null ? 0 : ids.Count, ex.ToString());
         }
     }
 }

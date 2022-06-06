@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -31,14 +33,14 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class FolderEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly UserFolderEngine _userFolderEngine;
-    private readonly ILog _log;
+    private readonly ILogger<FolderEngine> _log;
 
     public class MailFolderInfo
     {
@@ -54,14 +56,14 @@ public class FolderEngine
         SecurityContext securityContext,
         TenantManager tenantManager,
         UserFolderEngine userFolderEngine,
-        IOptionsMonitor<ILog> option,
+        ILogger<FolderEngine> log,
         IMailDaoFactory mailDaoFactory)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
         _userFolderEngine = userFolderEngine;
-        _log = option.Get("ASC.Mail.FolderEngine");
+        _log = log;
     }
 
     public List<MailFolderInfo> GetFolders(string userId = null)
@@ -168,12 +170,11 @@ public class FolderEngine
                 {
                     throw new Exception("Need recalculation");
                 }
-
             }
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("ChangeFolderCounters() Exception: {0}", ex.ToString());
+            _log.ErrorFolderEngineChangeFolderCounters(ex.ToString());
             //TODO: Fix OperationEngine.RecalculateFolders();
         }
 

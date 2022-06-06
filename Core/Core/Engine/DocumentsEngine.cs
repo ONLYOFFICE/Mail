@@ -32,7 +32,7 @@ public class DocumentsEngine
 {
     public const string MY_DOCS_FOLDER_ID = "@my";
 
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly SecurityContext _securityContext;

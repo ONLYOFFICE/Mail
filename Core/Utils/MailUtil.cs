@@ -23,6 +23,8 @@
  *
 */
 
+using Microsoft.Extensions.Logging.Abstractions;
+
 using Action = System.Action;
 using File = System.IO.File;
 
@@ -175,9 +177,9 @@ public static class MailUtil
         }
     }
 
-    public static Ical.Net.Calendar ParseValidCalendar(string icalFormat, ILog log = null)
+    public static Ical.Net.Calendar ParseValidCalendar(string icalFormat, ILogger log = null)
     {
-        log = log ?? new NullLog();
+        log = log ?? NullLogger.Instance;
 
         try
         {

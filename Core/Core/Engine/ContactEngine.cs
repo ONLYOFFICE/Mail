@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
 using Task = System.Threading.Tasks.Task;
@@ -32,10 +34,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ContactEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger<ContactEngine> _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
@@ -62,7 +64,7 @@ public class ContactEngine
         WebItemSecurity webItemSecurity,
         CommonLinkUtility commonLinkUtility,
         IServiceProvider serviceProvider,
-        IOptionsMonitor<ILog> option)
+        ILogger<ContactEngine> log)
     {
         _securityContext = securityContext;
         _mailDbContext = dbContextManager.Get("mail");
@@ -76,7 +78,7 @@ public class ContactEngine
         _serviceProvider = serviceProvider;
         _webItemSecurity = webItemSecurity;
         _commonLinkUtility = commonLinkUtility;
-        _log = option.Get("ASC.Mail.ContactEngine");
+        _log = log;
     }
 
     public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
@@ -172,7 +174,7 @@ public class ContactEngine
             tx.Commit();
         }
 
-        _log.Debug("IndexEngine->SaveContactCard()");
+        _log.DebugContactEngineSaveContact();
 
         _indexEngine.Add(contactCard.ToMailContactWrapper());
 
@@ -252,7 +254,7 @@ public class ContactEngine
             tx.Commit();
         }
 
-        _log.Debug("IndexEngine->UpdateContactCard()");
+        _log.DebugContactEngineUpdateContact();
 
         _indexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
 
@@ -273,7 +275,7 @@ public class ContactEngine
             tx.Commit();
         }
 
-        _log.Debug("IndexEngine->RemoveContacts()");
+        _log.DebugContactEngineRemoveContacts();
 
         _indexEngine.RemoveContacts(ids, Tenant, new Guid(User));
     }
@@ -369,7 +371,7 @@ public class ContactEngine
                     .AppendFormat("\n-------------------------------------------------\n{0}", t);
             }
 
-            _log.Error(errorText.ToString());
+            _log.ErrorContactEngineError(errorText.ToString());
         }
 
         contacts =
@@ -382,7 +384,7 @@ public class ContactEngine
                 .Distinct(equality)
                 .ToList();
 
-        _log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
+        _log.DebugContactEngineSearchEmails(term, watch.Elapsed.TotalSeconds, contacts.Count);
 
         return contacts;
     }

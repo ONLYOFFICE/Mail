@@ -341,7 +341,7 @@ public static class MailDraftExtensions
         };
     }
 
-    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILog log = null)
+    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILogger log = null)
     {
         if (log == null)
             log = new NullLog();

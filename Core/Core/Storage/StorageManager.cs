@@ -32,10 +32,10 @@ public class StorageManager
 {
     public const string CKEDITOR_IMAGES_DOMAIN = "mail";
 
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly StorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
@@ -44,12 +44,12 @@ public class StorageManager
         SecurityContext securityContext,
         StorageFactory storageFactory,
         TenantManager tenantManager,
-        IOptionsMonitor<ILog> options)
+        ILogger logger)
     {
         _securityContext = securityContext;
         _storageFactory = storageFactory;
         _tenantManager = tenantManager;
-        _log = options.Get("ASC.Mail.StorageManager");
+        _log = logger;
     }
 
     public IDataStore GetDataStoreForCkImages(int tenant)
@@ -62,7 +62,7 @@ public class StorageManager
         return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
     }
 
-    public static byte[] LoadLinkData(string link, ILog log = null)
+    public static byte[] LoadLinkData(string link, ILogger log = null)
     {
         if (log == null)
             log = new NullLog();
@@ -78,7 +78,7 @@ public class StorageManager
         }
         catch (Exception)
         {
-            log.ErrorFormat("LoadLinkData(url='{0}')", link);
+            log.LogError("LoadLinkData(url='{0}')", link);
         }
 
         return data;

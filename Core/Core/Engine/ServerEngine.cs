@@ -31,7 +31,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
     private readonly SecurityContext _securityContext;

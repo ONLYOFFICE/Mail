@@ -30,14 +30,14 @@ public class MailboxIterator : IMailboxIterator
     private readonly int _tenant;
     private readonly string _userId;
     private readonly bool? _isRemoved;
-    private readonly ILog _log;
+    private readonly ILogger<MailGarbageEngine> _log;
 
     private readonly int _minMailboxId;
     private readonly int _maxMailboxId;
 
     private readonly MailboxEngine _mailboxEngine;
 
-    public MailboxIterator(MailboxEngine mailboxEngine, int tenant = -1, string userId = null, bool? isRemoved = false, ILog log = null)
+    public MailboxIterator(MailboxEngine mailboxEngine, int tenant = -1, string userId = null, bool? isRemoved = false, ILogger<MailGarbageEngine> log = null)
     {
         if (!string.IsNullOrEmpty(userId) && tenant < 0)
             throw new ArgumentException("Tenant must be initialized if user not empty");
@@ -48,7 +48,7 @@ public class MailboxIterator : IMailboxIterator
         _userId = userId;
         _isRemoved = isRemoved;
 
-        _log = log ?? new NullLog();
+        _log = log;
 
         var result = _mailboxEngine.GetRangeMailboxes(GetMailboxExp(_tenant, _userId, _isRemoved));
 
