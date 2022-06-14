@@ -119,7 +119,7 @@ public class MailClient : IDisposable
     {
         var protocolLogger = !string.IsNullOrEmpty(protocolLogPath)
             ? (IProtocolLogger)
-                new ProtocolLogger(protocolLogPath)
+                new ProtocolLogger(protocolLogPath += $"{mailbox.EMail.Address}.log")
             : new NullProtocolLogger();
 
         Account = mailbox;
@@ -486,16 +486,6 @@ public class MailClient : IDisposable
                 Log.Debug("Imap: Successfull connection. Working on!");
             }
 
-            if (enableUtf8 && (Imap.Capabilities & ImapCapabilities.UTF8Accept) != ImapCapabilities.None)
-            {
-                Log.Debug("Imap: EnableUTF8().");
-
-                t = Imap.EnableUTF8Async(_cancelToken);
-
-                if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
-                    throw new TimeoutException("Imap: EnableUTF8Async() timeout.");
-            }
-
             Imap.Authenticated += ImapOnAuthenticated;
 
             if (string.IsNullOrEmpty(Account.OAuthToken))
@@ -525,6 +515,23 @@ public class MailClient : IDisposable
             }
 
             Imap.Authenticated -= ImapOnAuthenticated;
+
+            if (enableUtf8 && (Imap.Capabilities & ImapCapabilities.UTF8Accept) != ImapCapabilities.None)
+            {
+                Log.Debug("Imap: EnableUTF8().");
+
+                t = Imap.EnableUTF8Async(_cancelToken);
+
+                if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
+                {
+                    Log.Debug("Imap: Failed ENABLE_UTF8: Timeout.");
+                    throw new TimeoutException("Imap: ENABLE_UTF8 timeout.");
+                }
+                else
+                {
+                    Log.Debug("Imap: Successfull ENABLE_UTF8.");
+                }
+            }
         }
         catch (AggregateException aggEx)
         {
