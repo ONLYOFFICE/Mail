@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace ASC.Mail.Core.Engine;
@@ -32,17 +34,17 @@ public class MailBoxSettingEngine
 {
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
-    private readonly ILog _log;
+    private readonly ILogger<MailBoxSettingEngine> _log;
 
     public MailBoxSettingEngine(
         IMailDaoFactory mailDaoFactory,
-        IOptionsMonitor<ILog> option)
+        ILogger<MailBoxSettingEngine> log)
     {
         _mailDbContext = mailDaoFactory.GetContext();
 
         _mailDaoFactory = mailDaoFactory;
 
-        _log = option.Get("ASC.Mail.MailBoxSettingEngine");
+        _log = log;
     }
 
     public Dictionary<string, string> MxToDomainBusinessVendorsList
@@ -71,7 +73,7 @@ public class MailBoxSettingEngine
             }
             catch (Exception ex)
             {
-                _log.Error("MxToDomainBusinessVendorsList failed", ex);
+                _log.ErrorMailBoxSettingEngineMxToDomain(ex.ToString());
             }
 
             return list;
@@ -202,7 +204,7 @@ public class MailBoxSettingEngine
         }
         catch (Exception ex)
         {
-            _log.Error("SetMailBoxSettings failed", ex);
+            _log.ErrorMailBoxSettingEngineSetMailBoxSettings(ex.ToString());
 
             return false;
         }
@@ -310,7 +312,7 @@ public class MailBoxSettingEngine
         }
         catch (Exception ex)
         {
-            _log.Error("SearchBusinessVendorsSettings failed", ex);
+            _log.ErrorMailBoxSettingEngineSearchBusinessVendorsSettings(ex.ToString());
         }
 
         return settingsFromDb;

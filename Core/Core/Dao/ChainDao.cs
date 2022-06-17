@@ -39,15 +39,12 @@ public class ChainDao : BaseMailDao, IChainDao
     {
     }
 
-    public List<Chain> GetChains(IConversationsExp exp, ILog log = null)
+    public List<Chain> GetChains(IConversationsExp exp)
     {
         var dbChains = MailDbContext.MailChain
             .AsNoTracking()
             .Where(exp.GetExpression())
             .ToList();
-
-        if (log != null)
-            log.Debug($"ChainDao -> Get chains returned {dbChains.Count()} chains.");
 
         var chains = dbChains.Select(ToChain).ToList();
 

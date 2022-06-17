@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -33,7 +35,7 @@ public class UserFolderEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger<UserFolderEngine> _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
@@ -42,12 +44,12 @@ public class UserFolderEngine
         SecurityContext securityContext,
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
-        IOptionsMonitor<ILog> option)
+        ILogger<UserFolderEngine> log)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
-        _log = option.Get("ASC.Mail.UserFolderEngine");
+        _log = log;
     }
 
     public MailUserFolderData Get(int id)
@@ -285,7 +287,7 @@ public class UserFolderEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat($"UserFolderEngine->SetFolderCounters() Exception: {ex}\nStack trace:\n{ex.StackTrace}");
+            _log.ErrorUserFolderEngineSetFolderCounters(ex.ToString(), ex.StackTrace);
             throw new Exception($"SetFolderCounters exception: folder id {userFolderId}", ex);
             //TODO: Think about recalculation
             //var engine = new EngineFactory(Tenant, User);
@@ -311,7 +313,7 @@ public class UserFolderEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("UserFolderEngine->ChangeFolderCounters() Exception: {0}", ex.ToString());
+            _log.ErrorUserFolderEngineChangeFolderCounters(ex.ToString());
             //TODO: Think about recalculation
             //var engine = new EngineFactory(Tenant, User);
             //engine.OperationEngine.RecalculateFolders();

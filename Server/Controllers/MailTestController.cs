@@ -1,9 +1,6 @@
 ﻿using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
+
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace ASC.Mail.Controllers
 {
@@ -16,7 +13,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Id message</returns>
         /// <category>Tests</category>
         /// <visible>false</visible>
-        [Create(@"messages/sample/create")]
+        [HttpPost(@"messages/sample/create")]
         public int CreateSampleMessage(TestMessageModel model)
         {
             var id = _testEngine
@@ -35,7 +32,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Id message</returns>
         /// <category>Tests</category>
         /// <visible>false</visible>
-        [Create(@"messages/sample/attachments/append")]
+        [HttpPost(@"messages/sample/attachments/append")]
         public MailAttachmentData AppendAttachmentsToSampleMessage(int? messageId, TestAttachmentModel model)
         {
             var data = _testEngine
@@ -51,7 +48,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Id message</returns>
         /// <category>Tests</category>
         /// <visible>false</visible>
-        [Create(@"messages/sample/eml/load")]
+        [HttpPost(@"messages/sample/eml/load")]
         public int LoadSampleMessage(TestMessageModel model)
         {
             var id = _testEngine

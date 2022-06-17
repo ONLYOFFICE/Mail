@@ -19,7 +19,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Tags list. Tags represented as JSON.</returns>
         /// <short>Get tags list</short> 
         /// <category>Tags</category>
-        [Read(@"tags")]
+        [HttpGet(@"tags")]
         public IEnumerable<MailTagData> GetTags()
         {
             return _tagEngine.GetTags().ToTagData();
@@ -35,7 +35,7 @@ namespace ASC.Mail.Controllers
         /// <short>Create tag</short> 
         /// <category>Tags</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Create(@"tags")]
+        [HttpPost(@"tags")]
         public MailTagData CreateTag(string name, string style, IEnumerable<string> addresses)
         {
             //TODO: Is it necessary?
@@ -63,7 +63,7 @@ namespace ASC.Mail.Controllers
         /// <short>Update tag</short> 
         /// <category>Tags</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"tags/{id}")]
+        [HttpPut(@"tags/{id}")]
         public MailTagData UpdateTag(int id, string name, string style, IEnumerable<string> addresses)
         {
             if (id < 0)
@@ -100,7 +100,7 @@ namespace ASC.Mail.Controllers
         /// <short>Delete tag</short> 
         /// <category>Tags</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Delete(@"tags/{id}")]
+        [HttpDelete(@"tags/{id}")]
         public int DeleteTag(int id)
         {
             if (id < 0)
@@ -121,7 +121,7 @@ namespace ASC.Mail.Controllers
         /// <short>Set tag to messages</short> 
         /// <category>Tags</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"tags/{id}/set")]
+        [HttpPut(@"tags/{id}/set")]
         public int SetTag(int id, List<int> messages)
         {
             if (!messages.Any())
@@ -141,7 +141,7 @@ namespace ASC.Mail.Controllers
         /// <short>Remove tag from messages</short> 
         /// <category>Tags</category>
         /// <exception cref="ArgumentException">Exception happens when parameters are invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"tags/{id}/unset")]
+        [HttpPut(@"tags/{id}/unset")]
         public int UnsetTag(int id, List<int> messages)
         {
             if (!messages.Any())

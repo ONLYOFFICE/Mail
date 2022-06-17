@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Storage;
@@ -35,7 +37,7 @@ public class StorageManager
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger _log;
+    private readonly ILogger<StorageManager> _log;
     private readonly SecurityContext _securityContext;
     private readonly StorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
@@ -44,7 +46,7 @@ public class StorageManager
         SecurityContext securityContext,
         StorageFactory storageFactory,
         TenantManager tenantManager,
-        ILogger logger)
+        ILogger<StorageManager> logger)
     {
         _securityContext = securityContext;
         _storageFactory = storageFactory;
@@ -62,11 +64,8 @@ public class StorageManager
         return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
     }
 
-    public static byte[] LoadLinkData(string link, ILogger log = null)
+    public static byte[] LoadLinkData(string link)
     {
-        if (log == null)
-            log = new NullLog();
-
         var data = new byte[] { };
 
         try
@@ -78,7 +77,7 @@ public class StorageManager
         }
         catch (Exception)
         {
-            log.LogError("LoadLinkData(url='{0}')", link);
+            log.ErrorStorageManagerLoadLinkData(link);
         }
 
         return data;
@@ -117,7 +116,7 @@ public class StorageManager
                 {
                     var link = linkNode.Attributes["src"].Value;
 
-                    _log.InfoFormat("ChangeSignatureEditorImagesLinks() Original image link: {0}", link);
+                    _log.InfoStorageManagerOriginalImageLink(link);
 
                     var fileLink = HttpUtility.UrlDecode(link.Substring(currentMailCkeditorUrl.Length));
 
@@ -132,7 +131,7 @@ public class StorageManager
                 }
                 catch (Exception ex)
                 {
-                    _log.ErrorFormat("ChangeSignatureEditorImagesLinks() failed with exception: {0}", ex.ToString());
+                    _log.ErrorStorageManagerChangeSignature(ex.ToString());
                 }
             }
 
@@ -170,8 +169,7 @@ public class StorageManager
         }
         catch (Exception e)
         {
-            _log.ErrorFormat("StoreCKeditorImageWithoutQuota(). filename: {0} Exception:\r\n{1}\r\n", fileName,
-                       e.ToString());
+            _log.ErrorStorageManagerStoreCKeditor(fileName, e.ToString());
 
             throw;
         }
@@ -238,10 +236,7 @@ public class StorageManager
         }
         catch (Exception e)
         {
-            _log.ErrorFormat("StoreAttachmentWithoutQuota(). filename: {0}, ctype: {1} Exception:\r\n{2}\r\n",
-                mailAttachmentData.fileName,
-                mailAttachmentData.contentType,
-                e.ToString());
+            _log.ErrorStorageManagerStoreAttachment(mailAttachmentData.fileName, mailAttachmentData.contentType, e.ToString());
 
             throw;
         }

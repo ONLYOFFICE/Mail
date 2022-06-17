@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -51,9 +53,9 @@ public class MailRemoveUserFolderOperation : MailOperation
         StorageManager storageManager,
         FactoryIndexer<MailMail> factoryIndexer,
         IServiceProvider serviceProvider,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILogger<MailOperation> logger,
         int userFolderId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
     {
         _messageEngine = messageEngine;
         _indexEngine = indexEngine;
@@ -82,7 +84,7 @@ public class MailRemoveUserFolderOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Logger.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }
@@ -112,7 +114,7 @@ public class MailRemoveUserFolderOperation : MailOperation
                 removeFolderIds.Add(folderId);
 
             //Remove folder with subfolders
-            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.TenantId, CurrentUser.ID.ToString())
+            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.Id, CurrentUser.ID.ToString())
                 .SetIds(removeFolderIds)
                 .Build();
 

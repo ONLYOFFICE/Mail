@@ -31,7 +31,7 @@ namespace ASC.Mail.Extensions;
 public static class MailBoxExtensions
 {
     public static bool IsUserTerminated(this MailBoxData mailbox,
-        TenantManager tenantManager, UserManager userManager, ILogger log)
+        TenantManager tenantManager, UserManager userManager)
     {
         try
         {
@@ -49,10 +49,8 @@ public static class MailBoxExtensions
     }
 
     public static bool IsUserRemoved(this MailBoxData mailbox,
-        TenantManager tenantManager, UserManager userManager, ILog log = null)
+        TenantManager tenantManager, UserManager userManager)
     {
-        log = log ?? new NullLog();
-
         try
         {
             tenantManager.SetCurrentTenant(mailbox.TenantId);
@@ -87,7 +85,7 @@ public static class MailBoxExtensions
 
     public static DefineConstants.TariffType GetTenantStatus(this MailBoxData mailbox,
         TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-        int tenantOverdueDays, ILogger log = null)
+        int tenantOverdueDays)
     {
         log = log ?? NullLogger.Instance;
 
@@ -129,10 +127,9 @@ public static class MailBoxExtensions
         return type;
     }
 
-    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILog log = null)
+    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance)
     {
         var quotaEnded = false;
-        log = log ?? new NullLog();
 
         try
         {
@@ -153,10 +150,8 @@ public static class MailBoxExtensions
     }
 
     public static bool IsCrmAvailable(this MailBoxData mailbox,
-        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-        ILog log = null)
+        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper)
     {
-        log = log ?? new NullLog();
 
         try
         {

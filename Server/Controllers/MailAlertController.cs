@@ -1,6 +1,7 @@
 ﻿using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
+
 using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
 
@@ -14,7 +15,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Alerts list</returns>
         /// <short>Get alerts list</short> 
         /// <category>Alerts</category>
-        [Read("alert")]
+        [HttpGet("alert")]
         public IList<MailAlertData> GetAlerts()
         {
             var alerts = _alertEngine.GetAlerts();
@@ -28,7 +29,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Deleted alert id. Same as request parameter.</returns>
         /// <short>Delete alert by ID</short> 
         /// <category>Alerts</category>
-        [Delete("alert/{id}")]
+        [HttpDelete("alert/{id}")]
         public long DeleteAlert(long id)
         {
             if (id < 0)

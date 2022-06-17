@@ -13,7 +13,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Addresses list. Email adresses represented as string name@domain.</returns>
         /// <short>Get trusted addresses</short> 
         /// <category>Images</category>
-        [Read("display_images/addresses")]
+        [HttpGet("display_images/addresses")]
         public IEnumerable<string> GetDisplayImagesAddresses()
         {
             return _displayImagesAddressEngine.Get();
@@ -27,7 +27,7 @@ namespace ASC.Mail.Controllers
         /// <short>Add trusted address</short> 
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
         /// <category>Images</category>
-        [Create("display_images/address")]
+        [HttpPost("display_images/address")]
         public string AddDisplayImagesAddress(string address)
         {
             _displayImagesAddressEngine.Add(address);
@@ -43,7 +43,7 @@ namespace ASC.Mail.Controllers
         /// <short>Remove from trusted addresses</short> 
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
         /// <category>Images</category>
-        [Delete("display_images/address")]
+        [HttpDelete("display_images/address")]
         public string RemovevDisplayImagesAddress(string address)
         {
             _displayImagesAddressEngine.Remove(address);

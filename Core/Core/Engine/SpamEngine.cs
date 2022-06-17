@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Core.Engine;
@@ -36,17 +38,17 @@ public class SpamEngine
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly ApiHelper _apiHelper;
-    private readonly ILog _log;
+    private readonly ILogger<SpamEngine> _log;
 
     public SpamEngine(
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
         ApiHelper apiHelper,
         StorageFactory storageFactory,
-        IOptionsMonitor<ILog> option)
+        ILogger<SpamEngine> log)
     {
 
-        _log = option.Get("ASC.Mail.SpamEngine");
+        _log = log;
         _tenantManager = tenantManager;
 
         _mailDaoFactory = mailDaoFactory;
@@ -73,7 +75,7 @@ public class SpamEngine
             }
             catch (Exception ex)
             {
-                _log.ErrorFormat("SendConversationsToSpamTrainer() failed with exception:\r\n{0}", ex.ToString());
+                _log.ErrorSpamEngineSendConversationsToSpam(ex.ToString());
             }
         });
 
@@ -136,8 +138,7 @@ public class SpamEngine
 
         if (serverInfo == null)
         {
-            _log.Error(
-                "SendEmlUrlsToSpamTrainer: Can't sent task to spam trainer. Empty server api info.");
+            _log.ErrorSpamEngineSendEmlUrlsToSpam();
             return;
         }
 
@@ -152,7 +153,7 @@ public class SpamEngine
             }
             catch (Exception ex)
             {
-                _log.ErrorFormat("SendEmlUrlsToSpamTrainer() Exception: \r\n {0}", ex.ToString());
+                _log.ErrorSpamEngineSendEmlUrlsToSpam(ex.ToString());
             }
         }
     }
@@ -172,8 +173,7 @@ public class SpamEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("GetMailEmlUrl() tenant='{0}', user_id='{1}', save_eml_path='{2}' Exception: {3}",
-                tenant, user, emlPath, ex.ToString());
+            _log.ErrorSpamEngineGetMailEmlUrl(tenant, user, emlPath, ex.ToString());
         }
 
         return "";

@@ -14,7 +14,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailCommonSettings object</returns>
         /// <short>Get common settings</short> 
         /// <category>Settings</category>
-        [Read(@"settings")]
+        [HttpGet(@"settings")]
         public MailCommonSettings GetCommonSettings()
         {
             return _settingEngine.GetCommonSettings();
@@ -26,7 +26,7 @@ namespace ASC.Mail.Controllers
         /// <returns>boolean</returns>
         /// <short>Get EnableConversations flag</short> 
         /// <category>Settings</category>
-        [Read(@"settings/conversationsEnabled")]
+        [HttpGet(@"settings/conversationsEnabled")]
         public bool GetEnableConversationFlag()
         {
             return _settingEngine.GetEnableConversationFlag();
@@ -38,7 +38,7 @@ namespace ASC.Mail.Controllers
         /// <param name="enabled">True or False value</param>
         /// <short>Set EnableConversations flag</short> 
         /// <category>Settings</category>
-        [Update(@"settings/conversationsEnabled")]
+        [HttpPut(@"settings/conversationsEnabled")]
         public void SetEnableConversationFlag(bool enabled)
         {
             _settingEngine.SetEnableConversationFlag(enabled);
@@ -50,7 +50,7 @@ namespace ASC.Mail.Controllers
         /// <returns>boolean</returns>
         /// <short>Get AlwaysDisplayImages flag</short> 
         /// <category>Settings</category>
-        [Read(@"settings/alwaysDisplayImages")]
+        [HttpGet(@"settings/alwaysDisplayImages")]
         public bool GetAlwaysDisplayImagesFlag()
         {
             return _settingEngine.GetAlwaysDisplayImagesFlag();
@@ -62,7 +62,7 @@ namespace ASC.Mail.Controllers
         /// <param name="enabled">True or False value</param>
         /// <short>Set AlwaysDisplayImages flag</short> 
         /// <category>Settings</category>
-        [Update(@"settings/alwaysDisplayImages")]
+        [HttpPut(@"settings/alwaysDisplayImages")]
         public void SetAlwaysDisplayImagesFlag(bool enabled)
         {
             _settingEngine.SetAlwaysDisplayImagesFlag(enabled);
@@ -74,7 +74,7 @@ namespace ASC.Mail.Controllers
         /// <returns>boolean</returns>
         /// <short>Get CacheUnreadMessages flag</short> 
         /// <category>Settings</category>
-        [Read(@"settings/cacheMessagesEnabled")]
+        [HttpGet(@"settings/cacheMessagesEnabled")]
         public bool GetCacheUnreadMessagesFlag()
         {
             //TODO: Change cache algoritnm and restore it back
@@ -89,7 +89,7 @@ namespace ASC.Mail.Controllers
         /// <param name="enabled">True or False value</param>
         /// <short>Set CacheUnreadMessages flag</short> 
         /// <category>Settings</category>
-        [Update(@"settings/cacheMessagesEnabled")]
+        [HttpPut(@"settings/cacheMessagesEnabled")]
         public void SetCacheUnreadMessagesFlag(bool enabled)
         {
             _settingEngine.SetCacheUnreadMessagesFlag(enabled);
@@ -101,7 +101,7 @@ namespace ASC.Mail.Controllers
         /// <returns>boolean</returns>
         /// <short>Get GoNextAfterMove flag</short> 
         /// <category>Settings</category>
-        [Read(@"settings/goNextAfterMoveEnabled")]
+        [HttpGet(@"settings/goNextAfterMoveEnabled")]
         public bool GetEnableGoNextAfterMoveFlag()
         {
             return _settingEngine.GetEnableGoNextAfterMoveFlag();
@@ -113,7 +113,7 @@ namespace ASC.Mail.Controllers
         /// <param name="enabled">True or False value</param>
         /// <short>Set GoNextAfterMove flag</short> 
         /// <category>Settings</category>
-        [Update(@"settings/goNextAfterMoveEnabled")]
+        [HttpPut(@"settings/goNextAfterMoveEnabled")]
         public void SetEnableGoNextAfterMoveFlag(bool enabled)
         {
             _settingEngine.SetEnableGoNextAfterMoveFlag(enabled);
@@ -125,7 +125,7 @@ namespace ASC.Mail.Controllers
         /// <returns>boolean</returns>
         /// <short>Get ReplaceMessageBody flag</short> 
         /// <category>Settings</category>
-        [Read(@"settings/replaceMessageBody")]
+        [HttpGet(@"settings/replaceMessageBody")]
         public bool GetEnableReplaceMessageBodyFlag()
         {
             return _settingEngine.GetEnableReplaceMessageBodyFlag();
@@ -137,7 +137,7 @@ namespace ASC.Mail.Controllers
         /// <param name="enabled">True or False value</param>
         /// <short>Set ReplaceMessageBody flag</short> 
         /// <category>Settings</category>
-        [Update(@"settings/replaceMessageBody")]
+        [HttpPut(@"settings/replaceMessageBody")]
         public void SetEnableReplaceMessageBodyFlag(bool enabled)
         {
             _settingEngine.SetEnableReplaceMessageBodyFlag(enabled);

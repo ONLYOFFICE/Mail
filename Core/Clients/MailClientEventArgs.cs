@@ -68,10 +68,10 @@ public class MailClientMessageEventArgs : EventArgs
 
     public string MessageUid { get; private set; }
 
-    public ILog Logger { get; private set; }
+    public ILogger Logger { get; private set; }
 
     public MailClientMessageEventArgs(MimeKit.MimeMessage message, string messageUid, bool uread, MailFolder folder,
-        MailBoxData mailBoxData, ILog logger)
+        MailBoxData mailBoxData, ILogger logger)
     {
         Message = message;
         Unread = uread;

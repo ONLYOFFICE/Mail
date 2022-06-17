@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailFolder = ASC.Mail.Models.MailFolder;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -50,9 +52,9 @@ public class ApplyFiltersOperation : MailOperation
         MailboxEngine mailboxEngine,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILogger<MailOperation> logger,
         List<int> ids)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
     {
         _filterEngine = filterEngine;
         _messageEngine = messageEngine;
@@ -122,7 +124,7 @@ public class ApplyFiltersOperation : MailOperation
                 }
                 catch (Exception ex)
                 {
-                    Logger.ErrorFormat("Error processing: {0}. Exception: {1}", progressState, ex);
+                    Logger.ErrorMailOperationProcessing(progressState, ex.ToString());
                 }
             }
 
@@ -130,7 +132,7 @@ public class ApplyFiltersOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Logger.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }

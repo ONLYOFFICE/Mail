@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -48,6 +50,7 @@ public class DraftEngine : ComposeEngineBase
     private readonly FactoryIndexer<MailContact> _factoryIndexer;
     private readonly FactoryIndexer FactoryIndexerCommon;
     private readonly IServiceProvider ServiceProvider;
+    private readonly ILogger<MailClient> _mailClientlog;
 
     public DraftEngine(
         SecurityContext securityContext,
@@ -72,9 +75,10 @@ public class DraftEngine : ComposeEngineBase
         FactoryIndexer factoryIndexerCommon,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-        IOptionsMonitor<ILog> option,
+        SignalrServiceClient optionsSnapshot,
+        ILogger<ComposeEngineBase> engineBaseLog,
         MailSettings mailSettings,
+        ILogger<MailClient> mailClientlog,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -89,7 +93,7 @@ public class DraftEngine : ComposeEngineBase
         coreSettings,
         storageFactory,
         optionsSnapshot,
-        option,
+        engineBaseLog,
         mailSettings,
         daemonLabels)
     {
@@ -101,13 +105,12 @@ public class DraftEngine : ComposeEngineBase
         _contactEngine = contactEngine;
         _fileStorageService = fileStorageService;
         _factoryIndexer = factoryIndexer;
+        _mailClientlog = mailClientlog;
         FactoryIndexerCommon = factoryIndexerCommon;
         ServiceProvider = serviceProvider;
         _httpContext = httpContextAccessor?.HttpContext;
 
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
-
-        _log = option.Get("ASC.Mail.DraftEngine");
     }
 
     #region .Public
@@ -233,25 +236,25 @@ public class DraftEngine : ComposeEngineBase
 
                 _securityContext.AuthenticateMe(new Guid(draft.Mailbox.UserId));
 
-                draft.ChangeEmbeddedAttachmentLinks(_log);
+                draft.ChangeEmbeddedAttachmentLinks();
 
-                draft.ChangeSmileLinks(_log);
+                draft.ChangeSmileLinks();
 
-                draft.ChangeAttachedFileLinksAddresses(_fileStorageService, _log);
+                draft.ChangeAttachedFileLinksAddresses(_fileStorageService);
 
-                draft.ChangeAttachedFileLinksImages(_log);
+                draft.ChangeAttachedFileLinksImages();
 
                 if (!string.IsNullOrEmpty(draft.CalendarIcs))
                 {
-                    draft.ChangeAllImagesLinksToEmbedded(_log);
+                    draft.ChangeAllImagesLinksToEmbedded();
                 }
 
-                draft.ChangeUrlProxyLinks(_log);
+                draft.ChangeUrlProxyLinks();
 
                 var mimeMessage = draft.ToMimeMessage(_storageManager);
 
                 using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos,
-                    certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit, log: _log,
+                    certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit,
                     enableDsn: draft.RequestReceipt))
                 {
                     mc.Send(mimeMessage,
@@ -287,13 +290,12 @@ public class DraftEngine : ComposeEngineBase
                 }
                 catch (Exception ex)
                 {
-                    _log.ErrorFormat("Unexpected Error in Send() Id = {0}\r\nException: {1}",
-                        message.Id, ex.ToString());
+                    _log.ErrorDraftEngineSend(message.Id, ex.ToString());
                 }
             }
             catch (Exception ex)
             {
-                _log.ErrorFormat("Mail->Send failed: Exception: {0}", ex.ToString());
+                _log.ErrorDraftEngineSendFailed(ex.ToString());
 
                 AddNotificationAlertToMailbox(draft, ex);
 
@@ -409,7 +411,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.Warn(string.Format("Problem with attach ICAL to message. mailId={0} Exception:\r\n{1}\r\n", draft.Id, ex));
+            _log.WarnDraftEngineAttachICALToMessage(draft.Id, ex.ToString());
         }
     }
 
@@ -446,7 +448,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
         }
     }
 
@@ -476,7 +478,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
         }
     }
 
@@ -581,7 +583,7 @@ public class DraftEngine : ComposeEngineBase
             notifyMessageItem.ChainId = notifyMessageItem.MimeMessageId;
             notifyMessageItem.IsNew = true;
 
-            _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem, _log);
+            _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem);
 
             var mailDaemonMessageid = _messageEngine.MailSave(draft.Mailbox, notifyMessageItem, 0,
                 FolderType.Inbox, FolderType.Inbox, null,
@@ -598,8 +600,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception exError)
         {
-            _log.ErrorFormat("AddNotificationAlertToMailbox() in MailboxId={0} failed with exception:\r\n{1}",
-                draft.Mailbox.MailBoxId, exError.ToString());
+            _log.ErrorDraftEngineAlertToMailbox(draft.Mailbox.MailBoxId, exError.ToString());
         }
     }
 

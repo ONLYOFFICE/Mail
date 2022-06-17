@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -50,9 +52,9 @@ public class MailRemoveMailserverMailboxOperation : MailOperation
         IndexEngine indexEngine,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILogger<MailOperation> logger,
         MailBoxData mailBox)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
     {
         _serverMailboxEngine = serverMailboxEngine;
         _operationEngine = operationEngine;
@@ -101,7 +103,7 @@ public class MailRemoveMailserverMailboxOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove mailbox: {0}", e);
+            Logger.ErrorMailOperationRemoveMailbox(e.ToString());
             Error = "InternalServerError";
         }
     }

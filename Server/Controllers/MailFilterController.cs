@@ -1,13 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-
-using ASC.Mail.Core.Engine.Operations.Base;
+﻿using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
 using ASC.Web.Mail.Resources;
 
 using Microsoft.AspNetCore.Mvc;
+
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace ASC.Mail.Controllers
 {
@@ -19,7 +18,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Filters list. Filters represented as JSON.</returns>
         /// <short>Get filters list</short> 
         /// <category>Filters</category>
-        [Read(@"filters")]
+        [HttpGet(@"filters")]
         public IEnumerable<MailSieveFilterData> GetFilters()
         {
             var filters = _filterEngine.GetList();
@@ -34,7 +33,7 @@ namespace ASC.Mail.Controllers
         /// <short>Create filter</short> 
         /// <category>Filters</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Create(@"filters")]
+        [HttpPost(@"filters")]
         public MailSieveFilterData CreateFilter(MailSieveFilterData filter)
         {
             var id = _filterEngine.Create(filter);
@@ -50,7 +49,7 @@ namespace ASC.Mail.Controllers
         /// <short>Update filter</short> 
         /// <category>Filters</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"filters")]
+        [HttpPut(@"filters")]
         public MailSieveFilterData UpdateFilter(MailSieveFilterData filter)
         {
             _filterEngine.Update(filter);
@@ -66,7 +65,7 @@ namespace ASC.Mail.Controllers
         /// <short>Delete filter</short> 
         /// <category>Filters</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Delete(@"filters/{id}")]
+        [HttpDelete(@"filters/{id}")]
         public int DeleteFilter(int id)
         {
             _filterEngine.Delete(id);
@@ -84,7 +83,7 @@ namespace ASC.Mail.Controllers
         /// <short>Check filter</short> 
         /// <category>Filters</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"filters/check")]
+        [HttpGet(@"filters/check")]
         public List<MailMessageData> CheckFilter(MailSieveFilterData filter, int? page, int? pageSize)
         {
             if (!page.HasValue)
@@ -108,7 +107,7 @@ namespace ASC.Mail.Controllers
         /// <short>Check filter</short> 
         /// <category>Filters</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"filters/{id}/apply")]
+        [HttpGet(@"filters/{id}/apply")]
         public MailOperationStatus ApplyFilter(int id)
         {
             Thread.CurrentThread.CurrentCulture = CurrentCulture;

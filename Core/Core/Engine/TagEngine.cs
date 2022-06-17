@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -38,7 +40,7 @@ public class TagEngine
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILog _log;
+    private readonly ILogger<TagEngine> _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly WebItemSecurity _webItemSecurity;
 
@@ -47,7 +49,7 @@ public class TagEngine
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         WebItemSecurity webItemSecurity,
-        IOptionsMonitor<ILog> option)
+        ILogger<TagEngine> log)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
@@ -56,7 +58,7 @@ public class TagEngine
 
         _webItemSecurity = webItemSecurity;
 
-        _log = option.Get("ASC.Mail.TagEngine");
+        _log = log;
     }
 
     public Tag GetTag(int id)
@@ -283,8 +285,7 @@ public class TagEngine
 
             if (id > 0)
             {
-                _log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
-                    name, id);
+                _log.InfoTagEngineTagCreated(name, id);
 
                 tagIds.Add(id);
             }
@@ -308,8 +309,9 @@ public class TagEngine
 
         UpdateIndexerTags(messageIds, UpdateAction.Add, tagId);
 
-        _log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
-            string.Join(",", messageIds));
+        var ids = string.Join(",", messageIds);
+
+        _log.InfoTagEngineTagAdded(tagId, ids);
     }
 
     public bool SetMessagesTag(IMailDaoFactory daoFactory, List<int> messageIds, int tagId)

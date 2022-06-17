@@ -1,4 +1,6 @@
 ﻿
+using ASC.Mail.Aggregator.Service.Log;
+
 using AuthenticationException = MailKit.Security.AuthenticationException;
 
 namespace ASC.Mail.Aggregator.Service.Service;
@@ -11,7 +13,7 @@ internal class MailboxHandler : IDisposable
     private readonly MailSettings _settings;
     private readonly CancellationTokenSource _tokenSource;
     private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfo;
-    private ILogger _log;
+    private ILogger<MailboxHandler> _log;
 
     private readonly TenantManager _tenantManager;
     private readonly MailboxEngine _mailboxEngine;
@@ -25,14 +27,15 @@ internal class MailboxHandler : IDisposable
         IServiceProvider serviceProvider,
         MailBoxData mailBox,
         MailSettings mailSettings,
-        ILogger log,
         CancellationTokenSource tokenSource,
         List<ServerFolderAccessInfo> serverFolderAccessInfo)
     {
         _scope = serviceProvider.CreateScope();
         _box = mailBox;
         _settings = mailSettings;
-        _log = log;
+
+        _log = _scope.ServiceProvider.GetService<ILogger<MailboxHandler>>();
+
         _tokenSource = tokenSource;
         _serverFolderAccessInfo = serverFolderAccessInfo;
 
@@ -54,15 +57,15 @@ internal class MailboxHandler : IDisposable
         {
             if (_client != null)
             {
-                _log.LogInformation("Client -> Could not connect: {0} | Not authenticated: {1} | Was disposed: {2}",
+                _log.InfoMailboxHandlerCreateClient(
                     !_client.IsConnected ? "Yes" : "No",
                     !_client.IsAuthenticated ? "Yes" : "No",
                     _client.IsDisposed ? "Yes" : "No");
             }
 
-            else _log.LogInformation("Client was null");
+            else _log.InfoMailboxHandlerNullClient();
 
-            _log.LogInformation($"Release mailbox (Tenant: {_box.TenantId} MailboxId: {_box.MailBoxId}, Address: '{_box.EMail}')");
+            _log.InfoMailboxHandlerReleaseMailbox(_box.TenantId, _box.MailBoxId, _box.EMail.ToString());
 
             return;
         }
@@ -74,30 +77,26 @@ internal class MailboxHandler : IDisposable
 
         var active = mailbox.Active ? "Active" : "Inactive";
 
-        _log.LogInformation(
-            $"Process mailbox(Tenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId} " +
-            $"Address: \"{mailbox.EMail}\") Is {active}. | Task №: {Task.CurrentId}");
+        _log.InfoMailboxHandlerProcessMailbox(mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail.ToString(), active, Task.CurrentId);
 
         var failed = false;
 
         try
         {
-            _client.Log = _log;
+            _client.BoxLog = _log;
             _client.GetMessage += ClientOnGetMessage;
             _client.Aggregate(_settings, _settings.Aggregator.MaxMessagesPerSession);
         }
         catch (OperationCanceledException)
         {
-            _log.LogInformation(
-                $"Operation cancel: ProcessMailbox. Tenant: {mailbox.TenantId}, MailboxId: {mailbox.MailBoxId}, Address: {mailbox.EMail}");
+            _log.InfoMailboxHandlerOperationCancel(mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail.ToString());
 
             AggregatorService.NotifySocketIO(mailbox, _log);
         }
         catch (Exception ex)
         {
-            _log.LogError(
-                "ProcessMailbox exception. Tenant: {0}, MailboxId: {1}, Address = {2})\r\n{3}",
-                mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail,
+            _log.ErrorMailboxHandlerProcessMailbox(
+                mailbox.TenantId, mailbox.MailBoxId, mailbox.EMail.ToString(),
                 ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
 
             failed = true;
@@ -114,7 +113,7 @@ internal class MailboxHandler : IDisposable
 
         CheckMailboxState(mailbox);
 
-        _log.LogInformation($"Mailbox {mailbox.MailBoxId} {mailbox.EMail} has been processed.");
+        _log.InfoMailboxHandlerHasBeenProcessed(mailbox.MailBoxId, mailbox.EMail.ToString());
     }
 
     public void Dispose()
@@ -138,7 +137,7 @@ internal class MailboxHandler : IDisposable
     {
         try
         {
-            _log.LogDebug("Get mailbox state");
+            _log.DebugMailboxHandlerGetState();
 
             var status = _mailboxEngine.GetMailboxStatus(
                 new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, null));
@@ -148,13 +147,13 @@ internal class MailboxHandler : IDisposable
                 mailbox.BeginDateChanged = true;
                 mailbox.BeginDate = status.BeginDate;
 
-                _log.LogInformation($"MailBox {mailbox.MailBoxId}. STATUS: Begin date was changed.");
+                _log.InfoMailboxHandlerBeginDateWasChanged(mailbox.MailBoxId);
                 return;
             }
 
             if (status.IsRemoved)
             {
-                _log.LogInformation($"MailBox {mailbox.MailBoxId}. STATUS: Was removed.");
+                _log.InfoMailboxHandlerWasRemoved(mailbox.MailBoxId);
 
                 try
                 {
@@ -162,22 +161,22 @@ internal class MailboxHandler : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    _log.LogError($"Remove mailbox {mailbox.MailBoxId} exception.\r\n{ex.Message}");
+                    _log.ErrorMailboxHandlerRemoveMailbox(mailbox.MailBoxId, ex.Message);
                 }
                 return;
             }
 
             if (!status.Enabled)
             {
-                _log.LogInformation($"Mailbox {mailbox.MailBoxId}. STATUS: Deactivated");
+                _log.InfoMailboxHandlerMailboxDeactivated(mailbox.MailBoxId);
                 return;
             }
 
-            _log.LogInformation($"Mailbox {mailbox.MailBoxId}. STATUS: Not changed");
+            _log.InfoMailboxHandlerMailboxNotChanged(mailbox.MailBoxId);
         }
         catch (Exception ex)
         {
-            _log.LogError($"Check mailbox state exception.\r\n{ex.Message}");
+            _log.ErrorMailboxHandlerCheckState(ex.Message);
         }
     }
 
@@ -197,7 +196,7 @@ internal class MailboxHandler : IDisposable
                 _settings.Aggregator.TcpTimeout,
                 _box.IsTeamlab || _settings.Defines.SslCertificatesErrorsPermit,
                 _settings.Defines.CheckCertificateRevocation,
-                _settings.Aggregator.ProtocolLogPath, _log, true);
+                _settings.Aggregator.ProtocolLogPath, true);
 
             if (!_box.Imap)
                 _client.FuncGetPop3NewMessagesIDs = uidls => _messageEngine.GetPop3NewMessagesIDs(
@@ -209,34 +208,34 @@ internal class MailboxHandler : IDisposable
         }
         catch (TimeoutException tEx)
         {
-            _log.LogWarning($"AT LOGIN IMAP/POP3 [TIMEOUT]\r\n{_boxInfo}\r\n{tEx}");
+            _log.Warning($"AT LOGIN IMAP/POP3 [TIMEOUT]\r\n{_boxInfo}\r\n{tEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (ImapProtocolException iEx)
         {
-            _log.LogError($"AT LOGIN IMAP/POP3 [IMAP PROTOCOL]\r\n{_boxInfo}\r\n{iEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [IMAP PROTOCOL]\r\n{_boxInfo}\r\n{iEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (OperationCanceledException ocEx)
         {
-            _log.LogInformation($"AT LOGIN IMAP/POP3 [OPERATION CANCEL]\r\n{_boxInfo}\r\n{ocEx}");
+            _log.Information($"AT LOGIN IMAP/POP3 [OPERATION CANCEL]\r\n{_boxInfo}\r\n{ocEx}");
 
             stopClient = true;
         }
         catch (AuthenticationException aEx)
         {
-            _log.LogError($"AT LOGIN IMAP/POP3 [AUTHENTICATION]\r\n{_boxInfo}\r\n{aEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [AUTHENTICATION]\r\n{_boxInfo}\r\n{aEx}");
 
             connectError = true;
             stopClient = true;
         }
         catch (WebException wEx)
         {
-            _log.LogError($"AT LOGIN IMAP/POP3 [WEB]\r\n{_boxInfo}\r\n{wEx}");
+            _log.Error($"AT LOGIN IMAP/POP3 [WEB]\r\n{_boxInfo}\r\n{wEx}");
 
             connectError = true;
             stopClient = true;
@@ -245,12 +244,12 @@ internal class MailboxHandler : IDisposable
         {
             if (sslEx.Message.Contains("The remote certificate was rejected") || sslEx.Message.Contains("certificate has expired"))
             {
-                _log.LogError($"AT LOGIN IMAP/POP3 [Certificate has expired EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
+                _log.Error($"AT LOGIN IMAP/POP3 [Certificate has expired EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
                 connectError = true;
             }
             else
             {
-                _log.LogError($"AT LOGIN IMAP/POP3 [SSL EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
+                _log.Error($"AT LOGIN IMAP/POP3 [SSL EXCEPTION]\r\n{_boxInfo}\r\n{sslEx}");
             }
 
             stopClient = true;
@@ -261,13 +260,13 @@ internal class MailboxHandler : IDisposable
             {
                 if (ex.Message.Contains("Error_11001"))
                 {
-                    _log.LogError($"AT LOGIN IMAP/POP3 [Could not resolve host EXCEPTION]\r\n{_boxInfo}\r\n{ex}");
+                    _log.Error($"AT LOGIN IMAP/POP3 [Could not resolve host EXCEPTION]\r\n{_boxInfo}\r\n{ex}");
                     connectError = true;
                 }
             }
             else
             {
-                _log.LogError("AT LOGIN IMAP/POP3 [UNREGISTERED EXCEPTION]\r\n{0}\r\n{1}",
+                _log.Error("AT LOGIN IMAP/POP3 [UNREGISTERED EXCEPTION]\r\n{0}\r\n{1}",
                     _boxInfo, ex is ImapProtocolException || ex is Pop3ProtocolException ? ex.Message : ex.ToString());
             }
 
@@ -322,7 +321,7 @@ internal class MailboxHandler : IDisposable
 
             var uidl = _box.Imap ? $"{boxSaveInfo.Uid}-{(int)boxSaveInfo.Folder.Folder}" : boxSaveInfo.Uid;
 
-            _log.LogInformation($"Found message uidl: {uidl}, {_boxInfo}");
+            _log.Information($"Found message uidl: {uidl}, {_boxInfo}");
 
             if (!SaveAndOptional(box, boxSaveInfo, uidl)) return;
 
@@ -330,7 +329,7 @@ internal class MailboxHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogError($"Client on get message exception.\r\n{ex}");
+            _log.Error($"Client on get message exception.\r\n{ex}");
             failed = true;
         }
         finally
@@ -348,11 +347,11 @@ internal class MailboxHandler : IDisposable
     {
         _securityContext.AuthenticateMe(new Guid(box.UserId));
 
-        var message = _messageEngine.Save(box, saveInfo.MimeMessage, uidl, saveInfo.Folder, null, saveInfo.Unread, _log);
+        var message = _messageEngine.Save(box, saveInfo.MimeMessage, uidl, saveInfo.Folder, null, saveInfo.Unread);
 
         if (message == null || message.Id <= 0) return false;
 
-        _log.LogInformation($"Message {message.Id} has been saved to mailbox {box.MailBoxId} ({box.EMail.Address})");
+        _log.Information($"Message {message.Id} has been saved to mailbox {box.MailBoxId} ({box.EMail.Address})");
 
         DoOptionalOperations(message, saveInfo, box);
 
@@ -375,13 +374,13 @@ internal class MailboxHandler : IDisposable
 
             if (boxSaveInfo.Folder.Tags.Length > 0)
             {
-                _log.LogDebug("Optional operations: GetOrCreateTags");
+                _log.Debug("Optional operations: GetOrCreateTags");
                 tagsIds = tagEngine.GetOrCreateTags(box.TenantId, box.UserId, boxSaveInfo.Folder.Tags);
             }
 
             if (IsCrmAvailable(box))
             {
-                _log.LogDebug("Optional operations: GetCrmTags");
+                _log.Debug("Optional operations: GetCrmTags");
 
                 var crmTagsIds = tagEngine.GetCrmTags(message.FromEmail);
 
@@ -400,13 +399,13 @@ internal class MailboxHandler : IDisposable
                 message.TagIds = message.TagIds.Distinct().ToList();
             }
 
-            _log.LogDebug("Optional operations: AddMessageToIndex");
+            _log.Debug("Optional operations: AddMessageToIndex");
 
             var mailMessage = message.ToMailMail(box.TenantId, new Guid(box.UserId));
 
             indexEngine.Add(mailMessage);
 
-            _log.LogDebug("Optional operations: SetMessagesTags");
+            _log.Debug("Optional operations: SetMessagesTags");
 
             foreach (var tag in tagsIds)
             {
@@ -417,25 +416,25 @@ internal class MailboxHandler : IDisposable
                 catch (Exception ex)
                 {
                     var tags = tagsIds != null ? string.Join(", ", tagsIds) : "null";
-                    _log.LogError($"Set message tags exception.\r\nTags: {tags} | Message: {message.Id}, Tenant: {box.TenantId}, User: {box.UserId}\r\n{ex.Message}");
+                    _log.Error($"Set message tags exception.\r\nTags: {tags} | Message: {message.Id}, Tenant: {box.TenantId}, User: {box.UserId}\r\n{ex.Message}");
                 }
             }
 
-            _log.LogDebug("Optional operations: AddRelationshipEventForLinkedAccounts");
+            _log.Debug("Optional operations: AddRelationshipEventForLinkedAccounts");
 
             crmLinkEngine.AddRelationshipEventForLinkedAccounts(box, message);
 
-            _log.LogDebug("Optional operations: SaveEmailInData");
+            _log.Debug("Optional operations: SaveEmailInData");
 
             emailInEngine.SaveEmailInData(box, message, _settings.Defines.DefaultApiSchema);
 
-            _log.LogDebug("Optional operations: SendAutoreply");
+            _log.Debug("Optional operations: SendAutoreply");
 
             autoreplyEngine.SendAutoreply(box, message, _settings.Defines.DefaultApiSchema, _log);
 
             if (boxSaveInfo.Folder.Folder != Enums.FolderType.Spam)
             {
-                _log.LogDebug("Optional operations: UploadIcsToCalendar");
+                _log.Debug("Optional operations: UploadIcsToCalendar");
 
                 calendarEngine.UploadIcsToCalendar(box, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
                     message.CalendarEventCharset, message.CalendarEventMimeType);
@@ -443,25 +442,25 @@ internal class MailboxHandler : IDisposable
 
             if (_settings.Defines.SaveOriginalMessage)
             {
-                _log.LogDebug("Optional operations: StoreMailEml");
+                _log.Debug("Optional operations: StoreMailEml");
                 StoreMailEml(message.StreamId, boxSaveInfo.MimeMessage, box);
             }
 
-            _log.LogDebug($"Optional operations: ApplyFilters");
+            _log.Debug($"Optional operations: ApplyFilters");
 
             var filters = GetFilters(filterEngine, box.UserId);
             _ = filterEngine.ApplyFilters(message, box, boxSaveInfo.Folder, filters);
 
-            _log.LogDebug($"Optional operations: NotifySocketIO");
+            _log.Debug($"Optional operations: NotifySocketIO");
 
             if (!_settings.Aggregator.EnableSignalr)
-                _log.LogDebug("Skip notify socketIO... Enable: false");
+                _log.Debug("Skip notify socketIO... Enable: false");
 
             else AggregatorService.NotifySocketIO(box, _log);
         }
         catch (Exception ex)
         {
-            _log.LogError($"Do optional operation exception:\r\n{ex.Message}");
+            _log.Error($"Do optional operation exception:\r\n{ex.Message}");
         }
     }
 
@@ -481,7 +480,7 @@ internal class MailboxHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogError($"Get filters exception:\r\n{ex.Message}");
+            _log.Error($"Get filters exception:\r\n{ex.Message}");
         }
 
         return new List<MailSieveFilterData>();
@@ -500,12 +499,12 @@ internal class MailboxHandler : IDisposable
             using var stream = new MemoryStream();
             message.WriteTo(stream);
             var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
-            _log.LogDebug($"Store mail eml. Tenant: {mailBox.TenantId}, user: {mailBox.UserId}, result: {res}, path {savePath}");
+            _log.Debug($"Store mail eml. Tenant: {mailBox.TenantId}, user: {mailBox.UserId}, result: {res}, path {savePath}");
             return;
         }
         catch (Exception ex)
         {
-            _log.LogError($"Store mail eml exception:\r\n{ex.Message}");
+            _log.Error($"Store mail eml exception:\r\n{ex.Message}");
         }
 
         return;
@@ -539,7 +538,7 @@ internal class MailboxHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogError($"Set mailbox auth error exception\r\n{_boxInfo}\r\n{ex.Message}");
+            _log.Error($"Set mailbox auth error exception\r\n{_boxInfo}\r\n{ex.Message}");
         }
     }
 
@@ -557,7 +556,7 @@ internal class MailboxHandler : IDisposable
         }
         catch (Exception ex)
         {
-            _log.LogError($"Try close client exception.\r\n{_boxInfo}\r\n{ex.Message}");
+            _log.Error($"Try close client exception.\r\n{_boxInfo}\r\n{ex.Message}");
         }
     }
     #endregion

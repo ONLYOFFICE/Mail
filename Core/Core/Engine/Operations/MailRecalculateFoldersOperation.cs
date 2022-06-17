@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -42,8 +44,8 @@ public class MailRecalculateFoldersOperation : MailOperation
         FolderEngine folderEngine,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> optionsMonitor)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        ILogger<MailOperation> logger)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
     {
         _folderEngine = folderEngine;
     }
@@ -65,7 +67,7 @@ public class MailRecalculateFoldersOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.ErrorFormat("Mail operation error -> Recalculate folders: {0}", e.ToString());
+            Logger.ErrorMailOperationRecalculateFolders(e.ToString());
             Error = "InternalServerError";
         }
     }

@@ -2,7 +2,6 @@
 using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
-using ASC.Web.Api.Routing;
 
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +19,7 @@ namespace ASC.Mail.Controllers
         /// <param name="id_folder" optional="true">Id of Documents folder (if empty then @My)</param>
         /// <returns>Count of exported attachments</returns>
         /// <category>Messages</category>
-        [Update(@"messages/attachments/export")]
+        [HttpPut(@"messages/attachments/export")]
         public int ExportAttachmentsToDocuments(int id_message, string id_folder = null)
         {
             if (id_message < 1)
@@ -41,7 +40,7 @@ namespace ASC.Mail.Controllers
         /// <param name="id_folder" optional="true">Id of Documents folder (if empty then @My)</param>
         /// <returns>Id document in My Documents</returns>
         /// <category>Messages</category>
-        [Update(@"messages/attachment/export")]
+        [HttpPut(@"messages/attachment/export")]
         public object ExportAttachmentToDocuments(int id_attachment, string id_folder = null)
         {
             if (id_attachment < 1)
@@ -64,7 +63,7 @@ namespace ASC.Mail.Controllers
         /// <param name="content_type">File content type</param>
         /// <returns>MailAttachment</returns>
         /// <category>Messages</category>
-        [Create(@"messages/attachment/add")]
+        [HttpPost(@"messages/attachment/add")]
         public MailAttachmentData AddAttachment(int id_message, string name, Stream file, string content_type)
         {
             var attachment = _messageEngine
@@ -80,7 +79,7 @@ namespace ASC.Mail.Controllers
         /// <param name="ical_body">File name</param>
         /// <returns>MailAttachment</returns>
         /// <category>Messages</category>
-        [Create(@"messages/calendarbody/add")]
+        [HttpPost(@"messages/calendarbody/add")]
         public MailAttachmentData AddCalendarBody(int id_message, string ical_body)
         {
             if (string.IsNullOrEmpty(ical_body))
@@ -113,7 +112,7 @@ namespace ASC.Mail.Controllers
         /// </short>
         /// <param name="messageId">Id of message</param>
         /// <returns>Attachment Archive</returns>
-        [Update(@"messages/attachment/downloadall/{messageId}")]
+        [HttpPut(@"messages/attachment/downloadall/{messageId}")]
         public MailOperationStatus DownloadAllAttachments(int messageId)
         {
             //Thread.CurrentThread.CurrentCulture = CurrentCulture;

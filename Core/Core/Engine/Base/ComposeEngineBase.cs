@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -32,7 +34,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ComposeEngineBase
 {
-    protected ILog _log;
+    protected ILogger<ComposeEngineBase> _log;
     protected static SignalrServiceClient _signalrServiceClient;
     protected readonly bool _sslCertificatePermit;
     protected const string EMPTY_HTML_BODY = "<div dir=\"ltr\"><br></div>"; // GMail style
@@ -122,8 +124,8 @@ public class ComposeEngineBase
         TenantManager tenantManager,
         CoreSettings coreSettings,
         StorageFactory storageFactory,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-        IOptionsMonitor<ILog> option,
+        SignalrServiceClient signalrServiceClient,
+        ILogger<ComposeEngineBase> log,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)
     {
@@ -141,14 +143,14 @@ public class ComposeEngineBase
 
         _mailSettings = mailSettings;
 
-        _log = option.Get("ASC.Mail.ComposeEngineBase");
+        _log = log;
 
         DaemonLabels = daemonLabels ?? DeliveryFailureMessageTranslates.Defauilt;
 
         _sslCertificatePermit = _mailSettings.Defines.SslCertificatesErrorsPermit;
 
         if (_signalrServiceClient != null) return;
-        _signalrServiceClient = optionsSnapshot.Get("mail");
+        _signalrServiceClient = signalrServiceClient;
     }
 
     #region .Public
@@ -244,7 +246,7 @@ public class ComposeEngineBase
                         attachment, compose.StreamId));
         }
 
-        _messageEngine.StoreMailBody(compose.Mailbox, message, _log);
+        _messageEngine.StoreMailBody(compose.Mailbox, message);
 
         long usedQuota;
 
@@ -356,7 +358,7 @@ public class ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Clearing temp storage failed with exception: {0}", ex.ToString());
+            _log.ErrorComposeEngineClearingTempStorage(ex.ToString());
         }
 
         return message;
@@ -458,7 +460,7 @@ public class ComposeEngineBase
             }
             catch (Exception ex)
             {
-                _log.ErrorFormat("ChangeEmbededAttachmentLinksForStoring() failed with exception: {0}", ex.ToString());
+                _log.ErrorComposeEngineChangeLinks(ex.ToString());
             }
         }
 

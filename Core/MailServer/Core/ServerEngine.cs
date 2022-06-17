@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
 
@@ -31,19 +33,19 @@ namespace ASC.Mail.Server.Core;
 [Scope]
 public class ServerEngine
 {
-    private readonly ILog _log;
+    private readonly ILogger<ServerEngine> _log;
     private readonly IMailServerDaoFactory _mailServerDaoFactory;
 
     protected string DbConnectionString { get; private set; }
     internal ServerApi ServerApi { get; private set; }
 
     public ServerEngine(
-        IOptionsMonitor<ILog> option,
+        ILogger<ServerEngine> log,
         IMailServerDaoFactory mailServerDaoFactory
         )
     {
         _mailServerDaoFactory = mailServerDaoFactory;
-        _log = option.Get("ASC.Mail.ServerEngine");
+        _log = log;
     }
 
     public ServerEngine(int serverId, string connectionString)
@@ -206,7 +208,7 @@ public class ServerEngine
         }
         catch (Exception c)
         {
-            _log.Error($"{c.Message}\n{c.StackTrace}");
+            _log.ErrorServerEngine(c.Message, c.StackTrace);
         }
     }
 
@@ -241,22 +243,22 @@ public class ServerEngine
 
         var client = GetApiClient();
 
-        if (client != null) _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Get client URL: {client.BaseUrl}: OK");
+        if (client != null) _log.DebugServerEngineGetClientURL(client.BaseUrl);
 
         var request = GetApiRequest("domains/{domain_name}", Method.DELETE);
 
-        if (request != null) _log.Debug("ServerEngine -> ClearDomainStorageSpace: Get request: OK");
+        if (request != null) _log.DebugServerEngineGetRequest();
 
         request.AddUrlSegment("domain_name", domain);
 
-        _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Add Url Segment (domain name: {domain}): OK");
+        _log.DebugServerEngineAddUrlSegment(domain);
 
-        if (request.Resource != null) _log.Debug($"Request resource: {request.Resource}, method: {request.Method}");
+        if (request.Resource != null) _log.DebugServerEngineRequestResource(request.Resource, request.Method);
 
         // execute the request
         var response = client.ExecuteSafe(request);
 
-        _log.Debug($"ServerEngine -> ClearDomainStorageSpace: Response was executing. Status code: {response.StatusCode}");
+        _log.DebugServerEngineResponseWasExecuting(response.StatusCode);
 
         if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.NotFound)
             throw new Exception("MailServer->ClearDomainStorageSpace(). Response code = " + response.StatusCode, response.ErrorException);

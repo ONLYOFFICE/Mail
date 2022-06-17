@@ -95,7 +95,7 @@ global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Storage;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
-global using Microsoft.Extensions.Options;
+global using Microsoft.Extensions.Logging;
 
 global using MimeKit;
 global using MimeKit.Text;
@@ -107,8 +107,6 @@ global using Newtonsoft.Json;
 global using Newtonsoft.Json.Converters;
 global using Newtonsoft.Json.Linq;
 global using Newtonsoft.Json.Serialization;
-
-global using NLog;
 
 global using RestSharp;
 
@@ -148,3 +146,6 @@ global using System.Xml;
 global using System.Xml.Serialization;
 
 global using Ude;
+
+global using ILogger = Microsoft.Extensions.Logging.ILogger;
+global using LogLevel = Microsoft.Extensions.Logging.LogLevel;

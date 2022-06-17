@@ -44,8 +44,8 @@ public class TemplateEngine : ComposeEngineBase
         StorageManager storageManager,
         CoreSettings coreSettings,
         StorageFactory storageFactory,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-        IOptionsMonitor<ILog> option,
+        SignalrServiceClient signalrServiceClient,
+        ILogger<DraftEngine> log,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
@@ -60,8 +60,8 @@ public class TemplateEngine : ComposeEngineBase
         tenantManager,
         coreSettings,
         storageFactory,
-        optionsSnapshot,
-        option,
+        signalrServiceClient,
+        log,
         mailSettings,
         daemonLabels)
     {

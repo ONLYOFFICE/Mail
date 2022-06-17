@@ -260,7 +260,7 @@ public class AccountEngine
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
         using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
-                certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, _log: _log))
+                certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
         {
             loginResult = client.TestLogin();
         }
@@ -289,7 +289,7 @@ public class AccountEngine
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
         using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
-                certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, _log: _log))
+                certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
         {
             loginResult = client.TestLogin();
         }
@@ -334,7 +334,7 @@ public class AccountEngine
             _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
             using (var client = new MailClient(mb, CancellationToken.None, _serverFolderAccessInfos,
-                _mailSettings.Aggregator.TcpTimeout, _mailSettings.Defines.SslCertificatesErrorsPermit, _log: _log))
+                _mailSettings.Aggregator.TcpTimeout, _mailSettings.Defines.SslCertificatesErrorsPermit))
             {
                 loginResult = client.TestLogin();
             }
@@ -556,7 +556,7 @@ public class AccountEngine
 
             // Check account connection setting on activation
             using (var client = new MailClient(tuple.Item1, CancellationToken.None, _serverFolderAccessInfos,
-                    certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit, _log: _log))
+                    certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
             {
                 loginResult = client.TestLogin();
             }

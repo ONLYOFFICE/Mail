@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Log;
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -32,8 +34,6 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
     private readonly MessageEngine _messageEngine;
     private readonly TempStream _tempStream;
     private readonly int _messageId;
-
-    public ILog Log { get; set; }
 
     public override MailOperationType OperationType
     {
@@ -48,10 +48,10 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
         CoreSettings coreSettings,
         StorageManager storageManager,
         StorageFactory storageFactory,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILogger<MailOperation> logger,
         TempStream tempStream,
         int messageId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger, storageFactory)
     {
         _messageEngine = messageEngine;
         _messageId = messageId;
@@ -73,14 +73,14 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
             catch
             {
                 Error = "Error";//Resource.SsoSettingsNotValidToken;
-                base.Logger.Error(Error);
+                Logger.ErrorMailOperation(Error);
             }
 
             SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.GetAttachments);
 
             var attachments =
                 _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
-                    CurrentTenant.TenantId, CurrentUser.ID.ToString()));
+                    CurrentTenant.Id, CurrentUser.ID.ToString()));
 
             if (!attachments.Any())
             {
@@ -93,7 +93,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
 
             var damagedAttachments = 0;
 
-            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
+            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.Id);
 
             using (var stream = _tempStream.Create())
             {
@@ -121,7 +121,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
                         }
                         catch (Exception ex)
                         {
-                            base.Logger.Error(ex);
+                            Logger.ErrorMailOperation(ex.ToString());
 
                             Error = string.Format(MailCoreResource.FileNotFoundOrDamaged, attachment.fileName);
 
@@ -154,7 +154,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
                     "application/zip",
                     "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"").Result;
 
-                Log.Debug($"Zipped archive has been stored to {path}");
+                Logger.DebugMailOperationArchiveStored(path);
             }
 
             SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.CreateLink);
@@ -172,7 +172,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
         }
         catch (Exception ex)
         {
-            base.Logger.ErrorFormat("Mail operation error -> Download all attachments: {0}", ex.ToString());
+            Logger.ErrorMailOperationDownloadAttachments(ex.ToString());
             Error = string.IsNullOrEmpty(Error)
                 ? "InternalServerError"
                 : Error;

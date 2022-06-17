@@ -5,7 +5,6 @@ using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Models;
 using ASC.Mail.Utils;
-using ASC.Web.Api.Routing;
 using ASC.Web.Mail.Resources;
 
 using Microsoft.AspNetCore.Mvc;
@@ -41,7 +40,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Messages list</returns>
         /// <short>Get filtered messages</short> 
         /// <category>Messages</category>
-        [Read(@"messages")]
+        [HttpGet(@"messages")]
         public IEnumerable<MailMessageData> GetFilteredMessages(int? folder,
             bool? unread,
             bool? attachments,
@@ -105,7 +104,7 @@ namespace ASC.Mail.Controllers
         /// <category>Messages</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
         /// <exception cref="ItemNotFoundException">Exception happens when message with specified id wasn't found.</exception>
-        [Read(@"messages/{id}")]
+        [HttpGet(@"messages/{id}")]
         public MailMessageData GetMessage(int id, bool? loadImages, bool? needSanitize, bool? markRead)
         {
             if (id <= 0)
@@ -128,7 +127,7 @@ namespace ASC.Mail.Controllers
             {
 #if DEBUG
                 watch.Stop();
-                _log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms [NotFound] (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
+                //_log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms [NotFound] (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
                 throw new ItemNotFoundException(string.Format("Message with {0} wasn't found.", id));
             }
@@ -145,7 +144,7 @@ namespace ASC.Mail.Controllers
             }
 #if DEBUG
             watch.Stop();
-            _log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
+            //_log.Debug($"Mail->GetMessage(id={id})->Elapsed {watch.Elapsed.TotalMilliseconds}ms (NeedProxyHttp={_mailSettings.NeedProxyHttp}, NeedSanitizer={needSanitizeHtml})");
 #endif
             if (item.Folder != FolderType.UserFolder)
                 return item;
@@ -168,7 +167,7 @@ namespace ASC.Mail.Controllers
         /// <returns>none</returns>
         /// <short>Reassign drafts/templates</short> 
         /// <category>Messages</category>
-        [Update(@"messages/reassign")]
+        [HttpPut(@"messages/reassign")]
         public void ReassignMailMessages(int folder, string email)
         {
             var filter = new MailSearchFilterData
@@ -248,7 +247,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Previous or next message id</returns>
         /// <short>Get previous or next message id</short> 
         /// <category>Messages</category>
-        [Read(@"messages/{id}/{direction}")]
+        [HttpGet(@"messages/{id}/{direction}")]
         public long GetPrevNextMessageId(int id,
             string direction,
             int? folder,
@@ -308,7 +307,7 @@ namespace ASC.Mail.Controllers
         /// <short>Delete attachment from message</short> 
         /// <category>Messages</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Delete(@"messages/{messageid}/attachments/{attachmentid}")]
+        [HttpDelete(@"messages/{messageid}/attachments/{attachmentid}")]
         public int DeleteMessageAttachment(int messageid, int attachmentid)
         {
             if (messageid <= 0)
@@ -331,7 +330,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of messages with changed status</returns>
         /// <short>Set message status</short> 
         /// <category>Messages</category>
-        [Update(@"messages/mark")]
+        [HttpPut(@"messages/mark")]
         public IEnumerable<int> MarkMessages(List<int> ids, string status)
         {
             if (!ids.Any())
@@ -365,7 +364,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of restored messages ids</returns>
         /// <short>Restore messages to original folders</short>
         /// <category>Messages</category>
-        [Update(@"messages/restore")]
+        [HttpPut(@"messages/restore")]
         public IEnumerable<int> RestoreMessages(List<int> ids)
         {
             if (!ids.Any())
@@ -387,7 +386,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of moved messages ids.</returns>
         /// <short>Move message to folder</short> 
         /// <category>Messages</category>
-        [Update(@"messages/move")]
+        [HttpPut(@"messages/move")]
         public IEnumerable<int> MoveMessages(List<int> ids, int folder, int? userFolderId = null)
         {
             if (!ids.Any())
@@ -413,7 +412,7 @@ namespace ASC.Mail.Controllers
         /// <returns>message id</returns>
         /// <short>Send message</short> 
         /// <category>Messages</category>
-        [Update(@"messages/send")]
+        [HttpPut(@"messages/send")]
         public long SendMessage(MessageModel model)
         {
             try
@@ -477,7 +476,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Saved message id</returns>
         /// <short>SaveToDraft message</short> 
         /// <category>Messages</category>
-        [Update(@"drafts/save")]
+        [HttpPut(@"drafts/save")]
         public MailMessageData SaveMessage(MessageModel model)
         {
             if (model.Id < 1)
@@ -538,7 +537,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Saved template id</returns>
         /// <short>SaveToTemplate message</short> 
         /// <category>Templates</category>
-        [Update(@"templates/save")]
+        [HttpPut(@"templates/save")]
         public MailMessageData SaveTemplate(MessageModel model)
         {
             if (string.IsNullOrEmpty(model.From))
@@ -585,7 +584,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of removed messages ids</returns>
         /// <short>Remove messages</short> 
         /// <category>Messages</category>
-        [Update(@"messages/remove")]
+        [HttpPut(@"messages/remove")]
         public IEnumerable<int> RemoveMessages(List<int> ids)
         {
             if (!ids.Any())
@@ -602,7 +601,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Empty MailMessageItem</returns>
         /// <short>Get message template</short> 
         /// <category>Messages</category>
-        [Read(@"messages/template")]
+        [HttpGet(@"messages/template")]
         public MailMessageData GetMessageTemplate()
         {
             return _draftEngine.GetTemplate();
@@ -619,7 +618,7 @@ namespace ASC.Mail.Controllers
         /// <short>Attach Teamlab document</short>
         /// <category>Messages</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Create(@"messages/{id}/document")]
+        [HttpPost(@"messages/{id}/document")]
         public MailAttachmentData AttachDocument(int id, string fileId, string version, bool needSaveToTemp)
         {
             try
@@ -676,7 +675,7 @@ namespace ASC.Mail.Controllers
         /// </param>
         /// <returns>none</returns>
         /// <category>Messages</category>
-        [Update(@"messages/crm/export")]
+        [HttpPut(@"messages/crm/export")]
         public void ExportMessageToCrm(int id_message, IEnumerable<CrmContactData> crm_contact_ids)
         {
             if (id_message < 0)

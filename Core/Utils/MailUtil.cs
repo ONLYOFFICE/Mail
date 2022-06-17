@@ -567,7 +567,7 @@ public static class MailUtil
     /// <summary>
     /// Creates Rfc 2822 3.6.4 message-id.Syntax: id-left '@' id-right
     /// </summary>
-    public static string CreateMessageId(TenantManager tenantManager, CoreSettings coreSettings, ILog log = null)
+    public static string CreateMessageId(TenantManager tenantManager, CoreSettings coreSettings)
     {
         if (log == null)
             log = new NullLog();

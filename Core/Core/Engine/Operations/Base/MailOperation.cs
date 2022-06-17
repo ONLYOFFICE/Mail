@@ -54,7 +54,7 @@ public abstract class MailOperation
 
     protected IAccount CurrentUser { get; private set; }
 
-    protected ILog Logger { get; private set; }
+    protected ILogger<MailOperation> Logger { get; private set; }
 
     protected CancellationToken CancellationToken { get; private set; }
 
@@ -73,7 +73,8 @@ public abstract class MailOperation
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> option, StorageFactory storageFactory = null)
+        ILogger<MailOperation> logger,
+        StorageFactory storageFactory = null)
     {
         CurrentTenant = tenantManager.GetCurrentTenant();
         CurrentUser = securityContext.CurrentAccount;
@@ -93,7 +94,7 @@ public abstract class MailOperation
         CoreSettings = coreSettings;
         StorageManager = storageManager;
         StorageFactory = storageFactory;
-        Logger = option.Get("ASC.Mail.Operation");
+        Logger = logger;
     }
 
     public void RunJob(DistributedTask _, CancellationToken cancellationToken)
@@ -159,7 +160,7 @@ public abstract class MailOperation
     {
         TaskInfo.SetProperty(SOURCE, Source);
         TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
-        TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
+        TaskInfo.SetProperty(TENANT, CurrentTenant.Id);
         TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
         TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
         TaskInfo.SetProperty(STATUS, Status);

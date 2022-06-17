@@ -341,11 +341,8 @@ public static class MailDraftExtensions
         };
     }
 
-    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILogger log = null)
+    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService)
     {
-        if (log == null)
-            log = new NullLog();
-
         var doc = new HtmlDocument();
         doc.LoadHtml(draft.HtmlBody);
 
@@ -429,11 +426,8 @@ public static class MailDraftExtensions
         return links;
     }
 
-    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseAttachmentFolder = MailStoragePathCombiner.GetMessageDirectory(draft.Mailbox.UserId, draft.StreamId);
 
         var doc = new HtmlDocument();
@@ -456,11 +450,8 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeSmileLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeSmileLinks(this MailDraftData draft)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseSmileUrl = MailStoragePathCombiner.GetEditorSmileBaseUrl();
 
         var doc = new HtmlDocument();
@@ -476,7 +467,7 @@ public static class MailDraftExtensions
 
             var fileName = Path.GetFileName(link);
 
-            var data = StorageManager.LoadLinkData(link, log);
+            var data = StorageManager.LoadLinkData(link);
 
             if (!data.Any())
                 continue;
@@ -501,11 +492,8 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeUrlProxyLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeUrlProxyLinks(this MailDraftData draft)
     {
-        if (log == null)
-            log = new NullLog();
-
         try
         {
             draft.HtmlBody = HtmlSanitizer.RemoveProxyHttpUrls(draft.HtmlBody);
@@ -516,11 +504,8 @@ public static class MailDraftExtensions
         }
     }
 
-    public static void ChangeAttachedFileLinksImages(this MailDraftData draft, ILog log = null)
+    public static void ChangeAttachedFileLinksImages(this MailDraftData draft)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseSmileUrl = MailStoragePathCombiner.GetEditorImagesBaseUrl();
 
         var doc = new HtmlDocument();
@@ -535,7 +520,7 @@ public static class MailDraftExtensions
 
             var fileName = Path.GetFileName(link);
 
-            var data = StorageManager.LoadLinkData(link, log);
+            var data = StorageManager.LoadLinkData(link);
 
             if (!data.Any())
                 continue;
@@ -560,11 +545,8 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft, ILog log = null)
+    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft)
     {
-        if (log == null)
-            log = new NullLog();
-
         try
         {
             var doc = new HtmlDocument();

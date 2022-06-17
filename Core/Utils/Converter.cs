@@ -244,21 +244,19 @@ public static class Converter
     public static MailMessageData ConvertToMailMessage(this MimeMessage mimeMessage,
         TenantManager tenantManager, CoreSettings coreSettings,
         Models.MailFolder folder, bool unread, string chainId, DateTime? chainDate, string streamId, int mailboxId,
-        bool createFailedFake = true, ILog log = null)
+        bool createFailedFake = true)
     {
         MailMessageData message;
 
         try
         {
             message = mimeMessage.CreateMailMessage(tenantManager, coreSettings,
-                mailboxId, folder.Folder, unread, chainId, chainDate, streamId, log);
+                mailboxId, folder.Folder, unread, chainId, chainDate, streamId);
         }
         catch (Exception ex)
         {
             if (!createFailedFake)
                 throw;
-
-            var logger = log ?? new NullLog();
 
             logger.ErrorFormat("Convert MimeMessage->MailMessage: Exception: {0}", ex.ToString());
 

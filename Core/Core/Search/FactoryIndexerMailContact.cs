@@ -32,7 +32,7 @@ public sealed class FactoryIndexerMailContact : FactoryIndexer<MailContact>
     private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
 
     public FactoryIndexerMailContact(
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider options,
         TenantManager tenantManager,
         SearchSettingsHelper searchSettingsHelper,
         FactoryIndexer factoryIndexer,
