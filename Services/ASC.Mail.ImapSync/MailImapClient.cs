@@ -385,10 +385,6 @@ public class MailImapClient : IDisposable
                         _mailEnginesFactory.MessageEngine.SetRemoved(ids);
                         result = true;
                         break;
-                    case MailUserAction.RemovedFromFolder:
-                        break;
-                    case MailUserAction.New:
-                        break;
                     default:
                         break;
                 }
