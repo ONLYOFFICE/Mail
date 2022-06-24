@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -39,7 +39,7 @@ public class ApiHelper
     private UriBuilder _baseUrl;
     private string _token;
 
-    private readonly ILogger<ApiHelper> _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly CoreSettings _coreSettings;
@@ -61,8 +61,8 @@ public class ApiHelper
         CoreSettings coreSettings,
         ApiDateTimeHelper apiDateTimeHelper,
         MailSettings mailSettings,
-        ILogger<ApiHelper> log)
-        : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, log)
+        ILoggerProvider logProvider)
+        : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, logProvider)
     {
         if (httpContextAccessor != null || httpContextAccessor.HttpContext != null)
         {
@@ -76,10 +76,10 @@ public class ApiHelper
         CoreSettings coreSettings,
         ApiDateTimeHelper apiDateTimeHelper,
         MailSettings mailSettings,
-        ILogger<ApiHelper> log)
+        ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.ApiHelper");
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _coreSettings = coreSettings;

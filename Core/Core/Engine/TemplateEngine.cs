@@ -45,7 +45,7 @@ public class TemplateEngine : ComposeEngineBase
         CoreSettings coreSettings,
         StorageFactory storageFactory,
         SignalrServiceClient signalrServiceClient,
-        ILogger<DraftEngine> log,
+        ILoggerProvider logProvider,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
@@ -61,7 +61,7 @@ public class TemplateEngine : ComposeEngineBase
         coreSettings,
         storageFactory,
         signalrServiceClient,
-        log,
+        logProvider,
         mailSettings,
         daemonLabels)
     {

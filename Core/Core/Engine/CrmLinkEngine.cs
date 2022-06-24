@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -36,7 +36,7 @@ public class CrmLinkEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger<CrmLinkEngine> _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
@@ -53,7 +53,7 @@ public class CrmLinkEngine
         IMailDaoFactory mailDaoFactory,
         MessageEngine messageEngine,
         StorageFactory storageFactory,
-        ILogger<CrmLinkEngine> log,
+        ILoggerProvider logProvider,
         CrmSecurity crmSecurity,
         IServiceProvider serviceProvider)
     {
@@ -68,7 +68,7 @@ public class CrmLinkEngine
 
         _serviceProvider = serviceProvider;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.CrmLinkEngine");
     }
 
     public List<CrmContactData> GetLinkedCrmEntitiesId(int messageId)

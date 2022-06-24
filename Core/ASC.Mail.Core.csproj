@@ -56,8 +56,8 @@
 		<PackageReference Include="Autofac.Configuration" Version="6.0.0" />
 		<PackageReference Include="AutoMapper" Version="11.0.0" />
 		<PackageReference Include="Confluent.Kafka" Version="1.8.2" />
-		<PackageReference Include="Google.Protobuf" Version="3.19.4" />
-		<PackageReference Include="JWT" Version="6.1.4" />
+		<PackageReference Include="Google.Protobuf" Version="3.20.1" />
+		<PackageReference Include="JWT" Version="9.0.0" />
 		<PackageReference Include="log4net" Version="2.0.14" />
 		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
@@ -67,13 +67,12 @@
 		<PackageReference Include="Microsoft.Windows.Compatibility" Version="6.0.0" />
 		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="NLog" Version="4.7.13" />
 		<PackageReference Include="NVelocity" Version="1.2.0" />
 		<PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
 		<PackageReference Include="AWSSDK.Core" Version="3.7.6.3" />
 		<PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.120" />
 		<PackageReference Include="EntityFramework" Version="6.4.4" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.3" />
+		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.4" />
 		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.1" />
 		<PackageReference Include="Telegram.Bot" Version="15.7.1" />
 		<PackageReference Include="AWSSDK.CloudFront" Version="3.7.4.30" />
@@ -89,6 +88,7 @@
 		<PackageReference Include="DotNetOpenAuth.Ultimate" Version="4.3.4.13329" />
 		<PackageReference Include="Elasticsearch.Net" Version="7.10.0" />
 		<PackageReference Include="NEST" Version="7.10.0" />
+		<PackageReference Include="NLog" Version="5.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>

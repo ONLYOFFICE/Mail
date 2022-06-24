@@ -19,6 +19,7 @@
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.1" />
 		<PackageReference Include="CommandLineParser" Version="2.8.0" />
 		<PackageReference Include="MySql.Data" Version="8.0.28" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.0.0" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="1.0.0" />
 		<PackageReference Include="Ubiety.Dns.Core" Version="4.2.1" />
 		<PackageReference Include="Confluent.Kafka" Version="1.8.2" />

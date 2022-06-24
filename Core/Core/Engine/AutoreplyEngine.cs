@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -45,7 +45,7 @@ public class AutoreplyEngine
     private readonly StorageManager _storageManager;
     private readonly MailSettings _mailSettings;
     private readonly int _autoreplyDaysInterval;
-    private readonly ILogger<AutoreplyEngine> _log;
+    private readonly ILogger _log;
 
     public AutoreplyEngine(
         SecurityContext securityContext,
@@ -56,7 +56,7 @@ public class AutoreplyEngine
         ApiHelper apiHelper,
         StorageManager storageManager,
         MailSettings mailSettings,
-        ILogger<AutoreplyEngine> log)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
@@ -69,7 +69,7 @@ public class AutoreplyEngine
 
         _autoreplyDaysInterval = _mailSettings.Defines.AutoreplyDaysInterval;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.AutoreplyEngine");
     }
 
     public MailAutoreplyData SaveAutoreply(int mailboxId, bool turnOn, bool onlyContacts,

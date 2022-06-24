@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
@@ -50,7 +50,6 @@ public class DraftEngine : ComposeEngineBase
     private readonly FactoryIndexer<MailContact> _factoryIndexer;
     private readonly FactoryIndexer FactoryIndexerCommon;
     private readonly IServiceProvider ServiceProvider;
-    private readonly ILogger<MailClient> _mailClientlog;
 
     public DraftEngine(
         SecurityContext securityContext,
@@ -76,9 +75,8 @@ public class DraftEngine : ComposeEngineBase
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
         SignalrServiceClient optionsSnapshot,
-        ILogger<ComposeEngineBase> engineBaseLog,
         MailSettings mailSettings,
-        ILogger<MailClient> mailClientlog,
+        ILoggerProvider logProvider,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -93,7 +91,7 @@ public class DraftEngine : ComposeEngineBase
         coreSettings,
         storageFactory,
         optionsSnapshot,
-        engineBaseLog,
+        logProvider,
         mailSettings,
         daemonLabels)
     {
@@ -105,7 +103,6 @@ public class DraftEngine : ComposeEngineBase
         _contactEngine = contactEngine;
         _fileStorageService = fileStorageService;
         _factoryIndexer = factoryIndexer;
-        _mailClientlog = mailClientlog;
         FactoryIndexerCommon = factoryIndexerCommon;
         ServiceProvider = serviceProvider;
         _httpContext = httpContextAccessor?.HttpContext;
@@ -253,7 +250,7 @@ public class DraftEngine : ComposeEngineBase
 
                 var mimeMessage = draft.ToMimeMessage(_storageManager);
 
-                using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos,
+                using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos, _log,
                     certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit,
                     enableDsn: draft.RequestReceipt))
                 {

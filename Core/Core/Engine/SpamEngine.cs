@@ -23,8 +23,6 @@
  *
 */
 
-using ASC.Mail.Core.Log;
-
 using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Core.Engine;
@@ -38,17 +36,17 @@ public class SpamEngine
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly ApiHelper _apiHelper;
-    private readonly ILogger<SpamEngine> _log;
+    private readonly ILogger _log;
 
     public SpamEngine(
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
         ApiHelper apiHelper,
         StorageFactory storageFactory,
-        ILogger<SpamEngine> log)
+        ILoggerProvider logProvider)
     {
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.SpamEngine");
         _tenantManager = tenantManager;
 
         _mailDaoFactory = mailDaoFactory;
@@ -138,7 +136,7 @@ public class SpamEngine
 
         if (serverInfo == null)
         {
-            _log.ErrorSpamEngineSendEmlUrlsToSpam();
+            _log.ErrorSpamEngineSendEmlUrlsToSpamEmptyApi();
             return;
         }
 

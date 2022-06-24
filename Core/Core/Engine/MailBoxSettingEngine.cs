@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 
@@ -34,17 +34,17 @@ public class MailBoxSettingEngine
 {
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
-    private readonly ILogger<MailBoxSettingEngine> _log;
+    private readonly ILogger _log;
 
     public MailBoxSettingEngine(
         IMailDaoFactory mailDaoFactory,
-        ILogger<MailBoxSettingEngine> log)
+        ILoggerProvider logProvider)
     {
         _mailDbContext = mailDaoFactory.GetContext();
 
         _mailDaoFactory = mailDaoFactory;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.MailBoxSettingEngine");
     }
 
     public Dictionary<string, string> MxToDomainBusinessVendorsList

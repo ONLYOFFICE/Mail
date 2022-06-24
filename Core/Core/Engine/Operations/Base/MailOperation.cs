@@ -54,7 +54,7 @@ public abstract class MailOperation
 
     protected IAccount CurrentUser { get; private set; }
 
-    protected ILogger<MailOperation> Logger { get; private set; }
+    protected ILogger Log { get; private set; }
 
     protected CancellationToken CancellationToken { get; private set; }
 
@@ -73,7 +73,7 @@ public abstract class MailOperation
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        ILogger<MailOperation> logger,
+        ILoggerProvider logProvider,
         StorageFactory storageFactory = null)
     {
         CurrentTenant = tenantManager.GetCurrentTenant();
@@ -94,7 +94,7 @@ public abstract class MailOperation
         CoreSettings = coreSettings;
         StorageManager = storageManager;
         StorageFactory = storageFactory;
-        Logger = logger;
+        Log = logProvider.CreateLogger("ASC.Mail.Operation");
     }
 
     public void RunJob(DistributedTask _, CancellationToken cancellationToken)
@@ -115,7 +115,8 @@ public abstract class MailOperation
         catch (AuthorizingException authError)
         {
             Error = "ErrorAccessDenied";
-            Logger.Error(Error, new SecurityException(Error, authError));
+            var logError = new SecurityException(Error, authError).ToString();
+            Log.ErrorMailOperationAuthorizing(logError);
         }
         catch (AggregateException ae)
         {
@@ -124,17 +125,17 @@ public abstract class MailOperation
         catch (TenantQuotaException e)
         {
             Error = "TenantQuotaSettled";
-            Logger.Error("TenantQuotaException. {0}", e);
+            Log.ErrorMailOperationTenantQuota(e.ToString());
         }
         catch (FormatException e)
         {
             Error = "CantCreateUsers";
-            Logger.Error("FormatException error. {0}", e);
+            Log.ErrorMailOperationFormat(e.ToString());
         }
         catch (Exception e)
         {
             Error = "InternalServerError";
-            Logger.Error("Internal server error. {0}", e);
+            Log.ErrorMailOperationServer(e.ToString());
         }
         finally
         {

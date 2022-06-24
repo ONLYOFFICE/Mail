@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -32,7 +32,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class CalendarEngine
 {
-    private readonly ILogger<CalendarEngine> _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
@@ -40,12 +40,12 @@ public class CalendarEngine
     public CalendarEngine(SecurityContext securityContext,
         TenantManager tenantManager,
         ApiHelper apiHelper,
-        ILogger<CalendarEngine> log)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _apiHelper = apiHelper;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.CalendarEngine");
     }
 
     public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
@@ -110,7 +110,7 @@ public class CalendarEngine
         catch (Exception ex)
         {
             _log.ErrorUploadIcsToCalendar(calendarId, calendarEventUid, calendarIcs, calendarCharset, calendarContentType,
-                mailBoxData.EMail.Address, ex);
+                mailBoxData.EMail.Address, ex.ToString());
         }
     }
 }

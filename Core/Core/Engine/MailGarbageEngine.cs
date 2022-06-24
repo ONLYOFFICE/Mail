@@ -23,8 +23,6 @@
  *
 */
 
-using ASC.Mail.Core.Log;
-
 using Action = System.Action;
 using SecurityContext = ASC.Core.SecurityContext;
 using Task = System.Threading.Tasks.Task;
@@ -37,17 +35,17 @@ public class MailGarbageEngine : BaseEngine, IDisposable
     private static MemoryCache _tenantMemCache;
     private static TaskFactory _taskFactory;
     private static object _locker;
-    private readonly ILogger<MailGarbageEngine> _log;
+    private readonly ILogger _log;
     private readonly IServiceProvider _serviceProvider;
 
     public MailGarbageEngine(
         MailSettings mailSettings,
-        ILogger<MailGarbageEngine> log,
+        ILoggerProvider logProvider,
         IServiceProvider serviceProvider) : base(mailSettings)
     {
         _serviceProvider = serviceProvider;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.GarbageEngine");
 
         _tenantMemCache = new MemoryCache("GarbageEraserTenantCache");
 
@@ -316,7 +314,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                 _log.DebugMailGarbageGetTenantStatus(MailSettings.Cleaner.TenantOverdueDays);
 
-                type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, _log);
+                type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays);
 
                 var cacheItem = new CacheItem(mailbox.TenantId.ToString(CultureInfo.InvariantCulture), type);
 
@@ -489,7 +487,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             {
                 var sumCount = 0;
 
-                _log.DebugMailGarbageGetMessages(MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
+                _log.DebugMailGarbageGetMessagesLimit(MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
                 var messageGrbgList = factory.GetMailGarbageDao().GetMailboxMessages(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
@@ -528,7 +526,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         }
         catch (Exception ex)
         {
-            _log.ErrorMailGarbage(mailbox.MailBoxId, ex.ToString());
+            _log.ErrorMailGarbageMailbox(mailbox.MailBoxId, ex.ToString());
 
             throw;
         }
@@ -698,7 +696,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
-        var mailboxIterator = new MailboxIterator(mailboxEngine, tenant, user, log: _log);
+        var mailboxIterator = new MailboxIterator(mailboxEngine, _log, tenant, user);
 
         var mailbox = mailboxIterator.First();
 

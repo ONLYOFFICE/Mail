@@ -58,7 +58,7 @@ namespace ASC.Mail.Controllers
         private readonly TestEngine _testEngine;
         private readonly CoreBaseSettings _coreBaseSettings;
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<MailController> _log;
+        private readonly ILogger _log;
         private readonly MailSettings _mailSettings;
 
         private string Username
@@ -113,7 +113,7 @@ namespace ASC.Mail.Controllers
             CoreBaseSettings coreBaseSettings,
             MailSettings mailSettings,
             IServiceProvider serviceProvider,
-            ILogger<MailController> log)
+            ILoggerProvider logProvider)
         {
             _tenantManager = tenantManager;
             _securityContext = securityContext;
@@ -147,7 +147,7 @@ namespace ASC.Mail.Controllers
             _testEngine = testEngine;
             _coreBaseSettings = coreBaseSettings;
             _serviceProvider = serviceProvider;
-            _log = log;
+            _log = logProvider.CreateLogger("ASC.Api.MailController");
         }
 
         [HttpGet("info")]

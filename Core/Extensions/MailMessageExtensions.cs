@@ -27,6 +27,9 @@ namespace ASC.Mail.Extensions;
 
 public static class MailMessageExtensions
 {
+    private static LoggerFactory logFactory = new LoggerFactory();
+    private static ILogger log = logFactory.CreateLogger("ASC.Mail.MailMessageExtensions");
+
     public static void LoadCalendarInfo(this MailMessageData mail, MimeMessage message)
     {
         if (!message.BodyParts.Any())
@@ -39,7 +42,7 @@ public static class MailMessageExtensions
             if (!calendarParts.Any())
                 return;
 
-            logger.LogDebug($"LoadCalendarInfo found {calendarParts.Count} calendars");
+            log.DebugMailExtensionsFoundCalendars(calendarParts.Count);
 
             foreach (var calendarPart in calendarParts)
             {
@@ -78,7 +81,7 @@ public static class MailMessageExtensions
                 mail.CalendarEventCharset = string.IsNullOrEmpty(p.ContentType.Charset) ? Encoding.UTF8.HeaderName : p.ContentType.Charset;
                 mail.CalendarEventMimeType = p.ContentType.MimeType;
 
-                logger.LogDebug($"Calendar UID: {mail.CalendarUid} Method: {calendar.Method} ics: {mail.CalendarEventIcs}");
+                log.DebugMailExtensionsCalendarUid(mail.CalendarUid, calendar.Method, mail.CalendarEventIcs);
 
                 var calendarExists =
                     message.Attachments
@@ -125,7 +128,7 @@ public static class MailMessageExtensions
 
                 if (calendarExists)
                 {
-                    log.Debug("Calendar exists as attachment");
+                    log.DebugMailExtensionsCalendarExists();
                     continue;
                 }
 
@@ -146,7 +149,7 @@ public static class MailMessageExtensions
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("LoadCalendarInfo() \r\n Exception: \r\n{0}\r\n", ex.ToString());
+            log.ErrorMailExtensionsLoadCalendar(ex.ToString());
         }
     }
 
@@ -672,7 +675,7 @@ public static class MailMessageExtensions
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("ReplaceEmbeddedImages() \r\n Exception: \r\n{0}\r\n", ex.ToString());
+            log.ErrorMailExtensionsReplaceEmbeddedImages(ex.ToString());
         }
     }
 }

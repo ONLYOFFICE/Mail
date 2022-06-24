@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -54,9 +54,9 @@ public class MailRemoveMailboxOperation : MailOperation
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        ILogger<MailOperation> logger,
+        ILoggerProvider logProvider,
         MailBoxData mailBoxData)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _mailboxEngine = mailboxEngine;
         _quotaEngine = quotaEngine;
@@ -102,7 +102,7 @@ public class MailRemoveMailboxOperation : MailOperation
         }
         catch (Exception e)
         {
-            base.Logger.ErrorMailOperationRemoveMailbox(e.ToString());
+            base.Log.ErrorMailOperationRemoveMailbox(e.ToString());
             Error = "InternalServerError";
         }
     }

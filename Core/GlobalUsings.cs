@@ -1,7 +1,6 @@
 ﻿global using ASC.Api.Core;
 global using ASC.Common;
 global using ASC.Common.Caching;
-global using ASC.Common.Logging;
 global using ASC.Common.Security.Authentication;
 global using ASC.Common.Security.Authorizing;
 global using ASC.Common.Threading;
@@ -46,6 +45,7 @@ global using ASC.Mail.Core.Engine.Operations;
 global using ASC.Mail.Core.Engine.Operations.Base;
 global using ASC.Mail.Core.Entities;
 global using ASC.Mail.Core.Exceptions;
+global using ASC.Mail.Core.Loggers;
 global using ASC.Mail.Core.MailServer.Core.Dao;
 global using ASC.Mail.Core.Resources;
 global using ASC.Mail.Core.Search;

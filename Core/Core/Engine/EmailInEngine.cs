@@ -23,14 +23,14 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
 public class EmailInEngine
 {
-    private readonly ILogger<EmailInEngine> _log;
+    private readonly ILogger _log;
     private readonly AccountEngine _accountEngine;
     private readonly AlertEngine _alertEngine;
     private readonly StorageFactory _storageFactory;
@@ -41,7 +41,7 @@ public class EmailInEngine
         AlertEngine alertEngine,
         StorageFactory storageFactory,
         ApiHelper apiHelper,
-        ILogger<EmailInEngine> log
+        ILoggerProvider logProvider
         )
     {
         _accountEngine = accountEngine;
@@ -49,7 +49,7 @@ public class EmailInEngine
         _storageFactory = storageFactory;
         _apiHelper = apiHelper;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.EmailInEngine");
     }
 
     public void SaveEmailInData(MailBoxData mailbox, MailMessageData message, string httpContextScheme = null)

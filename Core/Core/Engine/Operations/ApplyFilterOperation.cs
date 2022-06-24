@@ -23,8 +23,6 @@
  *
 */
 
-using ASC.Mail.Core.Log;
-
 using ActionType = ASC.Mail.Enums.Filter.ActionType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -50,9 +48,9 @@ public class ApplyFilterOperation : MailOperation
         CoreSettings coreSettings,
         StorageManager storageManager,
         StorageFactory storageFactory,
-        ILogger<MailOperation> logger,
+        ILoggerProvider logProvider,
         int filterId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger, storageFactory)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider, storageFactory)
     {
         _filterEngine = filterEngine;
         _messageEngine = messageEngine;
@@ -106,7 +104,7 @@ public class ApplyFilterOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.ErrorMailOperationRemoveUserFolder(e.ToString());
+            Log.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }

@@ -1,6 +1,4 @@
-﻿using ASC.Mail.Aggregator.Service.Log;
-
-namespace ASC.Mail.Aggregator.Service.Queue;
+﻿namespace ASC.Mail.Aggregator.Service.Queue;
 
 [Singletone]
 public class QueueManager : IDisposable
@@ -20,7 +18,7 @@ public class QueueManager : IDisposable
     private ILiteCollection<MailboxData> _mailboxes;
     private ILiteCollection<TenantData> _tenants;
 
-    private readonly ILogger<QueueManager> _log;
+    private readonly ILogger _log;
     private readonly MailSettings _mailSettings;
     private readonly IServiceProvider _serviceProvider;
 
@@ -28,7 +26,7 @@ public class QueueManager : IDisposable
 
     public QueueManager(
         MailSettings mailSettings,
-        ILogger<QueueManager> logger,
+        ILoggerProvider logProvider,
         IServiceProvider serviceProvider)
     {
         _maxItemsLimit = mailSettings.Aggregator.MaxTasksAtOnce;
@@ -38,7 +36,7 @@ public class QueueManager : IDisposable
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
 
-        _log = logger;
+        _log = logProvider.CreateLogger("ASC.Mail.MainThread");
         _loadQueueTime = DateTime.UtcNow;
         _tenantMemCache = new MemoryCache("QueueManagerTenantCache");
 
@@ -515,9 +513,9 @@ public class QueueManager : IDisposable
                 _log.DebugQueueManagerTenantIsntInCache(mailbox.TenantId);
                 try
                 {
-                    var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)_mailSettings.Aggregator.TenantOverdueDays, _log);
+                    var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)_mailSettings.Aggregator.TenantOverdueDays);
 
-                    _log.InfoQueueManagerReturnedTenantStatus(mailbox.TenantId, type);
+                    _log.InfoQueueManagerReturnedTenantStatus(mailbox.TenantId, type.ToString());
                     switch (type)
                     {
                         case DefineConstants.TariffType.LongDead:
@@ -584,8 +582,8 @@ public class QueueManager : IDisposable
                 _log.DebugQueueManagerTenantIsInCache(mailbox.TenantId);
             }
 
-            var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager, _log);
-            var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, _log);
+            var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager);
+            var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager);
 
             if (isUserTerminated || isUserRemoved)
             {
@@ -606,7 +604,7 @@ public class QueueManager : IDisposable
                 return false;
             }
 
-            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)_mailSettings.Aggregator.TenantMinQuotaBalance, _log))
+            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)_mailSettings.Aggregator.TenantMinQuotaBalance))
             {
                 _log.InfoQueueManagerQuotaIsEnded(mailbox.TenantId, mailbox.UserId);
 

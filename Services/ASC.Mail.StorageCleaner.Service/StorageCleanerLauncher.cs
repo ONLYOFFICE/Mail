@@ -1,4 +1,8 @@
-﻿namespace ASC.Mail.StorageCleaner.Service;
+﻿using ASC.Mail.StorageCleaner.Loggers;
+
+using Microsoft.Extensions.Logging;
+
+namespace ASC.Mail.StorageCleaner.Service;
 
 [Singletone]
 class StorageCleanerLauncher : IHostedService
@@ -7,16 +11,16 @@ class StorageCleanerLauncher : IHostedService
     private CancellationTokenSource Cts;
     private ManualResetEvent MreStop;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly StorageCleanerService _storageCleanerService;
     private readonly ConsoleParameters _consoleParameters;
 
     public StorageCleanerLauncher(
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider logProvider,
         StorageCleanerService cleanerService,
         ConsoleParser consoleParser)
     {
-        _log = options.Get("ASC.Mail.Cleaner");
+        _log = logProvider.CreateLogger("ASC.Mail.Cleaner");
         _storageCleanerService = cleanerService;
         _consoleParameters = consoleParser.GetParsedParameters();
 
@@ -25,12 +29,12 @@ class StorageCleanerLauncher : IHostedService
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        _log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
+        _log.CritStorageCleanerLauncher(e.ExceptionObject.ToString());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _log.Info("Start service\r\n");
+        _log.InfoStorageCleanerLauncherStart();
 
         try
         {
@@ -38,8 +42,6 @@ class StorageCleanerLauncher : IHostedService
 
             if (_consoleParameters.IsConsole)
             {
-                _log.Info("Service Start in console-daemon mode");
-
                 _cleanerTask = _storageCleanerService.StartTimer(Cts.Token, true);
 
                 MreStop = new ManualResetEvent(false);
@@ -61,15 +63,16 @@ class StorageCleanerLauncher : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _log.InfoStorageCleanerLauncherTryingToStop();
+
         try
         {
-            _log.Info("Stop service\r\n");
             _storageCleanerService.StopService(Cts, MreStop);
             await Task.WhenAny(_cleanerTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
         }
         catch (Exception ex)
         {
-            _log.Error($"Failed to terminate the service correctly. The details:\r\n{ex}\r\n");
+            _log.ErrorStorageCleanerLauncherStop(ex.ToString());
         }
     }
 }

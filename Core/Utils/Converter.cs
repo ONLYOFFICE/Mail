@@ -243,7 +243,7 @@ public static class Converter
 
     public static MailMessageData ConvertToMailMessage(this MimeMessage mimeMessage,
         TenantManager tenantManager, CoreSettings coreSettings,
-        Models.MailFolder folder, bool unread, string chainId, DateTime? chainDate, string streamId, int mailboxId,
+        Models.MailFolder folder, bool unread, string chainId, DateTime? chainDate, string streamId, int mailboxId, ILogger log,
         bool createFailedFake = true)
     {
         MailMessageData message;
@@ -258,9 +258,9 @@ public static class Converter
             if (!createFailedFake)
                 throw;
 
-            logger.ErrorFormat("Convert MimeMessage->MailMessage: Exception: {0}", ex.ToString());
+            log.ErrorMessageEngineConvertMimeMessage(ex.ToString());
 
-            logger.Debug("Creating fake message with original MimeMessage in attachments");
+            log.DebugMessageEngineCreatingFakeMessage();
 
             message = mimeMessage.CreateCorruptedMesage(tenantManager, coreSettings,
                 folder.Folder, unread, chainId, streamId);

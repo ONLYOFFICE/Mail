@@ -1,6 +1,4 @@
-﻿using ASC.Mail.Aggregator.Service.Log;
-
-namespace ASC.Mail.Aggregator.Service.Queue;
+﻿namespace ASC.Mail.Aggregator.Service.Queue;
 
 [Singletone]
 public class SocketIoNotifier : IDisposable
@@ -13,17 +11,17 @@ public class SocketIoNotifier : IDisposable
     private readonly Queue<MailBoxData> _processingQueue;
     private readonly EventWaitHandle _waitHandle;
     private readonly TimeSpan _timeSpan;
-    private readonly ILogger<SocketIoNotifier> _log;
+    private readonly ILogger _log;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     public SocketIoNotifier(
-        ILogger<SocketIoNotifier> log,
+        ILoggerProvider logProvider,
         SignalrServiceClient signalrServiceClient,
         IServiceProvider serviceProvider)
     {
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.SignalrWorker");
         _signalrServiceClient = signalrServiceClient;
         _serviceProvider = serviceProvider;
         _cancellationTokenSource = new CancellationTokenSource();

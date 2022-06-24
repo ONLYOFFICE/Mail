@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -53,9 +53,9 @@ public class MailRemoveUserFolderOperation : MailOperation
         StorageManager storageManager,
         FactoryIndexer<MailMail> factoryIndexer,
         IServiceProvider serviceProvider,
-        ILogger<MailOperation> logger,
+        ILoggerProvider logProvider,
         int userFolderId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _messageEngine = messageEngine;
         _indexEngine = indexEngine;
@@ -84,7 +84,7 @@ public class MailRemoveUserFolderOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.ErrorMailOperationRemoveUserFolder(e.ToString());
+            Log.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }

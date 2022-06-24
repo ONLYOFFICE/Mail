@@ -13,10 +13,8 @@ public class WatchdogService
     public WatchdogService(
         IOptionsMonitor<ILog> options,
         MailboxEngine mailboxEngine,
-        MailSettings settings,
-        NlogCongigure mailLogCongigure)
+        MailSettings settings)
     {
-        mailLogCongigure.Configure();
 
         _log = options.Get("ASC.Mail.WatchdogService");
         _mailboxEngine = mailboxEngine;

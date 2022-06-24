@@ -29,6 +29,9 @@ namespace ASC.Mail.Extensions;
 
 public static class MimeMessageExtensions
 {
+    private static LoggerFactory logFactory = new LoggerFactory();
+    private static ILogger log = logFactory.CreateLogger("ASC.Mail.MimeMessageExtensions");
+
     public static void FixEncodingIssues(this MimeMessage mimeMessage)
     {
         try
@@ -71,7 +74,7 @@ public static class MimeMessageExtensions
                 }
                 catch (Exception ex)
                 {
-                    logger.WarnFormat("MimeMessage.FixEncodingIssues->ImproveBodyEncoding: {0}", ex.Message);
+                    log.WarnMailExtensionsImproveBodyEncoding(ex.Message);
                 }
             }
 
@@ -94,7 +97,7 @@ public static class MimeMessageExtensions
         }
         catch (Exception ex)
         {
-            logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsFixEncodingIssues(ex.Message);
         }
     }
 
@@ -124,7 +127,7 @@ public static class MimeMessageExtensions
         }
         catch (Exception ex)
         {
-            logger?.WarnFormat("Header.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsHeaderFixEncodingIssues(ex.Message);
         }
     }
 
@@ -139,7 +142,7 @@ public static class MimeMessageExtensions
         }
         catch (Exception ex)
         {
-            logger?.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsMimeFixEncodingIssues(ex.Message);
         }
     }
 

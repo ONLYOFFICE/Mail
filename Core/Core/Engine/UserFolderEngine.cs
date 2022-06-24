@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -35,7 +35,7 @@ public class UserFolderEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger<UserFolderEngine> _log;
+    private readonly ILogger _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
@@ -44,12 +44,12 @@ public class UserFolderEngine
         SecurityContext securityContext,
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
-        ILogger<UserFolderEngine> log)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.UserFolderEngine");
     }
 
     public MailUserFolderData Get(int id)

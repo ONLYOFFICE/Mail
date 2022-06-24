@@ -14,13 +14,17 @@
  *
 */
 
+
+
+using ASC.Mail.ImapSync.Loggers;
+
 namespace ASC.Mail.ImapSync;
 
 [Singletone]
 public class ImapSyncService : IHostedService
 {
-    private readonly ILog _log;
-    private readonly IOptionsMonitor<ILog> _options;
+    private readonly ILogger _log;
+    private readonly ILoggerProvider _logProvider;
 
     private readonly CancellationTokenSource _cancelTokenSource;
 
@@ -33,14 +37,13 @@ public class ImapSyncService : IHostedService
 
     private readonly IServiceProvider _serviceProvider;
 
-    public ImapSyncService(IOptionsMonitor<ILog> options,
+    public ImapSyncService(
         RedisFactory redisFactory,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
         IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-        NlogCongigure mailLogCongigure)
+        ILoggerProvider loggerProvider)
     {
-        _options = options;
         _redisClient = redisFactory.GetRedisClient();
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
@@ -52,15 +55,14 @@ public class ImapSyncService : IHostedService
 
         try
         {
-            mailLogCongigure.Configure();
+            _log = loggerProvider.CreateLogger("ASC.Mail.ImapSyncService");
+            _logProvider = loggerProvider;
 
-            _log = _options.Get("ASC.Mail.ImapSyncService");
-
-            _log.Info("Service is ready.");
+            _log.InfoImapSyncServiceReady();
         }
         catch (Exception ex)
         {
-            _log.FatalFormat("ImapSyncService error under construct: {0}", ex.ToString());
+            _log.CritImapSyncServiceConstruct(ex.ToString());
 
             throw;
         }
@@ -76,19 +78,19 @@ public class ImapSyncService : IHostedService
         }
         catch (Exception ex)
         {
-            _log.Error($"Didn`t subscribe to redis. Message: {ex.Message}");
+            _log.ErrorImapSyncServiceSubscribeRedis(ex.Message);
 
             return StopAsync(cancellationToken);
         }
         finally
         {
-            _log.Info("Try to subscribe redis...");
+            _log.InfoImapSyncServiceTrySubscribeRedis();
         }
     }
 
     public async Task CreateNewClient(ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
     {
-        _log.Debug($"Online Users count: {clients.Count}");
+        _log.DebugImapSyncServiceOnlineUsersCount(clients.Count);
 
         var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 
@@ -100,7 +102,7 @@ public class ImapSyncService : IHostedService
         {
             if (clients[cashedTenantUserMailBox.UserName] == null)
             {
-                _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Wait for client start...");
+                _log.DebugImapSyncServiceWaitForClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Folder);
             }
             else
             {
@@ -112,7 +114,7 @@ public class ImapSyncService : IHostedService
         {
             if (!clients.TryAdd(cashedTenantUserMailBox.UserName, null))
             {
-                _log.Debug($"User Activity -> {cashedTenantUserMailBox.UserName}, folder={cashedTenantUserMailBox.Folder}. Try to create client ...");
+                _log.DebugImapSyncServiceTry—reate—lient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Folder);
 
                 return;
             }
@@ -121,13 +123,13 @@ public class ImapSyncService : IHostedService
 
             try
             {
-                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _mailSettings, _serviceProvider, _signalrServiceClient, _cancelTokenSource.Token);
+                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _mailSettings, _serviceProvider, _signalrServiceClient, _cancelTokenSource.Token, _logProvider);
 
                 if (client == null)
                 {
                     clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
 
-                    _log.Info($"Can`t create Mail client for user {cashedTenantUserMailBox.UserName}.");
+                    _log.InfoImapSyncServiceCantCreateMailClient(cashedTenantUserMailBox.UserName);
                 }
                 else
                 {
@@ -138,25 +140,25 @@ public class ImapSyncService : IHostedService
             }
             catch (TimeoutException exTimeout)
             {
-                _log.Warn($"[TIMEOUT] Create mail client for user {cashedTenantUserMailBox.UserName}. {exTimeout}");
+                _log.WarnImapSyncServiceCreateClientTimeout(cashedTenantUserMailBox.UserName, exTimeout.ToString());
             }
             catch (OperationCanceledException)
             {
-                _log.Info("[CANCEL] Create mail client for user {userName}.");
+                _log.InfoImapSyncServiceCreateClientCancel(cashedTenantUserMailBox.UserName);
             }
             catch (MailKit.Security.AuthenticationException authEx)
             {
-                _log.Error($"[AuthenticationException] Create mail client for user {cashedTenantUserMailBox.UserName}. {authEx}");
+                _log.ErrorImapSyncServiceCreateClientAuth(cashedTenantUserMailBox.UserName, authEx.ToString());
             }
             catch (WebException webEx)
             {
-                _log.Error($"[WebException] Create mail client for user {cashedTenantUserMailBox.UserName}. {webEx}");
+                _log.ErrorImapSyncServiceCreateClientWeb(cashedTenantUserMailBox.UserName, webEx.ToString());
             }
             catch (Exception ex)
             {
                 clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
 
-                _log.Error($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
+                _log.ErrorImapSyncServiceCreateClientException(cashedTenantUserMailBox.UserName, ex.ToString());
             }
         }
     }
@@ -172,11 +174,11 @@ public class ImapSyncService : IHostedService
                 trashValue.OnCriticalError -= Client_DeleteClient;
                 trashValue?.Stop();
 
-                _log.Info($"ImapSyncService. MailImapClient {clientKey} died and was remove.");
+                _log.InfoImapSyncServiceClientDiedAndWasRemove(clientKey);
             }
             else
             {
-                _log.Info($"ImapSyncService. MailImapClient {clientKey} died, bud wasn`t remove.");
+                _log.InfoImapSyncServiceClientDiedAndWasntRemove(clientKey);
             }
         }
     }
@@ -185,13 +187,13 @@ public class ImapSyncService : IHostedService
     {
         try
         {
-            _log.Info("Start service\r\n");
+            _log.InfoImapSyncServiceStart();
 
             return RedisSubscribe(cancellationToken);
         }
         catch (Exception ex)
         {
-            _log.Error(ex.Message);
+            _log.ErrorImapSyncService(ex.Message);
 
             return StopAsync(cancellationToken);
         }
@@ -203,16 +205,16 @@ public class ImapSyncService : IHostedService
         {
             _cancelTokenSource.Cancel();
 
-            _log.Info("Stoping service\r\n");
+            _log.InfoImapSyncServiceStoping();
 
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Stop service Error: {0}\r\n", ex.ToString());
+            _log.ErrorImapSyncServiceStop(ex.ToString());
         }
         finally
         {
-            _log.Info("Stop service\r\n");
+            _log.InfoImapSyncServiceStop();
         }
 
         return Task.CompletedTask;

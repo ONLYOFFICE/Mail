@@ -30,14 +30,14 @@ public class MailboxIterator : IMailboxIterator
     private readonly int _tenant;
     private readonly string _userId;
     private readonly bool? _isRemoved;
-    private readonly ILogger<MailGarbageEngine> _log;
+    private readonly ILogger _log;
 
     private readonly int _minMailboxId;
     private readonly int _maxMailboxId;
 
     private readonly MailboxEngine _mailboxEngine;
 
-    public MailboxIterator(MailboxEngine mailboxEngine, int tenant = -1, string userId = null, bool? isRemoved = false, ILogger<MailGarbageEngine> log = null)
+    public MailboxIterator(MailboxEngine mailboxEngine, ILogger log, int tenant = -1, string userId = null, bool? isRemoved = false)
     {
         if (!string.IsNullOrEmpty(userId) && tenant < 0)
             throw new ArgumentException("Tenant must be initialized if user not empty");
@@ -123,13 +123,13 @@ public class MailboxIterator : IMailboxIterator
                 {
                     id = failedId;
 
-                    _log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. Skip it.", id);
+                    _log.ErrorMailboxIteratorGetNextMailboxDataFailedSkip(id);
 
                     id++;
                 }
                 else
                 {
-                    _log.ErrorFormat("MailboxEngine.GetNextMailboxData(Mailbox id = {0}) failed. End seek next.", id);
+                    _log.ErrorMailboxIteratorGetNextMailboxDataFailedEndSeekNext(id);
                     return null;
                 }
             }

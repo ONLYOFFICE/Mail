@@ -36,8 +36,7 @@ public class TestEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger<TestEngine> _log;
-    private readonly ILogger<MessageEngine> _messageEngineLog;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly CoreSettings _coreSettings;
@@ -71,8 +70,7 @@ public class TestEngine
         MessageEngine messageEngine,
         IndexEngine indexEngine,
         StorageFactory storageFactory,
-        ILogger<TestEngine> log,
-        ILogger<MessageEngine> messageEngineLog)
+        ILoggerProvider loggerProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
@@ -83,8 +81,7 @@ public class TestEngine
         _indexEngine = indexEngine;
         _storageFactory = storageFactory;
 
-        _log = log;
-        _messageEngineLog = messageEngineLog;
+        _log = loggerProvider.CreateLogger("ASC.Mail.TestEngine");
     }
 
     public int CreateSampleMessage(TestMessageModel model, bool add2Index = false)
@@ -316,7 +313,7 @@ public class TestEngine
         var storage = _storageFactory.GetMailStorage(mbox.TenantId);
 
         var message = _messageEngine.Save(mbox, mimeMessage, SAMPLE_UIDL,
-            new MailFolder(folder, ""), model.UserFolderId, model.Unread, _log);
+            new MailFolder(folder, ""), model.UserFolderId, model.Unread);
 
         if (message == null)
             return -1;

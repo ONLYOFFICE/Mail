@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using Contact = ASC.CRM.Core.Entities.Contact;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
@@ -34,7 +34,7 @@ namespace ASC.Mail.Core.Dao;
 [Scope]
 public class CrmContactDao : BaseMailDao, ICrmContactDao
 {
-    private readonly ILogger<CrmContactDao> _log;
+    private readonly ILogger _log;
 
     private readonly CrmSecurity _crmSecurity;
 
@@ -42,11 +42,11 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
          TenantManager tenantManager,
          SecurityContext securityContext,
          DbContextManager<MailDbContext> dbContext,
-         ILogger<CrmContactDao> log,
+         ILoggerProvider logProvider,
          CrmSecurity crmSecurity)
         : base(tenantManager, securityContext, dbContext)
     {
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.CrmContactDao");
         _crmSecurity = crmSecurity;
     }
 

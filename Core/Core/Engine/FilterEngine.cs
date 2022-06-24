@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using ActionType = ASC.Mail.Enums.Filter.ActionType;
 using Filter = ASC.Mail.Core.Entities.Filter;
@@ -40,7 +40,7 @@ public class FilterEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger<FilterEngine> _log;
+    private readonly ILogger _log;
     private readonly MessageEngine _messageEngine;
     private readonly UserFolderEngine _userFolderEngine;
     private readonly TagEngine _tagEngine;
@@ -55,7 +55,7 @@ public class FilterEngine
         MessageEngine messageEngine,
         UserFolderEngine userFolderEngine,
         TagEngine tagEngine,
-        ILogger<FilterEngine> log)
+        ILoggerProvider logProvider)
     {
         _messageEngine = messageEngine;
         _userFolderEngine = userFolderEngine;
@@ -65,7 +65,7 @@ public class FilterEngine
 
         _mailDaoFactory = mailDaoFactory;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.FilterEngine");
     }
 
     public MailSieveFilterData Get(int id)

@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -37,7 +37,7 @@ public class ContactEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILogger<ContactEngine> _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
@@ -64,7 +64,7 @@ public class ContactEngine
         WebItemSecurity webItemSecurity,
         CommonLinkUtility commonLinkUtility,
         IServiceProvider serviceProvider,
-        ILogger<ContactEngine> log)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _mailDbContext = dbContextManager.Get("mail");
@@ -78,7 +78,7 @@ public class ContactEngine
         _serviceProvider = serviceProvider;
         _webItemSecurity = webItemSecurity;
         _commonLinkUtility = commonLinkUtility;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.ContactEngine");
     }
 
     public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,

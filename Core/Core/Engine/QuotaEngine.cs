@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 namespace ASC.Mail.Core.Engine;
 
@@ -31,15 +31,15 @@ namespace ASC.Mail.Core.Engine;
 public class QuotaEngine
 {
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
-    private readonly ILogger<QuotaEngine> _log;
+    private readonly ILogger _log;
     private readonly TenantManager _tenantManager;
 
     public QuotaEngine(
         TenantManager tenantManager,
-        ILogger<QuotaEngine> log)
+        ILoggerProvider logProvider)
     {
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.QuotaEngine");
         _tenantManager = tenantManager;
     }
 

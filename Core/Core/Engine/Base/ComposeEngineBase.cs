@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
@@ -34,7 +34,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ComposeEngineBase
 {
-    protected ILogger<ComposeEngineBase> _log;
+    protected ILogger _log;
     protected static SignalrServiceClient _signalrServiceClient;
     protected readonly bool _sslCertificatePermit;
     protected const string EMPTY_HTML_BODY = "<div dir=\"ltr\"><br></div>"; // GMail style
@@ -125,7 +125,7 @@ public class ComposeEngineBase
         CoreSettings coreSettings,
         StorageFactory storageFactory,
         SignalrServiceClient signalrServiceClient,
-        ILogger<ComposeEngineBase> log,
+        ILoggerProvider logProvider,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)
     {
@@ -143,7 +143,7 @@ public class ComposeEngineBase
 
         _mailSettings = mailSettings;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.ComposeEngineBase");
 
         DaemonLabels = daemonLabels ?? DeliveryFailureMessageTranslates.Defauilt;
 

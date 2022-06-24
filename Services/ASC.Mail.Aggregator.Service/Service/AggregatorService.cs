@@ -1,13 +1,10 @@
-﻿using ASC.Mail.Core.Log;
-
-namespace ASC.Mail.Aggregator.Service.Service;
+﻿namespace ASC.Mail.Aggregator.Service.Service;
 
 [Singletone]
 public class AggregatorService
 {
     public const string ASC_MAIL_COLLECTION_SERVICE_NAME = "ASC Mail Collection Service";
-    private const string S_FAIL = "error";
-    private const string S_OK = "success";
+
     private const int SIGNALR_WAIT_SECONDS = 30;
 
     private readonly TimeSpan _taskStateCheck;
@@ -16,9 +13,9 @@ public class AggregatorService
     private bool _isFirstTime = true;
     private Timer _aggregatorTimer;
 
-    private readonly ILogger<AggregatorService> _log;
-    private readonly ILoggerFactory _logFactory;
-    private static ILogger _logStat;
+    private readonly ILogger _log;
+
+    private readonly ILoggerProvider _logProvider;
     private readonly List<ServerFolderAccessInfo> _serverFolderAccessInfo;
     private readonly MailSettings _settings;
     private readonly ConsoleParameters _consoleParameters;
@@ -36,25 +33,20 @@ public class AggregatorService
     public AggregatorService(
         QueueManager queueManager,
         ConsoleParser consoleParser,
-        ILogger<AggregatorService> logger,
-        ILoggerFactory logFactory,
+        ILoggerProvider logProvider,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
         SocketIoNotifier signalrWorker,
         MailQueueItemSettings mailQueueItemSettings,
-        IMailDaoFactory mailDaoFactory,
-        NlogCongigure mailLogCongigure)
+        IMailDaoFactory mailDaoFactory)
     {
-        mailLogCongigure.Configure();
-
         _serviceProvider = serviceProvider;
         _consoleParameters = consoleParser.GetParsedParameters();
         _queueManager = queueManager;
 
-        _logFactory = logFactory;
+        _logProvider = logProvider;
 
-        _log = logger;
-        _logStat = logFactory.CreateLogger("LogStatistics");
+        _log = logProvider.CreateLogger("ASC.Mail.MainThread");
 
         _settings = mailSettings;
 
@@ -263,7 +255,9 @@ public class AggregatorService
             var linkedTokenSource =
                 CancellationTokenSource.CreateLinkedTokenSource(cancelToken, new CancellationTokenSource(_taskSecondsLifetime).Token);
 
-            var task = Task.Run(() => ProcessMailbox(mailbox, linkedTokenSource), linkedTokenSource.Token);
+            var boxLog = _logProvider.CreateLogger($"ASC.Mail Mbox_{mailbox.MailBoxId}");
+
+            var task = Task.Run(() => ProcessMailbox(mailbox, boxLog, linkedTokenSource), linkedTokenSource.Token);
 
             tasks.Add(new TaskData(mailbox, task));
         }
@@ -274,9 +268,9 @@ public class AggregatorService
         return tasks;
     }
 
-    private void ProcessMailbox(MailBoxData mailBox, CancellationTokenSource cTSource)
+    private void ProcessMailbox(MailBoxData mailBox, ILogger log, CancellationTokenSource cTSource)
     {
-        using var handler = new MailboxHandler(_serviceProvider, mailBox, _settings, cTSource, _serverFolderAccessInfo);
+        using var handler = new MailboxHandler(_serviceProvider, mailBox, _settings, log, _logProvider, cTSource, _serverFolderAccessInfo);
 
         handler.DoProcess();
     }
@@ -317,7 +311,7 @@ public class AggregatorService
     {
         try
         {
-            _log.DebugAggServEndTask(taskData.Task.Id, taskData.Task.Status);
+            _log.DebugAggServEndTask(taskData.Task.Id, taskData.Task.Status.ToString());
 
             if (!tasks.Remove(taskData))
                 _log.ErrorAggServTaskNotExists();
@@ -350,19 +344,6 @@ public class AggregatorService
         {
             _log.ErrorAggServForgetFilters();
         }
-    }
-
-    internal static void LogStatistic(string method, MailBoxData mailBoxData, double duration, bool failed)
-    {
-        var pairs = new List<KeyValuePair<string, object>>
-        {
-            new KeyValuePair<string, object>("duration", duration),
-            new KeyValuePair<string, object>("mailboxId", mailBoxData.MailBoxId),
-            new KeyValuePair<string, object>("address", mailBoxData.EMail.ToString()),
-            new KeyValuePair<string, object>("status", failed ? S_FAIL : S_OK)
-        };
-
-        _logStat.DebugWithProps(method, pairs);
     }
     #endregion
 }

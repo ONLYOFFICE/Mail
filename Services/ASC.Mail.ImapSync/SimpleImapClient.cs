@@ -56,15 +56,14 @@ public class SimpleImapClient : IDisposable
 
     private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e) => DoneToken?.Cancel();
 
-    public SimpleImapClient(MailBoxData mailbox, MailSettings mailSettings, ILog log, string folderName, CancellationToken cancelToken)
+    public SimpleImapClient(MailBoxData mailbox, MailSettings mailSettings, ILoggerProvider logProvider, string folderName, CancellationToken cancelToken)
     {
         Account = mailbox;
         _mailSettings = mailSettings;
 
         folderName = string.IsNullOrEmpty(folderName) ? "INBOX" : folderName.Replace('/', '_');
 
-        _log = log;
-        _log.Name = $"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}";
+        _log = logProvider.CreateLogger($"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}");
 
         var protocolLogger = mailSettings.ImapSync.WriteIMAPLog ?
             new ProtocolLogger(_log.LogDirectory + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
@@ -358,7 +357,7 @@ public class SimpleImapClient : IDisposable
             }
             else
             {
-                newMessageDescriptors= new List<MessageDescriptor>();
+                newMessageDescriptors = new List<MessageDescriptor>();
             }
         }
         catch (Exception ex)
@@ -829,7 +828,7 @@ public class SimpleImapClient : IDisposable
     {
         var rootFolder = imap.GetFolder(imap.PersonalNamespaces[0].Path);
 
-        var newFolder=rootFolder.Create(name, true);
+        var newFolder = rootFolder.Create(name, true);
 
         if (newFolder == null) return false;
 

@@ -23,8 +23,6 @@
  *
 */
 
-using ASC.Mail.Core.Log;
-
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
@@ -34,20 +32,20 @@ public class IndexEngine
     private readonly FactoryIndexer _factoryIndexerCommon;
     private readonly IServiceProvider _serviceProvider;
     private readonly IMailDaoFactory _mailDaoFactory;
-    private readonly ILogger<IndexEngine> _log;
+    private readonly ILogger _log;
 
     public IndexEngine(
         FactoryIndexerMailMail factoryIndexerMailMail,
         FactoryIndexer factoryIndexerCommon,
         IServiceProvider serviceProvider,
         IMailDaoFactory mailDaoFactory,
-        ILogger<IndexEngine> log)
+        ILoggerProvider logProvider)
     {
         _factoryIndexerMailMail = factoryIndexerMailMail;
         _factoryIndexerCommon = factoryIndexerCommon;
         _serviceProvider = serviceProvider;
         _mailDaoFactory = mailDaoFactory;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.IndexEngine");
     }
 
     public bool IsIndexAvailable()
@@ -169,7 +167,7 @@ public class IndexEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorIndexEngineUpdate(mails == null ? 0 : mails.Count, ex.ToString());
+            _log.ErrorIndexEngineUpdateCount(mails == null ? 0 : mails.Count, ex.ToString());
         }
     }
 
@@ -239,7 +237,7 @@ public class IndexEngine
         {
             var typeParameterType = typeof(T);
 
-            _log.ErrorIndexEngineUpdate(typeParameterType, list == null ? 0 : list.Count, ex.ToString());
+            _log.ErrorIndexEngineUpdateType(typeParameterType, list == null ? 0 : list.Count, ex.ToString());
         }
     }
 

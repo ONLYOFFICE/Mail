@@ -23,11 +23,12 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
+
+
 
 using SaslMechanism = ASC.Mail.Enums.SaslMechanism;
 using SecurityContext = ASC.Core.SecurityContext;
-
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
@@ -37,7 +38,7 @@ public class AccountEngine
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly SecurityContext _securityContext;
-    private readonly ILogger<AccountEngine> _log;
+    private readonly ILogger _log;
     private readonly MailboxEngine _mailboxEngine;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly TenantManager _tenantManager;
@@ -61,7 +62,7 @@ public class AccountEngine
         CoreBaseSettings coreBaseSettings,
         SettingsManager settingsManager,
         MailSettings mailSettings,
-        ILogger<AccountEngine> log)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
 
@@ -77,7 +78,7 @@ public class AccountEngine
         _coreBaseSettings = coreBaseSettings;
         _settingsManager = settingsManager;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.AccountEngine");
     }
 
     public List<AccountInfo> GetAccountInfoList()
@@ -187,7 +188,7 @@ public class AccountEngine
             }
             catch (Exception ex)
             {
-                _log.ErrorGetMailServerMxDomain(ex);
+                _log.ErrorGetMailServerMxDomain(ex.ToString());
             }
 
             if (!string.IsNullOrEmpty(mxHost))
@@ -259,7 +260,7 @@ public class AccountEngine
 
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-        using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
+        using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos, _log,
                 certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
         {
             loginResult = client.TestLogin();
@@ -288,7 +289,7 @@ public class AccountEngine
 
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-        using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos,
+        using (var client = new MailClient(mbox, CancellationToken.None, _serverFolderAccessInfos, _log,
                 certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
         {
             loginResult = client.TestLogin();
@@ -333,7 +334,7 @@ public class AccountEngine
 
             _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
-            using (var client = new MailClient(mb, CancellationToken.None, _serverFolderAccessInfos,
+            using (var client = new MailClient(mb, CancellationToken.None, _serverFolderAccessInfos, _log,
                 _mailSettings.Aggregator.TcpTimeout, _mailSettings.Defines.SslCertificatesErrorsPermit))
             {
                 loginResult = client.TestLogin();
@@ -555,7 +556,7 @@ public class AccountEngine
             _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
 
             // Check account connection setting on activation
-            using (var client = new MailClient(tuple.Item1, CancellationToken.None, _serverFolderAccessInfos,
+            using (var client = new MailClient(tuple.Item1, CancellationToken.None, _serverFolderAccessInfos, _log,
                     certificatePermit: _mailSettings.Defines.SslCertificatesErrorsPermit))
             {
                 loginResult = client.TestLogin();

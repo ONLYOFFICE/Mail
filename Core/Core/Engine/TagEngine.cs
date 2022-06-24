@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -40,7 +40,7 @@ public class TagEngine
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILogger<TagEngine> _log;
+    private readonly ILogger _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly WebItemSecurity _webItemSecurity;
 
@@ -49,7 +49,7 @@ public class TagEngine
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         WebItemSecurity webItemSecurity,
-        ILogger<TagEngine> log)
+        ILoggerProvider logProvider)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
@@ -58,7 +58,7 @@ public class TagEngine
 
         _webItemSecurity = webItemSecurity;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.TagEngine");
     }
 
     public Tag GetTag(int id)

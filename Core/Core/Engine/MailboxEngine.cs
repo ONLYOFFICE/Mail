@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using FolderType = ASC.Mail.Enums.FolderType;
 using Mailbox = ASC.Mail.Core.Entities.Mailbox;
@@ -40,7 +40,7 @@ public class MailboxEngine : BaseEngine
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILogger<MailboxEngine> _log;
+    private readonly ILogger _log;
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly AlertEngine _alertEngine;
@@ -60,7 +60,7 @@ public class MailboxEngine : BaseEngine
         QuotaEngine quotaEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
-        ILogger<MailboxEngine> log,
+        ILoggerProvider logProvider,
         IServiceProvider serviceProvider,
         MailSettings mailSettings,
         OAuth20TokenHelper oAuth20TokenHelper) : base(mailSettings)
@@ -79,7 +79,7 @@ public class MailboxEngine : BaseEngine
 
         _oauth20TokenHelper = oAuth20TokenHelper;
 
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.MailboxEngine");
 
         _serviceProvider = serviceProvider;
     }

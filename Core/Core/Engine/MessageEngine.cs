@@ -26,12 +26,10 @@
 #if DEBUG
 #endif
 
-using ASC.Mail.Core.Log;
+
 
 using Attachment = ASC.Mail.Core.Entities.Attachment;
-using FileSecurity = ASC.Files.Core.Security.FileSecurity;
 using FolderType = ASC.Mail.Enums.FolderType;
-using IFilesDaoFactory = ASC.Files.Core.IDaoFactory;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -54,10 +52,10 @@ public class MessageEngine : BaseEngine
     private readonly IServiceProvider _serviceProvider;
     private readonly StorageFactory _storageFactory;
     private readonly StorageManager _storageManager;
-    private readonly IFilesDaoFactory _filesDaoFactory;
-    private readonly FileSecurity _filesSeurity;
-    private readonly FileConverter _fileConverter;
-    private readonly ILogger<MessageEngine> _log;
+    //private readonly IFilesDaoFactory _filesDaoFactory;
+    //private readonly FileSecurity _filesSeurity;
+    //private readonly FileConverter _fileConverter;
+    private readonly ILogger _log;
 
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
@@ -77,14 +75,14 @@ public class MessageEngine : BaseEngine
         CoreSettings coreSettings,
         StorageFactory storageFactory,
         StorageManager storageManager,
-        FileSecurity filesSeurity,
-        FileConverter fileConverter,
+        //FileSecurity filesSeurity,
+        //FileConverter fileConverter,
         FactoryIndexer<MailMail> factoryIndexer,
         FactoryIndexer factoryIndexerCommon,
-        IFilesDaoFactory filesDaoFactory,
+        //IFilesDaoFactory filesDaoFactory,
         IMailDaoFactory mailDaoFactory,
         IServiceProvider serviceProvider,
-        ILogger<MessageEngine> log,
+        ILoggerProvider logProvider,
         MailSettings mailSettings) : base(mailSettings)
     {
         _mailDaoFactory = mailDaoFactory;
@@ -102,10 +100,10 @@ public class MessageEngine : BaseEngine
         _serviceProvider = serviceProvider;
         _storageFactory = storageFactory;
         _storageManager = storageManager;
-        _filesDaoFactory = filesDaoFactory;
-        _filesSeurity = filesSeurity;
-        _fileConverter = fileConverter;
-        _log = log;
+        //_filesDaoFactory = filesDaoFactory;
+        //_filesSeurity = filesSeurity;
+        //_fileConverter = fileConverter;
+        _log = logProvider.CreateLogger("ASC.Mail.MessageEngine");
     }
 
     public MailMessageData GetMessage(int messageId, MailMessageData.Options options)
@@ -606,8 +604,8 @@ public class MessageEngine : BaseEngine
             catch (Exception e)
             {
                 if (e.InnerException != null)
-                    _log.ErrorMessageEngineSetFolder(userFolderId, folder, e.InnerException.ToString());
-                _log.ErrorMessageEngineCommitSetFolder(userFolderId, folder, e.ToString());
+                    _log.ErrorMessageEngineSetFolder(userFolderId, folder.ToString(), e.InnerException.ToString());
+                _log.ErrorMessageEngineCommitSetFolder(userFolderId, folder.ToString(), e.ToString());
             }
         }
 
@@ -1226,51 +1224,51 @@ public class MessageEngine : BaseEngine
 
         if (folder.Tags.Any())
         {
-            log.Debug("GetOrCreateTags()");
+            _log.DebugMessageEngineGetOrCreateTags();
             tagsIds = _tagEngine.GetOrCreateTags(mailbox.TenantId, mailbox.UserId, folder.Tags);
         }
 
-        log.Debug($"UpdateExistingMessages(md5={md5})");
+        _log.DebugMessageEngineUpdateExistingMessages(md5);
 
         var found = UpdateExistingMessages(mailbox, folder.Folder, uidl, md5,
-            mimeMessage.MessageId, MailUtil.NormalizeStringForMySql(mimeMessage.Subject), mimeMessage.Date.UtcDateTime, fromThisMailBox, toThisMailBox, tagsIds, log);
+            mimeMessage.MessageId, MailUtil.NormalizeStringForMySql(mimeMessage.Subject), mimeMessage.Date.UtcDateTime, fromThisMailBox, toThisMailBox, tagsIds);
 
         var needSave = !found;
         if (!needSave)
             return null;
 
-        log.Debug($"DetectChainId(md5={md5}))");
+        _log.DebugMessageEngineDetectChainId(md5);
 
         var chainInfo = DetectChain(mailbox, mimeMessage.MessageId, mimeMessage.InReplyTo,
             mimeMessage.Subject);
 
         var streamId = MailUtil.CreateStreamId();
 
-        log.Debug($"Convert MimeMessage->MailMessage (md5={md5})");
+        _log.DebugMessageEngineConvertMimeMessage(md5);
 
         var message = mimeMessage.ConvertToMailMessage(
             _tenantManager, _coreSettings,
             folder, unread, chainInfo.Id,
             chainInfo.ChainDate, streamId,
-            mailbox.MailBoxId, true, log);
+            mailbox.MailBoxId, _log, true);
 
-        log.Debug($"TryStoreMailData(md5={md5})");
+        _log.DebugMessageEngineTryStoreMailData(md5);
 
-        if (!TryStoreMailData(message, mailbox, log))
+        if (!TryStoreMailData(message, mailbox))
         {
             throw new Exception("Failed to save message");
         }
 
-        log.Debug($"MailSave(md5={md5})");
+        _log.DebugMessageEngineMailSaveMd(md5);
 
-        if (TrySaveMail(mailbox, message, folder, userFolderId, uidl, md5, log))
+        if (TrySaveMail(mailbox, message, folder, userFolderId, uidl, md5))
         {
             return message;
         }
 
-        if (TryRemoveMailDirectory(mailbox, message.StreamId, log))
+        if (TryRemoveMailDirectory(mailbox, message.StreamId))
         {
-            log.InfoFormat("Problem with mail proccessing(Account:{0}). Body and attachment have been deleted", mailbox.EMail);
+            _log.InfoMessageEngineProblemWithMailProccessing(mailbox.EMail.ToString());
         }
         else
         {
@@ -1294,39 +1292,36 @@ public class MessageEngine : BaseEngine
         if (uidl == null)
             throw new ArgumentException(@"uidl is null", "uidl");
 
-        if (log == null)
-            log = new NullLog();
-
         var md5 =
                 string.Format("{0}|{1}|{2}|{3}",
                     mimeMessage.From.Mailboxes.Any() ? mimeMessage.From.Mailboxes.First().Address : "",
                     mimeMessage.Subject, mimeMessage.Date.UtcDateTime, mimeMessage.MessageId).GetMd5();
 
-        log.Debug($"DetectChainId(md5={md5}))");
+        _log.DebugMessageEngineDetectChainId(md5);
 
         var chainInfo = DetectChain(mailbox, mimeMessage.MessageId, mimeMessage.InReplyTo,
             mimeMessage.Subject);
 
         var streamId = MailUtil.CreateStreamId();
 
-        log.Debug($"Convert MimeMessage->MailMessage (md5={md5})");
+        _log.DebugMessageEngineConvertMimeMessage(md5);
 
         var message = mimeMessage.ConvertToMailMessage(
             _tenantManager, _coreSettings,
             folder, unread, chainInfo.Id,
             chainInfo.ChainDate, streamId,
-            mailbox.MailBoxId, true);
+            mailbox.MailBoxId, _log, true);
 
         message.Important = impotant;
 
-        log.Debug($"TryStoreMailData(md5={md5})");
+        _log.DebugMessageEngineTryStoreMailData(md5);
 
         if (!TryStoreMailData(message, mailbox))
         {
             throw new Exception("Failed to save message");
         }
 
-        log.Debug($"MailSave(md5={md5})");
+        _log.DebugMessageEngineMailSaveMd(md5);
 
         if (TrySaveMail(mailbox, message, folder, userFolderId, uidl, md5))
         {
@@ -1335,7 +1330,7 @@ public class MessageEngine : BaseEngine
 
         if (TryRemoveMailDirectory(mailbox, message.StreamId))
         {
-            log.InfoFormat("Problem with mail proccessing(Account:{0}). Body and attachment have been deleted", mailbox.EMail);
+            _log.InfoMessageEngineProblemWithMailProccessing(mailbox.EMail.ToString());
         }
         else
         {
@@ -1378,15 +1373,13 @@ public class MessageEngine : BaseEngine
                 }
             }
 
-            log.Debug($"StoreMailBody() tenant='{mailBoxData.TenantId}', user_id='{mailBoxData.UserId}', save_body_path='{savePath}' Result: {response}");
+            _log.DebugMessageEngineStoreMailBody(mailBoxData.TenantId, mailBoxData.UserId, savePath, response);
 
             return response;
         }
         catch (Exception ex)
         {
-            log.ErrorFormat(
-                "StoreMailBody() Problems with message saving in messageId={0}. \r\n Exception: \r\n {1}\r\n",
-                messageItem.MimeMessageId, ex.ToString());
+            _log.ErrorMessageEngineStoreMailBody(messageItem.MimeMessageId, ex.ToString());
 
             Storage.DeleteAsync(string.Empty, savePath).Wait();
             throw;
@@ -1525,7 +1518,7 @@ public class MessageEngine : BaseEngine
                     if (attempt > 2)
                         throw;
 
-                    log.WarnFormat("[DEADLOCK] MailSave() try again (attempt {0}/2)", attempt);
+                    _log.WarnMessageEngineDeadlockSave(attempt);
 
                     attempt++;
                 }
@@ -1535,7 +1528,7 @@ public class MessageEngine : BaseEngine
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("TrySaveMail Exception:\r\n{0}\r\n", ex.ToString());
+            _log.ErrorMessageEngineTrySaveMail(ex.ToString());
         }
 
         return false;
@@ -1548,7 +1541,7 @@ public class MessageEngine : BaseEngine
         {
             if (message.Attachments.Any())
             {
-                log.Debug("StoreAttachments()");
+                _log.DebugMessageEngineStoreAttachments();
                 var index = 0;
                 message.Attachments.ForEach(att =>
                 {
@@ -1558,21 +1551,22 @@ public class MessageEngine : BaseEngine
 
                 StoreAttachments(mailbox, message.Attachments, message.StreamId);
 
-                log.Debug("MailMessage.ReplaceEmbeddedImages()");
-                message.ReplaceEmbeddedImages(log);
+                _log.DebugMessageEngineReplaceEmbeddedImages();
+                message.ReplaceEmbeddedImages();
             }
 
-            log.Debug("StoreMailBody()");
-            StoreMailBody(mailbox, message, log);
+            _log.DebugMessageEngineStoreBody();
+
+            StoreMailBody(mailbox, message);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("TryStoreMailData(Account:{0}): Exception:\r\n{1}\r\n", mailbox.EMail, ex.ToString());
+            _log.ErrorMessageEngineStoreMailData(mailbox.EMail.ToString(), ex.ToString());
 
             //Trying to delete all attachments and mailbody
-            if (TryRemoveMailDirectory(mailbox, message.StreamId, log))
+            if (TryRemoveMailDirectory(mailbox, message.StreamId))
             {
-                log.InfoFormat("Problem with mail proccessing(Account:{0}). Body and attachment have been deleted", mailbox.EMail);
+                _log.InfoMessageEngineProblemWithMailProccessing(mailbox.EMail.ToString());
             }
 
             return false;
@@ -1592,7 +1586,7 @@ public class MessageEngine : BaseEngine
         }
         catch (Exception ex)
         {
-            log.Debug($"Problems with mail_directory deleting. Account: {mailbox.EMail}. Folder: {mailbox.TenantId}/{mailbox.UserId}/{streamId}. Exception: {ex}");
+            _log.ErrorMessageEngineMailDirectoryDeleting(mailbox.EMail.ToString(), mailbox.TenantId, mailbox.UserId, streamId, ex.ToString());
 
             return false;
         }
@@ -1634,7 +1628,7 @@ public class MessageEngine : BaseEngine
         var idList = messagesInfo.Where(m => !m.IsRemoved).Select(m => m.Id).ToList();
         if (!idList.Any())
         {
-            log.Info($"Message already exists and it was removed from portal. (md5={md5})");
+            _log.InfoMessageEngineMessageAlreadyExists(md5);
             return true;
         }
 
@@ -1658,7 +1652,7 @@ public class MessageEngine : BaseEngine
             {
                 var clone = messagesInfo.FirstOrDefault(m => m.FolderRestore == folder && m.Uidl == uidl);
                 if (clone != null)
-                    log.InfoFormat("Message already exists: mailId={0}. Clone", clone.Id);
+                    _log.InfoMessageEngineMessageClone(clone.Id);
                 else
                 {
                     var existMessage = messagesInfo.First();
@@ -1676,7 +1670,7 @@ public class MessageEngine : BaseEngine
                         }
                     }
 
-                    log.Info("Message already exists by MD5|MimeMessageId|Subject|DateSent");
+                    _log.InfoMessageEngineMessageExists();
                 }
 
                 return true;
@@ -1686,7 +1680,7 @@ public class MessageEngine : BaseEngine
         {
             if (!fromThisMailBox && toThisMailBox && messagesInfo.Count == 1)
             {
-                log.Info($"Message already exists: mailId={messagesInfo.First().Id} (md5={md5}). Outbox clone");
+                _log.InfoMessageEngineMessageOutboxClone(messagesInfo.First().Id, md5);
                 return true;
             }
         }
@@ -1709,7 +1703,7 @@ public class MessageEngine : BaseEngine
                         uidl);
                 }
 
-                log.Info($"Message already exists: mailId={sentCloneForUpdate.Id} (md5={md5}). Outbox clone");
+                _log.InfoMessageEngineMessageOutboxClone(sentCloneForUpdate.Id, md5);
 
                 return true;
             }
@@ -1719,7 +1713,7 @@ public class MessageEngine : BaseEngine
         {
             var first = messagesInfo.First();
 
-            log.Info($"Message already exists: mailId={first.Id} (md5={md5}). It was moved to spam on server");
+            _log.InfoMessageEngineMessageMovedToSpam(first.Id, md5);
 
             return true;
         }
@@ -1728,7 +1722,7 @@ public class MessageEngine : BaseEngine
         if (fullClone == null)
             return false;
 
-        log.Info($"Message already exists: mailId={fullClone.Id} (md5={md5}). Full clone");
+        _log.InfoMessageEngineMessageFullClone(fullClone.Id, md5);
         return true;
     }
 
@@ -2321,7 +2315,7 @@ public class MessageEngine : BaseEngine
 
             var result = _mailDaoFactory.GetChainDao().Delete(deletQuery);
 
-            _log.DebugMessageEngineUpdateChainRowDeleted(tenant, user, mailboxId, folder, chainId, result);
+            _log.DebugMessageEngineUpdateChainRowDeleted(tenant, user, mailboxId, folder.ToString(), chainId, result);
 
             var unreadConvDiff = chainUnreadFlag ? -1 : (int?)null;
 
@@ -2358,7 +2352,7 @@ public class MessageEngine : BaseEngine
 
             _mailDaoFactory.GetChainDao().SaveChain(chain);
 
-            _log.DebugMessageEngineUpdateChainRowInserted(tenant, user, mailboxId, folder, chainId);
+            _log.DebugMessageEngineUpdateChainRowInserted(tenant, user, mailboxId, folder.ToString(), chainId);
 
             var unreadConvDiff = (int?)null;
             var totalConvDiff = (int?)null;
@@ -2563,98 +2557,98 @@ public class MessageEngine : BaseEngine
         return number;
     }
 
-    public MailAttachmentData AttachFileFromDocuments(int tenant, string user, int messageId, string fileId, string version, bool needSaveToTemp = false)
-    {
-        MailAttachmentData result;
+    //public MailAttachmentData AttachFileFromDocuments(int tenant, string user, int messageId, string fileId, string version, bool needSaveToTemp = false)
+    //{
+    //    MailAttachmentData result;
 
-        var fileDao = _filesDaoFactory.GetFileDao<string>();
+    //    var fileDao = _filesDaoFactory.GetFileDao<string>();
 
-        var file = string.IsNullOrEmpty(version)
-                       ? fileDao.GetFileAsync(fileId).Result
-                       : fileDao.GetFileAsync(fileId, Convert.ToInt32(version)).Result;
+    //    var file = string.IsNullOrEmpty(version)
+    //                   ? fileDao.GetFileAsync(fileId).Result
+    //                   : fileDao.GetFileAsync(fileId, Convert.ToInt32(version)).Result;
 
-        if (file == null)
-            throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound, "File not found.");
+    //    if (file == null)
+    //        throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound, "File not found.");
 
-        if (!_filesSeurity.CanReadAsync(file).Result)
-            throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied,
-                                           "Access denied.");
+    //    if (!_filesSeurity.CanReadAsync(file).Result)
+    //        throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied,
+    //                                       "Access denied.");
 
-        if (!fileDao.IsExistOnStorageAsync(file).Result)
-        {
-            throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound,
-                                           "File not exists on storage.");
-        }
+    //    if (!fileDao.IsExistOnStorageAsync(file).Result)
+    //    {
+    //        throw new AttachmentsException(AttachmentsException.Types.DocumentNotFound,
+    //                                       "File not exists on storage.");
+    //    }
 
-        _log.InfoMessageEngineOriginalFileId(file.Id);
-        _log.InfoMessageEngineOriginalFileName(file.Title);
-        var fileExt = FileUtility.GetFileExtension(file.Title);
-        var curFileType = FileUtility.GetFileTypeByFileName(file.Title);
-        _log.InfoMessageEngineFileConvertedType(file.ConvertedType);
+    //    _log.InfoMessageEngineOriginalFileId(file.Id);
+    //    _log.InfoMessageEngineOriginalFileName(file.Title);
+    //    var fileExt = FileUtility.GetFileExtension(file.Title);
+    //    var curFileType = FileUtility.GetFileTypeByFileName(file.Title);
+    //    _log.InfoMessageEngineFileConvertedType(file.ConvertedType);
 
-        if (file.ConvertedType != null)
-        {
-            switch (curFileType)
-            {
-                case FileType.Image:
-                    fileExt = file.ConvertedType == ".zip" ? ".pptt" : file.ConvertedType;
-                    break;
-                case FileType.Spreadsheet:
-                    fileExt = file.ConvertedType != ".xlsx" ? ".xlst" : file.ConvertedType;
-                    break;
-                default:
-                    if (file.ConvertedType == ".doct" || file.ConvertedType == ".xlst" || file.ConvertedType == ".pptt")
-                        fileExt = file.ConvertedType;
-                    break;
-            }
-        }
+    //    if (file.ConvertedType != null)
+    //    {
+    //        switch (curFileType)
+    //        {
+    //            case FileType.Image:
+    //                fileExt = file.ConvertedType == ".zip" ? ".pptt" : file.ConvertedType;
+    //                break;
+    //            case FileType.Spreadsheet:
+    //                fileExt = file.ConvertedType != ".xlsx" ? ".xlst" : file.ConvertedType;
+    //                break;
+    //            default:
+    //                if (file.ConvertedType == ".doct" || file.ConvertedType == ".xlst" || file.ConvertedType == ".pptt")
+    //                    fileExt = file.ConvertedType;
+    //                break;
+    //        }
+    //    }
 
-        var convertToExt = string.Empty;
-        switch (curFileType)
-        {
-            case FileType.Document:
-                if (fileExt == ".doct")
-                    convertToExt = ".docx";
-                break;
-            case FileType.Spreadsheet:
-                if (fileExt == ".xlst")
-                    convertToExt = ".xlsx";
-                break;
-            case FileType.Presentation:
-                if (fileExt == ".pptt")
-                    convertToExt = ".pptx";
-                break;
-        }
+    //    var convertToExt = string.Empty;
+    //    switch (curFileType)
+    //    {
+    //        case FileType.Document:
+    //            if (fileExt == ".doct")
+    //                convertToExt = ".docx";
+    //            break;
+    //        case FileType.Spreadsheet:
+    //            if (fileExt == ".xlst")
+    //                convertToExt = ".xlsx";
+    //            break;
+    //        case FileType.Presentation:
+    //            if (fileExt == ".pptt")
+    //                convertToExt = ".pptx";
+    //            break;
+    //    }
 
-        if (!string.IsNullOrEmpty(convertToExt) && fileExt != convertToExt)
-        {
-            var fileName = Path.ChangeExtension(file.Title, convertToExt);
-            _log.InfoMessageEngineChangeFileName(fileName, file.Id);
+    //    if (!string.IsNullOrEmpty(convertToExt) && fileExt != convertToExt)
+    //    {
+    //        var fileName = Path.ChangeExtension(file.Title, convertToExt);
+    //        _log.InfoMessageEngineChangeFileName(fileName, file.Id);
 
-            using var readStream = _fileConverter.ExecAsync(file, convertToExt).Result;
+    //        using var readStream = _fileConverter.ExecAsync(file, convertToExt).Result;
 
-            if (readStream == null)
-                throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
+    //        if (readStream == null)
+    //            throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
 
-            using var memStream = new MemoryStream();
+    //        using var memStream = new MemoryStream();
 
-            readStream.CopyTo(memStream);
-            result = AttachFileToDraft(tenant, user, messageId, fileName, memStream, memStream.Length, null, needSaveToTemp);
-            _log.InfoMessageEngineAttachedAttachment(result.fileId, result.fileName, result.storedFileUrl);
-        }
-        else
-        {
-            using var readStream = fileDao.GetFileStreamAsync(file).Result;
+    //        readStream.CopyTo(memStream);
+    //        result = AttachFileToDraft(tenant, user, messageId, fileName, memStream, memStream.Length, null, needSaveToTemp);
+    //        _log.InfoMessageEngineAttachedAttachment(result.fileId, result.fileName, result.storedFileUrl);
+    //    }
+    //    else
+    //    {
+    //        using var readStream = fileDao.GetFileStreamAsync(file).Result;
 
-            if (readStream == null)
-                throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
+    //        if (readStream == null)
+    //            throw new AttachmentsException(AttachmentsException.Types.DocumentAccessDenied, "Access denied.");
 
-            result = AttachFileToDraft(tenant, user, messageId, file.Title, readStream, readStream.CanSeek ? readStream.Length : file.ContentLength, null, needSaveToTemp);
-            _log.InfoMessageEngineAttachedAttachment(result.fileId, result.fileName, result.storedFileUrl);
-        }
+    //        result = AttachFileToDraft(tenant, user, messageId, file.Title, readStream, readStream.CanSeek ? readStream.Length : file.ContentLength, null, needSaveToTemp);
+    //        _log.InfoMessageEngineAttachedAttachment(result.fileId, result.fileName, result.storedFileUrl);
+    //    }
 
-        return result;
-    }
+    //    return result;
+    //}
 
     public MailAttachmentData AttachFile(int tenant, string user, MailMessageData message,
         string name, Stream inputStream, long contentLength, string contentType = null, bool needSaveToTemp = false)

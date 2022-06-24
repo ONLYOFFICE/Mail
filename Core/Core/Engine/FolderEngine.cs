@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -40,7 +40,7 @@ public class FolderEngine
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly UserFolderEngine _userFolderEngine;
-    private readonly ILogger<FolderEngine> _log;
+    private readonly ILogger _log;
 
     public class MailFolderInfo
     {
@@ -56,14 +56,14 @@ public class FolderEngine
         SecurityContext securityContext,
         TenantManager tenantManager,
         UserFolderEngine userFolderEngine,
-        ILogger<FolderEngine> log,
+        ILoggerProvider logProvider,
         IMailDaoFactory mailDaoFactory)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
         _userFolderEngine = userFolderEngine;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.FolderEngine");
     }
 
     public List<MailFolderInfo> GetFolders(string userId = null)

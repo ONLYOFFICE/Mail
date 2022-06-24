@@ -37,7 +37,8 @@ public class MailImapClient : IDisposable
     private readonly FolderEngine _folderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
-    private readonly ILog _log;
+    private readonly ILogger _log;
+    private readonly ILoggerProvider _logProvider;
     private readonly ApiHelper _apiHelper;
     private readonly TenantManager tenantManager;
     private readonly SecurityContext securityContext;
@@ -98,7 +99,14 @@ public class MailImapClient : IDisposable
         return result;
     }
 
-    public MailImapClient(string userName, int tenant, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient, CancellationToken cancelToken)
+    public MailImapClient(
+        string userName,
+        int tenant,
+        MailSettings mailSettings,
+        IServiceProvider serviceProvider,
+        SignalrServiceClient signalrServiceClient,
+        CancellationToken cancelToken,
+        ILoggerProvider loggerProvider)
     {
         _mailSettings = mailSettings;
 
@@ -129,13 +137,13 @@ public class MailImapClient : IDisposable
         _folderEngine = clientScope.GetService<FolderEngine>();
         _signalrServiceClient = signalrServiceClient;
 
-        _log = clientScope.GetService<ILog>();
+        _log = loggerProvider.CreateLogger($"ASC.Mail.User_{userName}");
+        _logProvider = loggerProvider;
+
         _apiHelper = clientScope.GetService<ApiHelper>();
 
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
-
-        _log.Name = $"ASC.Mail.User_{userName}";
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -221,7 +229,7 @@ public class MailImapClient : IDisposable
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
 
-        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper));
 
         needUserMailBoxUpdate = false;
 
@@ -237,7 +245,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), "", _cancelToken.Token);
+            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, "", _cancelToken.Token);
 
             if (!SetEvents(rootSimpleImapClient)) return;
 
@@ -270,7 +278,7 @@ public class MailImapClient : IDisposable
     {
         try
         {
-            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), folderName, _cancelToken.Token);
+            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folderName, _cancelToken.Token);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -592,7 +600,7 @@ public class MailImapClient : IDisposable
 
         _enginesFactorySemaphore.Wait();
 
-        message.FixDateIssues(imap_message?.InternalDate, _log);
+        message.FixDateIssues(imap_message?.InternalDate);
 
         bool unread = false, impotant = false;
 
@@ -602,7 +610,7 @@ public class MailImapClient : IDisposable
             impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
         }
 
-        message.FixEncodingIssues(_log);
+        message.FixEncodingIssues();
 
         var folder = simpleImapClient.MailWorkFolder;
         var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
@@ -617,7 +625,7 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log, impotant);
+                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
@@ -827,7 +835,7 @@ public class MailImapClient : IDisposable
 
             _log.Debug("DoOptionalOperations -> SendAutoreply()");
 
-            _mailEnginesFactory.AutoreplyEngine.SendAutoreply(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema, _log);
+            _mailEnginesFactory.AutoreplyEngine.SendAutoreply(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema);
 
             _log.Debug("DoOptionalOperations -> UploadIcsToCalendar()");
 

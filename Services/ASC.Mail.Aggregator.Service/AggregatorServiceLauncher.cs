@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Aggregator.Service;
+﻿using ASC.Mail.Aggregator.Service.Loggers;
+
+namespace ASC.Mail.Aggregator.Service;
 
 [Singletone]
 class AggregatorServiceLauncher : IHostedService
@@ -10,22 +12,30 @@ class AggregatorServiceLauncher : IHostedService
     private Task _aggregatorServiceTask;
     private CancellationTokenSource _cts;
 
+    private ILogger _log;
+
     public AggregatorServiceLauncher(
         AggregatorService aggregatorService,
-        ConsoleParser consoleParser)
+        ConsoleParser consoleParser,
+        ILoggerProvider loggerProvider)
     {
         _aggregatorService = aggregatorService;
         _consoleParameters = consoleParser.GetParsedParameters();
+
+        _log = loggerProvider.CreateLogger("ASC.Mail.AggregatorLauncher");
 
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
+        _log.CritAggregatorServiceLauncher(e.ExceptionObject.ToString());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        _log.InfoAggregatorServiceLauncherStart();
+
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (_consoleParameters.IsConsole)
@@ -45,6 +55,8 @@ class AggregatorServiceLauncher : IHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _log.InfoAggregatorServiceLauncherAwaitTask();
+
         try
         {
             _aggregatorService.StopService(_cts);
@@ -52,9 +64,13 @@ class AggregatorServiceLauncher : IHostedService
         }
         catch (TaskCanceledException)
         {
+            _log.ErrorAggregatorServiceLauncherCancel();
         }
         catch (Exception ex)
         {
+            _log.ErrorAggregatorServiceLauncherStop(ex.ToString());
         }
+
+        _log.InfoAggregatorServiceLauncherStop();
     }
 }

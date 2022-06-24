@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -48,10 +48,10 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
         CoreSettings coreSettings,
         StorageManager storageManager,
         StorageFactory storageFactory,
-        ILogger<MailOperation> logger,
+        ILoggerProvider logProvider,
         TempStream tempStream,
-        int messageId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logger, storageFactory)
+int messageId)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider, storageFactory)
     {
         _messageEngine = messageEngine;
         _messageId = messageId;
@@ -73,7 +73,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
             catch
             {
                 Error = "Error";//Resource.SsoSettingsNotValidToken;
-                Logger.ErrorMailOperation(Error);
+                Log.ErrorMailOperation(Error);
             }
 
             SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.GetAttachments);
@@ -121,7 +121,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
                         }
                         catch (Exception ex)
                         {
-                            Logger.ErrorMailOperation(ex.ToString());
+                            Log.ErrorMailOperation(ex.ToString());
 
                             Error = string.Format(MailCoreResource.FileNotFoundOrDamaged, attachment.fileName);
 
@@ -154,7 +154,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
                     "application/zip",
                     "attachment; filename=\"" + DefineConstants.ARCHIVE_NAME + "\"").Result;
 
-                Logger.DebugMailOperationArchiveStored(path);
+                Log.DebugMailOperationArchiveStored(path);
             }
 
             SetProgress((int?)MailOperationDownloadAllAttachmentsProgress.CreateLink);
@@ -172,7 +172,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
         }
         catch (Exception ex)
         {
-            Logger.ErrorMailOperationDownloadAttachments(ex.ToString());
+            Log.ErrorMailOperationDownloadAttachments(ex.ToString());
             Error = string.IsNullOrEmpty(Error)
                 ? "InternalServerError"
                 : Error;

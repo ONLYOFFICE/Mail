@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
@@ -33,19 +33,19 @@ namespace ASC.Mail.Server.Core;
 [Scope]
 public class ServerEngine
 {
-    private readonly ILogger<ServerEngine> _log;
+    private readonly ILogger _log;
     private readonly IMailServerDaoFactory _mailServerDaoFactory;
 
     protected string DbConnectionString { get; private set; }
     internal ServerApi ServerApi { get; private set; }
 
     public ServerEngine(
-        ILogger<ServerEngine> log,
+        ILoggerProvider logProvider,
         IMailServerDaoFactory mailServerDaoFactory
         )
     {
         _mailServerDaoFactory = mailServerDaoFactory;
-        _log = log;
+        _log = logProvider.CreateLogger("ASC.Mail.ServerEngine");
     }
 
     public ServerEngine(int serverId, string connectionString)
@@ -253,7 +253,7 @@ public class ServerEngine
 
         _log.DebugServerEngineAddUrlSegment(domain);
 
-        if (request.Resource != null) _log.DebugServerEngineRequestResource(request.Resource, request.Method);
+        if (request.Resource != null) _log.DebugServerEngineRequestResource(request.Resource, request.Method.ToString());
 
         // execute the request
         var response = client.ExecuteSafe(request);

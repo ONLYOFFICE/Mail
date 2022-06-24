@@ -23,9 +23,6 @@
  *
 */
 
-//using ASC.Common.Log;
-using ASC.Mail.Core.Log;
-
 using AuthenticationException = MailKit.Security.AuthenticationException;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailFolder = ASC.Mail.Models.MailFolder;
@@ -41,8 +38,7 @@ public class MailClient : IDisposable
     public List<ServerFolderAccessInfo> ServerFolderAccessInfos { get; }
     public bool CertificatePermit { get; }
     public FolderEngine FolderEngine { get; }
-    public ILogger<MailClient> Log { get; set; }
-    public ILogger BoxLog { get; set; }
+    public ILogger Log { get; set; }
 
     public ImapClient Imap { get; private set; }
     public Pop3Client Pop { get; private set; }
@@ -116,7 +112,7 @@ public class MailClient : IDisposable
     public MailClient(MailBoxData mailbox,
         CancellationToken cancelToken,
         List<ServerFolderAccessInfo> serverFolderAccessInfos,
-        ILogger<MailClient> logger,
+        ILogger logger,
         int tcpTimeout = 30000,
         bool certificatePermit = false,
         bool checkCertificateRevocation = true,
@@ -289,7 +285,7 @@ public class MailClient : IDisposable
     public void Cancel()
     {
         if (IsCanceled) return;
-        BoxLog.InfoMailClientCancel();
+        Log.InfoMailClientCancel();
         _stopTokenSource.Cancel();
         IsCanceled = true;
     }
@@ -298,7 +294,7 @@ public class MailClient : IDisposable
     {
         if (IsDisposed) return;
 
-        BoxLog.InfoMailClientDispose();
+        Log.InfoMailClientDispose();
 
         try
         {
@@ -356,7 +352,7 @@ public class MailClient : IDisposable
         }
         catch (Exception ex)
         {
-            BoxLog.ErrorMailClientDispose(Account.MailBoxId, Account.EMail.Address, ex.Message);
+            Log.ErrorMailClientDispose(Account.MailBoxId, Account.EMail.Address, ex.Message);
         }
     }
 
@@ -590,7 +586,7 @@ public class MailClient : IDisposable
 
                 var tags = mailFolder.Tags.Any() ? string.Format("tag='{0}'", mailFolder.Tags.FirstOrDefault()) : "";
 
-                Log.InfoMailClientFolder(folder.Name, mailFolder.Folder, tags);
+                Log.InfoMailClientFolder(folder.Name, mailFolder.Folder.ToString(), tags);
 
                 try
                 {
@@ -800,7 +796,7 @@ public class MailClient : IDisposable
                     if (messInfo.Size > maxSize)
                         throw new LimitMessageException($"Message size ({messInfo.Size}) exceeds fixed maximum message size ({maxSize}). The message will be skipped.");
                     else
-                        Log.DebugMailClientTryGetMessage(uid, messInfo.Size);
+                        Log.DebugMailClientTryGetMessage(uid.ToString(), messInfo.Size);
 
                     using var message = folder.GetMessageAsync(uid, _cancelToken).GetAwaiter().GetResult();
 
@@ -833,7 +829,7 @@ public class MailClient : IDisposable
                 {
                     Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, e.ToString());
+                        uid.ToString(), e.ToString());
 
                     loaded++;
                 }
@@ -845,7 +841,7 @@ public class MailClient : IDisposable
                 {
                     Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, aggE.InnerException.ToString());
+                        uid.ToString(), aggE.InnerException.ToString());
 
                     if (uid != uidsCollection.First() && (int)uid.Id != toUid)
                     {
@@ -864,7 +860,7 @@ public class MailClient : IDisposable
                 {
                     Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, e.ToString());
+                        uid.ToString(), e.ToString());
 
                     if (uid != uidsCollection.First() && (int)uid.Id != toUid)
                     {
@@ -1095,7 +1091,7 @@ public class MailClient : IDisposable
                 }
                 else
                 {
-                    Log.ErrorMailClientAppendCopyToSentFolder(
+                    Log.ErrorMailClientAppendCopyToSentFolderFailed(
                         Account.EMail.Address, Account.TenantId, Account.UserId);
                 }
             }

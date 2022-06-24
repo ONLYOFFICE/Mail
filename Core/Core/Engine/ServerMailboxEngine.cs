@@ -366,7 +366,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var userInfo = _userManager.GetUsers(_securityContext.CurrentAccount.ID);
 
-        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.ID.ToString());
+        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.Id.ToString());
     }
 
     public ServerMailboxData UpdateMailboxDisplayName(int mailboxId, string name)

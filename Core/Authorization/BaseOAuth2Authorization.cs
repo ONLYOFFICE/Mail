@@ -23,14 +23,14 @@
  *
 */
 
-using ASC.Mail.Core.Log;
+
 
 namespace ASC.Mail.Authorization;
 
 [Scope]
 public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new()
 {
-    private readonly ILogger<BaseOAuth2Authorization<T>> _log;
+    private readonly ILogger _log;
 
     private readonly T _loginProvider;
     private readonly OAuth20TokenHelper _oAuth20TokenHelper;
@@ -44,7 +44,10 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
 
     public string RefreshUrl => _loginProvider.AccessTokenUrl;
 
-    public BaseOAuth2Authorization(ILogger<BaseOAuth2Authorization<T>> log, ConsumerFactory consumerFactory, OAuth20TokenHelper oAuth20TokenHelper)
+    public BaseOAuth2Authorization(
+        ILogger log,
+        ConsumerFactory consumerFactory,
+        OAuth20TokenHelper oAuth20TokenHelper)
     {
         ConsumerFactory = consumerFactory;
         _oAuth20TokenHelper = oAuth20TokenHelper;
@@ -85,7 +88,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
         }
         catch (Exception ex)
         {
-            _log.ErrorBaseOAuth2Authorization(ex);
+            _log.ErrorBaseOAuth2Authorization(ex.ToString());
             return null;
         }
     }
