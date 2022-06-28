@@ -441,7 +441,7 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, -1);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
         }
         catch (Exception ex)
         {
@@ -453,19 +453,19 @@ public class DraftEngine : ComposeEngineBase
     {
         try
         {
-            var state = 0;
+            MailNotificationState state = MailNotificationState.SentMessageSuccess;
             if (!string.IsNullOrEmpty(draft.CalendarIcs))
             {
                 switch (draft.CalendarMethod)
                 {
                     case DefineConstants.ICAL_REQUEST:
-                        state = 1;
+                        state = MailNotificationState.SentIcalRequest;
                         break;
                     case DefineConstants.ICAL_REPLY:
-                        state = 2;
+                        state = MailNotificationState.SentIcalResponse;
                         break;
                     case DefineConstants.ICAL_CANCEL:
-                        state = 3;
+                        state = MailNotificationState.SentIcalCancel;
                         break;
                 }
             }

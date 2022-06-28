@@ -27,7 +27,9 @@
 		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="6.0.2" />
 		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="6.0.2" />
 		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="6.0.4" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="1.0.0" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="2.0.0" />
+		<PackageReference Include="protobuf-net" Version="3.1.4" />
+		<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
 	</ItemGroup>
 
 	<ItemGroup>
