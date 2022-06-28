@@ -23,7 +23,7 @@ internal static partial class ImapSyncServiceLogger
     [LoggerMessage(Level = LogLevel.Debug, Message = "User Activity -> {username}, folder = {folder}. Try to create client ...")]
     public static partial void DebugImapSyncServiceTryСreateСlient(this ILogger logger, string username, int folder);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Can`t create Mail client for user {cashedTenantUserMailBox.UserName}.")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Can`t create Mail client for user {username}.")]
     public static partial void InfoImapSyncServiceCantCreateMailClient(this ILogger logger, string username);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "[TIMEOUT] Create mail client for user {username}. {error}")]

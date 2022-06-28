@@ -19,6 +19,7 @@ global using ASC.Mail.Core.Search;
 global using ASC.Mail.Enums;
 global using ASC.Mail.Extensions;
 global using ASC.Mail.ImapSync;
+global using ASC.Mail.ImapSync.Loggers;
 global using ASC.Mail.Models;
 global using ASC.Mail.Storage;
 global using ASC.Mail.Utils;

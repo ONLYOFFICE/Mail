@@ -115,7 +115,7 @@ public class MailboxHandler : IDisposable
             {
                 watch.Stop();
 
-                LogStatistic("process mailbox", mailbox, watch.Elapsed.TotalSeconds, failed);
+                LogStatistic(mailbox, "process mailbox", watch.Elapsed.TotalSeconds, failed);
             }
         }
 
@@ -298,7 +298,7 @@ public class MailboxHandler : IDisposable
             if (_settings.Aggregator.CollectStatistics)
             {
                 watch.Stop();
-                LogStatistic("connect mailbox", _box, watch.Elapsed.TotalSeconds, connectError);
+                LogStatistic(_box, "connect mailbox", watch.Elapsed.TotalSeconds, connectError);
             }
         }
     }
@@ -351,7 +351,7 @@ public class MailboxHandler : IDisposable
             if (watch != null)
             {
                 watch.Stop();
-                LogStatistic("process message", box, watch.Elapsed.TotalMilliseconds, failed);
+                LogStatistic(box, "process message", watch.Elapsed.TotalMilliseconds, failed);
             }
         }
     }
@@ -574,7 +574,7 @@ public class MailboxHandler : IDisposable
     }
     #endregion
 
-    internal void LogStatistic(string method, MailBoxData mailBoxData, double duration, bool failed)
+    internal void LogStatistic(MailBoxData mailBoxData, string method, double duration, bool failed)
     {
         var threadId = Thread.CurrentThread.ManagedThreadId;
 

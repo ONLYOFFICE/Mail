@@ -64,7 +64,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<WatchdogLauncher>();
     services.AddHostedService<WatchdogLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     services.AddSingleton(new ConsoleParser(args));
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 });
@@ -73,6 +73,8 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
     builder.Register(context.Configuration, false, false);
 });
+
+builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 

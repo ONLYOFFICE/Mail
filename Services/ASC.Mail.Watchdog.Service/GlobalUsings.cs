@@ -17,6 +17,7 @@ global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Options;
 
 global using System;
@@ -26,3 +27,6 @@ global using System.Linq;
 global using System.Runtime.InteropServices;
 global using System.Threading;
 global using System.Threading.Tasks;
+
+global using ILogger = Microsoft.Extensions.Logging.ILogger;
+global using LogLevel = Microsoft.Extensions.Logging.LogLevel;
