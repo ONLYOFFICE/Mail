@@ -256,22 +256,7 @@ public class ServerDomainEngine : BaseEngine
 
         var isVerified = freeDns.CheckDnsStatus(domainName);
 
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
-
         var utcNow = DateTime.UtcNow;
-
-        var mailServerEngine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
-
-        var mailServerDomain = new Server.Core.Entities.Domain
-        {
-            DomainName = domainName,
-            Active = true,
-            Description = string.Format("Domain created in UtcTime: {0}, for tenant: {1}", utcNow, Tenant),
-            Created = utcNow,
-            Modified = utcNow
-        };
-
-        mailServerEngine.SaveDomain(mailServerDomain);
 
         var serverDomain = new ServerDomain
         {
@@ -283,28 +268,48 @@ public class ServerDomainEngine : BaseEngine
             DateChecked = utcNow
         };
 
-        serverDomain.Id = _mailDaoFactory.GetServerDomainDao()
-            .Save(serverDomain);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        var serverDns = _mailDaoFactory.GetServerDnsDao()
-            .GetById(freeDns.Id);
-
-        var mailServerDkim = new Server.Core.Entities.Dkim
+        strategy.Execute(() =>
         {
-            DomainName = domainName,
-            Selector = serverDns.DkimSelector,
-            PrivateKey = serverDns.DkimPrivateKey,
-            PublicKey = serverDns.DkimPublicKey
-        };
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        mailServerEngine.SaveDkim(mailServerDkim);
+            var mailServerEngine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
 
-        serverDns.DomainId = serverDomain.Id;
-        serverDns.TimeModified = utcNow;
+            var mailServerDomain = new Server.Core.Entities.Domain
+            {
+                DomainName = domainName,
+                Active = true,
+                Description = string.Format("Domain created in UtcTime: {0}, for tenant: {1}", utcNow, Tenant),
+                Created = utcNow,
+                Modified = utcNow
+            };
 
-        _mailDaoFactory.GetServerDnsDao().Save(serverDns);
+            mailServerEngine.SaveDomain(mailServerDomain);
 
-        tx.Commit();
+            serverDomain.Id = _mailDaoFactory.GetServerDomainDao()
+                .Save(serverDomain);
+
+            var serverDns = _mailDaoFactory.GetServerDnsDao()
+                .GetById(freeDns.Id);
+
+            var mailServerDkim = new Server.Core.Entities.Dkim
+            {
+                DomainName = domainName,
+                Selector = serverDns.DkimSelector,
+                PrivateKey = serverDns.DkimPrivateKey,
+                PublicKey = serverDns.DkimPublicKey
+            };
+
+            mailServerEngine.SaveDkim(mailServerDkim);
+
+            serverDns.DomainId = serverDomain.Id;
+            serverDns.TimeModified = utcNow;
+
+            _mailDaoFactory.GetServerDnsDao().Save(serverDns);
+
+            tx.Commit();
+        });
 
         return ToServerDomainData(serverDomain, freeDns);
     }

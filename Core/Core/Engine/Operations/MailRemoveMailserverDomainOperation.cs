@@ -86,10 +86,12 @@ public class MailRemoveMailserverDomainOperation : MailOperation
 
             var mailboxes = new List<MailBoxData>();
 
-            // using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RemoveDomainTimeout))
+            var strategy = MailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            strategy.Execute(() =>
             {
+                using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
                 var groups = MailDaoFactory.GetServerGroupDao().GetList(_domain.Id);
 
                 foreach (var serverGroup in groups)
@@ -128,7 +130,7 @@ public class MailRemoveMailserverDomainOperation : MailOperation
                 serverEngine.RemoveDomain(_domain.Name);
 
                 tx.Commit();
-            }
+            });
 
             SetProgress((int?)MailOperationRemoveDomainProgress.ClearCache, "Clear accounts cache");
 

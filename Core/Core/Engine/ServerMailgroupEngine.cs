@@ -153,8 +153,12 @@ public class ServerMailgroupEngine
             DateCreated = utcNow
         };
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             address.Id = _mailDaoFactory.GetServerAddressDao().Save(address);
 
             group.AddressId = address.Id;
@@ -178,7 +182,7 @@ public class ServerMailgroupEngine
             engine.SaveAlias(serverAddress);
 
             tx.Commit();
-        }
+        });
 
         _cacheEngine.ClearAll();
 
@@ -217,12 +221,16 @@ public class ServerMailgroupEngine
 
         var utcNow = DateTime.UtcNow;
 
-        ServerAddress groupAddress;
-        string groupEmail;
-        List<ServerDomainAddressData> newGroupMemberDataList;
+        ServerAddress groupAddress = new ServerAddress();
+        string groupEmail = "";
+        List<ServerDomainAddressData> newGroupMemberDataList = new List<ServerDomainAddressData>();
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             _mailDaoFactory.GetServerAddressDao().AddAddressesToMailGroup(mailgroupId, new List<int> { addressId });
 
             groupMembers.Add(newMemberAddress);
@@ -256,7 +264,7 @@ public class ServerMailgroupEngine
             engine.SaveAlias(serverAddress);
 
             tx.Commit();
-        }
+        });
 
         var groupAddressData = ServerMailboxEngine.ToServerDomainAddressData(groupAddress, groupEmail);
 
@@ -303,8 +311,12 @@ public class ServerMailgroupEngine
 
         var utcNow = DateTime.UtcNow;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             _mailDaoFactory.GetServerAddressDao().DeleteAddressFromMailGroup(mailgroupId, addressId);
 
             var goTo = string.Join(",",
@@ -327,7 +339,7 @@ public class ServerMailgroupEngine
             engine.SaveAlias(serverAddress);
 
             tx.Commit();
-        }
+        });
 
         _cacheEngine.ClearAll();
     }
@@ -349,8 +361,12 @@ public class ServerMailgroupEngine
 
         var engine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             _mailDaoFactory.GetServerGroupDao().Delete(id);
 
             _mailDaoFactory.GetServerAddressDao().DeleteAddressesFromMailGroup(id);
@@ -360,7 +376,7 @@ public class ServerMailgroupEngine
             engine.RemoveAlias(group.Address);
 
             tx.Commit();
-        }
+        });
 
         _cacheEngine.ClearAll();
     }

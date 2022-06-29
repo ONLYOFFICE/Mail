@@ -316,21 +316,26 @@ public class MessageEngine : BaseEngine
     public bool SetUnread(List<int> ids, bool unread, bool allChain = false)
     {
         var ids2Update = new List<int>();
+
         List<MailInfo> chainedMessages;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        chainedMessages = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(ids);
+
+        if (!chainedMessages.Any())
+            return true;
+
+        var listIds = allChain
+            ? chainedMessages.Where(x => x.IsNew == !unread).Select(x => x.Id).ToList()
+            : ids;
+
+        if (!listIds.Any())
+            return true;
+
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
-            chainedMessages = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(ids);
-
-            if (!chainedMessages.Any())
-                return true;
-
-            var listIds = allChain
-                ? chainedMessages.Where(x => x.IsNew == !unread).Select(x => x.Id).ToList()
-                : ids;
-
-            if (!listIds.Any())
-                return true;
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
             var exp = SimpleMessagesExp.CreateBuilder(Tenant, User)
                         .SetMessageIds(listIds)
@@ -423,24 +428,28 @@ public class MessageEngine : BaseEngine
             }
 
             tx.Commit();
-        }
 
-        var data = new MailMail
-        {
-            Unread = unread
-        };
+            var data = new MailMail
+            {
+                Unread = unread
+            };
 
-        ids2Update = allChain ? chainedMessages.Select(m => m.Id).ToList() : ids;
+            ids2Update = allChain ? chainedMessages.Select(m => m.Id).ToList() : ids;
 
-        _indexEngine.Update(data, s => s.In(m => m.Id, ids2Update.ToArray()), wrapper => wrapper.Unread);
+            _indexEngine.Update(data, s => s.In(m => m.Id, ids2Update.ToArray()), wrapper => wrapper.Unread);
+        });
 
         return true;
     }
 
     public bool SetImportant(List<int> ids, bool importance)
     {
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             var exp = SimpleMessagesExp.CreateBuilder(Tenant, User)
                     .SetMessageIds(ids)
                     .Build();
@@ -451,7 +460,7 @@ public class MessageEngine : BaseEngine
                 UpdateMessageChainImportanceFlag(Tenant, User, messageId);
 
             tx.Commit();
-        }
+        });
 
         var data = new MailMail
         {
@@ -475,11 +484,16 @@ public class MessageEngine : BaseEngine
         if (!mailInfoList.Any())
             return;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             Restore(_mailDaoFactory, mailInfoList);
+
             tx.Commit();
-        }
+        });
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -594,11 +608,16 @@ public class MessageEngine : BaseEngine
             folder = FolderType.UserFolder;
         }
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             try
             {
                 SetFolder(_mailDaoFactory, ids, folder, userFolderId);
+
                 tx.Commit();
             }
             catch (Exception e)
@@ -607,7 +626,7 @@ public class MessageEngine : BaseEngine
                     _log.ErrorMessageEngineSetFolder(userFolderId, folder.ToString(), e.InnerException.ToString());
                 _log.ErrorMessageEngineCommitSetFolder(userFolderId, folder.ToString(), e.ToString());
             }
-        }
+        });
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -798,7 +817,7 @@ public class MessageEngine : BaseEngine
         if (!ids.Any())
             throw new ArgumentNullException("ids");
 
-        long usedQuota;
+        long usedQuota = 0;
 
         var mailInfoList =
             _mailDaoFactory.GetMailInfoDao().GetMailInfoList(
@@ -808,11 +827,16 @@ public class MessageEngine : BaseEngine
 
         if (!mailInfoList.Any()) return;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             usedQuota = SetRemoved(_mailDaoFactory, mailInfoList);
+
             tx.Commit();
-        }
+        });
 
         _quotaEngine.QuotaUsedDelete(usedQuota);
 
@@ -902,7 +926,7 @@ public class MessageEngine : BaseEngine
 
     public void SetRemoved(FolderType folder)
     {
-        long usedQuota;
+        long usedQuota = 0;
 
         var mailInfoList = _mailDaoFactory.GetMailInfoDao().GetMailInfoList(
             SimpleMessagesExp.CreateBuilder(Tenant, User)
@@ -913,8 +937,12 @@ public class MessageEngine : BaseEngine
 
         var ids = mailInfoList.Select(m => m.Id).ToList();
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             _mailDaoFactory.GetMailInfoDao().SetFieldValue(
                 SimpleMessagesExp.CreateBuilder(Tenant, User)
                     .SetFolder((int)folder)
@@ -954,7 +982,7 @@ public class MessageEngine : BaseEngine
             _mailDaoFactory.GetFolderDao().ChangeFolderCounters(folder, 0, 0, 0, 0);
 
             tx.Commit();
-        }
+        });
 
         if (usedQuota <= 0)
             return;
@@ -966,18 +994,21 @@ public class MessageEngine : BaseEngine
         int messageId, FolderType folder, FolderType folderRestore, int? userFolderId,
         string uidl, string md5, bool saveAttachments)
     {
-        int id;
+        int id = 0;
         lock (sync)
         {
-            using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+            strategy.Execute(() =>
             {
+                using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
                 id = MailSave(mailbox, message, messageId,
                 folder, folderRestore, userFolderId,
                 uidl, md5, saveAttachments, out long usedQuota);
 
                 tx.Commit();
-            }
+            });
+
             return id;
         }
 
@@ -1636,16 +1667,27 @@ public class MessageEngine : BaseEngine
         {
             if (tagsIds != null) // Add new tags to existing messages
             {
-                using (var tx = _mailDaoFactory.BeginTransaction())
+                var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+                var success = false;
+
+                strategy.Execute(() =>
                 {
-                    if (tagsIds.Any(tagId => !_tagEngine.SetMessagesTag(_mailDaoFactory, idList, tagId)))
+                    using var tx = _mailDaoFactory.BeginTransaction();
+
+                    if (!tagsIds.Any(tagId => !_tagEngine.SetMessagesTag(_mailDaoFactory, idList, tagId)))
+                    {
+                        tx.Commit();
+                        success = true;
+                    }
+                    else
                     {
                         tx.Rollback();
-                        return false;
+                        success = false;
                     }
-
-                    tx.Commit();
-                }
+                });
+                if (!success)
+                    return false;
             }
 
             if ((!fromThisMailBox || !toThisMailBox) && messagesInfo.Exists(m => m.FolderRestore == folder))
@@ -1866,8 +1908,12 @@ public class MessageEngine : BaseEngine
 
         List<int> ids2Update;
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             ids2Update = unreadMessages.Select(x => x.Id).ToList();
 
             _mailDaoFactory.GetMailInfoDao().SetFieldValue(
@@ -1907,14 +1953,14 @@ public class MessageEngine : BaseEngine
             }
 
             tx.Commit();
-        }
 
-        var data = new MailMail
-        {
-            Unread = false
-        };
+            var data = new MailMail
+            {
+                Unread = false
+            };
 
-        _indexEngine.Update(data, s => s.In(m => m.Id, ids2Update.ToArray()), wrapper => wrapper.Unread);
+            _indexEngine.Update(data, s => s.In(m => m.Id, ids2Update.ToArray()), wrapper => wrapper.Unread);
+        });
 
         return messages;
     }
@@ -1931,11 +1977,16 @@ public class MessageEngine : BaseEngine
         if (!listObjects.Any())
             return;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             SetFolder(_mailDaoFactory, listObjects, folder, userFolderId);
+
             tx.Commit();
-        }
+        });
 
 
         if (folder == FolderType.Inbox || folder == FolderType.Sent || folder == FolderType.Spam)
@@ -1981,11 +2032,16 @@ public class MessageEngine : BaseEngine
         if (!listObjects.Any())
             return;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             Restore(_mailDaoFactory, listObjects);
+
             tx.Commit();
-        }
+        });
 
         var filterApplyIds =
             listObjects.Where(
@@ -2016,7 +2072,7 @@ public class MessageEngine : BaseEngine
         if (!ids.Any())
             throw new ArgumentNullException("ids");
 
-        long usedQuota;
+        long usedQuota = 0;
 
         List<MailInfo> listObjects;
 
@@ -2025,11 +2081,16 @@ public class MessageEngine : BaseEngine
         if (!listObjects.Any())
             return;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             usedQuota = SetRemoved(_mailDaoFactory, listObjects);
+
             tx.Commit();
-        }
+        });
 
         _quotaEngine.QuotaUsedDelete(usedQuota);
 
@@ -2058,9 +2119,13 @@ public class MessageEngine : BaseEngine
         if (!chainsInfo.Any())
             throw new Exception("no chain messages belong to current user");
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
-            Expression<Func<Dao.Entities.MailMail, bool>> exp = t => true;
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
+            Expression<Func<MailMail, bool>> exp = t => true;
 
             var сhains = new List<Tuple<int, string>>();
             foreach (var chain in chainsInfo)
@@ -2110,7 +2175,7 @@ public class MessageEngine : BaseEngine
             }
 
             tx.Commit();
-        }
+        });
 
         var data = new MailMail
         {
@@ -2701,10 +2766,14 @@ public class MessageEngine : BaseEngine
 
         if (!needSaveToTemp)
         {
-            int attachCount;
+            int attachCount = 0;
 
-            using (var tx = _mailDaoFactory.BeginTransaction())
+            var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+            strategy.Execute(() =>
             {
+                using var tx = _mailDaoFactory.BeginTransaction();
+
                 attachment.fileId = _mailDaoFactory.GetAttachmentDao().SaveAttachment(attachment.ToAttachmnet(messageId));
 
                 attachCount = _mailDaoFactory.GetAttachmentDao().GetAttachmentsCount(
@@ -2720,7 +2789,7 @@ public class MessageEngine : BaseEngine
                 UpdateMessageChainAttachmentsFlag(tenant, user, messageId);
 
                 tx.Commit();
-            }
+            });
 
             if (attachCount == 1)
             {
@@ -2808,11 +2877,15 @@ public class MessageEngine : BaseEngine
 
     public void DeleteMessageAttachments(int tenant, string user, int messageId, List<int> attachmentIds)
     {
-        long usedQuota;
-        int attachCount;
+        long usedQuota = 0;
+        int attachCount = 0;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             var exp = new ConcreteMessageAttachmentsExp(messageId, tenant, user, attachmentIds,
                 onlyEmbedded: null);
 
@@ -2833,7 +2906,7 @@ public class MessageEngine : BaseEngine
             UpdateMessageChainAttachmentsFlag(tenant, user, messageId);
 
             tx.Commit();
-        }
+        });
 
         if (attachCount == 0)
         {

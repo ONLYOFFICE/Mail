@@ -119,8 +119,12 @@ public class UserFolderEngine
                 string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
         }
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             newUserFolder.Id = _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
 
             if (newUserFolder.Id <= 0)
@@ -140,7 +144,7 @@ public class UserFolderEngine
             _mailDaoFactory.GetUserFolderTreeDao().InsertFullPathToRoot(newUserFolder.Id, newUserFolder.ParentId);
 
             tx.Commit();
-        }
+        });
 
         _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(newUserFolder.Id);
 
@@ -199,8 +203,12 @@ public class UserFolderEngine
             }
         }
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             newUserFolder.TimeModified = utsNow;
             _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
 
@@ -210,7 +218,7 @@ public class UserFolderEngine
             }
 
             tx.Commit();
-        }
+        });
 
         var recalcFolders = new List<int> { newUserFolder.ParentId };
 

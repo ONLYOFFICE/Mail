@@ -155,17 +155,20 @@ public class ServerEngine
 
     public void SaveMailbox(Mailbox mailbox, Alias address, bool deliver = true)
     {
-        using (var context = _mailServerDaoFactory.GetContext())
+        using var context = _mailServerDaoFactory.GetContext();
+
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
-            using (var tx = context.Database.BeginTransaction())
-            {
-                _mailServerDaoFactory.GetMailboxDao().Save(mailbox, deliver);
+            using var tx = context.Database.BeginTransaction();
 
-                _mailServerDaoFactory.GetAliasDao().Save(address);
+            _mailServerDaoFactory.GetMailboxDao().Save(mailbox, deliver);
 
-                tx.Commit();
-            }
-        }
+            _mailServerDaoFactory.GetAliasDao().Save(address);
+
+            tx.Commit();
+        });
     }
 
     public void RemoveMailbox(string address)
@@ -174,17 +177,20 @@ public class ServerEngine
 
         ClearMailboxStorageSpace(mailAddress.User, mailAddress.Host);
 
-        using (var context = _mailServerDaoFactory.GetContext())
+        using var context = _mailServerDaoFactory.GetContext();
+
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
-            using (var tx = context.Database.BeginTransaction())
-            {
-                _mailServerDaoFactory.GetMailboxDao().Remove(address);
+            using var tx = context.Database.BeginTransaction();
 
-                _mailServerDaoFactory.GetAliasDao().Remove(address);
+            _mailServerDaoFactory.GetMailboxDao().Remove(address);
 
-                tx.Commit();
-            }
-        }
+            _mailServerDaoFactory.GetAliasDao().Remove(address);
+
+            tx.Commit();
+        });
     }
 
     public void RemoveDomain(string domain, bool withStorageClean = true)
@@ -193,18 +199,21 @@ public class ServerEngine
 
         try
         {
-            using (var context = _mailServerDaoFactory.GetContext())
-            {
-                using (var tx = context.Database.BeginTransaction())
-                {
-                    _mailServerDaoFactory.GetAliasDao().RemoveByDomain(domain);
-                    _mailServerDaoFactory.GetMailboxDao().RemoveByDomain(domain);
-                    _mailServerDaoFactory.GetDomainDao().Remove(domain);
-                    _mailServerDaoFactory.GetDkimDao().Remove(domain);
+            using var context = _mailServerDaoFactory.GetContext();
 
-                    tx.Commit();
-                }
-            }
+            var strategy = context.Database.CreateExecutionStrategy();
+
+            strategy.Execute(() =>
+            {
+                using var tx = context.Database.BeginTransaction();
+
+                _mailServerDaoFactory.GetAliasDao().RemoveByDomain(domain);
+                _mailServerDaoFactory.GetMailboxDao().RemoveByDomain(domain);
+                _mailServerDaoFactory.GetDomainDao().Remove(domain);
+                _mailServerDaoFactory.GetDkimDao().Remove(domain);
+
+                tx.Commit();
+            });
         }
         catch (Exception c)
         {

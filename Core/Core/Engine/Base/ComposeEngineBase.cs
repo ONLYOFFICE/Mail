@@ -248,10 +248,14 @@ public class ComposeEngineBase
 
         _messageEngine.StoreMailBody(compose.Mailbox, message);
 
-        long usedQuota;
+        long usedQuota = 0;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             compose.Id = _messageEngine.MailSave(compose.Mailbox, message, compose.Id, message.Folder, message.Folder, null,
                 string.Empty, string.Empty, false, out usedQuota);
 
@@ -329,8 +333,7 @@ public class ComposeEngineBase
             }
 
             tx.Commit();
-
-        }
+        });
 
         if (usedQuota > 0)
         {

@@ -156,8 +156,12 @@ public class ContactEngine
 
     public ContactCard SaveContactCard(ContactCard contactCard)
     {
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             var contactId = _mailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
 
             contactCard.ContactInfo.Id = contactId;
@@ -172,7 +176,7 @@ public class ContactEngine
             }
 
             tx.Commit();
-        }
+        });
 
         _log.DebugContactEngineSaveContact();
 
@@ -218,8 +222,11 @@ public class ContactEngine
         if (!contactChanged && !newContactItems.Any() && !removedContactItems.Any())
             return contactCard;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
             if (contactChanged)
             {
                 _mailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
@@ -252,7 +259,7 @@ public class ContactEngine
             }
 
             tx.Commit();
-        }
+        });
 
         _log.DebugContactEngineUpdateContact();
 
@@ -266,14 +273,18 @@ public class ContactEngine
         if (!ids.Any())
             throw new ArgumentException(@"Empty ids collection", "ids");
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             _mailDaoFactory.GetContactDao().RemoveContacts(ids);
 
             _mailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
 
             tx.Commit();
-        }
+        });
 
         _log.DebugContactEngineRemoveContacts();
 

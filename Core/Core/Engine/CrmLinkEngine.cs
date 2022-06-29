@@ -131,46 +131,61 @@ public class CrmLinkEngine
 
         }
 
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        _mailDaoFactory.GetCrmLinkDao().SaveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
-
-        foreach (var message in linkingMessages)
+        strategy.Execute(() =>
         {
-            try
-            {
-                AddRelationshipEvents(message);
-            }
-            catch (ApiHelperException ex)
-            {
-                if (!ex.Message.Equals("Already exists"))
-                    throw;
-            }
-        }
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        tx.Commit();
+            _mailDaoFactory.GetCrmLinkDao().SaveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
+
+            foreach (var message in linkingMessages)
+            {
+                try
+                {
+                    AddRelationshipEvents(message);
+                }
+                catch (ApiHelperException ex)
+                {
+                    if (!ex.Message.Equals("Already exists"))
+                        throw;
+                }
+            }
+
+            tx.Commit();
+        });
     }
 
     public void MarkChainAsCrmLinked(int messageId, List<CrmContactData> contactIds)
     {
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
+        strategy.Execute(() =>
+        {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        _mailDaoFactory.GetCrmLinkDao().SaveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
+            var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
 
-        tx.Commit();
+            _mailDaoFactory.GetCrmLinkDao().SaveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
+
+            tx.Commit();
+        });
     }
 
     public void UnmarkChainAsCrmLinked(int messageId, IEnumerable<CrmContactData> contactIds)
     {
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
+        strategy.Execute(() =>
+        {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        _mailDaoFactory.GetCrmLinkDao().RemoveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
+            var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
 
-        tx.Commit();
+            _mailDaoFactory.GetCrmLinkDao().RemoveCrmLinks(mail.ChainId, mail.MailboxId, contactIds);
+
+            tx.Commit();
+        });
     }
 
     public void ExportMessageToCrm(int messageId, IEnumerable<CrmContactData> crmContactIds)

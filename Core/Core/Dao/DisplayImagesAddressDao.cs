@@ -55,20 +55,25 @@ public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
         if (string.IsNullOrEmpty(address))
             throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
 
-        using var tr = MailDbContext.Database.BeginTransaction();
+        var strategy = MailDbContext.Database.CreateExecutionStrategy();
 
-        var dbAddress = new MailDisplayImages
+        strategy.Execute(() =>
         {
-            Tenant = Tenant,
-            IdUser = UserId,
-            Address = address
-        };
+            using var tr = MailDbContext.Database.BeginTransaction();
 
-        MailDbContext.MailDisplayImages.Add(dbAddress);
+            var dbAddress = new MailDisplayImages
+            {
+                Tenant = Tenant,
+                IdUser = UserId,
+                Address = address
+            };
 
-        MailDbContext.SaveChanges();
+            MailDbContext.MailDisplayImages.Add(dbAddress);
 
-        tr.Commit();
+            MailDbContext.SaveChanges();
+
+            tr.Commit();
+        });
     }
 
     public void RemovevDisplayImagesAddress(string address)
@@ -76,15 +81,20 @@ public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
         if (string.IsNullOrEmpty(address))
             throw new ArgumentException(@"Invalid address. Address can't be empty.", "address");
 
-        using var tr = MailDbContext.Database.BeginTransaction();
+        var strategy = MailDbContext.Database.CreateExecutionStrategy();
 
-        var range = MailDbContext.MailDisplayImages
-            .Where(r => r.IdUser == UserId && r.Tenant == Tenant && r.Address == address);
+        strategy.Execute(() =>
+        {
+            using var tr = MailDbContext.Database.BeginTransaction();
 
-        MailDbContext.MailDisplayImages.RemoveRange(range);
+            var range = MailDbContext.MailDisplayImages
+                .Where(r => r.IdUser == UserId && r.Tenant == Tenant && r.Address == address);
 
-        var count = MailDbContext.SaveChanges();
+            MailDbContext.MailDisplayImages.RemoveRange(range);
 
-        tr.Commit();
+            var count = MailDbContext.SaveChanges();
+
+            tr.Commit();
+        });
     }
 }

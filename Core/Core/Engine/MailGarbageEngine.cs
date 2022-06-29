@@ -208,8 +208,12 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         try
         {
-            using (var tx = daoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            var strategy = context.Database.CreateExecutionStrategy();
+
+            strategy.Execute(() =>
             {
+                using var tx = daoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
                 var serverEngine = scope.ServiceProvider.GetService<Server.Core.ServerEngine>();
 
                 _log.DebugMailGarbageStartDeleteDomain(domain.Id);
@@ -238,7 +242,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
                 }
 
                 tx.Commit();
-            }
+            });
         }
         catch (Exception ex)
         {
@@ -539,55 +543,60 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var mailDbContext = mailDaoFactory.GetContext();
 
-        using var tx = mailDaoFactory.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted);
+        var strategy = mailDbContext.Database.CreateExecutionStrategy();
 
-        var exp = new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
-
-        var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
-
-        var deleteMailboxMessagesQuery = mailDbContext.MailMail
-            .Where(m => m.MailboxId == mb.Id && m.TenantId == mb.Tenant && m.UserId == mb.User);
-
-        mailDbContext.MailMail.RemoveRange(deleteMailboxMessagesQuery);
-
-        mailDbContext.SaveChanges();
-
-        var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachment
-            .Where(a => a.IdMailbox == mb.Id && a.Tenant == mb.Tenant);
-
-        mailDbContext.MailAttachment.RemoveRange(deleteMailboxAttachmentsQuery);
-
-        mailDbContext.SaveChanges();
-
-        mailDaoFactory.GetMailboxDao().RemoveMailbox(mb, mailDbContext);
-
-        if (totalRemove)
+        strategy.Execute(() =>
         {
-            mailDaoFactory.GetFolderDao().Delete();
+            using var tx = mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-            var deleteContactInfoQuery = mailDbContext.MailContactInfo
-                .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+            var exp = new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
 
-            mailDbContext.MailContactInfo.RemoveRange(deleteContactInfoQuery);
+            var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
-            mailDbContext.SaveChanges();
+            var deleteMailboxMessagesQuery = mailDbContext.MailMail
+                .Where(m => m.MailboxId == mb.Id && m.TenantId == mb.Tenant && m.UserId == mb.User);
 
-            var deleteContactsQuery = mailDbContext.MailContacts
-                .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
-
-            mailDbContext.MailContacts.RemoveRange(deleteContactsQuery);
+            mailDbContext.MailMail.RemoveRange(deleteMailboxMessagesQuery);
 
             mailDbContext.SaveChanges();
 
-            var deleteDisplayImagesQuery = mailDbContext.MailDisplayImages
-               .Where(c => c.IdUser == mb.User && c.Tenant == mb.Tenant);
+            var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachment
+                .Where(a => a.IdMailbox == mb.Id && a.Tenant == mb.Tenant);
 
-            mailDbContext.MailDisplayImages.RemoveRange(deleteDisplayImagesQuery);
+            mailDbContext.MailAttachment.RemoveRange(deleteMailboxAttachmentsQuery);
 
             mailDbContext.SaveChanges();
-        }
 
-        tx.Commit();
+            mailDaoFactory.GetMailboxDao().RemoveMailbox(mb, mailDbContext);
+
+            if (totalRemove)
+            {
+                mailDaoFactory.GetFolderDao().Delete();
+
+                var deleteContactInfoQuery = mailDbContext.MailContactInfo
+                    .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+
+                mailDbContext.MailContactInfo.RemoveRange(deleteContactInfoQuery);
+
+                mailDbContext.SaveChanges();
+
+                var deleteContactsQuery = mailDbContext.MailContacts
+                    .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+
+                mailDbContext.MailContacts.RemoveRange(deleteContactsQuery);
+
+                mailDbContext.SaveChanges();
+
+                var deleteDisplayImagesQuery = mailDbContext.MailDisplayImages
+                   .Where(c => c.IdUser == mb.User && c.Tenant == mb.Tenant);
+
+                mailDbContext.MailDisplayImages.RemoveRange(deleteDisplayImagesQuery);
+
+                mailDbContext.SaveChanges();
+            }
+
+            tx.Commit();
+        });
     }
 
     private void RemoveFile(IDataStore dataStorage, string path)

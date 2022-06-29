@@ -100,8 +100,12 @@ public class MailRemoveUserFolderOperation : MailOperation
         if (folder == null)
             return;
 
-        using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = MailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             //Find folder sub-folders
             var expTree = SimpleUserFoldersTreeExp.CreateBuilder()
                 .SetParent(folder.Id)
@@ -144,7 +148,7 @@ public class MailRemoveUserFolderOperation : MailOperation
             }
 
             tx.Commit();
-        }
+        });
 
         MailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(folder.ParentId);
 
