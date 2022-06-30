@@ -250,7 +250,7 @@ public static class Converter
 
         try
         {
-            message = mimeMessage.CreateMailMessage(tenantManager, coreSettings,
+            message = mimeMessage.CreateMailMessage(tenantManager, coreSettings, log,
                 mailboxId, folder.Folder, unread, chainId, chainDate, streamId);
         }
         catch (Exception ex)

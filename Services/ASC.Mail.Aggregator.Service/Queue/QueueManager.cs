@@ -513,7 +513,7 @@ public class QueueManager : IDisposable
                 _log.DebugQueueManagerTenantIsntInCache(mailbox.TenantId);
                 try
                 {
-                    var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)_mailSettings.Aggregator.TenantOverdueDays);
+                    var type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)_mailSettings.Aggregator.TenantOverdueDays, _log);
 
                     _log.InfoQueueManagerReturnedTenantStatus(mailbox.TenantId, type.ToString());
                     switch (type)
@@ -582,8 +582,8 @@ public class QueueManager : IDisposable
                 _log.DebugQueueManagerTenantIsInCache(mailbox.TenantId);
             }
 
-            var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager);
-            var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager);
+            var isUserTerminated = mailbox.IsUserTerminated(tenantManager, userManager, _log);
+            var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, _log);
 
             if (isUserTerminated || isUserRemoved)
             {
@@ -604,7 +604,7 @@ public class QueueManager : IDisposable
                 return false;
             }
 
-            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)_mailSettings.Aggregator.TenantMinQuotaBalance))
+            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)_mailSettings.Aggregator.TenantMinQuotaBalance, _log))
             {
                 _log.InfoQueueManagerQuotaIsEnded(mailbox.TenantId, mailbox.UserId);
 

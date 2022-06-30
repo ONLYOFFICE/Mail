@@ -27,10 +27,7 @@ namespace ASC.Mail.Extensions;
 
 public static class MailMessageExtensions
 {
-    private static LoggerFactory logFactory = new LoggerFactory();
-    private static ILogger log = logFactory.CreateLogger("ASC.Mail.MailMessageExtensions");
-
-    public static void LoadCalendarInfo(this MailMessageData mail, MimeMessage message)
+    public static void LoadCalendarInfo(this MailMessageData mail, MimeMessage message, ILogger log)
     {
         if (!message.BodyParts.Any())
             return;
@@ -579,9 +576,8 @@ public static class MailMessageExtensions
         return mailAttach;
     }
 
-    public static void ReplaceEmbeddedImages(this MailMessageData mail)
+    public static void ReplaceEmbeddedImages(this MailMessageData mail, ILogger log)
     {
-
         try
         {
             var attchments = mail.Attachments.Where(a => a.isEmbedded && !string.IsNullOrEmpty(a.storedFileUrl)).ToList();

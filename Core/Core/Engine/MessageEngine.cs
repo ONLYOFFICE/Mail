@@ -1583,7 +1583,7 @@ public class MessageEngine : BaseEngine
                 StoreAttachments(mailbox, message.Attachments, message.StreamId);
 
                 _log.DebugMessageEngineReplaceEmbeddedImages();
-                message.ReplaceEmbeddedImages();
+                message.ReplaceEmbeddedImages(_log);
             }
 
             _log.DebugMessageEngineStoreBody();

@@ -29,9 +29,6 @@ namespace ASC.Mail.Extensions;
 
 public static class MailDraftExtensions
 {
-    private static LoggerFactory logFactory = new LoggerFactory();
-    private static ILogger log = logFactory.CreateLogger("ASC.Mail.MailBoxExtensions");
-
     public static MailMessageData ToMailMessage(this MailComposeBase draft)
     {
         MailboxAddress fromVerified;
@@ -344,7 +341,7 @@ public static class MailDraftExtensions
         };
     }
 
-    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService)
+    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILogger log)
     {
         var doc = new HtmlDocument();
         doc.LoadHtml(draft.HtmlBody);
@@ -429,7 +426,7 @@ public static class MailDraftExtensions
         return links;
     }
 
-    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft)
+    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft, ILogger log)
     {
         var baseAttachmentFolder = MailStoragePathCombiner.GetMessageDirectory(draft.Mailbox.UserId, draft.StreamId);
 
@@ -453,7 +450,7 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeSmileLinks(this MailDraftData draft)
+    public static void ChangeSmileLinks(this MailDraftData draft, ILogger log)
     {
         var baseSmileUrl = MailStoragePathCombiner.GetEditorSmileBaseUrl();
 
@@ -495,7 +492,7 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeUrlProxyLinks(this MailDraftData draft)
+    public static void ChangeUrlProxyLinks(this MailDraftData draft, ILogger log)
     {
         try
         {
@@ -507,7 +504,7 @@ public static class MailDraftExtensions
         }
     }
 
-    public static void ChangeAttachedFileLinksImages(this MailDraftData draft)
+    public static void ChangeAttachedFileLinksImages(this MailDraftData draft, ILogger log)
     {
         var baseSmileUrl = MailStoragePathCombiner.GetEditorImagesBaseUrl();
 
@@ -548,7 +545,7 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft)
+    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft, ILogger log)
     {
         try
         {

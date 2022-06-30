@@ -533,7 +533,7 @@ public class MailboxHandler : IDisposable
         {
             if (AggregatorService.UserCrmAvailabeDictionary.TryGetValue(box.UserId, out available)) return available;
 
-            available = box.IsCrmAvailable(_tenantManager, _securityContext, apiHelper);
+            available = box.IsCrmAvailable(_tenantManager, _securityContext, apiHelper, _log);
             AggregatorService.UserCrmAvailabeDictionary.GetOrAdd(box.UserId, available);
         }
 

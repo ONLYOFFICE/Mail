@@ -29,10 +29,7 @@ namespace ASC.Mail.Extensions;
 
 public static class MimeMessageExtensions
 {
-    private static LoggerFactory logFactory = new LoggerFactory();
-    private static ILogger log = logFactory.CreateLogger("ASC.Mail.MimeMessageExtensions");
-
-    public static void FixEncodingIssues(this MimeMessage mimeMessage)
+    public static void FixEncodingIssues(this MimeMessage mimeMessage, ILogger log = null)
     {
         try
         {
@@ -74,7 +71,7 @@ public static class MimeMessageExtensions
                 }
                 catch (Exception ex)
                 {
-                    log.WarnMailExtensionsImproveBodyEncoding(ex.Message);
+                    log?.WarnMailExtensionsImproveBodyEncoding(ex.Message);
                 }
             }
 
@@ -84,7 +81,7 @@ public static class MimeMessageExtensions
                 if (fromParsed != null && !string.IsNullOrEmpty(fromParsed.Name))
                 {
                     var fromHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.From);
-                    fromHeader.FixEncodingIssues();
+                    fromHeader.FixEncodingIssues(log);
                 }
             }
 
@@ -92,7 +89,7 @@ public static class MimeMessageExtensions
                 return;
 
             var subjectHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.Subject);
-            subjectHeader.FixEncodingIssues();
+            subjectHeader.FixEncodingIssues(log);
 
         }
         catch (Exception ex)
@@ -101,7 +98,7 @@ public static class MimeMessageExtensions
         }
     }
 
-    public static void FixEncodingIssues(this Header header)
+    public static void FixEncodingIssues(this Header header, ILogger log)
     {
         try
         {
@@ -131,7 +128,7 @@ public static class MimeMessageExtensions
         }
     }
 
-    public static void FixDateIssues(this MimeMessage mimeMessage, DateTimeOffset? internalDate = null)
+    public static void FixDateIssues(this MimeMessage mimeMessage, ILogger log, DateTimeOffset? internalDate = null)
     {
         try
         {
@@ -147,7 +144,7 @@ public static class MimeMessageExtensions
     }
 
     public static MailMessageData CreateMailMessage(this MimeMessage message,
-        TenantManager tenantManager, CoreSettings coreSettings,
+        TenantManager tenantManager, CoreSettings coreSettings, ILogger log,
         int mailboxId = -1,
         FolderType folder = FolderType.Inbox,
         bool unread = false,
@@ -230,7 +227,7 @@ public static class MimeMessageExtensions
 
         mail.StreamId = string.IsNullOrEmpty(streamId) ? MailUtil.CreateStreamId() : streamId;
 
-        mail.LoadCalendarInfo(message);
+        mail.LoadCalendarInfo(message, log);
 
         return mail;
     }

@@ -233,20 +233,20 @@ public class DraftEngine : ComposeEngineBase
 
                 _securityContext.AuthenticateMe(new Guid(draft.Mailbox.UserId));
 
-                draft.ChangeEmbeddedAttachmentLinks();
+                draft.ChangeEmbeddedAttachmentLinks(_log);
 
-                draft.ChangeSmileLinks();
+                draft.ChangeSmileLinks(_log);
 
-                draft.ChangeAttachedFileLinksAddresses(_fileStorageService);
+                draft.ChangeAttachedFileLinksAddresses(_fileStorageService, _log);
 
-                draft.ChangeAttachedFileLinksImages();
+                draft.ChangeAttachedFileLinksImages(_log);
 
                 if (!string.IsNullOrEmpty(draft.CalendarIcs))
                 {
-                    draft.ChangeAllImagesLinksToEmbedded();
+                    draft.ChangeAllImagesLinksToEmbedded(_log);
                 }
 
-                draft.ChangeUrlProxyLinks();
+                draft.ChangeUrlProxyLinks(_log);
 
                 var mimeMessage = draft.ToMimeMessage(_storageManager);
 

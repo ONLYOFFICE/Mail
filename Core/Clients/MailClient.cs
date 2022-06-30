@@ -805,7 +805,7 @@ public class MailClient : IDisposable
                     var uid1 = uid;
                     var info = infoList.FirstOrDefault(t => t.UniqueId == uid1);
 
-                    message.FixDateIssues(info != null ? info.InternalDate : null);
+                    message.FixDateIssues(Log, info != null ? info.InternalDate : null);
 
                     if (message.Date < Account.BeginDate)
                     {
@@ -819,7 +819,7 @@ public class MailClient : IDisposable
                                  (info.Keywords.Contains("\\Unseen") ||
                                   info.Flags.HasValue && !info.Flags.Value.HasFlag(MessageFlags.Seen));
 
-                    message.FixEncodingIssues();
+                    message.FixEncodingIssues(Log);
 
                     OnGetMessage(message, uid.Id.ToString(), unread, mailFolder);
 
@@ -1266,7 +1266,7 @@ public class MailClient : IDisposable
                 {
                     var message = Pop.GetMessageAsync(newMessage.Key, _cancelToken).Result;
 
-                    message.FixDateIssues();
+                    message.FixDateIssues(Log);
 
                     if (message.Date < Account.BeginDate && skipOnDate)
                     {
@@ -1274,7 +1274,7 @@ public class MailClient : IDisposable
                         continue;
                     }
 
-                    message.FixEncodingIssues();
+                    message.FixEncodingIssues(Log);
 
                     OnGetMessage(message, newMessage.Value, true, mailFolder);
 

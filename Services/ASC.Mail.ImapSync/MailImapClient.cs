@@ -235,7 +235,7 @@ public class MailImapClient : IDisposable
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
 
-        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper));
+        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
 
         needUserMailBoxUpdate = false;
 
@@ -606,7 +606,7 @@ public class MailImapClient : IDisposable
 
         _enginesFactorySemaphore.Wait();
 
-        message.FixDateIssues(imap_message?.InternalDate);
+        message.FixDateIssues(_log, imap_message?.InternalDate);
 
         bool unread = false, impotant = false;
 

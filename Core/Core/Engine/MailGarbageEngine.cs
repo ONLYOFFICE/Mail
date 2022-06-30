@@ -318,7 +318,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                 _log.DebugMailGarbageGetTenantStatus(MailSettings.Cleaner.TenantOverdueDays);
 
-                type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays);
+                type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, _log);
 
                 var cacheItem = new CacheItem(mailbox.TenantId.ToString(CultureInfo.InvariantCulture), type);
 
@@ -346,7 +346,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             }
             else
             {
-                var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager);
+                var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, _log);
 
                 var status = isUserRemoved ? "Terminated. The mailbox will be deleted" : "Not terminated";
 
