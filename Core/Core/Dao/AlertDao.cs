@@ -104,11 +104,12 @@ public class AlertDao : BaseMailDao, IAlertDao
             };
 
             var saveResult = MailDbContext.MailAlerts.Add(dbAlert).Entity;
-            id = saveResult.Id;
 
             MailDbContext.SaveChanges();
 
             tr.Commit();
+
+            id = saveResult.Id;
         });
 
         return id;
