@@ -27,8 +27,8 @@ public class AggregatorService
     public static ConcurrentDictionary<string, bool> UserCrmAvailabeDictionary { get; set; } = new ConcurrentDictionary<string, bool>();
     public static ConcurrentDictionary<string, List<MailSieveFilterData>> Filters { get; set; } = new ConcurrentDictionary<string, List<MailSieveFilterData>>();
 
-    internal static readonly object crmAvailabeLocker = new object();
-    internal static readonly object filtersLocker = new object();
+    internal static readonly object crmAvailabeLocker = new();
+    internal static readonly object filtersLocker = new();
 
     public AggregatorService(
         QueueManager queueManager,
@@ -89,7 +89,7 @@ public class AggregatorService
                 {
                     _log.InfoAggServTasksToRelease(_queueManager.ProcessingCount);
 
-                    _queueManager.ReleaseAllProcessingMailboxes(true);
+                    _queueManager.ReleaseAllProcessingMailboxes();
                 }
 
                 _queueManager.LoadTenantsFromDump();
@@ -100,6 +100,7 @@ public class AggregatorService
             if (cancelToken.IsCancellationRequested)
             {
                 _log.DebugAggServCancellationRequested();
+
                 return;
             }
 
@@ -149,6 +150,7 @@ public class AggregatorService
                 tasks.AddRange(newTasks);
 
                 var tasksTotal = string.Join(",", tasks.Select(t => t.Task.Id));
+
                 _log.InfoAggServTotalTasks(tasks.Count, tasksTotal);
             }
 
@@ -156,9 +158,9 @@ public class AggregatorService
         }
         catch (Exception ex) //Exceptions while boxes in process
         {
-            if (ex is AggregateException)
+            if (ex is AggregateException exception)
             {
-                ex = ((AggregateException)ex).GetBaseException();
+                ex = exception.GetBaseException();
             }
 
             if (ex is TaskCanceledException || ex is OperationCanceledException)
@@ -210,6 +212,7 @@ public class AggregatorService
             return;
 
         _log.DebugAggServSetupWorkTimerInfinite();
+
         _aggregatorTimer.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
@@ -285,7 +288,7 @@ public class AggregatorService
                 !((now - mailbox.LastSignalrNotify.Value).TotalSeconds > SIGNALR_WAIT_SECONDS))
             {
                 mailbox.LastSignalrNotifySkipped = true;
-                log.LogInformation($"Skip NotifySignalrIfNeed: last notification has occurend less then {SIGNALR_WAIT_SECONDS} seconds ago");
+                log.InfoAggServSkipNotifySignalr(SIGNALR_WAIT_SECONDS);
                 return;
             }
 
@@ -294,13 +297,11 @@ public class AggregatorService
 
             SignalrWorker.AddMailbox(mailbox);
 
-            log.LogInformation("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) has been succeeded",
-                mailbox.UserId, mailbox.TenantId);
+            log.InfoAggServNotifySignalrSucceeded(mailbox.UserId, mailbox.TenantId);
         }
         catch (Exception ex)
         {
-            log.LogError("NotifySignalrIfNeed(UserId = {0} TenantId = {1}) Exception: {2}", mailbox.UserId,
-                mailbox.TenantId, ex.ToString());
+            log.ErrorAggServNotifySignalr(mailbox.UserId, mailbox.TenantId, ex.ToString());
         }
 
         mailbox.LastSignalrNotify = now;
@@ -339,12 +340,12 @@ public class AggregatorService
         if (!Filters.ContainsKey(mailbox.UserId))
             return;
 
-        List<MailSieveFilterData> filters;
-        if (!Filters.TryRemove(mailbox.UserId, out filters))
+        if (!Filters.TryRemove(mailbox.UserId, out _))
         {
             _log.ErrorAggServForgetFilters();
         }
     }
+
     #endregion
 }
 

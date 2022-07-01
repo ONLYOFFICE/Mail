@@ -109,6 +109,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             }
 
             _log.DebugMailGarbageQuit();
+
             break;
         }
 
@@ -372,11 +373,13 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             if (NeedRemove(mailbox))
             {
                 _log.DebugMailGarbageMailboxNeedRemove(mailbox.MailBoxId);
+
                 RemoveMailboxData(mailbox, true);
             }
             else if (mailbox.IsRemoved)
             {
                 _log.InfoMailGarbageMailboxMarkedForDeletion(mailbox.MailBoxId);
+
                 RemoveMailboxData(mailbox, false);
             }
             else

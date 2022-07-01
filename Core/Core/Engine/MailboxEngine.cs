@@ -670,9 +670,6 @@ public class MailboxEngine : BaseEngine
     {
         long totalAttachmentsSize = 0;
 
-        //TODO: Check timeout on big mailboxes
-        //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RemoveMailboxTimeout))
-
         using var scope = _serviceProvider.CreateScope();
 
         var factory = scope.ServiceProvider.GetService<MailDaoFactory>();

@@ -58,4 +58,13 @@ internal static partial class AggregatorServiceLogger
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "{duration}|{method}|{status}|{mailboxId}|{address}")]
     public static partial void DebugStatistic(this ILogger logger, double duration, string method, string status, int mailboxId, string address);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Skip NotifySignalrIfNeed: last notification has occurend less then {seconds} seconds ago")]
+    public static partial void InfoAggServSkipNotifySignalr(this ILogger logger, int seconds);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "NotifySignalrIfNeed(UserId = {userId} TenantId = {tenantId}) has been succeeded")]
+    public static partial void InfoAggServNotifySignalrSucceeded(this ILogger logger, string userId, int tenantId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "NotifySignalrIfNeed(UserId = {userId} TenantId = {tenantId}) Exception: {error}")]
+    public static partial void ErrorAggServNotifySignalr(this ILogger logger, string userId, int tenantId, string error);
 }

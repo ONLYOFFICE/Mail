@@ -1,5 +1,4 @@
-﻿
-using AuthenticationException = MailKit.Security.AuthenticationException;
+﻿using AuthenticationException = MailKit.Security.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Aggregator.Service.Service;
@@ -21,7 +20,6 @@ public class MailboxHandler : IDisposable
     private readonly SecurityContext _securityContext;
 
     private readonly string _boxInfo;
-    private const int SOCKET_WAIT_SECONDS = 30;
 
     private const string S_FAIL = "error";
     private const string S_OK = "success";
@@ -81,6 +79,7 @@ public class MailboxHandler : IDisposable
         var mailbox = _client.Account;
 
         Stopwatch watch = null;
+
         if (_settings.Aggregator.CollectStatistics) watch = Stopwatch.StartNew();
 
         var active = mailbox.Active ? "Active" : "Inactive";
@@ -159,6 +158,7 @@ public class MailboxHandler : IDisposable
                 mailbox.BeginDate = status.BeginDate;
 
                 _log.InfoMailboxHandlerBeginDateWasChanged(mailbox.MailBoxId);
+
                 return;
             }
 
@@ -180,6 +180,7 @@ public class MailboxHandler : IDisposable
             if (!status.Enabled)
             {
                 _log.InfoMailboxHandlerMailboxDeactivated(mailbox.MailBoxId);
+
                 return;
             }
 
@@ -194,6 +195,7 @@ public class MailboxHandler : IDisposable
     private void CreateClient()
     {
         Stopwatch watch = null;
+
         if (_settings.Aggregator.CollectStatistics)
             watch = Stopwatch.StartNew();
 
@@ -218,6 +220,7 @@ public class MailboxHandler : IDisposable
                     _settings.Aggregator.ChunkOfPop3Uidl);
 
             _client.Authenticated += ClientOnAuthenticated;
+
             _client.LoginClient();
         }
         catch (TimeoutException tEx)
@@ -259,6 +262,7 @@ public class MailboxHandler : IDisposable
             if (sslEx.Message.Contains("The remote certificate was rejected") || sslEx.Message.Contains("certificate has expired"))
             {
                 _log.ErrorMailboxHandlerCertificateExpired(_boxInfo, sslEx.ToString());
+
                 connectError = true;
             }
             else
@@ -275,6 +279,7 @@ public class MailboxHandler : IDisposable
                 if (ex.Message.Contains("Error_11001"))
                 {
                     _log.ErrorMailboxHandlerCouldNotResolveHost(_boxInfo, ex.ToString());
+
                     connectError = true;
                 }
             }
@@ -298,6 +303,7 @@ public class MailboxHandler : IDisposable
             if (_settings.Aggregator.CollectStatistics)
             {
                 watch.Stop();
+
                 LogStatistic(_box, "connect mailbox", watch.Elapsed.TotalSeconds, connectError);
             }
         }
@@ -324,7 +330,7 @@ public class MailboxHandler : IDisposable
 
         try
         {
-            BoxSaveInfo boxSaveInfo = new BoxSaveInfo()
+            BoxSaveInfo boxSaveInfo = new()
             {
                 Uid = args.MessageUid,
                 MimeMessage = args.Message,
@@ -343,14 +349,15 @@ public class MailboxHandler : IDisposable
         catch (Exception ex)
         {
             _log.ErrorMailboxHandlerOnGetMessage(ex.ToString());
+
             failed = true;
         }
         finally
         {
-
             if (watch != null)
             {
                 watch.Stop();
+
                 LogStatistic(box, "process message", watch.Elapsed.TotalMilliseconds, failed);
             }
         }
@@ -486,8 +493,11 @@ public class MailboxHandler : IDisposable
             lock (AggregatorService.filtersLocker)
             {
                 if (AggregatorService.Filters.ContainsKey(userId)) return AggregatorService.Filters[userId];
+
                 var filters = fEngine.GetList();
+
                 AggregatorService.Filters.TryAdd(userId, filters);
+
                 return filters;
             }
         }
@@ -502,6 +512,7 @@ public class MailboxHandler : IDisposable
     private void StoreMailEml(string streamId, MimeMessage message, MailBoxData mailBox)
     {
         if (message == null) return;
+
         var savePath = MailStoragePathCombiner.GetEmlKey(mailBox.UserId, streamId);
 
         var storageFactory = _scope.ServiceProvider.GetService<StorageFactory>();
@@ -510,9 +521,13 @@ public class MailboxHandler : IDisposable
         try
         {
             using var stream = new MemoryStream();
+
             message.WriteTo(stream);
+
             var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
+
             _log.DebugMailboxHandlerStoreMailEmlResult(mailBox.TenantId, mailBox.UserId, res, savePath);
+
             return;
         }
         catch (Exception ex)
@@ -534,6 +549,7 @@ public class MailboxHandler : IDisposable
             if (AggregatorService.UserCrmAvailabeDictionary.TryGetValue(box.UserId, out available)) return available;
 
             available = box.IsCrmAvailable(_tenantManager, _securityContext, apiHelper, _log);
+
             AggregatorService.UserCrmAvailabeDictionary.GetOrAdd(box.UserId, available);
         }
 
@@ -547,6 +563,7 @@ public class MailboxHandler : IDisposable
             if (_box.AuthErrorDate.HasValue) return;
 
             _box.AuthErrorDate = DateTime.UtcNow;
+
             _mailboxEngine.SetMaiboxAuthError(_box.MailBoxId, _box.AuthErrorDate.Value);
         }
         catch (Exception ex)

@@ -78,7 +78,7 @@ public class CrmLinkEngine
         return _mailDaoFactory.GetCrmLinkDao().GetLinkedCrmContactEntities(mail.ChainId, mail.MailboxId);
     }
 
-    public void LinkChainToCrm(int messageId, List<CrmContactData> contactIds, string httpContextScheme)
+    public void LinkChainToCrm(int messageId, List<CrmContactData> contactIds)
     {
         using (var scope = _serviceProvider.CreateScope())
         {
@@ -191,9 +191,9 @@ public class CrmLinkEngine
     public void ExportMessageToCrm(int messageId, IEnumerable<CrmContactData> crmContactIds)
     {
         if (messageId < 0)
-            throw new ArgumentException(@"Invalid message id", "messageId");
+            throw new ArgumentException(@"Invalid message id", nameof(messageId));
         if (crmContactIds == null)
-            throw new ArgumentException(@"Invalid contact ids list", "crmContactIds");
+            throw new ArgumentException(@"Invalid contact ids list", nameof(crmContactIds));
 
         var messageItem = _messageEngine.GetMessage(messageId, new MailMessageData.Options
         {
@@ -276,15 +276,14 @@ public class CrmLinkEngine
                 {
                     var dataStore = _storageFactory.GetMailStorage(Tenant);
 
-                    using (var file = attachment.ToAttachmentStream(dataStore))
-                    {
-                        var uploadedFileId = _apiHelper.UploadToCrm(file.FileStream, file.FileName,
-                            attachment.contentType, contactEntity);
+                    using var file = attachment.ToAttachmentStream(dataStore);
 
-                        if (uploadedFileId != null)
-                        {
-                            fileIds.Add(uploadedFileId);
-                        }
+                    var uploadedFileId = _apiHelper.UploadToCrm(file.FileStream, file.FileName,
+                        attachment.contentType, contactEntity);
+
+                    if (uploadedFileId != null)
+                    {
+                        fileIds.Add(uploadedFileId);
                     }
                 }
             }

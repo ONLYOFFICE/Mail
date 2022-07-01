@@ -31,7 +31,7 @@ public class MailQueueItemSettings
                     skip = boxInfoPair.Value.skip
                 };
 
-                if (SpecialDomainFolders.Keys.Contains(specialMB.Server))
+                if (SpecialDomainFolders.ContainsKey(specialMB.Server))
                 {
                     SpecialDomainFolders[specialMB.Server][boxInfoPair.Key] = mb;
                 }

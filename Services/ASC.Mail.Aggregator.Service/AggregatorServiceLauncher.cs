@@ -12,7 +12,7 @@ class AggregatorServiceLauncher : IHostedService
     private Task _aggregatorServiceTask;
     private CancellationTokenSource _cts;
 
-    private ILogger _log;
+    private readonly ILogger _log;
 
     public AggregatorServiceLauncher(
         AggregatorService aggregatorService,

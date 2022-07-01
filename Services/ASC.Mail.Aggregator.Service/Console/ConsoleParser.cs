@@ -3,7 +3,7 @@
 [Singletone]
 public class ConsoleParser
 {
-    string[] _args;
+    readonly string[] _args;
 
     public ConsoleParser(string[] args)
     {

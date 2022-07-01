@@ -93,9 +93,6 @@ public class MailRemoveUserFolderOperation : MailOperation
     {
         var affectedIds = new List<int>();
 
-        //TODO: Check or increase timeout for DB connection
-        //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RecalculateFoldersTimeout))
-
         var folder = MailDaoFactory.GetUserFolderDao().Get(folderId);
         if (folder == null)
             return;

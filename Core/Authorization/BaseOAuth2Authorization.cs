@@ -34,7 +34,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
 
     private readonly T _loginProvider;
     private readonly OAuth20TokenHelper _oAuth20TokenHelper;
-    private ConsumerFactory ConsumerFactory;
+    private readonly ConsumerFactory ConsumerFactory;
 
     public string ClientId => _loginProvider.ClientID;
 
@@ -68,7 +68,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
         }
         catch (Exception ex)
         {
-            log.LogError($"GoogleOAuth2Authorization() Exception:\r\n{ex}\r\n");
+            log.ErrorBaseOAuth2AuthorizationGoogleOAuth(ex.ToString());
         }
     }
 
