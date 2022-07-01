@@ -56,6 +56,6 @@ internal static partial class AggregatorServiceLogger
     [LoggerMessage(Level = LogLevel.Error, Message = "Try forget Filters for user failed")]
     public static partial void ErrorAggServForgetFilters(this ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "|{threadId}|{duration}|{method}|{status}|{mailboxId}|{address}")]
-    public static partial void DebugStatistic(this ILogger logger, int threadId, double duration, string method, string status, int mailboxId, string address);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{duration}|{method}|{status}|{mailboxId}|{address}")]
+    public static partial void DebugStatistic(this ILogger logger, double duration, string method, string status, int mailboxId, string address);
 }

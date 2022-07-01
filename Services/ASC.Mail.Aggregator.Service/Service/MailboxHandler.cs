@@ -576,9 +576,7 @@ public class MailboxHandler : IDisposable
 
     internal void LogStatistic(MailBoxData mailBoxData, string method, double duration, bool failed)
     {
-        var threadId = Thread.CurrentThread.ManagedThreadId;
-
-        _logStat.DebugStatistic(threadId, duration, method, failed ? S_FAIL : S_OK, mailBoxData.MailBoxId, mailBoxData.EMail.ToString());
+        _logStat.DebugStatistic(duration, method, failed ? S_FAIL : S_OK, mailBoxData.MailBoxId, mailBoxData.EMail.ToString());
     }
 }
 

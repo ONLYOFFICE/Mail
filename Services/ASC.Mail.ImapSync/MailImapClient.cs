@@ -734,9 +734,7 @@ public class MailImapClient : IDisposable
 
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
     {
-        var threadId = Thread.CurrentThread.ManagedThreadId;
-
-        _logStat.DebugStatistic(threadId, duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
+        _logStat.DebugStatistic(duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
     }
 
     private bool SendUnreadUser()

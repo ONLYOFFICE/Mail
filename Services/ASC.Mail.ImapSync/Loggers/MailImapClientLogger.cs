@@ -2,8 +2,8 @@
 
 internal static partial class MailImapClientLogger
 {
-    [LoggerMessage(Level = LogLevel.Debug, Message = "|{threadId}|{duration}|{method}|{status}|{mailboxId}|{address}")]
-    public static partial void DebugStatistic(this ILogger logger, int threadId, double duration, string method, bool status, int mailboxId, string address);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "{duration}|{method}|{status}|{mailboxId}|{address}")]
+    public static partial void DebugStatistic(this ILogger logger, double duration, string method, bool status, int mailboxId, string address);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "CheckRedis error: {error}.")]
     public static partial void ErrorMailImapClientCheckRedis(this ILogger logger, string error);
