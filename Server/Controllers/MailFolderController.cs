@@ -24,7 +24,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Folders list</returns>
         /// <short>Get folders</short> 
         /// <category>Folders</category>
-        [Read(@"folders")]
+        [HttpGet(@"folders")]
         public IEnumerable<MailFolderData> GetFolders()
         {
             if (!_mailSettings.Defines.IsSignalRAvailable)
@@ -42,7 +42,7 @@ namespace ASC.Mail.Controllers
         /// <param name="folderid">Selected folder id. Trash - 4, Spam 5.</param>
         /// <short>Remove all messages from folder</short> 
         /// <category>Folders</category>
-        [Delete(@"folders/{folderid}/messages")]
+        [HttpDelete(@"folders/{folderid}/messages")]
         public int RemoveFolderMessages(int folderid)
         {
             var folderType = (FolderType)folderid;
@@ -63,7 +63,7 @@ namespace ASC.Mail.Controllers
         /// <short>Get folders</short> 
         /// <category>Folders</category>
         /// <visible>false</visible>
-        [Read(@"folders/recalculate")]
+        [HttpGet(@"folders/recalculate")]
         public MailOperationStatus RecalculateFolders()
         {
             _operationEngine.RecalculateFolders(TranslateMailOperationStatus);
@@ -78,7 +78,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Folders list</returns>
         /// <short>Get folders</short> 
         /// <category>Folders</category>
-        [Read(@"userfolders")]
+        [HttpGet(@"userfolders")]
         public IEnumerable<MailUserFolderData> GetUserFolders(List<int> ids, int? parentId)
         {
             var list = _userFolderEngine.GetList(ids, parentId);
@@ -94,7 +94,7 @@ namespace ASC.Mail.Controllers
         /// <short>Create folder</short> 
         /// <category>Folders</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Create(@"userfolders")]
+        [HttpPost(@"userfolders")]
         public MailUserFolderData CreateUserFolder(string name, int parentId = 0)
         {
             //Thread.CurrentThread.CurrentCulture = CurrentCulture;
@@ -130,7 +130,7 @@ namespace ASC.Mail.Controllers
         /// <short>Update folder</short> 
         /// <category>Folders</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"userfolders/{id}")]
+        [HttpPut(@"userfolders/{id}")]
         public MailUserFolderData UpdateUserFolder(int id, string name, int? parentId = null)
         {
             //Thread.CurrentThread.CurrentCulture = CurrentCulture;
@@ -164,7 +164,7 @@ namespace ASC.Mail.Controllers
         /// <category>Folders</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
         /// <returns>MailOperationResult object</returns>
-        [Delete(@"userfolders/{id}")]
+        [HttpDelete(@"userfolders/{id}")]
         public MailOperationStatus DeleteUserFolder(int id)
         {
             Thread.CurrentThread.CurrentCulture = CurrentCulture;
@@ -187,7 +187,7 @@ namespace ASC.Mail.Controllers
         /// <returns>User Folder</returns>
         /// <short>Get folder by mail id</short> 
         /// <category>Folders</category>
-        [Read(@"userfolders/bymail")]
+        [HttpGet(@"userfolders/bymail")]
         public MailUserFolderData GetUserFolderByMailId(uint mailId)
         {
             var folder = _userFolderEngine.GetByMail(mailId);

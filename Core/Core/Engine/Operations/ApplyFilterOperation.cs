@@ -48,9 +48,9 @@ public class ApplyFilterOperation : MailOperation
         CoreSettings coreSettings,
         StorageManager storageManager,
         StorageFactory storageFactory,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILoggerProvider logProvider,
         int filterId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor, storageFactory)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider, storageFactory)
     {
         _filterEngine = filterEngine;
         _messageEngine = messageEngine;
@@ -104,7 +104,7 @@ public class ApplyFilterOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Log.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }

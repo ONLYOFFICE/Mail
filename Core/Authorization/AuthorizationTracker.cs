@@ -27,7 +27,7 @@ namespace ASC.Mail.Authorization;
 
 public class AuthorizationTracker : IClientAuthorizationTracker
 {
-    private List<string> _scope;
+    private readonly List<string> _scope;
 
     public AuthorizationTracker(List<string> scope)
     {

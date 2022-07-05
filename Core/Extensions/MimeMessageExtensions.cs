@@ -29,11 +29,8 @@ namespace ASC.Mail.Extensions;
 
 public static class MimeMessageExtensions
 {
-    public static void FixEncodingIssues(this MimeMessage mimeMessage, ILog logger = null)
+    public static void FixEncodingIssues(this MimeMessage mimeMessage, ILogger log = null)
     {
-        if (logger == null)
-            logger = new NullLog();
-
         try
         {
             foreach (var mimeEntity in mimeMessage.BodyParts)
@@ -74,7 +71,7 @@ public static class MimeMessageExtensions
                 }
                 catch (Exception ex)
                 {
-                    logger.WarnFormat("MimeMessage.FixEncodingIssues->ImproveBodyEncoding: {0}", ex.Message);
+                    log?.WarnMailExtensionsImproveBodyEncoding(ex.Message);
                 }
             }
 
@@ -84,7 +81,7 @@ public static class MimeMessageExtensions
                 if (fromParsed != null && !string.IsNullOrEmpty(fromParsed.Name))
                 {
                     var fromHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.From);
-                    fromHeader.FixEncodingIssues(logger);
+                    fromHeader.FixEncodingIssues(log);
                 }
             }
 
@@ -92,20 +89,17 @@ public static class MimeMessageExtensions
                 return;
 
             var subjectHeader = mimeMessage.Headers.FirstOrDefault(h => h.Id == HeaderId.Subject);
-            subjectHeader.FixEncodingIssues(logger);
+            subjectHeader.FixEncodingIssues(log);
 
         }
         catch (Exception ex)
         {
-            logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsFixEncodingIssues(ex.Message);
         }
     }
 
-    public static void FixEncodingIssues(this Header header, ILog logger = null)
+    public static void FixEncodingIssues(this Header header, ILogger log)
     {
-        if (logger == null)
-            logger = new NullLog();
-
         try
         {
             var rawValueString = Encoding.UTF8.GetString(header.RawValue).Trim();
@@ -130,15 +124,12 @@ public static class MimeMessageExtensions
         }
         catch (Exception ex)
         {
-            logger.WarnFormat("Header.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsHeaderFixEncodingIssues(ex.Message);
         }
     }
 
-    public static void FixDateIssues(this MimeMessage mimeMessage, DateTimeOffset? internalDate = null, ILog logger = null)
+    public static void FixDateIssues(this MimeMessage mimeMessage, ILogger log, DateTimeOffset? internalDate = null)
     {
-        if (logger == null)
-            logger = new NullLog();
-
         try
         {
             if (!mimeMessage.Headers.Contains(HeaderId.Date) || mimeMessage.Date > DateTimeOffset.UtcNow)
@@ -148,26 +139,23 @@ public static class MimeMessageExtensions
         }
         catch (Exception ex)
         {
-            logger.WarnFormat("MimeMessage.FixEncodingIssues: {0}", ex.Message);
+            log.WarnMailExtensionsMimeFixEncodingIssues(ex.Message);
         }
     }
 
     public static MailMessageData CreateMailMessage(this MimeMessage message,
-        TenantManager tenantManager, CoreSettings coreSettings,
+        TenantManager tenantManager, CoreSettings coreSettings, ILogger log,
         int mailboxId = -1,
         FolderType folder = FolderType.Inbox,
         bool unread = false,
         string chainId = "",
         DateTime? chainDate = null,
-        string streamId = "",
-        ILog log = null)
+        string streamId = "")
     {
         var mail = new MailMessageData();
 
         if (message == null)
             throw new ArgumentNullException("message");
-
-        log = log ?? new NullLog();
 
         mail.MailboxId = mailboxId;
 

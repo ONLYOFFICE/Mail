@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -43,10 +45,10 @@ public class MailCheckMailserverDomainsDnsOperation : MailOperation
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILoggerProvider logProvider,
         string domainName,
         ServerDns dns)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _domainName = domainName;
         _dns = dns;
@@ -117,7 +119,7 @@ public class MailCheckMailserverDomainsDnsOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.ErrorFormat("Mail operation error -> Domain '{0}' dns check failed. Error: {1}", _domainName, e);
+            Log.ErrorMailOperationDomainDnsCheckFailed(_domainName, e.ToString());
             Error = "InternalServerError";
         }
     }

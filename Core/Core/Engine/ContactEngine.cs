@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
 using Task = System.Threading.Tasks.Task;
@@ -32,10 +34,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ContactEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
@@ -62,7 +64,7 @@ public class ContactEngine
         WebItemSecurity webItemSecurity,
         CommonLinkUtility commonLinkUtility,
         IServiceProvider serviceProvider,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _mailDbContext = dbContextManager.Get("mail");
@@ -76,7 +78,7 @@ public class ContactEngine
         _serviceProvider = serviceProvider;
         _webItemSecurity = webItemSecurity;
         _commonLinkUtility = commonLinkUtility;
-        _log = option.Get("ASC.Mail.ContactEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.ContactEngine");
     }
 
     public List<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
@@ -154,8 +156,12 @@ public class ContactEngine
 
     public ContactCard SaveContactCard(ContactCard contactCard)
     {
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             var contactId = _mailDaoFactory.GetContactDao().SaveContact(contactCard.ContactInfo);
 
             contactCard.ContactInfo.Id = contactId;
@@ -170,9 +176,9 @@ public class ContactEngine
             }
 
             tx.Commit();
-        }
+        });
 
-        _log.Debug("IndexEngine->SaveContactCard()");
+        _log.DebugContactEngineSaveContact();
 
         _indexEngine.Add(contactCard.ToMailContactWrapper());
 
@@ -216,8 +222,11 @@ public class ContactEngine
         if (!contactChanged && !newContactItems.Any() && !removedContactItems.Any())
             return contactCard;
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
             if (contactChanged)
             {
                 _mailDaoFactory.GetContactDao().SaveContact(newContactCard.ContactInfo);
@@ -250,9 +259,9 @@ public class ContactEngine
             }
 
             tx.Commit();
-        }
+        });
 
-        _log.Debug("IndexEngine->UpdateContactCard()");
+        _log.DebugContactEngineUpdateContact();
 
         _indexEngine.Update(new List<MailContact> { contactCard.ToMailContactWrapper() });
 
@@ -264,16 +273,20 @@ public class ContactEngine
         if (!ids.Any())
             throw new ArgumentException(@"Empty ids collection", "ids");
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             _mailDaoFactory.GetContactDao().RemoveContacts(ids);
 
             _mailDaoFactory.GetContactInfoDao().RemoveByContactIds(ids);
 
             tx.Commit();
-        }
+        });
 
-        _log.Debug("IndexEngine->RemoveContacts()");
+        _log.DebugContactEngineRemoveContacts();
 
         _indexEngine.RemoveContacts(ids, Tenant, new Guid(User));
     }
@@ -369,7 +382,7 @@ public class ContactEngine
                     .AppendFormat("\n-------------------------------------------------\n{0}", t);
             }
 
-            _log.Error(errorText.ToString());
+            _log.ErrorContactEngineError(errorText.ToString());
         }
 
         contacts =
@@ -382,7 +395,7 @@ public class ContactEngine
                 .Distinct(equality)
                 .ToList();
 
-        _log.Debug($"SearchEmails (term = '{term}'): {watch.Elapsed.TotalSeconds} sec / {contacts.Count} items");
+        _log.DebugContactEngineSearchEmails(term, watch.Elapsed.TotalSeconds, contacts.Count);
 
         return contacts;
     }

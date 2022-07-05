@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using Contact = ASC.CRM.Core.Entities.Contact;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -32,7 +34,7 @@ namespace ASC.Mail.Core.Dao;
 [Scope]
 public class CrmContactDao : BaseMailDao, ICrmContactDao
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
     private readonly CrmSecurity _crmSecurity;
 
@@ -40,11 +42,11 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
          TenantManager tenantManager,
          SecurityContext securityContext,
          DbContextManager<MailDbContext> dbContext,
-         IOptionsMonitor<ILog> option,
+         ILoggerProvider logProvider,
          CrmSecurity crmSecurity)
         : base(tenantManager, securityContext, dbContext)
     {
-        _log = option.Get("ASC.Mail.TagEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.CrmContactDao");
         _crmSecurity = crmSecurity;
     }
 
@@ -95,8 +97,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
         }
         catch (Exception e)
         {
-            _log.WarnFormat("GetCrmContactsId(tenandId='{0}', userId='{1}', email='{2}') Exception:\r\n{3}\r\n",
-                Tenant, UserId, email, e.ToString());
+            _log.WarnCrmContactDaoGetCrmContacts(Tenant, UserId, email, e.ToString());
         }
 
         return ids;

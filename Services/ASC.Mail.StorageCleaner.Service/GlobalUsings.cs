@@ -2,14 +2,12 @@
 global using ASC.Common;
 global using ASC.Common.Caching;
 global using ASC.Common.DependencyInjection;
-global using ASC.Common.Logging;
 global using ASC.Common.Utils;
 global using ASC.Core;
 global using ASC.Data.Storage;
 global using ASC.Mail.Configuration;
 global using ASC.Mail.Core;
 global using ASC.Mail.Core.Engine;
-global using ASC.Mail.Core.Utils;
 global using ASC.Mail.StorageCleaner.Service;
 global using ASC.Mail.Utils;
 
@@ -32,3 +30,5 @@ global using System.Linq;
 global using System.Runtime.InteropServices;
 global using System.Threading;
 global using System.Threading.Tasks;
+
+global using ILogger = Microsoft.Extensions.Logging.ILogger;

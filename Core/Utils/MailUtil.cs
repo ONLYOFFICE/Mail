@@ -175,10 +175,8 @@ public static class MailUtil
         }
     }
 
-    public static Ical.Net.Calendar ParseValidCalendar(string icalFormat, ILog log = null)
+    public static Ical.Net.Calendar ParseValidCalendar(string icalFormat, ILogger log = null)
     {
-        log = log ?? new NullLog();
-
         try
         {
             var calendars = ParseICalendar(icalFormat);
@@ -219,7 +217,7 @@ public static class MailUtil
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("ParseValidCalendar() Exception: {0}", ex.ToString());
+            log?.ErrorCalendarParseValidCalendar(ex.ToString());
         }
 
         return null;
@@ -565,11 +563,8 @@ public static class MailUtil
     /// <summary>
     /// Creates Rfc 2822 3.6.4 message-id.Syntax: id-left '@' id-right
     /// </summary>
-    public static string CreateMessageId(TenantManager tenantManager, CoreSettings coreSettings, ILog log = null)
+    public static string CreateMessageId(TenantManager tenantManager, CoreSettings coreSettings)
     {
-        if (log == null)
-            log = new NullLog();
-
         var domain = "";
 
         try
@@ -581,7 +576,7 @@ public static class MailUtil
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("CreateMessageId: GetTenantDomain failed: Exception\r\n{0}\r\n", ex.ToString());
+            //log.ErrorFormat("CreateMessageId: GetTenantDomain failed: Exception\r\n{0}\r\n", ex.ToString());
         }
 
         if (string.IsNullOrEmpty(domain))
@@ -598,7 +593,7 @@ public static class MailUtil
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("CreateMessageId: Remove colon failed: Exception\r\n{0}\r\n", ex.ToString());
+            //log.ErrorFormat("CreateMessageId: Remove colon failed: Exception\r\n{0}\r\n", ex.ToString());
         }
 
         return string.Format("AU{0}@{1}", GetUniqueString(), domain);

@@ -1,4 +1,5 @@
-﻿using System.Net.Security;
+﻿
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -41,7 +42,7 @@ public class SimpleImapClient : IDisposable
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly MailSettings _mailSettings;
     private IMailFolder _trashFolder;
     private CancellationTokenSource DoneToken;
@@ -56,18 +57,17 @@ public class SimpleImapClient : IDisposable
 
     private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e) => DoneToken?.Cancel();
 
-    public SimpleImapClient(MailBoxData mailbox, MailSettings mailSettings, ILog log, string folderName, CancellationToken cancelToken)
+    public SimpleImapClient(MailBoxData mailbox, MailSettings mailSettings, ILoggerProvider logProvider, string folderName, CancellationToken cancelToken)
     {
         Account = mailbox;
         _mailSettings = mailSettings;
 
         folderName = string.IsNullOrEmpty(folderName) ? "INBOX" : folderName.Replace('/', '_');
 
-        _log = log;
-        _log.Name = $"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}";
+        _log = logProvider.CreateLogger($"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}");
 
-        var protocolLogger = mailSettings.ImapSync.WriteIMAPLog ?
-            new ProtocolLogger(_log.LogDirectory + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
+        var protocolLogger = mailSettings.ImapSync.WriteIMAPLog && _mailSettings.Aggregator.ProtocolLogPath != "" ?
+            new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
             (IProtocolLogger)new NullProtocolLogger();
 
         CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
@@ -91,11 +91,11 @@ public class SimpleImapClient : IDisposable
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
     {
-        _log.Debug($"CertificateValidationCallback(). Certificate callback: {certificate.Subject}.");
+        _log.DebugSimpleImapClientCertificateCallback(certificate.Subject);
 
         if (sslPolicyErrors == SslPolicyErrors.None)
         {
-            _log.Debug("CertificateValidationCallback(). No Ssl policy errors...");
+            _log.DebugSimpleImapClientNoSslErrors();
             return true;
         }
 
@@ -125,7 +125,7 @@ public class SimpleImapClient : IDisposable
 
                 if (imapDestinationFolder == null)
                 {
-                    _log.Error($"ExecuteUserAction: Destination ({destination}) didn't found.");
+                    _log.ErrorSimpleImapClientExecuteUserActionDest(destination);
 
                     return;
                 }
@@ -139,7 +139,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"ExecuteUserAction exception: {ex.Message}");
+            _log.ErrorSimpleImapClientExecuteUserAction(ex.Message);
         }
     }
 
@@ -147,7 +147,7 @@ public class SimpleImapClient : IDisposable
     {
         if (e.IsRequested)
         {
-            _log.Info("Try reconnect to IMAP...");
+            _log.InfoSimpleImapClientReconnectToIMAP();
 
             Authenticate();
         }
@@ -163,7 +163,7 @@ public class SimpleImapClient : IDisposable
     {
         if (imap.IsAuthenticated) return true;
 
-        _log.Info($"Authenticate: {Account.Name}");
+        _log.InfoSimpleImapClientAuth(Account.Name);
 
         var secureSocketOptions = SecureSocketOptions.Auto;
         var sslProtocols = SslProtocols.None;
@@ -184,7 +184,7 @@ public class SimpleImapClient : IDisposable
                 break;
         }
 
-        _log.Debug($"Connect to {Account.Server}:{Account.Port}, {secureSocketOptions})");
+        _log.DebugSimpleImapConnectTo(Account.Server, Account.Port, secureSocketOptions.ToString());
 
         imap.SslProtocols = sslProtocols;
 
@@ -197,20 +197,20 @@ public class SimpleImapClient : IDisposable
         {
             if (enableUtf8 && (imap.Capabilities & ImapCapabilities.UTF8Accept) != ImapCapabilities.None)
             {
-                _log.Debug("Imap.EnableUTF8");
+                _log.DebugSimpleImapEnableUTF8();
 
                 imap.EnableUTF8(CancelToken.Token);
             }
 
             if (string.IsNullOrEmpty(Account.OAuthToken))
             {
-                _log.DebugFormat("Imap.Authentication({0})", Account.Account);
+                _log.DebugSimpleImapAuth(Account.Account);
 
                 imap.Authenticate(Account.Account, Account.Password, CancelToken.Token);
             }
             else
             {
-                _log.DebugFormat("Imap.AuthenticationByOAuth({0})", Account.Account);
+                _log.DebugSimpleImapAuthByOAuth(Account.Account);
 
                 var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -224,7 +224,7 @@ public class SimpleImapClient : IDisposable
             return false;
         }
 
-        _log.Debug("IMAP: logged in.");
+        _log.DebugSimpleImapLoggedIn();
 
         return true;
     }
@@ -247,7 +247,7 @@ public class SimpleImapClient : IDisposable
     {
         IsReady = false;
 
-        _log.Warn(message);
+        _log.WarnSimpleImap(message);
 
         DoneToken?.Cancel();
 
@@ -256,13 +256,13 @@ public class SimpleImapClient : IDisposable
 
     private void LoadFoldersFromIMAP()
     {
-        _log.Debug("Load folders from IMAP.");
+        _log.DebugSimpleImapLoadFolders();
 
         try
         {
             GetIMAPFolders().ForEach(x => AddImapFolderToDictionary(x));
 
-            _log.Debug($"Find {foldersDictionary.Count} folders in IMAP.");
+            _log.DebugSimpleImapLoadFoldersCount(foldersDictionary.Count);
         }
         catch (AggregateException aggEx)
         {
@@ -305,7 +305,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"GetImapSubFolders: {folder.Name} Exception: {ex.Message}");
+            _log.ErrorSimpleImapGetSubFolders(folder.Name, ex.Message);
         }
 
         return new List<IMailFolder>();
@@ -335,12 +335,12 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"SetNewImapWorkFolder {imapFolder.FullName}: {ex.Message}");
+            _log.ErrorSimpleImapSetNewWorkFolder(imapFolder.FullName, ex.Message);
 
             IsReady = false;
         }
 
-        _log.Debug($"SetNewImapWorkFolder: Work folder changed to {imapFolder.FullName}.");
+        _log.DebugSimpleImapSetNewWorkFolder(imapFolder.FullName);
     }
 
     private async Task UpdateMessagesList()
@@ -358,12 +358,13 @@ public class SimpleImapClient : IDisposable
             }
             else
             {
-                newMessageDescriptors= new List<MessageDescriptor>();
+                newMessageDescriptors = new List<MessageDescriptor>();
             }
         }
         catch (Exception ex)
         {
-            _log.Error($"UpdateMessagesList: Try fetch messages from IMAP folder={ImapWorkFolder?.FullName}: {ex.Message}.");
+            var fName = ImapWorkFolder == null ? "" : ImapWorkFolder.FullName;
+            _log.ErrorSimpleImapUpdateMessagesList(fName, ex.Message);
 
             newMessageDescriptors = null;
 
@@ -376,7 +377,9 @@ public class SimpleImapClient : IDisposable
 
             MessagesListUpdated?.Invoke(this, EventArgs.Empty);
 
-            _log.Debug($"UpdateMessagesList: Load {ImapMessagesList?.Count} messages from IMAP.");
+            var count = ImapMessagesList == null ? 0 : ImapMessagesList.Count;
+
+            _log.DebugSimpleImapLoadCountMessages(count);
 
             return;
         }
@@ -391,13 +394,13 @@ public class SimpleImapClient : IDisposable
             {
                 deleteList.Add(oldMessage);
 
-                _log.Debug($"UpdateMessagesList: Delete message detect. Uid= {oldMessage.UniqueId} DBid={oldMessage.MessageIdInDB} IMAPIndex={oldMessage.Index}.");
+                _log.DebugSimpleImapDeleteMessageDetect(oldMessage.UniqueId.ToString(), oldMessage.MessageIdInDB, oldMessage.Index);
             }
             else
             {
                 if (oldMessage.Index != newMessage.Index)
                 {
-                    _log.Debug($"UpdateMessagesList: Change IMAP index. Uid= {oldMessage.UniqueId} DBid={oldMessage.MessageIdInDB} IMAPIndex={oldMessage.Index}->{newMessage.Index}.");
+                    _log.DebugSimpleImapChangeIMAPIndex(oldMessage.UniqueId.ToString(), oldMessage.MessageIdInDB, oldMessage.Index, newMessage.Index);
 
                     oldMessage.Index = newMessage.Index;
                 }
@@ -426,7 +429,7 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            _log.Debug($"GetNewMessage task run: UniqueId={messageDescriptors.UniqueId}.");
+            _log.DebugSimpleImapGetNewMessageTaskRun(messageDescriptors.UniqueId.ToString());
 
             var mimeMessage = ImapWorkFolder.GetMessage(messageDescriptors.UniqueId, CancelToken.Token);
 
@@ -434,7 +437,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"GetNewMessage: Try fetch one mimeMessage from imap with UniqueId={messageDescriptors.UniqueId}: {ex.Message}.");
+            _log.ErrorSimpleImapGetNewMessageTryFetchMime(messageDescriptors.UniqueId.ToString(), ex.Message);
         }
     }
 
@@ -474,16 +477,19 @@ public class SimpleImapClient : IDisposable
 
     private void MoveMessageInImap(IMailFolder sourceFolder, List<MessageDescriptor> messageDescriptors, IMailFolder destinationFolder)
     {
+        var sFolder = sourceFolder == null ? "" : sourceFolder.Name;
+        var dFolder = destinationFolder == null ? "" : destinationFolder.Name;
+
         if (sourceFolder == null || destinationFolder == null || messageDescriptors.Count == 0)
         {
-            _log.Debug($"MoveMessageInImap: Bad parametrs. Source={sourceFolder?.Name}, Destination={destinationFolder?.Name}.");
+            _log.DebugSimpleImapBadParametrs(sFolder, dFolder);
 
             return;
         }
 
         var uniqueIds = messageDescriptors.Select(x => x.UniqueId).ToList();
 
-        _log.Debug($"MoveMessageInImap: Source={sourceFolder?.Name}, Destination={destinationFolder?.Name}, Count={uniqueIds.Count}.");
+        _log.DebugSimpleImapMoveMessageInImap(sFolder, dFolder, uniqueIds.Count);
 
         try
         {
@@ -493,7 +499,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"MoveMessageInImap: {ex.Message}");
+            _log.ErrorSimpleImapMoveMessageInImap(ex.Message);
         }
     }
 
@@ -505,7 +511,7 @@ public class SimpleImapClient : IDisposable
         {
             var uniqueIds = messageDescriptors.Select(x => x.UniqueId).ToList();
 
-            _log.Debug($"SetFlagsInImap task run: In {ImapWorkFolder} set {action} for {uniqueIds.Count} messages.");
+            _log.DebugSimpleImapSetFlags(ImapWorkFolder.ToString(), action.ToString(), uniqueIds.Count);
 
             switch (action)
             {
@@ -544,7 +550,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"SetMessageFlagIMAP->{ImapWorkFolder.FullName}, {action}->{ex.Message}");
+            _log.ErrorSimpleImapSetFlags(ImapWorkFolder.FullName, action.ToString(), ex.Message);
 
             return false;
         }
@@ -556,17 +562,17 @@ public class SimpleImapClient : IDisposable
     {
         if (!(oldMessageDescriptor.Flags.HasValue && oldMessageDescriptor.Flags.HasValue))
         {
-            _log.Error($"CompareImapFlags: No flags in MessageDescriptor.");
+            _log.ErrorSimpleImapCompareImapFlagsNoFlags();
         }
 
         if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags)
         {
-            _log.Debug($"CompareImapFlags: flag is equal.");
+            _log.DebugSimpleImapCompareImapFlagsEqual();
 
             return;
         }
 
-        _log.Debug($"CompareImapFlags: Old flags=({oldMessageDescriptor.Flags}). New flags {newMessageDescriptor.Flags}.");
+        _log.DebugSimpleImapCompareImapFlagsNewOld(oldMessageDescriptor.Flags.ToString(), newMessageDescriptor.Flags.ToString());
 
         try
         {
@@ -590,7 +596,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"CompareImapFlags Uidl={newMessageDescriptor.UniqueId} exception: {ex.Message}");
+            _log.ErrorSimpleImapCompareImapFlags(newMessageDescriptor.UniqueId.ToString(), ex.Message);
         }
 
         oldMessageDescriptor.Flags = newMessageDescriptor.Flags;
@@ -600,7 +606,7 @@ public class SimpleImapClient : IDisposable
     {
         if (previosTask.Exception != null)
         {
-            _log.Error($"Task manager: {previosTask.Exception.Message}");
+            _log.ErrorSimpleImapTaskManager(previosTask.Exception.Message);
         }
 
         if (CancelToken.IsCancellationRequested) return;
@@ -616,7 +622,8 @@ public class SimpleImapClient : IDisposable
 
         if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
         {
-            _log.Debug($"TaskManager Cancellation Requested, folder {ImapWorkFolder?.FullName}.");
+            var fName = ImapWorkFolder == null ? "" : ImapWorkFolder.FullName;
+            _log.DebugSimpleImapTaskManagerCancellationRequested(fName);
 
             OnCriticalError?.Invoke(this, false);
         }
@@ -636,7 +643,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warn($"AddTask exception: {ex.Message}");
+            _log.WarnSimpleImapAddTask(ex.Message);
         }
     }
 
@@ -660,7 +667,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warn($"Dispose exception: {ex.Message}");
+            _log.WarnSimpleImapDispose(ex.Message);
         }
 
         GC.SuppressFinalize(this);
@@ -747,7 +754,7 @@ public class SimpleImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Warn($"Stop exception: {ex.Message}");
+            _log.WarnSimpleImapStop(ex.Message);
         }
 
         ((IDisposable)this).Dispose();
@@ -778,7 +785,7 @@ public class SimpleImapClient : IDisposable
         {
             foldersDictionary.Add(folder, mailFolder);
 
-            _log.Debug($"LoadFoldersFromIMAP-> Detect folder {folder.Name}.");
+            _log.DebugSimpleImapDetectFolder(folder.Name);
 
             return true;
         }
@@ -829,7 +836,7 @@ public class SimpleImapClient : IDisposable
     {
         var rootFolder = imap.GetFolder(imap.PersonalNamespaces[0].Path);
 
-        var newFolder=rootFolder.Create(name, true);
+        var newFolder = rootFolder.Create(name, true);
 
         if (newFolder == null) return false;
 

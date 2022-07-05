@@ -3,10 +3,11 @@ using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
 using ASC.Web.Studio.Core.Notify;
+
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace ASC.Mail.Controllers
         /// <returns>ServerData for current tenant.</returns>
         /// <short>Get mail server</short> 
         /// <category>Servers</category>
-        [Read(@"server")]
+        [HttpGet(@"server")]
         public ServerData GetMailServer()
         {
             return _serverEngine.GetMailServer();
@@ -33,7 +34,7 @@ namespace ASC.Mail.Controllers
         /// <returns>ServerData for current tenant.</returns>
         /// <short>Get mail server</short> 
         /// <category>Servers</category>
-        [Read(@"serverinfo/get")]
+        [HttpGet(@"serverinfo/get")]
         public ServerFullData GetMailServerFullInfo()
         {
             var fullServerInfo = _serverEngine.GetMailServerFullInfo();
@@ -59,7 +60,7 @@ namespace ASC.Mail.Controllers
         /// <returns>DNS records for current tenant and user.</returns>
         /// <short>Get free DNS records</short>
         /// <category>DnsRecords</category>
-        [Read(@"freedns/get")]
+        [HttpGet(@"freedns/get")]
         public ServerDomainDnsData GetUnusedDnsRecords()
         {
             return _serverEngine.GetOrCreateUnusedDnsData();
@@ -71,7 +72,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of WebDomainData for current tenant</returns>
         /// <short>Get tenant web domain list</short> 
         /// <category>Domains</category>
-        [Read(@"domains/get")]
+        [HttpGet(@"domains/get")]
         public List<ServerDomainData> GetDomains()
         {
             var listDomainData = _serverDomainEngine.GetDomains();
@@ -91,7 +92,7 @@ namespace ASC.Mail.Controllers
         /// <returns>WebDomainData for common web domain</returns>
         /// <short>Get common web domain</short> 
         /// <category>Domains</category>
-        [Read(@"domains/common")]
+        [HttpGet(@"domains/common")]
         public ServerDomainData GetCommonDomain()
         {
             var commonDomain = _serverDomainEngine.GetCommonDomain();
@@ -106,7 +107,7 @@ namespace ASC.Mail.Controllers
         /// <returns>WebDomainData associated with tenant</returns>
         /// <short>Add domain to mail server</short> 
         /// <category>Domains</category>
-        [Create(@"domains/add")]
+        [HttpPost(@"domains/add")]
         public ServerDomainData AddDomain(string name, int id_dns)
         {
             var domain = _serverDomainEngine.AddDomain(name, id_dns);
@@ -120,7 +121,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailOperationResult object</returns>
         /// <short>Remove domain from mail server</short> 
         /// <category>Domains</category>
-        [Delete(@"domains/remove/{id}")]
+        [HttpDelete(@"domains/remove/{id}")]
         public MailOperationStatus RemoveDomain(int id)
         {
             var status = _serverDomainEngine.RemoveDomain(id);
@@ -134,7 +135,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Dns records associated with domain</returns>
         /// <short>Returns dns records</short>
         /// <category>DnsRecords</category>
-        [Read(@"domains/dns/get")]
+        [HttpGet(@"domains/dns/get")]
         public ServerDomainDnsData GetDnsRecords(int id)
         {
             var dns = _serverDomainEngine.GetDnsData(id);
@@ -148,7 +149,7 @@ namespace ASC.Mail.Controllers
         /// <returns>True if domain name already exists.</returns>
         /// <short>Is domain name exists.</short> 
         /// <category>Domains</category>
-        [Read(@"domains/exists")]
+        [HttpGet(@"domains/exists")]
         public bool IsDomainExists(string name)
         {
             var isExists = _serverDomainEngine.IsDomainExists(name);
@@ -162,7 +163,7 @@ namespace ASC.Mail.Controllers
         /// <returns>True if user is owner of this domain.</returns>
         /// <short>Check domain ownership.</short> 
         /// <category>Domains</category>
-        [Read(@"domains/ownership/check")]
+        [HttpGet(@"domains/ownership/check")]
         public bool CheckDomainOwnership(string name)
         {
             var isOwnershipProven = _serverEngine.CheckDomainOwnership(name);
@@ -181,7 +182,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailboxData associated with tenant</returns>
         /// <short>Create mailbox</short> 
         /// <category>Mailboxes</category>
-        [Create(@"mailboxes/add")]
+        [HttpPost(@"mailboxes/add")]
         public ServerMailboxData CreateMailbox(string name, string local_part, int domain_id, string user_id,
             bool notifyCurrent = false, bool notifyProfile = false)
         {
@@ -199,7 +200,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailboxData associated with tenant</returns>
         /// <short>Create mailbox</short> 
         /// <category>Mailboxes</category>
-        [Create(@"mailboxes/addmy")]
+        [HttpPost(@"mailboxes/addmy")]
         public ServerMailboxData CreateMyMailbox(string name)
         {
             var serverMailbox = _serverMailboxEngine.CreateMyCommonDomainMailbox(name);
@@ -212,7 +213,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of MailboxData for current tenant</returns>
         /// <short>Get mailboxes list</short> 
         /// <category>Mailboxes</category>
-        [Read(@"mailboxes/get")]
+        [HttpGet(@"mailboxes/get")]
         public List<ServerMailboxData> GetMailboxes()
         {
             var mailboxes = _serverMailboxEngine.GetMailboxes();
@@ -228,7 +229,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="ItemNotFoundException">Exception happens when mailbox wasn't found.</exception>
         /// <short>Remove mailbox from mail server</short> 
         /// <category>Mailboxes</category>
-        [Delete(@"mailboxes/remove/{id}")]
+        [HttpDelete(@"mailboxes/remove/{id}")]
         public MailOperationStatus RemoveMailbox(int id)
         {
             var status = _serverMailboxEngine.RemoveMailbox(id);
@@ -243,7 +244,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Updated MailboxData</returns>
         /// <short>Update mailbox</short>
         /// <category>Mailboxes</category>
-        [Update(@"mailboxes/update")]
+        [HttpPut(@"mailboxes/update")]
         public ServerMailboxData UpdateMailbox(int mailbox_id, string name)
         {
             var mailbox = _serverMailboxEngine.UpdateMailboxDisplayName(mailbox_id, name);
@@ -258,7 +259,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailboxData associated with tenant</returns>
         /// <short>Add mailbox's aliases</short>
         /// <category>AddressData</category>
-        [Update(@"mailboxes/alias/add")]
+        [HttpPut(@"mailboxes/alias/add")]
         public ServerDomainAddressData AddMailboxAlias(int mailbox_id, string alias_name)
         {
             var serverAlias = _serverMailboxEngine.AddAlias(mailbox_id, alias_name);
@@ -273,7 +274,7 @@ namespace ASC.Mail.Controllers
         /// <returns>id of mailbox</returns>
         /// <short>Remove mailbox's aliases</short>
         /// <category>Mailboxes</category>
-        [Update(@"mailboxes/alias/remove")]
+        [HttpPut(@"mailboxes/alias/remove")]
         public int RemoveMailboxAlias(int mailbox_id, int address_id)
         {
             _serverMailboxEngine.RemoveAlias(mailbox_id, address_id);
@@ -288,7 +289,7 @@ namespace ASC.Mail.Controllers
         /// <param name="password"></param>
         /// <short>Change mailbox password</short> 
         /// <category>Mailboxes</category>
-        [Update(@"mailboxes/changepwd")]
+        [HttpPut(@"mailboxes/changepwd")]
         public void ChangeMailboxPassword(int mailbox_id, string password)
         {
             _serverMailboxEngine.ChangePassword(mailbox_id, password);
@@ -304,7 +305,7 @@ namespace ASC.Mail.Controllers
         /// <short>Is server mailbox address exists</short>
         /// <returns>True - address exists, False - not exists</returns>
         /// <category>Mailboxes</category>
-        [Read(@"mailboxes/alias/exists")]
+        [HttpGet(@"mailboxes/alias/exists")]
         public bool IsAddressAlreadyRegistered(string local_part, int domain_id)
         {
             return _serverMailboxEngine.IsAddressAlreadyRegistered(local_part, domain_id);
@@ -318,7 +319,7 @@ namespace ASC.Mail.Controllers
         /// <short>Is server mailbox address valid</short>
         /// <returns>True - address valid, False - not valid</returns>
         /// <category>Mailboxes</category>
-        [Read(@"mailboxes/alias/valid")]
+        [HttpGet(@"mailboxes/alias/valid")]
         public bool IsAddressValid(string local_part, int domain_id)
         {
             return _serverMailboxEngine.IsAddressValid(local_part, domain_id);
@@ -333,7 +334,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailGroupData associated with tenant</returns>
         /// <short>Create mail group address</short>
         /// <category>MailGroup</category>
-        [Create(@"groupaddress/add")]
+        [HttpPost(@"groupaddress/add")]
         public ServerDomainGroupData CreateMailGroup(string name, int domain_id, List<int> address_ids)
         {
             var group = _serverMailgroupEngine.CreateMailGroup(name, domain_id, address_ids);
@@ -349,7 +350,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailGroupData associated with tenant</returns>
         /// <short>Add group's addresses</short> 
         /// <category>MailGroup</category>
-        [Update(@"groupaddress/address/add")]
+        [HttpPut(@"groupaddress/address/add")]
         public ServerDomainGroupData AddMailGroupAddress(int mailgroup_id, int address_id)
         {
             var group = _serverMailgroupEngine.AddMailGroupMember(mailgroup_id, address_id);
@@ -365,7 +366,7 @@ namespace ASC.Mail.Controllers
         /// <returns>id of group address</returns>
         /// <short>Remove group's address</short>
         /// <category>MailGroup</category>
-        [Delete(@"groupaddress/addresses/remove")]
+        [HttpDelete(@"groupaddress/addresses/remove")]
         public int RemoveMailGroupAddress(int mailgroup_id, int address_id)
         {
             _serverMailgroupEngine.RemoveMailGroupMember(mailgroup_id, address_id);
@@ -379,7 +380,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of MailGroupData for current tenant</returns>
         /// <short>Get mail group list</short>
         /// <category>MailGroup</category>
-        [Read(@"groupaddress/get")]
+        [HttpGet(@"groupaddress/get")]
         public List<ServerDomainGroupData> GetMailGroups()
         {
             var groups = _serverMailgroupEngine.GetMailGroups();
@@ -394,7 +395,7 @@ namespace ASC.Mail.Controllers
         /// <returns>id of group address</returns>
         /// <short>Remove group address from mail server</short> 
         /// <category>MailGroup</category>
-        [Delete(@"groupaddress/remove/{id}")]
+        [HttpDelete(@"groupaddress/remove/{id}")]
         public int RemoveMailGroup(int id)
         {
             _serverMailgroupEngine.RemoveMailGroup(id);
@@ -411,7 +412,7 @@ namespace ASC.Mail.Controllers
         /// <returns>NotificationAddressData associated with tenant</returns>
         /// <short>Create notification address</short> 
         /// <category>Notifications</category>
-        [Create(@"notification/address/add")]
+        [HttpPost(@"notification/address/add")]
         public ServerNotificationAddressData CreateNotificationAddress(string name, string password, int domain_id)
         {
             var notifyAddress = _serverEngine.CreateNotificationAddress(name, password, domain_id);
@@ -423,7 +424,7 @@ namespace ASC.Mail.Controllers
         /// </summary>
         /// <short>Remove mailbox from mail server</short> 
         /// <category>Notifications</category>
-        [Delete(@"notification/address/remove")]
+        [HttpDelete(@"notification/address/remove")]
         public void RemoveNotificationAddress(string address)
         {
             _serverEngine.RemoveNotificationAddress(address);
@@ -487,7 +488,7 @@ namespace ASC.Mail.Controllers
                     }
                     catch (Exception ex)
                     {
-                        _log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
+                        //_log.ErrorFormat("GetMailServerMxDomain() failed. Exception: {0}", ex.ToString());
                     }
 
                     studioNotifyService.SendMailboxCreated(emails, userInfo.DisplayUserName(_displayUserSettingsHelper),
@@ -504,7 +505,7 @@ namespace ASC.Mail.Controllers
             }
             catch (Exception ex)
             {
-                _log.Error(ex.ToString());
+                //_log.Error(ex.ToString());
             }
         }
 
@@ -547,7 +548,7 @@ namespace ASC.Mail.Controllers
             }
             catch (Exception ex)
             {
-                _log.Error(ex.ToString());
+                //_log.Error(ex.ToString());
             }
         }
     }

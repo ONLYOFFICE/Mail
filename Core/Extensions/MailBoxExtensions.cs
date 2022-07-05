@@ -22,7 +22,6 @@
  * Pursuant to Section 7 § 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
-
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Extensions;
@@ -30,10 +29,8 @@ namespace ASC.Mail.Extensions;
 public static class MailBoxExtensions
 {
     public static bool IsUserTerminated(this MailBoxData mailbox,
-        TenantManager tenantManager, UserManager userManager, ILog log = null)
+        TenantManager tenantManager, UserManager userManager, ILogger log)
     {
-        log = log ?? new NullLog();
-
         try
         {
             tenantManager.SetCurrentTenant(mailbox.TenantId);
@@ -44,16 +41,15 @@ public static class MailBoxExtensions
         }
         catch (Exception ex)
         {
-            log.Debug($"IsUserTerminated(). Cannot detect user status. Exception:\n{ex}\nreturn false.");
+            log.DebugMailExtensionsCannotDetectUserStatus(ex.ToString());
+
             return false;
         }
     }
 
     public static bool IsUserRemoved(this MailBoxData mailbox,
-        TenantManager tenantManager, UserManager userManager, ILog log = null)
+        TenantManager tenantManager, UserManager userManager, ILogger log)
     {
-        log = log ?? new NullLog();
-
         try
         {
             tenantManager.SetCurrentTenant(mailbox.TenantId);
@@ -65,7 +61,7 @@ public static class MailBoxExtensions
         }
         catch (Exception ex)
         {
-            log.Debug($"IsUserRemoved(). Cannot detect user remove status. Exception:\n{ex}\nreturn false.");
+            log.DebugMailExtensionsCannotDetectUserRemoveStatus(ex.ToString());
             return false;
         }
     }
@@ -88,52 +84,50 @@ public static class MailBoxExtensions
 
     public static DefineConstants.TariffType GetTenantStatus(this MailBoxData mailbox,
         TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-        int tenantOverdueDays, ILog log = null)
+        int tenantOverdueDays, ILogger log)
     {
-        log = log ?? new NullLog();
-
         DefineConstants.TariffType type;
 
         try
         {
-            log.Debug($"Attempt to set current tenant. Tenant {mailbox.TenantId}...");
+            log.DebugMailExtensionsAttemptSetTenant(mailbox.TenantId);
             tenantManager.SetCurrentTenant(mailbox.TenantId);
 
-            log.Debug($"Attempt to get current tenant info.");
+            log.DebugMailExtensionsGetCurrentTenantInfo();
             var tenantInfo = tenantManager.GetCurrentTenant();
 
-            log.Debug($"Returned tenant status: {tenantInfo.Status}. TenantId: {tenantInfo.TenantId}. OwnerId: {tenantInfo.OwnerId}");
+            log.DebugMailExtensionsReturnedTenantStatus(tenantInfo.Status.ToString(), tenantInfo.Id, tenantInfo.OwnerId);
 
             if (tenantInfo.Status == TenantStatus.RemovePending)
                 return DefineConstants.TariffType.LongDead;
 
             try
             {
-                log.Debug("Authentication attempt by OwnerId for tenant");
+                log.DebugMailExtensionsAuthByOwnerIdTenant();
                 securityContext.AuthenticateMe(tenantInfo.OwnerId);
             }
             catch (InvalidCredentialException)
             {
-                log.Debug("Authentication failed. Authentication attempt by mailbox UserId");
+                log.DebugMailExtensionsAuthFailed();
                 securityContext.AuthenticateMe(new Guid(mailbox.UserId));
             }
 
-            type = apiHelper.GetTenantTariffLogged(tenantOverdueDays, log);
+            type = apiHelper.GetTenantTariff(tenantOverdueDays);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("GetTenantStatus(Tenant={0}, User='{1}') Exception: {2}",
+            log.ErrorMailExtensionsGetTenantStatus(
                 mailbox.TenantId, mailbox.UserId, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
+
             type = DefineConstants.TariffType.Active;
         }
 
         return type;
     }
 
-    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILog log = null)
+    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILogger log)
     {
         var quotaEnded = false;
-        log = log ?? new NullLog();
 
         try
         {
@@ -141,23 +135,24 @@ public static class MailBoxExtensions
             var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
             var usedQuota = quotaController.QuotaCurrentGet();
             quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
-            log.Debug($"IsTenantQuotaEnded: {quotaEnded} Tenant = {mailbox.TenantId}. " +
-                $"Tenant quota = {MailUtil.BytesToMegabytes(quota.MaxTotalSize)}Mb ({quota.MaxTotalSize}), " +
-                $"used quota = {MailUtil.BytesToMegabytes(usedQuota)}Mb ({usedQuota}) ");
+
+            var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
+            var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
+
+
+            log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
         }
         catch (Exception ex)
         {
-            log.Error($"IsQuotaExhausted(Tenant={mailbox.TenantId}) Exception: {ex.Message} StackTrace: \n{ex.StackTrace}");
+            log.ErrorMailExtensionsIsQuotaExhausted(mailbox.TenantId, ex.Message, ex.StackTrace);
         }
 
         return quotaEnded;
     }
 
     public static bool IsCrmAvailable(this MailBoxData mailbox,
-        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper,
-        ILog log = null)
+        TenantManager tenantManager, SecurityContext securityContext, ApiHelper apiHelper, ILogger log)
     {
-        log = log ?? new NullLog();
 
         try
         {
@@ -177,11 +172,11 @@ public static class MailBoxExtensions
             if (ex is ApiHelperException)
             {
                 var apiEx = ex as ApiHelperException;
-                log.Error($"Get portal settings failed (Tenant: {mailbox.TenantId}, User: {mailbox.UserId}, Mailbox: {mailbox.MailBoxId}). Returned status code: {apiEx.StatusCode}");
+                log.ErrorMailExtensionsGetPortalSettings(mailbox.TenantId, mailbox.UserId, mailbox.MailBoxId, apiEx.StatusCode.ToString());
             }
             else
             {
-                log.ErrorFormat("GetTenantStatus(Tenant={0}, User='{1}') Exception: {2}",
+                log.ErrorMailExtensionsGetTenantStatus(
                     mailbox.TenantId, mailbox.UserId, ex.InnerException != null ? ex.InnerException.Message : ex.Message);
             }
         }

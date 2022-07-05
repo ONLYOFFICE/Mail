@@ -341,11 +341,8 @@ public static class MailDraftExtensions
         };
     }
 
-    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILog log = null)
+    public static void ChangeAttachedFileLinksAddresses(this MailDraftData draft, FileStorageService<string> fileStorageService, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         var doc = new HtmlDocument();
         doc.LoadHtml(draft.HtmlBody);
 
@@ -365,7 +362,7 @@ public static class MailDraftExtensions
             if (setLink != null)
             {
                 linkNode.SetAttributeValue("href", setLink.Item2);
-                log.InfoFormat("ChangeAttachedFileLinks() Change file link href: {0}", fileId);
+                log.InfoMailExtensionsFileLinkHref(fileId);
                 continue;
             }
 
@@ -384,12 +381,12 @@ public static class MailDraftExtensions
             };
 
             fileStorageService.SetAceObjectAsync(aceCollection, false).Wait();
-            log.InfoFormat("ChangeAttachedFileLinks() Set public accees to file: {0}", fileId);
+            log.InfoMailExtensionsSetPublicAcceesToFile(fileId);
             var sharedInfo =
                 fileStorageService.GetSharedInfoAsync(new List<string> { objectId }, new List<string> { }).Result
                                   .Find(r => r.SubjectId == FileConstant.ShareLinkId);
             linkNode.SetAttributeValue("href", sharedInfo.Link);
-            log.InfoFormat("ChangeAttachedFileLinks() Change file link href: {0}", fileId);
+            log.InfoMailExtensionsChangeFileLinkHref(fileId);
             setLinks.Add(new Tuple<string, string>(fileId, sharedInfo.Link));
         }
 
@@ -429,11 +426,8 @@ public static class MailDraftExtensions
         return links;
     }
 
-    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeEmbeddedAttachmentLinks(this MailDraftData draft, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseAttachmentFolder = MailStoragePathCombiner.GetMessageDirectory(draft.Mailbox.UserId, draft.StreamId);
 
         var doc = new HtmlDocument();
@@ -444,23 +438,20 @@ public static class MailDraftExtensions
         foreach (var linkNode in linkNodes)
         {
             var link = linkNode.Attributes["src"].Value;
-            log.InfoFormat("ChangeEmbededAttachmentLinks() Embeded attachment link for changing to cid: {0}", link);
+            log.InfoMailExtensionsLinkForChangingToCid(link);
             var fileLink = HttpUtility.UrlDecode(link.Substring(baseAttachmentFolder.Length));
             var fileName = Path.GetFileName(fileLink);
 
             var attach = CreateEmbbededAttachment(fileName, link, fileLink, draft.Mailbox.UserId, draft.Mailbox.TenantId, draft.Mailbox.MailBoxId, draft.StreamId);
             draft.AttachmentsEmbedded.Add(attach);
             linkNode.SetAttributeValue("src", "cid:" + attach.contentId);
-            log.InfoFormat("ChangeEmbededAttachmentLinks() Attachment cid: {0}", attach.contentId);
+            log.InfoMailExtensionsAttachmentCid(attach.contentId);
         }
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeSmileLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeSmileLinks(this MailDraftData draft, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseSmileUrl = MailStoragePathCombiner.GetEditorSmileBaseUrl();
 
         var doc = new HtmlDocument();
@@ -472,7 +463,7 @@ public static class MailDraftExtensions
         {
             var link = linkNode.Attributes["src"].Value;
 
-            log.InfoFormat("ChangeSmileLinks() Link to smile: {0}", link);
+            log.InfoMailExtensionsLinkToSmile(link);
 
             var fileName = Path.GetFileName(link);
 
@@ -489,7 +480,7 @@ public static class MailDraftExtensions
                 data = data
             };
 
-            log.InfoFormat("ChangeSmileLinks() Embedded smile contentId: {0}", attach.contentId);
+            log.InfoMailExtensionsEmbeddedSmile(attach.contentId);
 
             linkNode.SetAttributeValue("src", "cid:" + attach.contentId);
 
@@ -501,26 +492,20 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeUrlProxyLinks(this MailDraftData draft, ILog log = null)
+    public static void ChangeUrlProxyLinks(this MailDraftData draft, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         try
         {
             draft.HtmlBody = HtmlSanitizer.RemoveProxyHttpUrls(draft.HtmlBody);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("ChangeUrlProxyLinks(): Exception: {0}", ex.ToString());
+            log.ErrorMailboxExtensionsChangeUrlProxyLinks(ex.ToString());
         }
     }
 
-    public static void ChangeAttachedFileLinksImages(this MailDraftData draft, ILog log = null)
+    public static void ChangeAttachedFileLinksImages(this MailDraftData draft, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         var baseSmileUrl = MailStoragePathCombiner.GetEditorImagesBaseUrl();
 
         var doc = new HtmlDocument();
@@ -531,7 +516,7 @@ public static class MailDraftExtensions
         foreach (var linkNode in linkNodes)
         {
             var link = linkNode.Attributes["src"].Value;
-            log.InfoFormat("ChangeAttachedFileLinksImages() Link to file link: {0}", link);
+            log.InfoMailExtensionsLinkToFile(link);
 
             var fileName = Path.GetFileName(link);
 
@@ -548,7 +533,7 @@ public static class MailDraftExtensions
                 data = data
             };
 
-            log.InfoFormat("ChangeAttachedFileLinksImages() Embedded file link contentId: {0}", attach.contentId);
+            log.InfoMailExtensionsEmbeddedFileLink(attach.contentId);
             linkNode.SetAttributeValue("src", "cid:" + attach.contentId);
 
             if (draft.AttachmentsEmbedded.All(x => x.contentId != attach.contentId))
@@ -560,11 +545,8 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft, ILog log = null)
+    public static void ChangeAllImagesLinksToEmbedded(this MailDraftData draft, ILogger log)
     {
-        if (log == null)
-            log = new NullLog();
-
         try
         {
             var doc = new HtmlDocument();
@@ -575,7 +557,7 @@ public static class MailDraftExtensions
             foreach (var linkNode in linkNodes)
             {
                 var link = linkNode.Attributes["src"].Value;
-                log.InfoFormat("ChangeAllImagesLinksToEmbedded() Link to img link: {0}", link);
+                log.InfoMailExtensionsLinkToImg(link);
 
                 var fileName = Path.GetFileName(link);
 
@@ -592,7 +574,7 @@ public static class MailDraftExtensions
                     data = data
                 };
 
-                log.InfoFormat("ChangeAllImagesLinksToEmbedded() Embedded img link contentId: {0}", attach.contentId);
+                log.InfoMailExtensionsEmbeddedImgLink(attach.contentId);
                 linkNode.SetAttributeValue("src", "cid:" + attach.contentId);
 
                 if (draft.AttachmentsEmbedded.All(x => x.contentId != attach.contentId))
@@ -605,7 +587,7 @@ public static class MailDraftExtensions
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("ChangeAllImagesLinksToEmbedded(): Exception: {0}", ex.ToString());
+            log.ErrorMailExtensionsImagesLinksToEmbedded(ex.ToString());
         }
     }
 

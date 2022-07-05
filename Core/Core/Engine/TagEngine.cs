@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -33,12 +35,12 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class TagEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly WebItemSecurity _webItemSecurity;
 
@@ -47,7 +49,7 @@ public class TagEngine
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         WebItemSecurity webItemSecurity,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
@@ -56,7 +58,7 @@ public class TagEngine
 
         _webItemSecurity = webItemSecurity;
 
-        _log = option.Get("ASC.Mail.TagEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.TagEngine");
     }
 
     public Tag GetTag(int id)
@@ -283,8 +285,7 @@ public class TagEngine
 
             if (id > 0)
             {
-                _log.InfoFormat("TagEngine->GetOrCreateTags(): new tag '{0}' with id = {1} has bee created",
-                    name, id);
+                _log.InfoTagEngineTagCreated(name, id);
 
                 tagIds.Add(id);
             }
@@ -295,8 +296,12 @@ public class TagEngine
 
     public void SetMessagesTag(List<int> messageIds, int tagId)
     {
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             if (!SetMessagesTag(_mailDaoFactory, messageIds, tagId))
             {
                 tx.Rollback();
@@ -304,12 +309,13 @@ public class TagEngine
             }
 
             tx.Commit();
-        }
+        });
 
         UpdateIndexerTags(messageIds, UpdateAction.Add, tagId);
 
-        _log.InfoFormat("TagEngine->SetMessagesTag(): tag with id = {0} has bee added to messages [{1}]", tagId,
-            string.Join(",", messageIds));
+        var ids = string.Join(",", messageIds);
+
+        _log.InfoTagEngineTagAdded(tagId, ids);
     }
 
     public bool SetMessagesTag(IMailDaoFactory daoFactory, List<int> messageIds, int tagId)
@@ -356,10 +362,14 @@ public class TagEngine
 
     public void UnsetMessagesTag(List<int> messageIds, int tagId)
     {
-        List<int> validIds;
+        List<int> validIds = new List<int>();
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             GetValidForUserMessages(messageIds, out validIds, out List<ChainInfo> chains);
 
             _mailDaoFactory.GetTagMailDao().Delete(tagId, validIds);
@@ -378,7 +388,7 @@ public class TagEngine
             _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
             tx.Commit();
-        }
+        });
 
         UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
     }
@@ -389,10 +399,14 @@ public class TagEngine
 
         if (!ids.Any()) return;
 
-        List<int> validIds;
+        List<int> validIds = new List<int>();
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             var tag = _mailDaoFactory.GetTagDao().GetTag(tagId);
 
             if (tag == null)
@@ -434,7 +448,7 @@ public class TagEngine
             _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
             tx.Commit();
-        }
+        });
 
         UpdateIndexerTags(validIds, UpdateAction.Add, tagId);
     }
@@ -445,10 +459,14 @@ public class TagEngine
 
         if (!ids.Any()) return;
 
-        List<int> validIds;
+        List<int> validIds = new List<int>();
 
-        using (var tx = _mailDaoFactory.BeginTransaction())
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction();
+
             var foundedChains = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(messagesIds.ToList());
 
             if (!foundedChains.Any())
@@ -486,7 +504,7 @@ public class TagEngine
             _mailDaoFactory.GetMailDao().SetMessagesChanged(validIds);
 
             tx.Commit();
-        }
+        });
 
         UpdateIndexerTags(validIds, UpdateAction.Remove, tagId);
     }

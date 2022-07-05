@@ -58,12 +58,12 @@ public class MailboxesForProcessingExp : IMailboxesExp
         && mb.IsRemoved == false
         && mb.Enabled == true;
 
-        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.All)
+        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorSettings.AggregateModeType.All)
         {
-            exp = exp.And(mb => mb.IsServerMailbox == (_mailSettings.Aggregator.AggregateMode == MailSettings.AggregatorConfig.AggregateModeType.Internal));
+            exp = exp.And(mb => mb.IsServerMailbox == (_mailSettings.Aggregator.AggregateMode == MailSettings.AggregatorSettings.AggregateModeType.Internal));
         }
 
-        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorConfig.AggregateModeType.External)
+        if (_mailSettings.Aggregator.AggregateMode != MailSettings.AggregatorSettings.AggregateModeType.External)
         {
             exp = exp.And(mb => !mb.IsServerMailbox || mb.DateCreated < _mailSettings.Defines.ImapSyncStartDate);
         }

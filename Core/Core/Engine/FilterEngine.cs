@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using ActionType = ASC.Mail.Enums.Filter.ActionType;
 using Filter = ASC.Mail.Core.Entities.Filter;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -35,10 +37,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class FilterEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly MessageEngine _messageEngine;
     private readonly UserFolderEngine _userFolderEngine;
     private readonly TagEngine _tagEngine;
@@ -53,7 +55,7 @@ public class FilterEngine
         MessageEngine messageEngine,
         UserFolderEngine userFolderEngine,
         TagEngine tagEngine,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _messageEngine = messageEngine;
         _userFolderEngine = userFolderEngine;
@@ -63,7 +65,7 @@ public class FilterEngine
 
         _mailDaoFactory = mailDaoFactory;
 
-        _log = option.Get("ASC.Mail.FilterEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.FilterEngine");
     }
 
     public MailSieveFilterData Get(int id)
@@ -338,7 +340,7 @@ public class FilterEngine
         }
         catch (Exception ex)
         {
-            _log.Error(ex.ToString());
+            _log.ErrorFilterEngine(ex.ToString());
         }
 
         return false;
@@ -384,8 +386,7 @@ public class FilterEngine
                 var success = IsConditionSucceed(c, message);
                 if (success)
                 {
-                    _log.InfoFormat("Filter condition succeed -> {0} {1} '{2}'",
-                        Enum.GetName(typeof(ConditionKeyType), c.Key),
+                    _log.InfoFilterEngineConditionSucceed(Enum.GetName(typeof(ConditionKeyType), c.Key),
                         Enum.GetName(typeof(ConditionOperationType), c.Operation), c.Value);
                 }
                 return success;
@@ -401,7 +402,7 @@ public class FilterEngine
                     }
                     else if (appliedCount > 0)
                     {
-                        _log.InfoFormat("Skip filter by not match all conditions");
+                        _log.InfoFilterEngineSkipFilter();
                     }
                     break;
                 case MatchMultiConditionsType.MatchAtLeastOne:
@@ -409,7 +410,7 @@ public class FilterEngine
                         listAppliedFilters.Add(filter);
                     break;
                 default:
-                    _log.Error("Unknown MatchMultiConditionsType");
+                    _log.ErrorFilterEngineUnknownMatchMultiConditionsType();
                     break;
             }
 
@@ -423,24 +424,25 @@ public class FilterEngine
             {
                 try
                 {
-                    _log.InfoFormat("Apply filter (id={0}) action: '{1}'{2}", filter.Id,
-                        Enum.GetName(typeof(ActionType), action.Action),
-                        action.Action == ActionType.MarkTag || action.Action == ActionType.MoveTo
-                            ? " id=" + action.Data
-                            : "");
+                    if (action.Action == ActionType.MarkTag || action.Action == ActionType.MoveTo)
+                    {
+                        _log.InfoFilterEngineApplyFilterWithData(filter.Id, Enum.GetName(typeof(ActionType), action.Action), action.Data);
+                    }
+                    else
+                    {
+                        _log.InfoFilterEngineApplyFilter(filter.Id, Enum.GetName(typeof(ActionType), action.Action));
+                    }
 
                     if (ApplyAction(new List<int> { message.Id }, action))
                     {
                         filterAppliedSuccessfull.Add(action);
                     }
-
-
                 }
                 catch (NotFoundFilterDataException ex)
                 {
-                    _log.Error(ex.ToString());
+                    _log.ErrorFilterEngine(ex.ToString());
 
-                    _log.Debug($"Disable filter with id={filter.Id}");
+                    _log.DebugFilterEngineDisableFilter(filter.Id);
 
                     filter.Enabled = false;
 
@@ -450,8 +452,7 @@ public class FilterEngine
                 }
                 catch (Exception e)
                 {
-                    _log.ErrorFormat("ApplyFilters(filterId = {0}, mailId = {1}) Exception:\r\n{2}\r\n", filter.Id,
-                        message.Id, e.ToString());
+                    _log.ErrorFilterEngineApplyFilters(filter.Id, message.Id, e.ToString());
                 }
             }
         }

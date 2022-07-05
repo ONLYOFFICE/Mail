@@ -15,6 +15,8 @@ public partial class MailDbContext : BaseDbContext
     public class MySqlMailDbContext : MailDbContext { }
     public class PostgreSqlMailDbContext : MailDbContext { }
 
+    #region DbSets
+
     public virtual DbSet<MailAlert> MailAlerts { get; set; }
     public virtual DbSet<MailAttachment> MailAttachment { get; set; }
     public virtual DbSet<MailChain> MailChain { get; set; }
@@ -56,6 +58,8 @@ public partial class MailDbContext : BaseDbContext
     public virtual DbSet<CrmContactInfo> CrmContactInfo { get; set; }
     public virtual DbSet<CrmCurrencyInfo> CrmCurrencyInfo { get; set; }
 
+    #endregion
+
     protected override Dictionary<Provider, Func<BaseDbContext>> ProviderContext
     {
         get
@@ -70,9 +74,9 @@ public partial class MailDbContext : BaseDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        //ModelBuilderWrapper
-        //    .From(modelBuilder, Provider)
-        //    .AddDbTenant();
+        ModelBuilderWrapper
+            .From(modelBuilder, _provider)
+            .AddDbTenant();
 
         modelBuilder.AddMailAlert()
             .AddMailAttachment()

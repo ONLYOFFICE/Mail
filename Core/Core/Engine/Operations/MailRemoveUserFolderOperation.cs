@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -51,9 +53,9 @@ public class MailRemoveUserFolderOperation : MailOperation
         StorageManager storageManager,
         FactoryIndexer<MailMail> factoryIndexer,
         IServiceProvider serviceProvider,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILoggerProvider logProvider,
         int userFolderId)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _messageEngine = messageEngine;
         _indexEngine = indexEngine;
@@ -82,7 +84,7 @@ public class MailRemoveUserFolderOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove user folder: {0}", e);
+            Log.ErrorMailOperationRemoveUserFolder(e.ToString());
             Error = "InternalServerError";
         }
     }
@@ -91,15 +93,16 @@ public class MailRemoveUserFolderOperation : MailOperation
     {
         var affectedIds = new List<int>();
 
-        //TODO: Check or increase timeout for DB connection
-        //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RecalculateFoldersTimeout))
-
         var folder = MailDaoFactory.GetUserFolderDao().Get(folderId);
         if (folder == null)
             return;
 
-        using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = MailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             //Find folder sub-folders
             var expTree = SimpleUserFoldersTreeExp.CreateBuilder()
                 .SetParent(folder.Id)
@@ -112,7 +115,7 @@ public class MailRemoveUserFolderOperation : MailOperation
                 removeFolderIds.Add(folderId);
 
             //Remove folder with subfolders
-            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.TenantId, CurrentUser.ID.ToString())
+            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.Id, CurrentUser.ID.ToString())
                 .SetIds(removeFolderIds)
                 .Build();
 
@@ -142,7 +145,7 @@ public class MailRemoveUserFolderOperation : MailOperation
             }
 
             tx.Commit();
-        }
+        });
 
         MailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(folder.ParentId);
 

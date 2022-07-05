@@ -27,12 +27,10 @@ namespace ASC.Mail.Extensions;
 
 public static class MailMessageExtensions
 {
-    public static void LoadCalendarInfo(this MailMessageData mail, MimeMessage message, ILog log = null)
+    public static void LoadCalendarInfo(this MailMessageData mail, MimeMessage message, ILogger log)
     {
         if (!message.BodyParts.Any())
             return;
-
-        log = log ?? new NullLog();
 
         try
         {
@@ -41,7 +39,7 @@ public static class MailMessageExtensions
             if (!calendarParts.Any())
                 return;
 
-            log.Debug($"LoadCalendarInfo found {calendarParts.Count} calendars");
+            log.DebugMailExtensionsFoundCalendars(calendarParts.Count);
 
             foreach (var calendarPart in calendarParts)
             {
@@ -51,7 +49,7 @@ public static class MailMessageExtensions
 
                 var ics = p.Text;
 
-                var calendar = MailUtil.ParseValidCalendar(ics, log);
+                var calendar = MailUtil.ParseValidCalendar(ics);
 
                 if (calendar == null)
                     continue;
@@ -80,7 +78,7 @@ public static class MailMessageExtensions
                 mail.CalendarEventCharset = string.IsNullOrEmpty(p.ContentType.Charset) ? Encoding.UTF8.HeaderName : p.ContentType.Charset;
                 mail.CalendarEventMimeType = p.ContentType.MimeType;
 
-                log.Debug($"Calendar UID: {mail.CalendarUid} Method: {calendar.Method} ics: {mail.CalendarEventIcs}");
+                log.DebugMailExtensionsCalendarUid(mail.CalendarUid, calendar.Method, mail.CalendarEventIcs);
 
                 var calendarExists =
                     message.Attachments
@@ -117,7 +115,7 @@ public static class MailMessageExtensions
                                     }
                                 }
 
-                                var cal = MailUtil.ParseValidCalendar(icsAttach, log);
+                                var cal = MailUtil.ParseValidCalendar(icsAttach);
 
                                 if (cal == null)
                                     return false;
@@ -127,7 +125,7 @@ public static class MailMessageExtensions
 
                 if (calendarExists)
                 {
-                    log.Debug("Calendar exists as attachment");
+                    log.DebugMailExtensionsCalendarExists();
                     continue;
                 }
 
@@ -148,7 +146,7 @@ public static class MailMessageExtensions
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("LoadCalendarInfo() \r\n Exception: \r\n{0}\r\n", ex.ToString());
+            log.ErrorMailExtensionsLoadCalendar(ex.ToString());
         }
     }
 
@@ -578,10 +576,8 @@ public static class MailMessageExtensions
         return mailAttach;
     }
 
-    public static void ReplaceEmbeddedImages(this MailMessageData mail, ILog log = null)
+    public static void ReplaceEmbeddedImages(this MailMessageData mail, ILogger log)
     {
-        log = log ?? new NullLog();
-
         try
         {
             var attchments = mail.Attachments.Where(a => a.isEmbedded && !string.IsNullOrEmpty(a.storedFileUrl)).ToList();
@@ -675,7 +671,7 @@ public static class MailMessageExtensions
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("ReplaceEmbeddedImages() \r\n Exception: \r\n{0}\r\n", ex.ToString());
+            log.ErrorMailExtensionsReplaceEmbeddedImages(ex.ToString());
         }
     }
 }

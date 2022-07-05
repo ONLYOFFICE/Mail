@@ -35,17 +35,17 @@ public class MailGarbageEngine : BaseEngine, IDisposable
     private static MemoryCache _tenantMemCache;
     private static TaskFactory _taskFactory;
     private static object _locker;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly IServiceProvider _serviceProvider;
 
     public MailGarbageEngine(
         MailSettings mailSettings,
-        IOptionsMonitor<ILog> option,
+        ILoggerProvider logProvider,
         IServiceProvider serviceProvider) : base(mailSettings)
     {
         _serviceProvider = serviceProvider;
 
-        _log = option.Get("ASC.Mail.GarbageEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.GarbageEngine");
 
         _tenantMemCache = new MemoryCache("GarbageEraserTenantCache");
 
@@ -60,7 +60,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
     public void ClearMailGarbage(CancellationToken cancelToken)
     {
-        _log.Debug("Begin ClearMailGarbage()");
+        _log.DebugMailGarbageBegin();
 
         using var scope = _serviceProvider.CreateScope();
         var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
@@ -90,7 +90,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                 if (tasks.Count == MailSettings.Cleaner.MaxTasksAtOnce)
                 {
-                    _log.Info("Wait all tasks to complete");
+                    _log.InfoMailGarbageWaitTasks();
 
                     Task.WaitAll(tasks.ToArray());
 
@@ -99,7 +99,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             }
             catch (Exception ex)
             {
-                _log.Error(ex.ToString());
+                _log.ErrorMailGarbage(ex.ToString());
             }
 
             if (!cancelToken.IsCancellationRequested)
@@ -108,18 +108,19 @@ public class MailGarbageEngine : BaseEngine, IDisposable
                 continue;
             }
 
-            _log.Debug("ClearMailGarbage: IsCancellationRequested. Quit.");
+            _log.DebugMailGarbageQuit();
+
             break;
         }
 
         RemoveUselessMsDomains();
 
-        _log.Debug("End ClearMailGarbage()\r\n");
+        _log.DebugMailGarbageEnd();
     }
 
     public void RemoveUselessMsDomains()
     {
-        _log.Debug("Start RemoveUselessMsDomains()\r\n");
+        _log.DebugMailGarbageStartRemoveDomains();
 
         try
         {
@@ -146,13 +147,12 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                 if (mailboxes.Any())
                 {
-                    _log.WarnFormat("Domain's '{0}' Tenant={1} is removed, but it has unremoved server mailboxes (count={2}). Skip it.",
-                        domain.Name, domain.Tenant, mailboxes.Count);
+                    _log.WarnMailGarbageDomainHasUnremovedMailboxes(domain.Name, domain.Tenant, mailboxes.Count);
 
                     continue;
                 }
 
-                _log.InfoFormat("Domain's '{0}' Tenant = {1} is removed. Lets remove domain.", domain.Name, domain.Tenant);
+                _log.InfoMailGarbageDomainLetsRemove(domain.Name, domain.Tenant);
 
                 var count = domains.Count(d => d.Name.Equals(domain.Name, StringComparison.InvariantCultureIgnoreCase));
 
@@ -160,7 +160,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                 if (skipMS)
                 {
-                    _log.InfoFormat("Domain's '{0}' has duplicated entry for another tenant. Remove only current entry.", domain.Name);
+                    _log.InfoMailGarbageDomainDuplicated(domain.Name);
                 }
 
                 RemoveDomain(domain, skipMS);
@@ -169,10 +169,10 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error(string.Format("RemoveUselessMsDomains failed. Exception: {0}", ex.ToString()));
+            _log.ErrorMailGarbageRemoveDomainFailed(ex.ToString());
         }
 
-        _log.Debug("End RemoveUselessMsDomains()\r\n");
+        _log.DebugMailGarbageEndRemoveDomains();
     }
 
     public TenantStatus GetTenantStatus(int tenant)
@@ -190,36 +190,40 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"GetTenantStatus(tenant='{tenant}') failed. Exception: {ex}");
+            _log.ErrorMailGarbageGetTenantStatusFailed(tenant, ex.ToString());
         }
 
         return TenantStatus.Active;
     }
 
-    public void RemoveDomain(Entities.ServerDomain domain, bool skipMS = false)
+    public void RemoveDomain(ServerDomain domain, bool skipMS = false)
     {
         using var scope = _serviceProvider.CreateScope();
 
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
         tenantManager.SetCurrentTenant(domain.Tenant);
-        _log.Debug($"RemoveDomain. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+        _log.DebugMailGarbageRemoveDomainSetTenant(tenantManager.GetCurrentTenant().Id);
 
         var daoFactory = scope.ServiceProvider.GetService<MailDaoFactory>();
         var context = daoFactory.GetContext();
 
         try
         {
-            using (var tx = daoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            var strategy = context.Database.CreateExecutionStrategy();
+
+            strategy.Execute(() =>
             {
+                using var tx = daoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
                 var serverEngine = scope.ServiceProvider.GetService<Server.Core.ServerEngine>();
 
-                _log.Debug($"MailGarbageEngine -> RemoveDomain: 1) Delete domain by id {domain.Id}...");
+                _log.DebugMailGarbageStartDeleteDomain(domain.Id);
 
                 daoFactory.GetServerDomainDao().Delete(domain.Id);
 
                 if (!skipMS)
                 {
-                    _log.Debug($"MailGarbageEngine -> RemoveDomain: 2) Try get server by tenant {domain.Tenant}...");
+                    _log.DebugMailGarbageTryGetServer(domain.Tenant);
 
                     var server = daoFactory.GetServerDao().Get(domain.Tenant);
 
@@ -228,23 +232,22 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                     serverEngine.InitServer(server.Id, server.ConnectionString);
 
-                    _log.Debug($"MailGarbageEngine -> RemoveDomain: 3) Successfull init server. " +
-                        $"\nServer Api | " +
-                        $"\nPort: {serverEngine.ServerApi.port} " +
-                        $"\nProtocol: {serverEngine.ServerApi.protocol}" +
-                        $"\nIP: {serverEngine.ServerApi.server_ip}" +
-                        $"\nToken: {serverEngine.ServerApi.token}" +
-                        $"\nVersion: {serverEngine.ServerApi.version}");
+                    _log.DebugMailGarbageSuccessfullInitServer(
+                        serverEngine.ServerApi.port,
+                        serverEngine.ServerApi.protocol,
+                        serverEngine.ServerApi.server_ip,
+                        serverEngine.ServerApi.token,
+                        serverEngine.ServerApi.version);
 
                     serverEngine.RemoveDomain(domain.Name);
                 }
 
                 tx.Commit();
-            }
+            });
         }
         catch (Exception ex)
         {
-            _log.Error(string.Format("RemoveDomainIfUseless(Domain: '{0}', ID='{1}') failed. Exception: {2}", domain.Name, domain.Id, ex.ToString()));
+            _log.ErrorMailGarbageRemoveDomainIfUseless(domain.Name, domain.Id, ex.ToString());
         }
     }
 
@@ -254,13 +257,13 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
-        var tenant = tenantId != null ? tenantId.TenantId : tenantManager.GetCurrentTenant().TenantId;
+        var tenant = tenantId != null ? tenantId.Id : tenantManager.GetCurrentTenant().Id;
 
-        _log.InfoFormat("ClearUserMail(userId: '{0}' tenant: {1})", userId, tenant);
+        _log.InfoMailGarbageClearUserMail(userId, tenant);
 
         var user = userId.ToString();
 
-        RemoveUserFolders(_log);
+        RemoveUserFolders();
 
         //RemoveUserMailboxes(tenant, user, Log);
 
@@ -287,13 +290,13 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             .GetAwaiter()
             .OnCompleted(() =>
             {
-                _log.Debug($"End Task {task.Id} with status = '{task.Status}'.");
+                _log.DebugMailGarbageEndTask(task.Id, task.Status);
             });
 
         return task;
     }
 
-    private bool NeedRemove(MailBoxData mailbox, ILog taskLog)
+    private bool NeedRemove(MailBoxData mailbox)
     {
         var needRemove = false;
 
@@ -312,9 +315,9 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
             if (memTenantItem == null)
             {
-                taskLog.InfoFormat("Tenant {0} isn't in cache", mailbox.TenantId);
+                _log.InfoMailGarbageTenantIsntInCache(mailbox.TenantId);
 
-                taskLog.Debug($"GetTenantStatus(OverdueDays={MailSettings.Cleaner.TenantOverdueDays})");
+                _log.DebugMailGarbageGetTenantStatus(MailSettings.Cleaner.TenantOverdueDays);
 
                 type = mailbox.GetTenantStatus(tenantManager, securityContext, apiHelper, (int)MailSettings.Cleaner.TenantOverdueDays, _log);
 
@@ -330,23 +333,25 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             }
             else
             {
-                taskLog.InfoFormat("Tenant {0} is in cache", mailbox.TenantId);
+                _log.InfoMailGarbageTenantIsInCache(mailbox.TenantId);
 
                 type = (DefineConstants.TariffType)memTenantItem;
             }
 
-            taskLog.InfoFormat("Tenant {0} has status '{1}'", mailbox.TenantId, type.ToString());
+            _log.InfoMailGarbageTenantStatus(mailbox.TenantId, type.ToString());
 
             if (type == DefineConstants.TariffType.LongDead)
             {
-                taskLog.InfoFormat($"The mailbox {mailbox.MailBoxId} will be deleted");
+                _log.InfoMailGarbageMailboxWillBeDeleted(mailbox.MailBoxId);
                 needRemove = true;
             }
             else
             {
-                var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager);
+                var isUserRemoved = mailbox.IsUserRemoved(tenantManager, userManager, _log);
 
-                taskLog.InfoFormat("User '{0}' status is '{1}'", mailbox.UserId, isUserRemoved ? "Terminated. The mailbox will be deleted" : "Not terminated");
+                var status = isUserRemoved ? "Terminated. The mailbox will be deleted" : "Not terminated";
+
+                _log.InfoMailGarbageUserStatus(mailbox.UserId, status);
 
                 if (isUserRemoved)
                 {
@@ -361,37 +366,38 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
     private void ClearGarbage(MailBoxData mailbox)
     {
-        _log.InfoFormat("Processing MailboxId = {0}, email = '{1}', tenant = '{2}', user = '{3}'",
-            mailbox.MailBoxId, mailbox.EMail.Address, mailbox.TenantId, mailbox.UserId);
+        _log.InfoMailGarbageProcessingMailbox(mailbox.MailBoxId, mailbox.EMail.Address, mailbox.TenantId, mailbox.UserId);
 
         try
         {
-            if (NeedRemove(mailbox, _log))
+            if (NeedRemove(mailbox))
             {
-                _log.Debug($"Mailbox {mailbox.MailBoxId} need remove. Removal started...");
-                RemoveMailboxData(mailbox, true, _log);
+                _log.DebugMailGarbageMailboxNeedRemove(mailbox.MailBoxId);
+
+                RemoveMailboxData(mailbox, true);
             }
             else if (mailbox.IsRemoved)
             {
-                _log.Info($"Mailbox {mailbox.MailBoxId} has been marked for deletion. Removal started...");
-                RemoveMailboxData(mailbox, false, _log);
+                _log.InfoMailGarbageMailboxMarkedForDeletion(mailbox.MailBoxId);
+
+                RemoveMailboxData(mailbox, false);
             }
             else
             {
-                RemoveGarbageMailData(mailbox, (int)MailSettings.Cleaner.GarbageOverdueDays, _log);
+                RemoveGarbageMailData(mailbox, (int)MailSettings.Cleaner.GarbageOverdueDays);
             }
 
-            _log.InfoFormat("Mailbox {0} processing complete.", mailbox.MailBoxId);
+            _log.InfoMailGarbageMailboxProcessingComplete(mailbox.MailBoxId);
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Mailbox {0} processed with error : {1}", mailbox.MailBoxId, ex.ToString());
+            _log.InfoMailGarbageMailboxProcessedWithError(mailbox.MailBoxId, ex.ToString());
         }
     }
 
-    private void RemoveMailboxData(MailBoxData mailbox, bool totalMailRemove, ILog log)
+    private void RemoveMailboxData(MailBoxData mailbox, bool totalMailRemove)
     {
-        log.InfoFormat("RemoveMailboxData(id: {0} address: {1})", mailbox.MailBoxId, mailbox.EMail.ToString());
+        _log.InfoMailGarbageRemoveMailboxData(mailbox.MailBoxId, mailbox.EMail.ToString());
 
         try
         {
@@ -400,36 +406,36 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             tenantManager.SetCurrentTenant(mailbox.TenantId);
-            log.Debug($"RemoveMailboxData. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+            _log.DebugMailGarbageRemoveMailboxDataSetTenant(tenantManager.GetCurrentTenant().Id);
 
             var mbEngine = scope.ServiceProvider.GetService<MailboxEngine>();
             var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
 
             if (!mailbox.IsRemoved)
             {
-                log.Info("Mailbox is't removed.");
+                _log.InfoMailGarbageMaiboxIsntRemove();
 
                 var needRecalculateFolders = !totalMailRemove;
 
                 if (mailbox.IsTeamlab)
                 {
-                    log.Info("RemoveTeamlabMailbox()");
+                    _log.InfoMailGarbageRemoveTeamlabMailbox();
 
                     var securityContext = scope.ServiceProvider.GetService<SecurityContext>();
 
                     securityContext.AuthenticateMe(ASC.Core.Configuration.Constants.CoreSystem);
 
-                    RemoveTeamlabMailbox(mailbox, log);
+                    RemoveTeamlabMailbox(mailbox);
                 }
 
-                log.Info("SetMailboxRemoved()");
+                _log.InfoMailGarbageSetMailboxRemoved();
 
                 mbEngine.RemoveMailBox(mailbox, needRecalculateFolders);
 
                 mailbox.IsRemoved = true;
             }
 
-            log.Debug($"MailDataStore.GetDataStore(Tenant = {mailbox.TenantId})");
+            _log.DebugMailGarbageGetDataStore(mailbox.TenantId);
 
             var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
 
@@ -437,36 +443,36 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
             dataStorage.QuotaController = null;
 
-            log.Debug("GetMailboxAttachsCount()");
+            _log.DebugMailGarbageGetMailboxAttachsCount();
 
             var countAttachs = factory.GetMailGarbageDao().GetMailboxAttachsCount(mailbox);
 
-            log.InfoFormat("Found {0} garbage attachments", countAttachs);
+            _log.DebugMailGarbageCountAttachs(countAttachs);
 
             if (countAttachs > 0)
             {
                 var sumCount = 0;
 
-                log.Debug($"GetMailboxAttachsGarbage(limit = {MailSettings.Cleaner.MaxFilesToRemoveAtOnce})");
+                _log.DebugMailGarbageGetAttachsGarbage(MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
                 var attachGrbgList = factory.GetMailGarbageDao().GetMailboxAttachs(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
                 sumCount += attachGrbgList.Count;
 
-                log.InfoFormat("Clearing {0} garbage attachments ({1}/{2})", attachGrbgList.Count, sumCount, countAttachs);
+                _log.InfoMailGarbageClearingAttachments(attachGrbgList.Count, sumCount, countAttachs);
 
                 while (attachGrbgList.Any())
                 {
                     foreach (var attachGrbg in attachGrbgList)
                     {
-                        RemoveFile(dataStorage, attachGrbg.Path, log);
+                        RemoveFile(dataStorage, attachGrbg.Path);
                     }
 
-                    log.Debug("CleanupMailboxAttachs()");
+                    _log.DebugMailGarbageCleanupMailboxAttachs();
 
                     factory.GetMailGarbageDao().CleanupMailboxAttachs(attachGrbgList);
 
-                    log.Debug("GetMailboxAttachs()");
+                    _log.DebugMailGarbageGetMailboxAttachs();
 
                     attachGrbgList = factory.GetMailGarbageDao().GetMailboxAttachs(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
@@ -474,41 +480,40 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                     sumCount += attachGrbgList.Count;
 
-                    log.InfoFormat("Found {0} garbage attachments ({1}/{2})", attachGrbgList.Count, sumCount,
-                             countAttachs);
+                    _log.InfoMailGarbageFoundAttachments(attachGrbgList.Count, sumCount, countAttachs);
                 }
             }
 
-            log.Debug("GetMailboxMessagesCount()");
+            _log.DebugMailGarbageGetMessagesCount();
 
             var countMessages = factory.GetMailGarbageDao().GetMailboxMessagesCount(mailbox);
 
-            log.InfoFormat("Found {0} garbage messages", countMessages);
+            _log.InfoMailGarbageFountCountMsg(countMessages);
 
             if (countMessages > 0)
             {
                 var sumCount = 0;
 
-                log.Debug($"GetMailboxMessagesGarbage(limit = {MailSettings.Cleaner.MaxFilesToRemoveAtOnce})");
+                _log.DebugMailGarbageGetMessagesLimit(MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
                 var messageGrbgList = factory.GetMailGarbageDao().GetMailboxMessages(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
                 sumCount += messageGrbgList.Count;
 
-                log.InfoFormat("Clearing {0} garbage messages ({1}/{2})", messageGrbgList.Count, sumCount, countMessages);
+                _log.InfoMailGarbageClearingMessages(messageGrbgList.Count, sumCount, countMessages);
 
                 while (messageGrbgList.Any())
                 {
                     foreach (var mailMessageGarbage in messageGrbgList)
                     {
-                        RemoveFile(dataStorage, mailMessageGarbage.Path, log);
+                        RemoveFile(dataStorage, mailMessageGarbage.Path);
                     }
 
-                    log.Debug("CleanupMailboxMessages()");
+                    _log.DebugMailGarbageCleanupMessages();
 
                     factory.GetMailGarbageDao().CleanupMailboxMessages(messageGrbgList);
 
-                    log.Debug("GetMailboxMessages()");
+                    _log.DebugMailGarbageGetMessages();
 
                     messageGrbgList = factory.GetMailGarbageDao().GetMailboxMessages(mailbox, (int)MailSettings.Cleaner.MaxFilesToRemoveAtOnce);
 
@@ -516,20 +521,19 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
                     sumCount += messageGrbgList.Count;
 
-                    log.InfoFormat("Found {0} garbage messages ({1}/{2})", messageGrbgList.Count, sumCount,
-                             countMessages);
+                    _log.InfoMailGarbageFountMessages(messageGrbgList.Count, sumCount, countMessages);
                 }
             }
 
-            log.Debug("ClearMailboxData()");
+            _log.DebugMailGarbageClearMailboxData();
 
             CleanupMailboxData(mailbox, totalMailRemove, factory);
 
-            log.Debug($"Garbage mailbox '{mailbox.EMail.Address}' was totaly removed.");
+            _log.DebugMailGarbageMailboxWasRemoved(mailbox.EMail.Address);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("RemoveMailboxData(mailboxId = {0}) Failure\r\nException: {1}", mailbox.MailBoxId, ex.ToString());
+            _log.ErrorMailGarbageMailbox(mailbox.MailBoxId, ex.ToString());
 
             throw;
         }
@@ -542,80 +546,85 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var mailDbContext = mailDaoFactory.GetContext();
 
-        using var tx = mailDaoFactory.BeginTransaction(System.Data.IsolationLevel.ReadUncommitted);
+        var strategy = mailDbContext.Database.CreateExecutionStrategy();
 
-        var exp = new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
-
-        var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
-
-        var deleteMailboxMessagesQuery = mailDbContext.MailMail
-            .Where(m => m.MailboxId == mb.Id && m.TenantId == mb.Tenant && m.UserId == mb.User);
-
-        mailDbContext.MailMail.RemoveRange(deleteMailboxMessagesQuery);
-
-        mailDbContext.SaveChanges();
-
-        var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachment
-            .Where(a => a.IdMailbox == mb.Id && a.Tenant == mb.Tenant);
-
-        mailDbContext.MailAttachment.RemoveRange(deleteMailboxAttachmentsQuery);
-
-        mailDbContext.SaveChanges();
-
-        mailDaoFactory.GetMailboxDao().RemoveMailbox(mb, mailDbContext);
-
-        if (totalRemove)
+        strategy.Execute(() =>
         {
-            mailDaoFactory.GetFolderDao().Delete();
+            using var tx = mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-            var deleteContactInfoQuery = mailDbContext.MailContactInfo
-                .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+            var exp = new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
 
-            mailDbContext.MailContactInfo.RemoveRange(deleteContactInfoQuery);
+            var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
-            mailDbContext.SaveChanges();
+            var deleteMailboxMessagesQuery = mailDbContext.MailMail
+                .Where(m => m.MailboxId == mb.Id && m.TenantId == mb.Tenant && m.UserId == mb.User);
 
-            var deleteContactsQuery = mailDbContext.MailContacts
-                .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
-
-            mailDbContext.MailContacts.RemoveRange(deleteContactsQuery);
+            mailDbContext.MailMail.RemoveRange(deleteMailboxMessagesQuery);
 
             mailDbContext.SaveChanges();
 
-            var deleteDisplayImagesQuery = mailDbContext.MailDisplayImages
-               .Where(c => c.IdUser == mb.User && c.Tenant == mb.Tenant);
+            var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachment
+                .Where(a => a.IdMailbox == mb.Id && a.Tenant == mb.Tenant);
 
-            mailDbContext.MailDisplayImages.RemoveRange(deleteDisplayImagesQuery);
+            mailDbContext.MailAttachment.RemoveRange(deleteMailboxAttachmentsQuery);
 
             mailDbContext.SaveChanges();
-        }
 
-        tx.Commit();
+            mailDaoFactory.GetMailboxDao().RemoveMailbox(mb, mailDbContext);
+
+            if (totalRemove)
+            {
+                mailDaoFactory.GetFolderDao().Delete();
+
+                var deleteContactInfoQuery = mailDbContext.MailContactInfo
+                    .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+
+                mailDbContext.MailContactInfo.RemoveRange(deleteContactInfoQuery);
+
+                mailDbContext.SaveChanges();
+
+                var deleteContactsQuery = mailDbContext.MailContacts
+                    .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
+
+                mailDbContext.MailContacts.RemoveRange(deleteContactsQuery);
+
+                mailDbContext.SaveChanges();
+
+                var deleteDisplayImagesQuery = mailDbContext.MailDisplayImages
+                   .Where(c => c.IdUser == mb.User && c.Tenant == mb.Tenant);
+
+                mailDbContext.MailDisplayImages.RemoveRange(deleteDisplayImagesQuery);
+
+                mailDbContext.SaveChanges();
+            }
+
+            tx.Commit();
+        });
     }
 
-    private void RemoveFile(IDataStore dataStorage, string path, ILog log)
+    private void RemoveFile(IDataStore dataStorage, string path)
     {
         try
         {
-            log.Debug($"Removing file: {path}");
+            _log.DebugMailGarbageRemovingFile(path);
 
             dataStorage.DeleteAsync(string.Empty, path).Wait();
 
-            log.InfoFormat("File: '{0}' removed successfully", path);
+            _log.InfoMailGarbageFileRemoved(path);
         }
         catch (FileNotFoundException)
         {
-            log.WarnFormat("File: {0} not found", path);
+            _log.WarnMailGarbageFileNotFound(path);
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("RemoveFile(path: {0}) failed. Error: {1}", path, ex.ToString());
+            _log.ErrorMailGarbageRemoveFile(path, ex.ToString());
         }
     }
 
-    private void RemoveUserMailDirectory(int tenant, string userId, ILog log)
+    private void RemoveUserMailDirectory(int tenant, string userId)
     {
-        log.Debug($"MailDataStore.GetDataStore(Tenant = {tenant})");
+        _log.DebugMailGarbageGetDataStore(tenant);
 
         using var scope = _serviceProvider.CreateScope();
 
@@ -627,26 +636,26 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         try
         {
-            log.InfoFormat("RemoveUserMailDirectory(Path: {0}, Tenant = {1} User = '{2}')", userMailDir, tenant, userId);
+            _log.InfoMailGarbageRemoveUserMailDirectory(userMailDir, tenant, userId);
 
             dataStorage.DeleteDirectoryAsync(userMailDir).Wait();
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("MailDataStore.DeleteDirectory(path: {0}) failed. Error: {1}", userMailDir, ex.ToString());
+            _log.ErrorMailGarbageDeleteDirectory(userMailDir, ex.ToString());
 
             throw;
         }
     }
 
-    public bool RemoveGarbageMailData(MailBoxData mailbox, int garbageDaysLimit, ILog log)
+    public bool RemoveGarbageMailData(MailBoxData mailbox, int garbageDaysLimit)
     {
         //TODO: Implement cleanup data marked as removed and trash messages exceeded garbageDaysLimit
 
         return true;
     }
 
-    private void RemoveTeamlabMailbox(MailBoxData mailbox, ILog log)
+    private void RemoveTeamlabMailbox(MailBoxData mailbox)
     {
         if (mailbox == null)
             throw new ArgumentNullException("mailbox");
@@ -657,7 +666,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         using var scope = _serviceProvider.CreateScope();
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
         tenantManager.SetCurrentTenant(mailbox.TenantId);
-        log.Debug($"RemoveTeamlabMailbox. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+        _log.DebugMailGarbageRemoveTLMailboxDataSetTenant(tenantManager.GetCurrentTenant().Id);
 
         var serverMailboxEngine = scope.ServiceProvider.GetService<ServerMailboxEngine>();
 
@@ -667,12 +676,11 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("RemoveTeamlabMailbox(mailboxId = {0}) Failure\r\nException: {1}", mailbox.MailBoxId,
-                ex.ToString());
+            _log.ErrorMailGarbageRemoveTLMailbox(mailbox.MailBoxId, ex.ToString());
         }
     }
 
-    private void RemoveUserFolders(ILog log)
+    private void RemoveUserFolders()
     {
         using var scope = _serviceProvider.CreateScope();
 
@@ -690,23 +698,23 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         }
         catch (Exception ex)
         {
-            log.ErrorFormat("RemoveUserFolders() Failure\r\nException: {0}", ex.ToString());
+            _log.ErrorMailGarbageRemoveUserFolders(ex.ToString());
         }
     }
 
-    private void RemoveUserMailboxes(int tenant, string user, ILog log)
+    private void RemoveUserMailboxes(int tenant, string user)
     {
         using var scope = _serviceProvider.CreateScope();
 
         var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
 
-        var mailboxIterator = new MailboxIterator(mailboxEngine, tenant, user);
+        var mailboxIterator = new MailboxIterator(mailboxEngine, _log, tenant, user);
 
         var mailbox = mailboxIterator.First();
 
         if (mailboxIterator.IsDone)
         {
-            log.Info("There are no user's mailboxes for deletion");
+            _log.InfoMailGarbageNoUsersForDeletion();
             return;
         }
 
@@ -723,13 +731,13 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             }
             catch (Exception ex)
             {
-                log.ErrorFormat("RemoveMailboxData(MailboxId: {0}) failed. Error: {1}", mailbox.MailBoxId, ex);
+                _log.ErrorMailGarbageRemoveMailboxData(mailbox.MailBoxId, ex.ToString());
             }
 
             mailbox = mailboxIterator.Next();
         }
 
-        RemoveUserMailDirectory(tenant, user, log);
+        RemoveUserMailDirectory(tenant, user);
     }
 
     #endregion

@@ -28,7 +28,7 @@ namespace ASC.Mail.Core.Dao.Interfaces;
 [Scope(typeof(ChainDao))]
 public interface IChainDao
 {
-    List<Chain> GetChains(IConversationsExp exp, ILog log = null);
+    List<Chain> GetChains(IConversationsExp exp);
 
     Dictionary<int, int> GetChainCount(IConversationsExp exp);
 

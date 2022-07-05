@@ -50,7 +50,7 @@ public class ImapFolderUids
         }
 
         // If one is null, but not both, return false.
-        if (((object)a == null) || ((object)b == null))
+        if ((a is null) || (b is null))
         {
             return false;
         }
@@ -67,13 +67,13 @@ public class ImapFolderUids
     public override bool Equals(object obj)
     {
         var p = obj as ImapFolderUids;
-        return (object)p != null && Equals(p);
+        return p is not null && Equals(p);
     }
 
     public bool Equals(ImapFolderUids p)
     {
         // If parameter is null return false:
-        if ((object)p == null)
+        if (p is null)
         {
             return false;
         }

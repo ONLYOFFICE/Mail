@@ -28,7 +28,7 @@ namespace ASC.Mail.Authorization;
 [Scope]
 public class GoogleOAuth2Authorization : BaseOAuth2Authorization<GoogleLoginProvider>
 {
-    public GoogleOAuth2Authorization(ILog log, ConsumerFactory consumerFactory, OAuth20TokenHelper oAuth20TokenHelper) : base(log, consumerFactory, oAuth20TokenHelper)
+    public GoogleOAuth2Authorization(ILogger log, ConsumerFactory consumerFactory, OAuth20TokenHelper oAuth20TokenHelper) : base(log, consumerFactory, oAuth20TokenHelper)
     {
     }
 }

@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using ASC.Common.Mapping;
+
+using Microsoft.Extensions.Hosting.WindowsServices;
+
+using System.Reflection;
 
 var options = new WebApplicationOptions
 {
@@ -67,8 +71,9 @@ builder.Host.ConfigureServices((hostContext, services) =>
 
     diHelper.TryAdd<StorageCleanerLauncher>();
     services.AddHostedService<StorageCleanerLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<StorageCleanerScope>();
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 });
 
@@ -76,6 +81,8 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
     builder.Register(context.Configuration, false, false);
 });
+
+builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 

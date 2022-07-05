@@ -68,7 +68,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<MailClientScope>();
     diHelper.TryAdd<ImapSyncService>();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
@@ -84,6 +84,8 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
     builder.Register(context.Configuration, false, false, "search.json");
 });
+
+builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 

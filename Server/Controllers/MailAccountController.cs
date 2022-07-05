@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
-
-using ASC.Mail.Core.Dao.Expressions.Mailbox;
+﻿using ASC.Mail.Core.Dao.Expressions.Mailbox;
 using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Core.Resources;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Extensions;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
 
 using Microsoft.AspNetCore.Mvc;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
 
 namespace ASC.Mail.Controllers
 {
@@ -25,7 +24,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Mailboxes, aliases and groups list</returns>
         /// <short>Get mailboxes, aliases and groups list</short> 
         /// <category>Accounts</category>
-        [Read("accounts")]
+        [HttpGet("accounts")]
         public IEnumerable<MailAccountData> GetAccounts()
         {
             var accounts = _accountEngine.GetAccountInfoList();
@@ -41,7 +40,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="NullReferenceException">Exception happens when mailbox wasn't found by email.</exception>
         /// <short>Get account by email</short> 
         /// <category>Accounts</category>
-        [Read(@"accounts/single")]
+        [HttpGet(@"accounts/single")]
         public MailBoxData GetAccount(string email)
         {
             var account = _accountEngine.GetAccount(email);
@@ -57,7 +56,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="Exception">Exception contains text description of happened error.</exception>
         /// <short>Create account with custom mail servers.</short> 
         /// <category>Accounts</category>
-        [Create("accounts")]
+        [HttpPost("accounts")]
         public MailAccountData CreateAccount(AccountModel model)
         {
             var accountInfo = _accountEngine.TryCreateAccount(model, out LoginResult loginResult);
@@ -78,7 +77,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Created account</returns>
         /// <short>Create new account by email and password</short> 
         /// <category>Accounts</category>
-        [Create(@"accounts/simple")]
+        [HttpPost(@"accounts/simple")]
         public MailAccountData CreateAccountSimple(string email, string password)
         {
             if (string.IsNullOrEmpty(email))
@@ -134,7 +133,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Created account</returns>
         /// <short>Create OAuth account</short> 
         /// <category>Accounts</category>
-        [Create(@"accounts/oauth")]
+        [HttpPost(@"accounts/oauth")]
         public MailAccountData CreateAccountOAuth(string code, byte type)
         {
             if (string.IsNullOrEmpty(code))
@@ -162,7 +161,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Updated OAuth account</returns>
         /// <short>Update OAuth account</short> 
         /// <category>Accounts</category>
-        [Update(@"accounts/oauth")]
+        [HttpPut(@"accounts/oauth")]
         public MailAccountData UpdateAccountOAuth(string code, byte type, int mailboxId)
         {
             string errorText = null;
@@ -193,7 +192,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="Exception">Exception contains text description of happened error.</exception>
         /// <short>Update account</short> 
         /// <category>Accounts</category>
-        [Update(@"accounts")]
+        [HttpPut(@"accounts")]
         public MailAccountData UpdateAccount(AccountModel accountModel)
         {
             if (accountModel == null || string.IsNullOrEmpty(accountModel.Email))
@@ -266,7 +265,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="NullReferenceException">Exception happens when mailbox wasn't found.</exception>
         /// <short>Delete account</short> 
         /// <category>Accounts</category>
-        [Delete(@"accounts")]
+        [HttpDelete(@"accounts")]
         public MailOperationStatus DeleteAccount(string email)
         {
             if (string.IsNullOrEmpty(email))
@@ -295,7 +294,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="Exception">Exception happens when update operation failed.</exception>
         /// <short>Set account state</short> 
         /// <category>Accounts</category>
-        [Update(@"accounts/state")]
+        [HttpPut(@"accounts/state")]
         public int SetAccountEnable(string email, bool state)
         {
             if (string.IsNullOrEmpty(email))
@@ -343,7 +342,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="Exception">Exception happens when update operation failed.</exception>
         /// <short>Set default account</short> 
         /// <category>Accounts</category>
-        [Update(@"accounts/default")]
+        [HttpPut(@"accounts/default")]
         public string SetDefaultAccount(string email, bool isDefault)
         {
             var result = _accountEngine.SetDefaultAccount(email, isDefault);
@@ -364,7 +363,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Account with default settings</returns>
         /// <short>Get default account settings</short> 
         /// <category>Accounts</category>
-        [Read(@"accounts/setups")]
+        [HttpGet(@"accounts/setups")]
         public MailBoxData GetAccountDefaults(string email, string action)
         {
             var result = _accountEngine.GetAccountDefaults(email, action);
@@ -382,7 +381,7 @@ namespace ASC.Mail.Controllers
         /// <exception cref="Exception">Exception happens when update operation failed.</exception>
         /// <short>Set account state</short> 
         /// <category>Accounts</category>
-        [Update(@"accounts/emailinfolder")]
+        [HttpPut(@"accounts/emailinfolder")]
         public void SetAccountEMailInFolder(int mailbox_id, string email_in_folder)
         {
             if (mailbox_id < 0)
@@ -396,7 +395,7 @@ namespace ASC.Mail.Controllers
         /// </summary>
         /// <param name="userOnline"></param>
         /// <category>Accounts</category>
-        [Update(@"accounts/updateuseractivity")]
+        [HttpPut(@"accounts/updateuseractivity")]
         public void UpdateUserActivity(bool userOnline)
         {
             _accountEngine.SetAccountsActivity(userOnline);

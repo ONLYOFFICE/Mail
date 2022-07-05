@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -30,10 +32,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class UserFolderEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
@@ -42,12 +44,12 @@ public class UserFolderEngine
         SecurityContext securityContext,
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
-        _log = option.Get("ASC.Mail.UserFolderEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.UserFolderEngine");
     }
 
     public MailUserFolderData Get(int id)
@@ -117,8 +119,12 @@ public class UserFolderEngine
                 string.Format("Folder with name \"{0}\" already exists", newUserFolder.Name));
         }
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             newUserFolder.Id = _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
 
             if (newUserFolder.Id <= 0)
@@ -138,7 +144,7 @@ public class UserFolderEngine
             _mailDaoFactory.GetUserFolderTreeDao().InsertFullPathToRoot(newUserFolder.Id, newUserFolder.ParentId);
 
             tx.Commit();
-        }
+        });
 
         _mailDaoFactory.GetUserFolderDao().RecalculateFoldersCount(newUserFolder.Id);
 
@@ -197,8 +203,12 @@ public class UserFolderEngine
             }
         }
 
-        using (var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
             newUserFolder.TimeModified = utsNow;
             _mailDaoFactory.GetUserFolderDao().Save(newUserFolder);
 
@@ -208,7 +218,7 @@ public class UserFolderEngine
             }
 
             tx.Commit();
-        }
+        });
 
         var recalcFolders = new List<int> { newUserFolder.ParentId };
 
@@ -285,7 +295,7 @@ public class UserFolderEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat($"UserFolderEngine->SetFolderCounters() Exception: {ex}\nStack trace:\n{ex.StackTrace}");
+            _log.ErrorUserFolderEngineSetFolderCounters(ex.ToString(), ex.StackTrace);
             throw new Exception($"SetFolderCounters exception: folder id {userFolderId}", ex);
             //TODO: Think about recalculation
             //var engine = new EngineFactory(Tenant, User);
@@ -311,7 +321,7 @@ public class UserFolderEngine
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("UserFolderEngine->ChangeFolderCounters() Exception: {0}", ex.ToString());
+            _log.ErrorUserFolderEngineChangeFolderCounters(ex.ToString());
             //TODO: Think about recalculation
             //var engine = new EngineFactory(Tenant, User);
             //engine.OperationEngine.RecalculateFolders();

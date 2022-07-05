@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -72,9 +74,9 @@ public class DraftEngine : ComposeEngineBase
         FactoryIndexer factoryIndexerCommon,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
-        IOptionsMonitor<ILog> option,
+        SignalrServiceClient optionsSnapshot,
         MailSettings mailSettings,
+        ILoggerProvider logProvider,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -89,7 +91,7 @@ public class DraftEngine : ComposeEngineBase
         coreSettings,
         storageFactory,
         optionsSnapshot,
-        option,
+        logProvider,
         mailSettings,
         daemonLabels)
     {
@@ -106,8 +108,6 @@ public class DraftEngine : ComposeEngineBase
         _httpContext = httpContextAccessor?.HttpContext;
 
         _serverFolderAccessInfos = _mailDaoFactory.GetImapSpecialMailboxDao().GetServerFolderAccessInfoList();
-
-        _log = option.Get("ASC.Mail.DraftEngine");
     }
 
     #region .Public
@@ -250,8 +250,8 @@ public class DraftEngine : ComposeEngineBase
 
                 var mimeMessage = draft.ToMimeMessage(_storageManager);
 
-                using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos,
-                    certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit, log: _log,
+                using (var mc = new MailClient(draft.Mailbox, CancellationToken.None, _serverFolderAccessInfos, _log,
+                    certificatePermit: draft.Mailbox.IsTeamlab || _sslCertificatePermit,
                     enableDsn: draft.RequestReceipt))
                 {
                     mc.Send(mimeMessage,
@@ -287,13 +287,12 @@ public class DraftEngine : ComposeEngineBase
                 }
                 catch (Exception ex)
                 {
-                    _log.ErrorFormat("Unexpected Error in Send() Id = {0}\r\nException: {1}",
-                        message.Id, ex.ToString());
+                    _log.ErrorDraftEngineSend(message.Id, ex.ToString());
                 }
             }
             catch (Exception ex)
             {
-                _log.ErrorFormat("Mail->Send failed: Exception: {0}", ex.ToString());
+                _log.ErrorDraftEngineSendFailed(ex.ToString());
 
                 AddNotificationAlertToMailbox(draft, ex);
 
@@ -325,66 +324,76 @@ public class DraftEngine : ComposeEngineBase
 
     private void ReleaseSendingDraftOnSuccess(MailDraftData draft, MailMessage message)
     {
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        // message was correctly send - lets update its chains id
-        var draftChainId = message.ChainId;
-        // before moving message from draft to sent folder - lets recalculate its correct chain id
-        var chainInfo = _messageEngine.DetectChain(draft.Mailbox,
-            message.MimeMessageId, message.MimeReplyToId, message.Subject);
-
-        message.ChainId = chainInfo.Id;
-
-        if (message.ChainId.Equals(message.MimeMessageId))
-            message.MimeReplyToId = null;
-
-        if (!draftChainId.Equals(message.ChainId))
+        strategy.Execute(() =>
         {
-            _mailDaoFactory.GetMailInfoDao().SetFieldValue(
-                SimpleMessagesExp.CreateBuilder(Tenant, User)
-                    .SetMessageId(message.Id)
-                    .Build(),
-                "ChainId",
-                message.ChainId);
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-            _messageEngine.UpdateChain(draftChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
+            // message was correctly send - lets update its chains id
+            var draftChainId = message.ChainId;
+            // before moving message from draft to sent folder - lets recalculate its correct chain id
+            var chainInfo = _messageEngine.DetectChain(draft.Mailbox,
+                message.MimeMessageId, message.MimeReplyToId, message.Subject);
+
+            message.ChainId = chainInfo.Id;
+
+            if (message.ChainId.Equals(message.MimeMessageId))
+                message.MimeReplyToId = null;
+
+            if (!draftChainId.Equals(message.ChainId))
+            {
+                _mailDaoFactory.GetMailInfoDao().SetFieldValue(
+                    SimpleMessagesExp.CreateBuilder(Tenant, User)
+                        .SetMessageId(message.Id)
+                        .Build(),
+                    "ChainId",
+                    message.ChainId);
+
+                _messageEngine.UpdateChain(draftChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
+                    draft.Mailbox.TenantId, draft.Mailbox.UserId);
+
+                _mailDaoFactory.GetCrmLinkDao().UpdateCrmLinkedChainId(draftChainId, draft.Mailbox.MailBoxId, message.ChainId);
+            }
+
+            _messageEngine.UpdateChain(message.ChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
                 draft.Mailbox.TenantId, draft.Mailbox.UserId);
 
-            _mailDaoFactory.GetCrmLinkDao().UpdateCrmLinkedChainId(draftChainId, draft.Mailbox.MailBoxId, message.ChainId);
-        }
+            var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
 
-        _messageEngine.UpdateChain(message.ChainId, FolderType.Sending, null, draft.Mailbox.MailBoxId,
-            draft.Mailbox.TenantId, draft.Mailbox.UserId);
+            if (!listObjects.Any())
+                return;
 
-        var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
+            _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Sent);
 
-        if (!listObjects.Any())
-            return;
+            _mailDaoFactory.GetMailInfoDao().SetFieldValue(
+                SimpleMessagesExp.CreateBuilder(Tenant, User)
+                    .SetMessageId(draft.Id)
+                    .Build(),
+                "FolderRestore",
+                FolderType.Sent);
 
-        _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Sent);
-
-        _mailDaoFactory.GetMailInfoDao().SetFieldValue(
-            SimpleMessagesExp.CreateBuilder(Tenant, User)
-                .SetMessageId(draft.Id)
-                .Build(),
-            "FolderRestore",
-            FolderType.Sent);
-
-        tx.Commit();
+            tx.Commit();
+        });
     }
 
     private void ReleaseSendingDraftOnFailure(MailDraftData draft)
     {
-        using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+        var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-        var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
+        strategy.Execute(() =>
+        {
+            using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-        if (!listObjects.Any())
-            return;
+            var listObjects = _mailDaoFactory.GetMailInfoDao().GetChainedMessagesInfo(new List<int> { draft.Id });
 
-        _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Draft);
+            if (!listObjects.Any())
+                return;
 
-        tx.Commit();
+            _messageEngine.SetFolder(_mailDaoFactory, listObjects, FolderType.Draft);
+
+            tx.Commit();
+        });
     }
 
     private void SaveIcsAttachment(MailDraftData draft, MimeMessage mimeMessage)
@@ -409,7 +418,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.Warn(string.Format("Problem with attach ICAL to message. mailId={0} Exception:\r\n{1}\r\n", draft.Id, ex));
+            _log.WarnDraftEngineAttachICALToMessage(draft.Id, ex.ToString());
         }
     }
 
@@ -442,11 +451,11 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, -1);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
         }
     }
 
@@ -454,19 +463,19 @@ public class DraftEngine : ComposeEngineBase
     {
         try
         {
-            var state = 0;
+            MailNotificationState state = MailNotificationState.SentMessageSuccess;
             if (!string.IsNullOrEmpty(draft.CalendarIcs))
             {
                 switch (draft.CalendarMethod)
                 {
                     case DefineConstants.ICAL_REQUEST:
-                        state = 1;
+                        state = MailNotificationState.SentIcalRequest;
                         break;
                     case DefineConstants.ICAL_REPLY:
-                        state = 2;
+                        state = MailNotificationState.SentIcalResponse;
                         break;
                     case DefineConstants.ICAL_CANCEL:
-                        state = 3;
+                        state = MailNotificationState.SentIcalCancel;
                         break;
                 }
             }
@@ -476,7 +485,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception ex)
         {
-            _log.ErrorFormat("Unexpected error with wcf signalrServiceClient: {0}, {1}", ex.Message, ex.StackTrace);
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
         }
     }
 
@@ -581,7 +590,7 @@ public class DraftEngine : ComposeEngineBase
             notifyMessageItem.ChainId = notifyMessageItem.MimeMessageId;
             notifyMessageItem.IsNew = true;
 
-            _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem, _log);
+            _messageEngine.StoreMailBody(draft.Mailbox, notifyMessageItem);
 
             var mailDaemonMessageid = _messageEngine.MailSave(draft.Mailbox, notifyMessageItem, 0,
                 FolderType.Inbox, FolderType.Inbox, null,
@@ -598,8 +607,7 @@ public class DraftEngine : ComposeEngineBase
         }
         catch (Exception exError)
         {
-            _log.ErrorFormat("AddNotificationAlertToMailbox() in MailboxId={0} failed with exception:\r\n{1}",
-                draft.Mailbox.MailBoxId, exError.ToString());
+            _log.ErrorDraftEngineAlertToMailbox(draft.Mailbox.MailBoxId, exError.ToString());
         }
     }
 

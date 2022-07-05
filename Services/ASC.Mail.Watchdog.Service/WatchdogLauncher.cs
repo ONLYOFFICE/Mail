@@ -1,9 +1,11 @@
-﻿namespace ASC.Mail.Watchdog.Service;
+﻿using ASC.Mail.Watchdog.Loggers;
+
+namespace ASC.Mail.Watchdog.Service;
 
 [Singletone]
 class WatchdogLauncher : IHostedService
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly WatchdogService _watchdogService;
     private readonly ConsoleParameters _consoleParameters;
 
@@ -13,30 +15,28 @@ class WatchdogLauncher : IHostedService
 
     public WatchdogLauncher(
         WatchdogService watchdogService,
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider logProvider,
         ConsoleParser consoleParser)
     {
         _watchdogService = watchdogService;
-        _log = options.Get("ASC.Mail.WatchdogLauncher");
+        _log = logProvider.CreateLogger("ASC.Mail.WatchdogLauncher");
         _consoleParameters = consoleParser.GetParsedParameters();
         AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
     }
 
     private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        _log.FatalFormat("Unhandled exception: {0}", e.ExceptionObject.ToString());
+        _log.CritWatchdogLauncher(e.ExceptionObject.ToString());
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _log.Info("Start service\r\n");
+        _log.InfoWatchdogLauncherStart();
 
         Cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         if (_consoleParameters.IsConsole)
         {
-            _log.Info("Service Start in console-daemon mode");
-
             _watchdogTask = _watchdogService.StarService(Cts.Token);
 
             _mreStop = new ManualResetEvent(false);
@@ -61,9 +61,9 @@ class WatchdogLauncher : IHostedService
         catch (Exception e)
         {
 
-            _log.Error($"Failed to terminate the service correctly. The details:\r\n{e}\r\n");
+            _log.ErrorWatchdogLauncherStop(e.ToString());
         }
 
-        _log.Info("Service stopped.\r\n");
+        _log.InfoWatchdogLauncherStop();
     }
 }

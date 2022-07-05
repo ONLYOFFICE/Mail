@@ -23,16 +23,18 @@
  *
 */
 
+
+
 namespace ASC.Mail.Authorization;
 
 [Scope]
 public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new()
 {
-    private readonly ILog log;
+    private readonly ILogger _log;
 
     private readonly T _loginProvider;
     private readonly OAuth20TokenHelper _oAuth20TokenHelper;
-    private ConsumerFactory ConsumerFactory;
+    private readonly ConsumerFactory ConsumerFactory;
 
     public string ClientId => _loginProvider.ClientID;
 
@@ -42,12 +44,15 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
 
     public string RefreshUrl => _loginProvider.AccessTokenUrl;
 
-    public BaseOAuth2Authorization(ILog log, ConsumerFactory consumerFactory, OAuth20TokenHelper oAuth20TokenHelper)
+    public BaseOAuth2Authorization(
+        ILogger log,
+        ConsumerFactory consumerFactory,
+        OAuth20TokenHelper oAuth20TokenHelper)
     {
         ConsumerFactory = consumerFactory;
         _oAuth20TokenHelper = oAuth20TokenHelper;
 
-        this.log = log;
+        _log = log;
         _loginProvider = ConsumerFactory.Get<T>();
 
         try
@@ -63,7 +68,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
         }
         catch (Exception ex)
         {
-            log.Error($"GoogleOAuth2Authorization() Exception:\r\n{ex}\r\n");
+            log.ErrorBaseOAuth2AuthorizationGoogleOAuth(ex.ToString());
         }
     }
 
@@ -83,7 +88,7 @@ public class BaseOAuth2Authorization<T> where T : Consumer, ILoginProvider, new(
         }
         catch (Exception ex)
         {
-            log.Error($"RequestAccessToken() Exception:\r\n{ex}\r\n");
+            _log.ErrorBaseOAuth2Authorization(ex.ToString());
             return null;
         }
     }

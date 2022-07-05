@@ -9,6 +9,7 @@ global using ASC.Core;
 global using ASC.Core.Notify.Signalr;
 global using ASC.Core.Users;
 global using ASC.Data.Storage;
+global using ASC.Mail.Aggregator.Loggers;
 global using ASC.Mail.Aggregator.Service;
 global using ASC.Mail.Aggregator.Service.Console;
 global using ASC.Mail.Aggregator.Service.Queue;
@@ -20,7 +21,6 @@ global using ASC.Mail.Core;
 global using ASC.Mail.Core.Dao.Expressions.Mailbox;
 global using ASC.Mail.Core.Engine;
 global using ASC.Mail.Core.Search;
-global using ASC.Mail.Core.Utils;
 global using ASC.Mail.Enums;
 global using ASC.Mail.Extensions;
 global using ASC.Mail.Models;
@@ -43,7 +43,7 @@ global using Microsoft.AspNetCore.Hosting;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
-global using Microsoft.Extensions.Options;
+global using Microsoft.Extensions.Logging;
 
 global using MimeKit;
 
@@ -58,6 +58,8 @@ global using System.Net;
 global using System.Reflection;
 global using System.Runtime.Caching;
 global using System.Runtime.InteropServices;
-global using System.Security.Authentication;
 global using System.Threading;
 global using System.Threading.Tasks;
+
+global using ILogger = Microsoft.Extensions.Logging.ILogger;
+global using LogLevel = Microsoft.Extensions.Logging.LogLevel;

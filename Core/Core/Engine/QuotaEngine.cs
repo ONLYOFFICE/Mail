@@ -23,21 +23,23 @@
  *
 */
 
+
+
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
 public class QuotaEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
-    private readonly ILog _log;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private readonly ILogger _log;
     private readonly TenantManager _tenantManager;
 
     public QuotaEngine(
         TenantManager tenantManager,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
 
-        _log = option.Get("ASC.Mail.QuotaEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.QuotaEngine");
         _tenantManager = tenantManager;
     }
 
@@ -50,7 +52,7 @@ public class QuotaEngine
         }
         catch (Exception ex)
         {
-            _log.Error(string.Format("QuotaUsedAdd with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
+            _log.ErrorQuotaEngineQuotaUsedAdd(Tenant, usedQuota, ex.ToString());
 
             throw;
         }
@@ -65,7 +67,7 @@ public class QuotaEngine
         }
         catch (Exception ex)
         {
-            _log.Error(string.Format("QuotaUsedDelete with params: tenant={0}, used_quota={1}", Tenant, usedQuota), ex);
+            _log.ErrorQuotaEngineQuotaUsedDelete(Tenant, usedQuota, ex.ToString());
 
             throw;
         }

@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using FolderType = ASC.Mail.Enums.FolderType;
 using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 using SaslMechanism = ASC.Mail.Enums.SaslMechanism;
@@ -33,12 +35,12 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class MailboxEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly TenantManager _tenantManager;
     private readonly SecurityContext _securityContext;
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly AlertEngine _alertEngine;
@@ -58,7 +60,7 @@ public class MailboxEngine : BaseEngine
         QuotaEngine quotaEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
-        IOptionsMonitor<ILog> option,
+        ILoggerProvider logProvider,
         IServiceProvider serviceProvider,
         MailSettings mailSettings,
         OAuth20TokenHelper oAuth20TokenHelper) : base(mailSettings)
@@ -77,7 +79,7 @@ public class MailboxEngine : BaseEngine
 
         _oauth20TokenHelper = oAuth20TokenHelper;
 
-        _log = option.Get("ASC.Mail.MailboxEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.MailboxEngine");
 
         _serviceProvider = serviceProvider;
     }
@@ -146,7 +148,7 @@ public class MailboxEngine : BaseEngine
 
             if (tuple == null)
             {
-                _log.WarnFormat("Mailbox id = {0} is not well-formated.", mailbox.Id);
+                _log.WarnMailboxEngineNotWellFormated(mailbox.Id);
 
                 mailBoxData = null;
                 failedId = mailbox.Id;
@@ -158,7 +160,7 @@ public class MailboxEngine : BaseEngine
         }
         catch (Exception ex)
         {
-            _log.Error("TryGetNextMailboxData failed", ex);
+            _log.ErrorMailboxEngineGetMailboxData(ex.ToString());
         }
 
         mailBoxData = null;
@@ -285,165 +287,174 @@ public class MailboxEngine : BaseEngine
         if (mailbox.IsTeamlab)
             throw new ArgumentException("Mailbox with specified email can't be updated");
 
-        using var tx = _mailDbContext.Database.BeginTransaction();
+        var success = false;
 
-        var existingMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
-            new СoncreteUserMailboxExp(
-                mailbox.EMail,
-                mailbox.TenantId, mailbox.UserId));
+        var strategy = _mailDbContext.Database.CreateExecutionStrategy();
 
-        int newInServerId, newOutServerId;
-
-        var mailboxId = 0;
-        var dateCreated = DateTime.UtcNow;
-        var enabled = true;
-        var host = authType == AuthorizationServiceType.Google ? DefineConstants.GOOGLE_HOST : mailbox.EMail.Host;
-
-        // Get new imap/pop3 server from MailBoxData
-        var newInServer = new MailboxServer
+        strategy.Execute(() =>
         {
-            Hostname = mailbox.Server,
-            Port = mailbox.Port,
-            Type = mailbox.Imap ? DefineConstants.IMAP : DefineConstants.POP3,
-            Username = mailbox.EMail.ToLoginFormat(mailbox.Account) ?? mailbox.Account,
-            SocketType = mailbox.Encryption.ToNameString(),
-            Authentication = mailbox.Authentication.ToNameString()
-        };
+            using var tx = _mailDbContext.Database.BeginTransaction();
 
-        // Get new smtp server from MailBoxData
-        var newOutServer = new MailboxServer
-        {
-            Hostname = mailbox.SmtpServer,
-            Port = mailbox.SmtpPort,
-            Type = DefineConstants.SMTP,
-            Username =
-                mailbox.SmtpAuthentication != SaslMechanism.None
-                    ? mailbox.EMail.ToLoginFormat(mailbox.SmtpAccount) ?? mailbox.SmtpAccount
-                    : "",
-            SocketType = mailbox.SmtpEncryption.ToNameString(),
-            Authentication = mailbox.SmtpAuthentication.ToNameString()
-        };
+            var existingMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
+                new СoncreteUserMailboxExp(
+                    mailbox.EMail,
+                    mailbox.TenantId, mailbox.UserId));
 
-        if (existingMailbox != null)
-        {
-            mailboxId = existingMailbox.Id;
-            enabled = existingMailbox.Enabled;
-            dateCreated = existingMailbox.DateCreated;
+            int newInServerId, newOutServerId;
 
-            // Get existing settings by existing ids
-            var dbInServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.ServerId);
-            var dbOutServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.SmtpServerId);
+            var mailboxId = 0;
+            var dateCreated = DateTime.UtcNow;
+            var enabled = true;
+            var host = authType == AuthorizationServiceType.Google ? DefineConstants.GOOGLE_HOST : mailbox.EMail.Host;
 
-            // Compare existing settings with new
-            if (!dbInServer.Equals(newInServer) || !dbOutServer.Equals(newOutServer))
+            // Get new imap/pop3 server from MailBoxData
+            var newInServer = new MailboxServer
             {
+                Hostname = mailbox.Server,
+                Port = mailbox.Port,
+                Type = mailbox.Imap ? DefineConstants.IMAP : DefineConstants.POP3,
+                Username = mailbox.EMail.ToLoginFormat(mailbox.Account) ?? mailbox.Account,
+                SocketType = mailbox.Encryption.ToNameString(),
+                Authentication = mailbox.Authentication.ToNameString()
+            };
+
+            // Get new smtp server from MailBoxData
+            var newOutServer = new MailboxServer
+            {
+                Hostname = mailbox.SmtpServer,
+                Port = mailbox.SmtpPort,
+                Type = DefineConstants.SMTP,
+                Username =
+                    mailbox.SmtpAuthentication != SaslMechanism.None
+                        ? mailbox.EMail.ToLoginFormat(mailbox.SmtpAccount) ?? mailbox.SmtpAccount
+                        : "",
+                SocketType = mailbox.SmtpEncryption.ToNameString(),
+                Authentication = mailbox.SmtpAuthentication.ToNameString()
+            };
+
+            if (existingMailbox != null)
+            {
+                mailboxId = existingMailbox.Id;
+                enabled = existingMailbox.Enabled;
+                dateCreated = existingMailbox.DateCreated;
+
+                // Get existing settings by existing ids
+                var dbInServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.ServerId);
+                var dbOutServer = _mailDaoFactory.GetMailboxServerDao().GetServer(existingMailbox.SmtpServerId);
+
+                // Compare existing settings with new
+                if (!dbInServer.Equals(newInServer) || !dbOutServer.Equals(newOutServer))
+                {
+                    var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
+
+                    List<MailboxServer> trustedServers = null;
+                    if (domain != null)
+                        trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
+
+                    newInServerId = GetMailboxServerId(dbInServer, newInServer, trustedServers);
+                    newOutServerId = GetMailboxServerId(dbOutServer, newOutServer,
+                        trustedServers);
+                }
+                else
+                {
+                    newInServerId = existingMailbox.ServerId;
+                    newOutServerId = existingMailbox.SmtpServerId;
+                }
+            }
+            else
+            {
+                //Find settings by host
+
                 var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
 
-                List<MailboxServer> trustedServers = null;
                 if (domain != null)
-                    trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
+                {
+                    //Get existing servers with isUserData = 0
+                    var trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
 
-                newInServerId = GetMailboxServerId(dbInServer, newInServer, trustedServers);
-                newOutServerId = GetMailboxServerId(dbOutServer, newOutServer,
-                    trustedServers);
+                    //Compare existing settings with new
+
+                    var foundInServer = trustedServers.FirstOrDefault(ts => ts.Equals(newInServer));
+                    var foundOutServer = trustedServers.FirstOrDefault(ts => ts.Equals(newOutServer));
+
+                    //Use existing or save new servers
+                    newInServerId = foundInServer != null
+                        ? foundInServer.Id
+                        : SaveMailboxServer(newInServer, domain.ProviderId);
+
+                    newOutServerId = foundOutServer != null
+                        ? foundOutServer.Id
+                        : SaveMailboxServer(newOutServer, domain.ProviderId);
+                }
+                else
+                {
+                    //Save new servers
+                    var newProvider = new MailboxProvider
+                    {
+                        Id = 0,
+                        Name = host,
+                        DisplayShortName = "",
+                        DisplayName = "",
+                        Url = ""
+                    };
+
+                    newProvider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(newProvider);
+
+                    var newDomain = new MailboxDomain
+                    {
+                        Id = 0,
+                        Name = host,
+                        ProviderId = newProvider.Id
+                    };
+
+                    _mailDaoFactory.GetMailboxDomainDao().SaveDomain(newDomain);
+
+                    newInServerId = SaveMailboxServer(newInServer, newProvider.Id);
+                    newOutServerId = SaveMailboxServer(newOutServer, newProvider.Id);
+                }
+            }
+
+            var loginDelayTime = GetLoginDelayTime(mailbox);
+
+            //Save Mailbox to DB
+            var mb = new Mailbox
+            {
+                Id = mailboxId,
+                Tenant = mailbox.TenantId,
+                User = mailbox.UserId,
+                Address = mailbox.EMail.Address.ToLowerInvariant(),
+                Name = mailbox.Name,
+                Password = mailbox.Password,
+                MsgCountLast = mailbox.MessagesCount,
+                SmtpPassword = mailbox.SmtpPassword,
+                SizeLast = mailbox.Size,
+                LoginDelay = loginDelayTime,
+                Enabled = enabled,
+                Imap = mailbox.Imap,
+                BeginDate = mailbox.BeginDate,
+                OAuthType = mailbox.OAuthType,
+                OAuthToken = mailbox.OAuthToken,
+                ServerId = newInServerId,
+                SmtpServerId = newOutServerId,
+                DateCreated = dateCreated
+            };
+
+            var mailBoxId = _mailDaoFactory.GetMailboxDao().SaveMailBox(mb);
+
+            mailbox.MailBoxId = mailBoxId;
+
+            if (mailBoxId < 1)
+            {
+                tx.Rollback();
+                success = false;
             }
             else
-            {
-                newInServerId = existingMailbox.ServerId;
-                newOutServerId = existingMailbox.SmtpServerId;
-            }
-        }
-        else
-        {
-            //Find settings by host
+                success = true;
 
-            var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(host);
+            tx.Commit();
+        });
 
-            if (domain != null)
-            {
-                //Get existing servers with isUserData = 0
-                var trustedServers = _mailDaoFactory.GetMailboxServerDao().GetServers(domain.ProviderId);
-
-                //Compare existing settings with new
-
-                var foundInServer = trustedServers.FirstOrDefault(ts => ts.Equals(newInServer));
-                var foundOutServer = trustedServers.FirstOrDefault(ts => ts.Equals(newOutServer));
-
-                //Use existing or save new servers
-                newInServerId = foundInServer != null
-                    ? foundInServer.Id
-                    : SaveMailboxServer(newInServer, domain.ProviderId);
-
-                newOutServerId = foundOutServer != null
-                    ? foundOutServer.Id
-                    : SaveMailboxServer(newOutServer, domain.ProviderId);
-            }
-            else
-            {
-                //Save new servers
-                var newProvider = new MailboxProvider
-                {
-                    Id = 0,
-                    Name = host,
-                    DisplayShortName = "",
-                    DisplayName = "",
-                    Url = ""
-                };
-
-                newProvider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(newProvider);
-
-                var newDomain = new MailboxDomain
-                {
-                    Id = 0,
-                    Name = host,
-                    ProviderId = newProvider.Id
-                };
-
-                _mailDaoFactory.GetMailboxDomainDao().SaveDomain(newDomain);
-
-                newInServerId = SaveMailboxServer(newInServer, newProvider.Id);
-                newOutServerId = SaveMailboxServer(newOutServer, newProvider.Id);
-            }
-        }
-
-        var loginDelayTime = GetLoginDelayTime(mailbox);
-
-        //Save Mailbox to DB
-        var mb = new Mailbox
-        {
-            Id = mailboxId,
-            Tenant = mailbox.TenantId,
-            User = mailbox.UserId,
-            Address = mailbox.EMail.Address.ToLowerInvariant(),
-            Name = mailbox.Name,
-            Password = mailbox.Password,
-            MsgCountLast = mailbox.MessagesCount,
-            SmtpPassword = mailbox.SmtpPassword,
-            SizeLast = mailbox.Size,
-            LoginDelay = loginDelayTime,
-            Enabled = enabled,
-            Imap = mailbox.Imap,
-            BeginDate = mailbox.BeginDate,
-            OAuthType = mailbox.OAuthType,
-            OAuthToken = mailbox.OAuthToken,
-            ServerId = newInServerId,
-            SmtpServerId = newOutServerId,
-            DateCreated = dateCreated
-        };
-
-        var mailBoxId = _mailDaoFactory.GetMailboxDao().SaveMailBox(mb);
-
-        mailbox.MailBoxId = mailBoxId;
-
-        if (mailBoxId < 1)
-        {
-            tx.Rollback();
-            return false;
-        }
-
-        tx.Commit();
-
-        return true;
+        return success;
     }
 
     public List<MailBoxData> GetMailboxesForProcessing(MailSettings mailSettings, int needTasks)
@@ -488,7 +499,7 @@ public class MailboxEngine : BaseEngine
 
         foreach (var box in mailboxes)
         {
-            _log.Debug($"Address: {box.EMail.Address} | Id: {box.MailBoxId} | IsEnabled: {box.Enabled} | IsRemoved: {box.IsRemoved} | Tenant: {box.TenantId} | Id: {box.UserId}");
+            _log.DebugMailboxEngineGetMailboxes(box.EMail.Address, box.MailBoxId, box.Enabled, box.IsRemoved, box.TenantId, box.UserId);
         }
 
         return mailboxes;
@@ -614,20 +625,24 @@ public class MailboxEngine : BaseEngine
         if (mailbox.MailBoxId <= 0)
             throw new Exception("MailBox id is 0");
 
-        long freedQuotaSize;
+        long freedQuotaSize = 0;
 
         using var scope = _serviceProvider.CreateScope();
 
         var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
 
-        using (var tx = factory.BeginTransaction())
+        var strategy = _mailDbContext.Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = factory.BeginTransaction();
+
             if (mailbox.MailBoxId <= 0)
                 throw new Exception("MailBox id is 0");
 
             freedQuotaSize = RemoveMailBoxInfo(mailbox);
 
-            _log.Debug($"Free quota size: {freedQuotaSize}");
+            _log.DebugMailboxEngineFreeQuota(freedQuotaSize);
 
             _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
@@ -637,7 +652,7 @@ public class MailboxEngine : BaseEngine
             //TODO: Fix OperationEngine.RecalculateFolders();
 
             tx.Commit();
-        }
+        });
 
         _quotaEngine.QuotaUsedDelete(freedQuotaSize);
 
@@ -653,10 +668,7 @@ public class MailboxEngine : BaseEngine
 
     public long RemoveMailBoxInfo(MailBoxData mailBoxData)
     {
-        long totalAttachmentsSize;
-
-        //TODO: Check timeout on big mailboxes
-        //using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RemoveMailboxTimeout))
+        long totalAttachmentsSize = 0;
 
         using var scope = _serviceProvider.CreateScope();
 
@@ -664,10 +676,14 @@ public class MailboxEngine : BaseEngine
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
         tenantManager.SetCurrentTenant(mailBoxData.TenantId);
-        _log.Debug($"RemoveMailboxInfo. Set current tenant: {tenantManager.GetCurrentTenant().TenantId}");
+        _log.DebugMailboxEngineRemoveMailboxTenant(tenantManager.GetCurrentTenant().Id);
 
-        using (var tx = factory.BeginTransaction())
+        var strategy = _mailDbContext.Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
+            using var tx = factory.BeginTransaction();
+
             if (mailBoxData.MailBoxId <= 0)
                 throw new Exception("MailBox id is 0");
 
@@ -742,7 +758,7 @@ public class MailboxEngine : BaseEngine
                 .RemoveByMailbox(mailBoxData.MailBoxId);
 
             tx.Commit();
-        }
+        });
 
         return totalAttachmentsSize;
     }
@@ -752,11 +768,11 @@ public class MailboxEngine : BaseEngine
         if (tasksLimit <= 0)
             return new List<MailBoxData>();
 
-        _log.Debug("GetActiveMailboxForProcessing()");
+        _log.DebugMailboxEngineGetActiveMailbox();
 
         var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, true));
 
-        _log.Debug($"Found {mailboxes.Count} active tasks");
+        _log.DebugMailboxEngineFoundedTasks(mailboxes.Count);
 
         return mailboxes;
     }
@@ -766,11 +782,11 @@ public class MailboxEngine : BaseEngine
         if (tasksLimit <= 0)
             return new List<MailBoxData>();
 
-        _log.Debug("GetInactiveMailboxForProcessing()");
+        _log.DebugMailboxEngineGetInactiveMailbox();
 
         var mailboxes = GetMailboxDataList(new MailboxesForProcessingExp(mailSettings, tasksLimit, false));
 
-        _log.Debug($"Found {mailboxes.Count} inactive tasks");
+        _log.DebugMailboxEngineFoundedInactiveTasks(mailboxes.Count);
 
         return mailboxes;
     }

@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Aggregator.Service.Service;
+﻿
+
+namespace ASC.Mail.Aggregator.Service.Service;
 
 [Scope]
 public class AggregatorServiceScope

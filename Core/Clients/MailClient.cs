@@ -38,7 +38,7 @@ public class MailClient : IDisposable
     public List<ServerFolderAccessInfo> ServerFolderAccessInfos { get; }
     public bool CertificatePermit { get; }
     public FolderEngine FolderEngine { get; }
-    public ILog Log { get; set; }
+    public ILogger Log { get; set; }
 
     public ImapClient Imap { get; private set; }
     public Pop3Client Pop { get; private set; }
@@ -112,37 +112,40 @@ public class MailClient : IDisposable
     public MailClient(MailBoxData mailbox,
         CancellationToken cancelToken,
         List<ServerFolderAccessInfo> serverFolderAccessInfos,
+        ILogger logger,
         int tcpTimeout = 30000,
-        bool certificatePermit = false, bool checkCertificateRevocation = true,
+        bool certificatePermit = false,
+        bool checkCertificateRevocation = true,
         string protocolLogPath = "",
-        ILog log = null, bool skipSmtp = false, bool enableDsn = false)
+        bool skipSmtp = false,
+        bool enableDsn = false)
     {
         var protocolLogger = !string.IsNullOrEmpty(protocolLogPath)
-            ? (IProtocolLogger)
-                new ProtocolLogger(protocolLogPath += $"{mailbox.EMail.Address}.log")
+            ? (IProtocolLogger)new ProtocolLogger(protocolLogPath += $"{mailbox.EMail.Address}.log")
             : new NullProtocolLogger();
 
         Account = mailbox;
         ServerFolderAccessInfos = serverFolderAccessInfos;
         CertificatePermit = certificatePermit;
-        Log = log ?? new NullLog();
+
+        Log = logger;
 
         _stopTokenSource = new CancellationTokenSource();
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken, _stopTokenSource.Token).Token;
 
-        Log.Debug($"MailClient: Constructor -> Certificate Permit: {CertificatePermit}.");
-        Log.Debug($"MailClient: Constructor -> Check Certificate Revocation: {checkCertificateRevocation}.");
+        Log.DebugMailClientCertificatePermit(CertificatePermit);
+
+        Log.DebugMailClientCheckCertificateRevocation(checkCertificateRevocation);
 
         if (Account.Imap)
         {
             Imap = new ImapClient(protocolLogger)
             {
-                Timeout = tcpTimeout
+                Timeout = tcpTimeout,
+                ServerCertificateValidationCallback = CertificateValidationCallback,
+                CheckCertificateRevocation = checkCertificateRevocation
             };
-
-            Imap.ServerCertificateValidationCallback = CertificateValidationCallback;
-            Imap.CheckCertificateRevocation = checkCertificateRevocation;
 
             Pop = null;
         }
@@ -150,11 +153,10 @@ public class MailClient : IDisposable
         {
             Pop = new Pop3Client(protocolLogger)
             {
-                Timeout = tcpTimeout
+                Timeout = tcpTimeout,
+                ServerCertificateValidationCallback = CertificateValidationCallback,
+                CheckCertificateRevocation = checkCertificateRevocation
             };
-
-            Pop.ServerCertificateValidationCallback = CertificateValidationCallback;
-            Pop.CheckCertificateRevocation = checkCertificateRevocation;
 
             Imap = null;
         }
@@ -162,6 +164,7 @@ public class MailClient : IDisposable
         if (skipSmtp)
         {
             Smtp = null;
+
             return;
         }
 
@@ -191,11 +194,12 @@ public class MailClient : IDisposable
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
     {
-        Log.Debug($"CertificateValidationCallback(). Certificate callback: {certificate.Subject}.");
+        Log.DebugMailClientCertificateCallback(certificate.Subject);
 
         if (sslPolicyErrors == SslPolicyErrors.None)
         {
-            Log.Debug("CertificateValidationCallback(). No Ssl policy errors...");
+            Log.DebugMailClientNoSslPolicyErrors();
+
             return true;
         }
 
@@ -204,21 +208,18 @@ public class MailClient : IDisposable
 
     public MimeMessage GetInboxMessage(string uidl)
     {
-        if (string.IsNullOrEmpty(uidl))
-            throw new ArgumentNullException("uidl");
+        if (string.IsNullOrEmpty(uidl)) throw new ArgumentNullException(nameof(uidl));
 
         if (Account.Imap)
         {
-            if (!Imap.IsAuthenticated)
-                LoginImap();
+            if (!Imap.IsAuthenticated) LoginImap();
 
             var elements = uidl.Split('-');
 
             var index = Convert.ToInt32(elements[0]);
             var folderId = Convert.ToInt32(elements[1]);
 
-            if (folderId != (int)FolderType.Inbox)
-                throw new ArgumentException("Uidl is invalid. Only INBOX folder is supported.");
+            if (folderId != (int)FolderType.Inbox) throw new ArgumentException("Uidl is invalid. Only INBOX folder is supported.");
 
             var inbox = Imap.Inbox;
 
@@ -230,8 +231,7 @@ public class MailClient : IDisposable
 
             var uid = allUids.FirstOrDefault(u => u.Id == index);
 
-            if (!uid.IsValid)
-                throw new Exception("IMAP4 uidl not found");
+            if (!uid.IsValid) throw new Exception("IMAP4 uidl not found");
 
             var message = Imap.Inbox.GetMessageAsync(uid, _cancelToken).Result;
 
@@ -239,10 +239,10 @@ public class MailClient : IDisposable
         }
         else
         {
-            if (!Pop.IsAuthenticated)
-                LoginPop3();
+            if (!Pop.IsAuthenticated) LoginPop3();
 
             var i = 0;
+
             var uidls =
                 Pop.GetMessageUids(_cancelToken)
                     .Select(u => new KeyValuePair<int, string>(i++, u))
@@ -250,8 +250,7 @@ public class MailClient : IDisposable
 
             var uid = uidls.FirstOrDefault(u => u.Value.Equals(uidl, StringComparison.OrdinalIgnoreCase));
 
-            if (uid.Value == null)
-                throw new Exception("POP3 uidl not found");
+            if (uid.Value == null) throw new Exception("POP3 uidl not found");
 
             return Pop.GetMessage(uid.Key, _cancelToken);
         }
@@ -259,21 +258,17 @@ public class MailClient : IDisposable
 
     public void Aggregate(MailSettings mailSettings, int limitMessages = -1)
     {
-        if (Account.Imap)
-            AggregateImap(mailSettings, limitMessages);
-        else
-            AggregatePop3(limitMessages);
+        if (Account.Imap) AggregateImap(mailSettings, limitMessages);
+        else AggregatePop3(limitMessages);
     }
 
     public void Send(MimeMessage message, bool needCopyToSentFolder = true)
     {
-        if (!Smtp.IsConnected)
-            LoginSmtp();
+        if (!Smtp.IsConnected) LoginSmtp();
 
         Smtp.Send(message, _cancelToken);
 
-        if (!Account.Imap || !needCopyToSentFolder)
-            return;
+        if (!Account.Imap || !needCopyToSentFolder) return;
 
         AppendCopyToSentFolder(message);
     }
@@ -281,8 +276,11 @@ public class MailClient : IDisposable
     public void Cancel()
     {
         if (IsCanceled) return;
-        Log.Info("MailClient -> Cancel()");
+
+        Log.InfoMailClientCancel();
+
         _stopTokenSource.Cancel();
+
         IsCanceled = true;
     }
 
@@ -290,7 +288,7 @@ public class MailClient : IDisposable
     {
         if (IsDisposed) return;
 
-        Log.Info("MailClient -> Dispose()");
+        Log.InfoMailClientDispose();
 
         try
         {
@@ -300,7 +298,7 @@ public class MailClient : IDisposable
                 {
                     if (Imap.IsConnected)
                     {
-                        Log.Debug("Imap -> Disconnect()");
+                        Log.DebugMailClientImapDisconnect();
                         Imap.Disconnect(true, _cancelToken);
                     }
 
@@ -315,7 +313,7 @@ public class MailClient : IDisposable
                 {
                     if (Pop.IsConnected)
                     {
-                        Log.Debug("Pop -> Disconnect()");
+                        Log.DebugMailClientPopDisconnect();
                         Pop.Disconnect(true, _cancelToken);
                     }
 
@@ -329,7 +327,7 @@ public class MailClient : IDisposable
                 {
                     if (Smtp.IsConnected)
                     {
-                        Log.Debug("Smtp -> Disconnect()");
+                        Log.DebugMailClientSmtpDisconnect();
                         Smtp.Disconnect(true, _cancelToken);
                     }
 
@@ -348,7 +346,7 @@ public class MailClient : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error($"MailClient -> Dispose(MailboxId={Account.MailBoxId} MailboxAddres: '{Account.EMail.Address}')\r\nException: {ex.Message}\r\n");
+            Log.ErrorMailClientDispose(Account.MailBoxId, Account.EMail.Address, ex.Message);
         }
     }
 
@@ -356,13 +354,11 @@ public class MailClient : IDisposable
     {
         if (Account.Imap)
         {
-            if (!Imap.IsAuthenticated)
-                LoginImap();
+            if (!Imap.IsAuthenticated) LoginImap();
         }
         else
         {
-            if (!Pop.IsAuthenticated)
-                LoginPop3();
+            if (!Pop.IsAuthenticated) LoginPop3();
         }
     }
 
@@ -377,13 +373,11 @@ public class MailClient : IDisposable
         {
             if (Account.Imap)
             {
-                if (!Imap.IsAuthenticated)
-                    LoginImap(false);
+                if (!Imap.IsAuthenticated) LoginImap(false);
             }
             else
             {
-                if (!Pop.IsAuthenticated)
-                    LoginPop3(false);
+                if (!Pop.IsAuthenticated) LoginPop3(false);
             }
 
             result.IngoingSuccess = true;
@@ -396,8 +390,7 @@ public class MailClient : IDisposable
 
         try
         {
-            if (!Smtp.IsAuthenticated)
-                LoginSmtp();
+            if (!Smtp.IsAuthenticated) LoginSmtp();
 
             result.OutgoingSuccess = true;
         }
@@ -430,10 +423,9 @@ public class MailClient : IDisposable
 
     public static MimeMessage ParseMimeMessage(string emlPath)
     {
-        using (var fs = new FileStream(emlPath, FileMode.Open, FileAccess.Read))
-        {
-            return ParseMimeMessage(fs);
-        }
+        using var fs = new FileStream(emlPath, FileMode.Open, FileAccess.Read);
+
+        return ParseMimeMessage(fs);
     }
 
     #endregion
@@ -444,7 +436,7 @@ public class MailClient : IDisposable
 
     private void LoginImap(bool enableUtf8 = true)
     {
-        Log.Debug($"Try login IMAP client (Tenant: {Account.TenantId}, MailboxId: {Account.MailBoxId}, Address: '{Account.EMail}')");
+        Log.DebugMailClientTryLoginIMAP(Account.TenantId, Account.MailBoxId, Account.EMail.ToString());
 
         var secureSocketOptions = SecureSocketOptions.Auto;
         var sslProtocols = SslProtocols.None;
@@ -465,37 +457,40 @@ public class MailClient : IDisposable
                 break;
         }
 
-        Log.Debug($"Imap: Connect({Account.Server}:{Account.Port}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
+        Log.DebugMailClientImapConnect(Account.Server, Account.Port, Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
 
         try
         {
             Imap.SslProtocols = sslProtocols;
 
-            Log.InfoFormat("Try connect... to ({1}:{2}) timeout {0} miliseconds", CONNECT_TIMEOUT, Account.Server, Account.Port);
+            Log.InfoMailClientTryConnectTo(CONNECT_TIMEOUT, Account.Server, Account.Port);
 
             var t = Imap.ConnectAsync(Account.Server, Account.Port, secureSocketOptions, _cancelToken);
 
             if (!t.Wait(CONNECT_TIMEOUT, _cancelToken))
             {
-                Log.Debug("Imap: Failed connect: Timeout.");
+                Log.InfoMailClientImapConnectTimeout();
+
                 throw new TimeoutException("Imap: ConnectAsync() timeout.");
             }
             else
             {
                 IsConnected = true;
-                Log.Debug("Imap: Successfull connection. Working on!");
+
+                Log.DebugMailClientImapConnectSuccessfull();
             }
 
             Imap.Authenticated += ImapOnAuthenticated;
 
             if (string.IsNullOrEmpty(Account.OAuthToken))
             {
-                Log.Debug($"Imap: Authentication({Account.Account}).");
+                Log.DebugMailClientImapAuthentication(Account.Account);
+
                 t = Imap.AuthenticateAsync(Account.Account, Account.Password, _cancelToken);
             }
             else
             {
-                Log.Debug("Imap: AuthenticationByOAuth({Account.Account}).");
+                Log.DebugMailClientImapAuthByOAuth(Account.Account);
 
                 var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -505,31 +500,35 @@ public class MailClient : IDisposable
             if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
             {
                 Imap.Authenticated -= ImapOnAuthenticated;
-                Log.Debug("Imap: Failed authentication: Timeout.");
+
+                Log.DebugMailClientImapAuthTimeout();
+
                 throw new TimeoutException("Imap: AuthenticateAsync timeout.");
             }
             else
             {
                 IsAuthenticated = true;
-                Log.Debug("Imap: Successfull authentication.");
+
+                Log.DebugMailClientImapAuthSuccessfull();
             }
 
             Imap.Authenticated -= ImapOnAuthenticated;
 
             if (enableUtf8 && (Imap.Capabilities & ImapCapabilities.UTF8Accept) != ImapCapabilities.None)
             {
-                Log.Debug("Imap: EnableUTF8().");
+                Log.DebugMailClientImapEnableUTF8();
 
                 t = Imap.EnableUTF8Async(_cancelToken);
 
                 if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
                 {
-                    Log.Debug("Imap: Failed ENABLE_UTF8: Timeout.");
+                    Log.DebugMailClientImapEnableUTF8Timeout();
+
                     throw new TimeoutException("Imap: ENABLE_UTF8 timeout.");
                 }
                 else
                 {
-                    Log.Debug("Imap: Successfull ENABLE_UTF8.");
+                    Log.DebugMailClientImapEnableUTF8Successfull();
                 }
             }
         }
@@ -558,8 +557,7 @@ public class MailClient : IDisposable
 
     private void AggregateImap(MailSettings mailSettings, int limitMessages = -1)
     {
-        if (!Imap.IsAuthenticated)
-            LoginImap();
+        if (!Imap.IsAuthenticated) LoginImap();
 
         try
         {
@@ -569,19 +567,20 @@ public class MailClient : IDisposable
 
             foreach (var folder in folders)
             {
-                if (!Imap.IsConnected || _cancelToken.IsCancellationRequested)
-                    return;
+                if (!Imap.IsConnected || _cancelToken.IsCancellationRequested) return;
 
                 var mailFolder = DetectFolder(mailSettings, folder);
 
                 if (mailFolder == null)
                 {
-                    Log.InfoFormat("[folder] x '{0}' (skipped)", folder.Name);
+                    Log.InfoMailClientFolderSkipped(folder.Name);
+
                     continue;
                 }
 
-                Log.InfoFormat("[folder] >> '{0}' (fId={1}) {2}", folder.Name, mailFolder.Folder,
-                    mailFolder.Tags.Any() ? string.Format("tag='{0}'", mailFolder.Tags.FirstOrDefault()) : "");
+                var tags = mailFolder.Tags.Any() ? string.Format("tag='{0}'", mailFolder.Tags.FirstOrDefault()) : "";
+
+                Log.InfoMailClientFolder(folder.Name, mailFolder.Folder.ToString(), tags);
 
                 try
                 {
@@ -589,21 +588,21 @@ public class MailClient : IDisposable
                 }
                 catch (OperationCanceledException)
                 {
-                    // Skip log error
                     continue;
                 }
                 catch (Exception e)
                 {
-                    Log.Error($"Open faild: {folder.Name} Exception: {e.Message}");
+                    Log.ErrorMailClientOpenFolder(folder.Name, e.Message);
+
                     continue;
                 }
 
                 loaded += LoadFolderMessages(folder, mailFolder, limitMessages, mailSettings.Aggregator.MaxMessageSizeLimit);
 
-                if (limitMessages <= 0 || loaded < limitMessages)
-                    continue;
+                if (limitMessages <= 0 || loaded < limitMessages) continue;
 
-                Log.Debug("Limit of maximum number messages per session is exceeded!");
+                Log.DebugMailClientImapLimitMessages();
+
                 break;
             }
         }
@@ -613,36 +612,35 @@ public class MailClient : IDisposable
             {
                 throw aggEx.InnerException;
             }
+
             throw new Exception("AggregateImap failed", aggEx);
         }
     }
 
     private static bool CompareFolders(IMailFolder f1, IMailFolder f2)
     {
-        Func<IMailFolder, bool> isInbox = (f) => f.Attributes.HasFlag(FolderAttributes.Inbox) ||
+        static bool isInbox(IMailFolder f) => f.Attributes.HasFlag(FolderAttributes.Inbox) ||
                                                  f.Name.Equals("inbox", StringComparison.InvariantCultureIgnoreCase);
 
-        Func<IMailFolder, bool> isSent = (f) => f.Attributes.HasFlag(FolderAttributes.Sent) ||
+        static bool isSent(IMailFolder f) => f.Attributes.HasFlag(FolderAttributes.Sent) ||
                                                 f.Name.Equals("sent", StringComparison.InvariantCultureIgnoreCase) ||
                                                 f.Name.Equals("sent items", StringComparison.InvariantCultureIgnoreCase);
 
-        Func<IMailFolder, bool> isSpam = (f) => f.Attributes.HasFlag(FolderAttributes.Junk) ||
+        static bool isSpam(IMailFolder f) => f.Attributes.HasFlag(FolderAttributes.Junk) ||
                                                 f.Name.Equals("spam", StringComparison.InvariantCultureIgnoreCase) ||
                                                 f.Name.Equals("junk", StringComparison.InvariantCultureIgnoreCase) ||
                                                 f.Name.Equals("bulk", StringComparison.InvariantCultureIgnoreCase);
 
-        if (isInbox(f1))
-            return true;
+        if (isInbox(f1)) return true;
 
-        if (isSent(f1) && !isInbox(f2))
-            return true;
+        if (isSent(f1) && !isInbox(f2)) return true;
 
         return isSpam(f1) && !isInbox(f2) && !isSent(f2);
     }
 
     private IEnumerable<IMailFolder> GetImapFolders()
     {
-        Log.Debug("GetImapFoldersAsync()");
+        Log.DebugMailClientGetImapFoldersAsync();
 
         var personal = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], true, _cancelToken).Result.ToList();
 
@@ -700,7 +698,7 @@ public class MailClient : IDisposable
         }
         catch (Exception ex)
         {
-            Log.Error($"GetImapSubFolders: {folder.Name} Exception: {ex.Message}");
+            Log.ErrorMailClientGetImapSubFolders(folder.Name, ex.Message);
         }
 
         return new List<IMailFolder>();
@@ -727,8 +725,7 @@ public class MailClient : IDisposable
     {
         var loaded = 0;
 
-        ImapFolderUids folderUids;
-        if (!Account.ImapIntervals.TryGetValue(folder.Name, out folderUids))
+        if (!Account.ImapIntervals.TryGetValue(folder.Name, out ImapFolderUids folderUids))
         {
             Account.ImapFolderChanged = true;
             folderUids = new ImapFolderUids(new List<int> { 1, int.MaxValue }, 1, folder.UidValidity); // by default - mailbox never was processed before
@@ -738,14 +735,16 @@ public class MailClient : IDisposable
             if (folderUids.UidValidity.HasValue &&
                 folderUids.UidValidity != folder.UidValidity)
             {
-                Log.Debug($"Folder '{folder.Name}' UIDVALIDITY changed - need refresh folder");
+                Log.DebugMailClientUidValidityChanged(folder.Name);
+
                 folderUids = new ImapFolderUids(new List<int> { 1, int.MaxValue }, 1, folder.UidValidity); // reset folder check history if uidValidity has been changed
             }
         }
 
         if (!folderUids.UidValidity.HasValue)
         {
-            Log.Debug($"Folder '{folder.Name}' Save UIDVALIDITY = {folder.UidValidity}");
+            Log.DebugMailClientUidValiditySave(folder.Name, folder.UidValidity);
+
             folderUids.UidValidity = folder.UidValidity; // Update UidValidity
         }
 
@@ -792,20 +791,21 @@ public class MailClient : IDisposable
                     if (messInfo.Size > maxSize)
                         throw new LimitMessageException($"Message size ({messInfo.Size}) exceeds fixed maximum message size ({maxSize}). The message will be skipped.");
                     else
-                        Log.Debug($"Try get message {uid}. Size: {messInfo.Size}");
+                        Log.DebugMailClientTryGetMessage(uid.ToString(), messInfo.Size);
 
                     using var message = folder.GetMessageAsync(uid, _cancelToken).GetAwaiter().GetResult();
 
-                    Log.Debug($"BytesTransferred = {messInfo.Size}");
+                    Log.DebugMailClientBytesTransferred(messInfo.Size);
 
                     var uid1 = uid;
                     var info = infoList.FirstOrDefault(t => t.UniqueId == uid1);
 
-                    message.FixDateIssues(info != null ? info.InternalDate : null, Log);
+                    message.FixDateIssues(Log, info?.InternalDate);
 
                     if (message.Date < Account.BeginDate)
                     {
-                        Log.Debug($"Skip message (Date = {message.Date}) on BeginDate = {Account.BeginDate}");
+                        Log.DebugMailClientSkipMessage(message.Date, Account.BeginDate);
+
                         imapIntervals.SetBeginIndex(toUid);
                         beginDateUid = toUid;
                         break;
@@ -823,10 +823,9 @@ public class MailClient : IDisposable
                 }
                 catch (LimitMessageException e)
                 {
-                    Log.ErrorFormat(
-                        "ProcessMessages() Tenant={0} User='{1}' Account='{2}', MailboxId={3}, UID={4} Exception:\r\n{5}\r\n",
+                    Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, e);
+                        uid.ToString(), e.ToString());
 
                     loaded++;
                 }
@@ -836,10 +835,9 @@ public class MailClient : IDisposable
                 }
                 catch (AggregateException aggE)
                 {
-                    Log.ErrorFormat(
-                        "ProcessMessages() Tenant={0} User='{1}' Account='{2}', MailboxId={3}, UID={4} Exception:\r\n{5}\r\n",
+                    Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, aggE.InnerException);
+                        uid.ToString(), aggE.InnerException.ToString());
 
                     if (uid != uidsCollection.First() && (int)uid.Id != toUid)
                     {
@@ -856,10 +854,9 @@ public class MailClient : IDisposable
                 }
                 catch (Exception e)
                 {
-                    Log.ErrorFormat(
-                        "ProcessMessages() Tenant={0} User='{1}' Account='{2}', MailboxId={3}, UID={4} Exception:\r\n{5}\r\n",
+                    Log.ErrorMailClientProcessMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        uid, e);
+                        uid.ToString(), e.ToString());
 
                     if (uid != uidsCollection.First() && (int)uid.Id != toUid)
                     {
@@ -898,7 +895,7 @@ public class MailClient : IDisposable
 
         var updatedImapFolderUids = new ImapFolderUids(imapIntervals.ToIndexes(), beginDateUid, folder.UidValidity);
 
-        if (!Account.ImapIntervals.Keys.Contains(folder.Name))
+        if (!Account.ImapIntervals.ContainsKey(folder.Name))
         {
             Account.ImapFolderChanged = true;
             Account.ImapIntervals.Add(folder.Name, updatedImapFolderUids);
@@ -922,7 +919,7 @@ public class MailClient : IDisposable
         }
         catch (ImapCommandException ex)
         {
-            Log.WarnFormat("GetFolderUids() Exception: {0}", ex.ToString());
+            Log.WarnMailClientGetFolderUidsException(ex.ToString());
 
             const int start = 0;
             var end = folder.Count;
@@ -952,7 +949,7 @@ public class MailClient : IDisposable
         }
         catch (ImapCommandException ex)
         {
-            Log.WarnFormat("GetMessagesSummaryInfo() Exception: {0}", ex.ToString());
+            Log.WarnMailClientGetMessagesSummaryInfoException(ex.ToString());
         }
 
         return infoList;
@@ -1027,13 +1024,11 @@ public class MailClient : IDisposable
     {
         var folders = Imap.GetFoldersAsync(Imap.PersonalNamespaces[0], false, _cancelToken).Result.ToList();
 
-        if (!folders.Any())
-            return null;
+        if (!folders.Any()) return null;
 
         var sendFolder = folders.FirstOrDefault(f => (f.Attributes & FolderAttributes.Sent) != 0);
 
-        if (sendFolder != null)
-            return sendFolder;
+        if (sendFolder != null) return sendFolder;
 
         if (ServerFolderAccessInfos == null || !ServerFolderAccessInfos.Any() || !ServerFolderAccessInfos.Any(f => f.Server == Account.Server))
             return null;
@@ -1044,19 +1039,17 @@ public class MailClient : IDisposable
 
             var serverInfo = ServerFolderAccessInfos.FirstOrDefault(f => f.Server == Account.Server);
 
-            if (serverInfo == null)
-                continue;
+            if (serverInfo == null) continue;
 
             if (!serverInfo.FolderAccessList.TryGetValue(folderName, out ServerFolderAccessInfo.FolderInfo folderInfo))
                 continue;
 
-            if (folderInfo.skip)
-                continue;
+            if (folderInfo.skip) continue;
 
-            if (folderInfo.folder_id != FolderType.Sent)
-                continue;
+            if (folderInfo.folder_id != FolderType.Sent) continue;
 
             sendFolder = folder;
+
             break;
         }
 
@@ -1065,43 +1058,41 @@ public class MailClient : IDisposable
 
     private void AppendCopyToSentFolder(MimeMessage message)
     {
-        if (!Account.Imap)
-            throw new NotSupportedException("Only Imap is suppoted");
+        if (!Account.Imap) throw new NotSupportedException("Only Imap is suppoted");
 
-        if (message == null)
-            throw new ArgumentNullException("message");
+        if (message == null) throw new ArgumentNullException(nameof(message));
 
         try
         {
-            if (!Imap.IsAuthenticated)
-                LoginImap();
+            if (!Imap.IsAuthenticated) LoginImap();
 
             var sendFolder = GetSentFolder();
 
             if (sendFolder != null)
             {
                 sendFolder.Open(FolderAccess.ReadWrite);
+
                 var uid = sendFolder.Append(FormatOptions.Default, message, MessageFlags.Seen, _cancelToken);
 
                 if (uid.HasValue)
                 {
-                    Log.InfoFormat("AppendCopyToSenFolder(Mailbox: '{0}', Tenant: {1}, User: '{2}') succeed! (uid:{3})",
+                    Log.InfoMailClientAppendCopyToSentFolder(
                         Account.EMail.Address, Account.TenantId, Account.UserId, uid.Value.Id);
                 }
                 else
                 {
-                    Log.ErrorFormat("AppendCopyToSenFolder(Mailbox: '{0}', Tenant: {1}, User: '{2}') failed!",
+                    Log.ErrorMailClientAppendCopyToSentFolderFailed(
                         Account.EMail.Address, Account.TenantId, Account.UserId);
                 }
             }
             else
             {
-                Log.Debug($"AppendCopyToSenFolder(Mailbox: '{Account.EMail.Address}', Tenant: {Account.TenantId}, User: '{Account.UserId}'): Skip - sent-folder not found");
+                Log.DebugMailClientAppendCopyToSentFolder(Account.EMail.Address, Account.TenantId, Account.UserId);
             }
         }
         catch (Exception ex)
         {
-            Log.Error($"AppendCopyToSenFolder(Mailbox: '{Account.EMail.Address}', Tenant: {Account.TenantId}, User: '{Account.UserId}'): Exception:\r\n{ex.ToString()}\r\n");
+            Log.ErrorMailClientAppendCopyToSentFolder(Account.EMail.Address, Account.TenantId, Account.UserId, ex.ToString());
         }
     }
 
@@ -1111,7 +1102,7 @@ public class MailClient : IDisposable
 
     private void LoginPop3(bool enableUtf8 = true)
     {
-        Log.Debug($"Try login POP3 client (Tenant: {Account.TenantId}, MailboxId: {Account.MailBoxId}, Address: '{Account.EMail}')");
+        Log.DebugMailClientTryLoginPop(Account.TenantId, Account.MailBoxId, Account.EMail.ToString());
 
         var secureSocketOptions = SecureSocketOptions.Auto;
         var sslProtocols = SslProtocols.None;
@@ -1132,7 +1123,8 @@ public class MailClient : IDisposable
                 break;
         }
 
-        Log.Debug($"Pop.Connect({Account.Server}:{Account.Port}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
+        Log.DebugMailClientPopConnect(Account.Server, Account.Port, Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
+
         try
         {
             Pop.SslProtocols = sslProtocols;
@@ -1141,36 +1133,28 @@ public class MailClient : IDisposable
 
             if (!t.Wait(CONNECT_TIMEOUT, _cancelToken))
             {
-                Log.InfoFormat("Pop3: Failed connect: Timeout.");
+                Log.InfoMailClientPopConnectTimeout();
+
                 throw new TimeoutException("Pop.ConnectAsync timeout");
             }
             else
             {
                 IsConnected = true;
-                Log.InfoFormat("Imap: Successfull connection. Working on!");
-            }
 
-            if (enableUtf8 && (Pop.Capabilities & Pop3Capabilities.UTF8) != Pop3Capabilities.None)
-            {
-                Log.Debug("Pop.EnableUTF8");
-
-                t = Pop.EnableUTF8Async(_cancelToken);
-
-                if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
-                    throw new TimeoutException("Pop.EnableUTF8Async timeout");
+                Log.DebugMailClientPopConnectSuccessfull();
             }
 
             Pop.Authenticated += PopOnAuthenticated;
 
             if (string.IsNullOrEmpty(Account.OAuthToken))
             {
-                Log.Debug($"Pop.Authentication({Account.Account})");
+                Log.DebugMailClientPopAuthentication(Account.Account);
 
                 t = Pop.AuthenticateAsync(Account.Account, Account.Password, _cancelToken);
             }
             else
             {
-                Log.Debug($"Pop.AuthenticationByOAuth({Account.Account})");
+                Log.DebugMailClientPopAuthByOAuth(Account.Account);
 
                 var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -1180,16 +1164,37 @@ public class MailClient : IDisposable
             if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
             {
                 Pop.Authenticated -= PopOnAuthenticated;
-                Log.InfoFormat("Pop: Authentication failed.");
+
+                Log.DebugMailClientPopAuthTimeout();
+
                 throw new TimeoutException("Pop.AuthenticateAsync timeout");
             }
             else
             {
                 IsAuthenticated = true;
-                Log.InfoFormat("Pop: Successfull authentication.");
+
+                Log.DebugMailClientPopAuthSuccessfull();
             }
 
             Pop.Authenticated -= PopOnAuthenticated;
+
+            if (enableUtf8 && (Pop.Capabilities & Pop3Capabilities.UTF8) != Pop3Capabilities.None)
+            {
+                Log.DebugMailClientPopEnableUTF8();
+
+                t = Pop.EnableUTF8Async(_cancelToken);
+
+                if (!t.Wait(ENABLE_UTF8_TIMEOUT, _cancelToken))
+                {
+                    Log.DebugMailClientPopEnableUTF8Timeout();
+
+                    throw new TimeoutException("Pop.EnableUTF8Async timeout");
+                }
+                else
+                {
+                    Log.DebugMailClientPopEnableUTF8Successfull();
+                }
+            }
         }
         catch (AggregateException aggEx)
         {
@@ -1197,6 +1202,7 @@ public class MailClient : IDisposable
             {
                 throw aggEx.InnerException;
             }
+
             throw new Exception("LoginPop3 failed", aggEx);
         }
     }
@@ -1210,8 +1216,7 @@ public class MailClient : IDisposable
 
     private void AggregatePop3(int limitMessages = -1)
     {
-        if (!Pop.IsAuthenticated)
-            LoginPop3();
+        if (!Pop.IsAuthenticated) LoginPop3();
 
         var mailFolder = new MailFolder(FolderType.Inbox, "INBOX");
 
@@ -1227,7 +1232,8 @@ public class MailClient : IDisposable
             {
                 Account.MessagesCount = uidls.Count;
 
-                Log.Debug("New messages not found.\r\n");
+                Log.DebugMailClientMsgsNotFound();
+
                 return;
             }
 
@@ -1237,11 +1243,12 @@ public class MailClient : IDisposable
             {
                 Account.MessagesCount = uidls.Count;
 
-                Log.Debug("New messages not found.\r\n");
+                Log.DebugMailClientMsgsNotFound();
+
                 return;
             }
 
-            Log.Debug($"Found {newMessages.Count} new messages.\r\n");
+            Log.DebugMailClientFoundMsgs(newMessages.Count);
 
             newMessages = FixPop3UidsOrder(newMessages);
 
@@ -1249,24 +1256,24 @@ public class MailClient : IDisposable
 
             foreach (var newMessage in newMessages)
             {
-                if (!Pop.IsConnected || _cancelToken.IsCancellationRequested)
-                    break;
+                if (!Pop.IsConnected || _cancelToken.IsCancellationRequested) break;
 
-                Log.Debug($"Processing new message\tUID: {newMessage.Key}\tUIDL: {newMessage.Value}\t");
+                Log.DebugMailClientProcessingMsgs(newMessage.Key, newMessage.Value);
 
                 try
                 {
                     var message = Pop.GetMessageAsync(newMessage.Key, _cancelToken).Result;
 
-                    message.FixDateIssues(logger: Log);
+                    message.FixDateIssues(Log);
 
                     if (message.Date < Account.BeginDate && skipOnDate)
                     {
-                        Log.Debug($"Skip message (Date = {message.Date}) on BeginDate = {Account.BeginDate}");
+                        Log.DebugMailClientSkipMessage(message.Date, Account.BeginDate);
+
                         continue;
                     }
 
-                    message.FixEncodingIssues();
+                    message.FixEncodingIssues(Log);
 
                     OnGetMessage(message, newMessage.Value, true, mailFolder);
 
@@ -1275,7 +1282,8 @@ public class MailClient : IDisposable
                     if (limitMessages <= 0 || loaded < limitMessages)
                         continue;
 
-                    Log.Debug("Limit of max messages per session is exceeded!");
+                    Log.DebugMailClientImapLimitMessages();
+
                     break;
                 }
                 catch (OperationCanceledException)
@@ -1284,10 +1292,9 @@ public class MailClient : IDisposable
                 }
                 catch (Exception e)
                 {
-                    Log.ErrorFormat(
-                        "ProcessMessages() Tenant={0} User='{1}' Account='{2}', MailboxId={3}, MessageIndex={4}, UIDL='{5}' Exception:\r\n{6}\r\n",
+                    Log.ErrorMailClientProcessPopMessages(
                         Account.TenantId, Account.UserId, Account.EMail.Address, Account.MailBoxId,
-                        newMessage.Key, newMessage.Value, e);
+                        newMessage.Key, newMessage.Value, e.ToString());
 
                     if (e is IOException)
                     {
@@ -1307,6 +1314,7 @@ public class MailClient : IDisposable
             {
                 throw aggEx.InnerException;
             }
+
             throw new Exception("AggregatePop3 failed", aggEx);
         }
     }
@@ -1336,16 +1344,14 @@ public class MailClient : IDisposable
                 lstMailHeaders.FirstOrDefault(
                     h => h.Field.Equals("Date", StringComparison.InvariantCultureIgnoreCase));
 
-            DateTime fstDate;
-            DateTime lstDate;
 
-            if (fstDateHeader != null && DateTime.TryParse(fstDateHeader.Value, out fstDate) &&
+            if (fstDateHeader != null && DateTime.TryParse(fstDateHeader.Value, out DateTime fstDate) &&
                 lstDateHeader != null &&
-                DateTime.TryParse(lstDateHeader.Value, out lstDate))
+                DateTime.TryParse(lstDateHeader.Value, out DateTime lstDate))
             {
                 if (fstDate < lstDate)
                 {
-                    Log.Debug($"Account '{Account.EMail.Address}' uids order is DESC");
+                    Log.DebugMailClientUidsOrderDESC(Account.EMail.Address);
                     newMessages = newMessages
                         .OrderByDescending(item => item.Key)
                         .ToDictionary(id => id.Key, id => id.Value);
@@ -1354,7 +1360,7 @@ public class MailClient : IDisposable
             }
 
 
-            Log.Debug($"Account '{Account.EMail.Address}' uids order is ASC");
+            Log.DebugMailClientUidsOrderASC(Account.EMail.Address);
         }
         catch (Exception)
         {
@@ -1362,7 +1368,7 @@ public class MailClient : IDisposable
                 .OrderByDescending(item => item.Key)
                 .ToDictionary(id => id.Key, id => id.Value);
 
-            Log.WarnFormat("Calculating order skipped! Account '{0}' uids order is DESC", Account.EMail.Address);
+            Log.WarnMailClientCalculatingOrderSkipped(Account.EMail.Address);
         }
 
         return newMessages;
@@ -1394,7 +1400,8 @@ public class MailClient : IDisposable
         }
 
 
-        Log.Debug($"Smtp.Connect({Account.SmtpServer}:{Account.SmtpPort}, {Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions)})");
+        Log.DebugMailClientSmtpConnect(Account.SmtpServer, Account.SmtpPort, Enum.GetName(typeof(SecureSocketOptions), secureSocketOptions));
+
         try
         {
             Smtp.SslProtocols = sslProtocols;
@@ -1416,13 +1423,13 @@ public class MailClient : IDisposable
 
             if (string.IsNullOrEmpty(Account.OAuthToken))
             {
-                Log.Debug($"Smtp.Authentication({Account.SmtpAccount})");
+                Log.DebugMailClientSmtpAuthentication(Account.SmtpAccount);
 
                 t = Smtp.AuthenticateAsync(Account.SmtpAccount, Account.SmtpPassword, _cancelToken);
             }
             else
             {
-                Log.Debug($"Smtp.AuthenticationByOAuth({Account.SmtpAccount})");
+                Log.DebugMailClientSmtpAuthByOAuth(Account.SmtpAccount);
 
                 var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
 
@@ -1432,6 +1439,7 @@ public class MailClient : IDisposable
             if (!t.Wait(LOGIN_TIMEOUT, _cancelToken))
             {
                 Smtp.Authenticated -= SmtpOnAuthenticated;
+
                 throw new TimeoutException("Smtp.AuthenticateAsync timeout");
             }
 
@@ -1443,6 +1451,7 @@ public class MailClient : IDisposable
             {
                 throw aggEx.InnerException;
             }
+
             throw new Exception("LoginSmtp failed", aggEx);
         }
     }

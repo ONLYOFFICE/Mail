@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -48,9 +50,9 @@ public class MailRemoveMailserverDomainOperation : MailOperation
         IndexEngine indexEngine,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> optionsMonitor,
+        ILoggerProvider logProvider,
         ServerDomainData domain)
-        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, optionsMonitor)
+        : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _mailboxEngine = mailboxEngine;
         _cacheEngine = cacheEngine;
@@ -80,14 +82,16 @@ public class MailRemoveMailserverDomainOperation : MailOperation
 
             SetProgress((int?)MailOperationRemoveDomainProgress.RemoveFromDb, "Remove domain from Db");
 
-            var tenant = CurrentTenant.TenantId;
+            var tenant = CurrentTenant.Id;
 
             var mailboxes = new List<MailBoxData>();
 
-            // using (var db = new DbManager(Defines.CONNECTION_STRING_NAME, Defines.RemoveDomainTimeout))
+            var strategy = MailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
-            using (var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted))
+            strategy.Execute(() =>
             {
+                using var tx = MailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
+
                 var groups = MailDaoFactory.GetServerGroupDao().GetList(_domain.Id);
 
                 foreach (var serverGroup in groups)
@@ -126,7 +130,7 @@ public class MailRemoveMailserverDomainOperation : MailOperation
                 serverEngine.RemoveDomain(_domain.Name);
 
                 tx.Commit();
-            }
+            });
 
             SetProgress((int?)MailOperationRemoveDomainProgress.ClearCache, "Clear accounts cache");
 
@@ -141,7 +145,7 @@ public class MailRemoveMailserverDomainOperation : MailOperation
         }
         catch (Exception e)
         {
-            Logger.Error("Mail operation error -> Remove mailbox: {0}", e);
+            Log.ErrorMailOperationRemoveMailbox(e.ToString());
             Error = "InternalServerError";
         }
     }

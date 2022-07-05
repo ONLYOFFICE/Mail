@@ -85,38 +85,54 @@ public class AlertDao : BaseMailDao, IAlertDao
             }
         }
 
-        using var tr = MailDbContext.Database.BeginTransaction();
+        var id = 0;
 
-        var dbAlert = new MailAlert()
+        var strategy = MailDbContext.Database.CreateExecutionStrategy();
+
+        strategy.Execute(() =>
         {
-            Id = alert.Id,
-            Tenant = Tenant,
-            IdUser = UserId,
-            IdMailbox = alert.MailboxId,
-            Type = alert.Type,
-            Data = alert.Data
-        };
+            using var tr = MailDbContext.Database.BeginTransaction();
 
-        var saveResult = MailDbContext.MailAlerts.Add(dbAlert).Entity;
+            var dbAlert = new MailAlert()
+            {
+                Id = alert.Id,
+                Tenant = Tenant,
+                IdUser = UserId,
+                IdMailbox = alert.MailboxId,
+                Type = alert.Type,
+                Data = alert.Data
+            };
 
-        MailDbContext.SaveChanges();
+            var saveResult = MailDbContext.MailAlerts.Add(dbAlert).Entity;
 
-        tr.Commit();
+            MailDbContext.SaveChanges();
 
-        return saveResult.Id;
+            tr.Commit();
+
+            id = saveResult.Id;
+        });
+
+        return id;
     }
 
     public int DeleteAlert(long id)
     {
-        using var tr = MailDbContext.Database.BeginTransaction();
+        var count = 0;
 
-        var range = MailDbContext.MailAlerts.Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id);
+        var strategy = MailDbContext.Database.CreateExecutionStrategy();
 
-        MailDbContext.MailAlerts.RemoveRange(range);
+        strategy.Execute(() =>
+        {
+            using var tr = MailDbContext.Database.BeginTransaction();
 
-        var count = MailDbContext.SaveChanges();
+            var range = MailDbContext.MailAlerts.Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.Id == id);
 
-        tr.Commit();
+            MailDbContext.MailAlerts.RemoveRange(range);
+
+            count = MailDbContext.SaveChanges();
+
+            tr.Commit();
+        });
 
         return count;
     }
@@ -135,16 +151,23 @@ public class AlertDao : BaseMailDao, IAlertDao
 
     public int DeleteAlerts(List<int> ids)
     {
-        using var tr = MailDbContext.Database.BeginTransaction();
+        int count = 0;
 
-        var range = MailDbContext.MailAlerts
-            .Where(r => r.Tenant == Tenant && r.IdUser == UserId && ids.Contains(r.Id));
+        var strategy = MailDbContext.Database.CreateExecutionStrategy();
 
-        MailDbContext.MailAlerts.RemoveRange(range);
+        strategy.Execute(() =>
+        {
+            using var tr = MailDbContext.Database.BeginTransaction();
 
-        var count = MailDbContext.SaveChanges();
+            var range = MailDbContext.MailAlerts
+                .Where(r => r.Tenant == Tenant && r.IdUser == UserId && ids.Contains(r.Id));
 
-        tr.Commit();
+            MailDbContext.MailAlerts.RemoveRange(range);
+
+            count = MailDbContext.SaveChanges();
+
+            tr.Commit();
+        });
 
         return count;
     }

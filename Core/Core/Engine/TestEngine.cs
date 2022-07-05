@@ -33,10 +33,10 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class TestEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly CoreSettings _coreSettings;
@@ -70,7 +70,7 @@ public class TestEngine
         MessageEngine messageEngine,
         IndexEngine indexEngine,
         StorageFactory storageFactory,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider loggerProvider)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
@@ -81,7 +81,7 @@ public class TestEngine
         _indexEngine = indexEngine;
         _storageFactory = storageFactory;
 
-        _log = option.Get("ASC.Mail.TestEngine");
+        _log = loggerProvider.CreateLogger("ASC.Mail.TestEngine");
     }
 
     public int CreateSampleMessage(TestMessageModel model, bool add2Index = false)
@@ -110,7 +110,7 @@ public class TestEngine
             throw new ArgumentException("no such mailbox");
 
         var internalId = string.IsNullOrEmpty(model.MimeMessageId)
-            ? MailUtil.CreateMessageId(_tenantManager, _coreSettings, _log)
+            ? MailUtil.CreateMessageId(_tenantManager, _coreSettings)
             : model.MimeMessageId;
 
         var restoreFolder = folder == FolderType.Spam || folder == FolderType.Trash
@@ -179,7 +179,7 @@ public class TestEngine
             sampleMessage.TagIds = model.TagIds;
         }
 
-        _messageEngine.StoreMailBody(mbox, sampleMessage, _log);
+        _messageEngine.StoreMailBody(mbox, sampleMessage);
 
         var id = _messageEngine.MailSave(mbox, sampleMessage, 0, folder, restoreFolder, model.UserFolderId,
             SAMPLE_UIDL, "", false);
@@ -211,7 +211,7 @@ public class TestEngine
         if (mbox == null)
             throw new ArgumentException("Mailbox not found");
 
-        var mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings, _log);
+        var mimeMessageId = MailUtil.CreateMessageId(_tenantManager, _coreSettings);
 
         var sampleMessage = new MailMessage
         {
@@ -239,7 +239,7 @@ public class TestEngine
             FromEmail = mbox.EMail.Address
         };
 
-        _messageEngine.StoreMailBody(mbox, sampleMessage, _log);
+        _messageEngine.StoreMailBody(mbox, sampleMessage);
 
         var replyId = _messageEngine.MailSave(mbox, sampleMessage, 0, FolderType.Sent, FolderType.Sent, null,
             SAMPLE_REPLY_UIDL, "", false);
@@ -313,7 +313,7 @@ public class TestEngine
         var storage = _storageFactory.GetMailStorage(mbox.TenantId);
 
         var message = _messageEngine.Save(mbox, mimeMessage, SAMPLE_UIDL,
-            new MailFolder(folder, ""), model.UserFolderId, model.Unread, _log);
+            new MailFolder(folder, ""), model.UserFolderId, model.Unread);
 
         if (message == null)
             return -1;

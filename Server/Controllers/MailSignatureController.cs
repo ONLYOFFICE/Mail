@@ -13,7 +13,7 @@ namespace ASC.Mail.Controllers
         /// </summary>
         /// <param name="mailbox_id"></param>
         /// <returns>Signature object</returns>
-        [Read("signature/{mailbox_id}")]
+        [HttpGet("signature/{mailbox_id}")]
         public MailSignatureData GetSignature(int mailbox_id)
         {
             var accounts = GetAccounts();
@@ -32,7 +32,7 @@ namespace ASC.Mail.Controllers
         /// <param name="mailbox_id">Id of updated mailbox.</param>
         /// <param name="html">New signature value.</param>
         /// <param name="is_active">New signature status.</param>
-        [Create("signature/update/{mailbox_id}")]
+        [HttpPost("signature/update/{mailbox_id}")]
         public MailSignatureData UpdateSignature(int mailbox_id, string html, bool is_active)
         {
             var accounts = GetAccounts();

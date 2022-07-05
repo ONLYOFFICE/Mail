@@ -54,7 +54,7 @@ public abstract class MailOperation
 
     protected IAccount CurrentUser { get; private set; }
 
-    protected ILog Logger { get; private set; }
+    protected ILogger Log { get; private set; }
 
     protected CancellationToken CancellationToken { get; private set; }
 
@@ -73,7 +73,8 @@ public abstract class MailOperation
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
         StorageManager storageManager,
-        IOptionsMonitor<ILog> option, StorageFactory storageFactory = null)
+        ILoggerProvider logProvider,
+        StorageFactory storageFactory = null)
     {
         CurrentTenant = tenantManager.GetCurrentTenant();
         CurrentUser = securityContext.CurrentAccount;
@@ -93,7 +94,7 @@ public abstract class MailOperation
         CoreSettings = coreSettings;
         StorageManager = storageManager;
         StorageFactory = storageFactory;
-        Logger = option.Get("ASC.Mail.Operation");
+        Log = logProvider.CreateLogger("ASC.Mail.Operation");
     }
 
     public void RunJob(DistributedTask _, CancellationToken cancellationToken)
@@ -114,7 +115,8 @@ public abstract class MailOperation
         catch (AuthorizingException authError)
         {
             Error = "ErrorAccessDenied";
-            Logger.Error(Error, new SecurityException(Error, authError));
+            var logError = new SecurityException(Error, authError).ToString();
+            Log.ErrorMailOperationAuthorizing(logError);
         }
         catch (AggregateException ae)
         {
@@ -123,17 +125,17 @@ public abstract class MailOperation
         catch (TenantQuotaException e)
         {
             Error = "TenantQuotaSettled";
-            Logger.Error("TenantQuotaException. {0}", e);
+            Log.ErrorMailOperationTenantQuota(e.ToString());
         }
         catch (FormatException e)
         {
             Error = "CantCreateUsers";
-            Logger.Error("FormatException error. {0}", e);
+            Log.ErrorMailOperationFormat(e.ToString());
         }
         catch (Exception e)
         {
             Error = "InternalServerError";
-            Logger.Error("Internal server error. {0}", e);
+            Log.ErrorMailOperationServer(e.ToString());
         }
         finally
         {
@@ -159,7 +161,7 @@ public abstract class MailOperation
     {
         TaskInfo.SetProperty(SOURCE, Source);
         TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
-        TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
+        TaskInfo.SetProperty(TENANT, CurrentTenant.Id);
         TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
         TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
         TaskInfo.SetProperty(STATUS, Status);

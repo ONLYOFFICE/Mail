@@ -1,26 +1,28 @@
-﻿namespace ASC.Mail.StorageCleaner.Service;
+﻿using ASC.Mail.StorageCleaner.Loggers;
+
+using Microsoft.Extensions.Logging;
+
+namespace ASC.Mail.StorageCleaner.Service;
 
 [Singletone]
 public class StorageCleanerService
 {
-    private readonly ILog _log;
+    private readonly ILogger _log;
     internal Timer WorkTimer { get; private set; }
     readonly TimeSpan TsInterval;
     private MailGarbageEngine Eraser { get; set; }
 
     public StorageCleanerService(
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider loggerProvider,
         MailGarbageEngine mailGarbageEngine,
-        MailSettings settings,
-        NlogCongigure mailLogCongigure)
+        MailSettings settings)
     {
-        mailLogCongigure.Configure();
 
-        _log = options.Get("ASC.Mail.Cleaner");
+        _log = loggerProvider.CreateLogger("ASC.Mail.Cleaner");
         Eraser = mailGarbageEngine;
         TsInterval = TimeSpan.FromMinutes(Convert.ToInt32(settings.Cleaner.TimerWaitMinutes));
 
-        _log.InfoFormat("Service will clear mail storage every {0} minutes\r\n", TsInterval.TotalMinutes);
+        _log.InfoStorageCleanerServiceCleaningInterval(TsInterval.TotalMinutes);
     }
 
     internal Task StartTimer(CancellationToken token, bool immediately = false)
@@ -30,13 +32,13 @@ public class StorageCleanerService
 
         if (immediately)
         {
-            _log.Debug("Setup WorkTimer to start immediately");
+            _log.DebugStorageCleanerServiceStartImmediately();
 
             WorkTimer.Change(0, Timeout.Infinite);
         }
         else
         {
-            _log.Debug($"Setup WorkTimer to {TsInterval.TotalMinutes} minutes");
+            _log.DebugStorageCleanerServiceWorkTimer(TsInterval.TotalMinutes);
 
             WorkTimer.Change(TsInterval, TsInterval);
         }
@@ -49,7 +51,7 @@ public class StorageCleanerService
         if (WorkTimer == null)
             return;
 
-        _log.Debug("Setup WorkTimer to Timeout.Infinite");
+        _log.DebugStorageCleanerServiceWorkTimerInfinite();
 
         WorkTimer.Change(Timeout.Infinite, Timeout.Infinite);
     }
@@ -79,7 +81,7 @@ public class StorageCleanerService
 
     private void WorkTimerElapsed(object state)
     {
-        _log.Debug("Timer -> WorkTimerElapsed");
+        _log.DebugStorageCleanerServiceWorkTimerElapsed();
 
         var cancelToken = state as CancellationToken? ?? new CancellationToken();
 
@@ -87,8 +89,7 @@ public class StorageCleanerService
         {
             Eraser.ClearMailGarbage(cancelToken);
 
-            _log.InfoFormat("All mailboxes were processed. Go back to timer. Next start after {0} minutes.\r\n",
-                TsInterval.TotalMinutes);
+            _log.InfoStorageCleanerServiceNextStart(TsInterval.TotalMinutes);
 
         }
         catch (Exception ex)
@@ -100,12 +101,12 @@ public class StorageCleanerService
 
             if (ex is TaskCanceledException || ex is OperationCanceledException)
             {
-                _log.Info("Execution was canceled.");
+                _log.InfoStorageCleanerServiceWasCanceled();
 
                 return;
             }
 
-            _log.ErrorFormat("Timer -> WorkTimerElapsed. Exception:\r\n{0}\r\n", ex.ToString());
+            _log.ErrorStorageCleanerServiceWorkTimer(ex.ToString());
         }
 
         StartTimer(cancelToken);

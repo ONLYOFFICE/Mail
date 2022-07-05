@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -37,7 +39,7 @@ public class ApiHelper
     private UriBuilder _baseUrl;
     private string _token;
 
-    private readonly ILog _log;
+    private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
     private readonly CoreSettings _coreSettings;
@@ -59,8 +61,8 @@ public class ApiHelper
         CoreSettings coreSettings,
         ApiDateTimeHelper apiDateTimeHelper,
         MailSettings mailSettings,
-        IOptionsMonitor<ILog> option)
-        : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, option)
+        ILoggerProvider logProvider)
+        : this(securityContext, tenantManager, coreSettings, apiDateTimeHelper, mailSettings, logProvider)
     {
         if (httpContextAccessor != null || httpContextAccessor.HttpContext != null)
         {
@@ -74,10 +76,10 @@ public class ApiHelper
         CoreSettings coreSettings,
         ApiDateTimeHelper apiDateTimeHelper,
         MailSettings mailSettings,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
-        _log = option.Get("ASC.Mail.ApiHelper");
+        _log = logProvider.CreateLogger("ASC.Mail.ApiHelper");
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _coreSettings = coreSettings;
@@ -104,7 +106,7 @@ public class ApiHelper
                         _httpContext.Request.Url().ToString())
                       : "null";
 
-        _log.Debug($"ApiHelper->Setup: Tenant={Tenant.TenantId} User='{user.ID}' IsAuthenticated={user.IsAuthenticated} Scheme='{_scheme}' HttpContext is {httpCon}");
+        _log.DebugApiHelperSetup(Tenant.Id, user.ID, user.IsAuthenticated, _scheme, httpCon);
 
         if (!user.IsAuthenticated)
             throw new AuthenticationException("User not authenticated");
@@ -131,23 +133,21 @@ public class ApiHelper
         _baseUrl = ubBase;
 
         _token = _securityContext.AuthenticateMe(_securityContext.CurrentAccount.ID);
-
-        var tokenIsEmpty = !string.IsNullOrEmpty(_token) ? "not empty" : "empty";
-
-        _log.Debug($"ApiHelper->Setup: Token is {tokenIsEmpty}");
     }
 
     public IRestResponse Execute(RestRequest request)
     {
         Setup();
 
-        _log.Debug($"ApiHelper->Execute: request url: {_baseUrl.Uri}/{request.Resource}");
+        _log.DebugApiHelperExecuteRequest(_baseUrl.Uri, request.Resource);
 
         var client = new RestClient { BaseUrl = _baseUrl.Uri };
 
         request.AddHeader("Authorization", _token);
 
         var response = client.ExecuteSafe(request);
+
+        _log.DebugApiHelperResponseCode(response.StatusCode);
 
         if (response.ErrorException is ApiHelperException)
             return response;
@@ -158,42 +158,19 @@ public class ApiHelper
         return response;
     }
 
-    public IRestResponse ExecuteWithLog(RestRequest request, ILog log)
+    public DefineConstants.TariffType GetTenantTariff(int tenantOverdueDays)
     {
-        Setup();
-
-        log.Debug($"ApiHelper -> Execute: request url: {_baseUrl.Uri}/{request.Resource}");
-
-        var client = new RestClient { BaseUrl = _baseUrl.Uri };
-
-        request.AddHeader("Authorization", _token);
-
-        var response = client.ExecuteSafe(request);
-
-        log.Debug($"ApiHelper -> Response status code {response.StatusCode}");
-
-        if (response.ErrorException is ApiHelperException)
-            return response;
-
-        if (response.ErrorException != null)
-            throw new ApplicationException(ERR_MESSAGE, response.ErrorException);
-
-        return response;
-    }
-
-    public DefineConstants.TariffType GetTenantTariffLogged(int tenantOverdueDays, ILog log)
-    {
-        log.Debug("ApiHelper -> Create tariff request...");
+        _log.DebugApiHelperCreateTariffRequest();
         var request = new RestRequest("portal/tariff.json", Method.GET);
 
         request.AddHeader("Payment-Info", "false");
 
-        log.Debug("ApiHelper -> Execute tariff request...");
-        var response = ExecuteWithLog(request, log);
+        _log.DebugApiHelperExecuteTariffRequest();
+        var response = Execute(request);
 
         if (response.StatusCode == HttpStatusCode.PaymentRequired)
         {
-            log.Debug("ApiHelper -> HttpStatusCode: PaymentRequired. TariffType: LongDead");
+            _log.DebugApiHelperPaymentRequired();
             return DefineConstants.TariffType.LongDead;
         }
 
@@ -202,7 +179,7 @@ public class ApiHelper
             (response.StatusCode != HttpStatusCode.Created &&
              response.StatusCode != HttpStatusCode.OK))
         {
-            log.Debug($"ApiHelper -> Cannot get tariff by request. Status code: {response.StatusCode}");
+            _log.DebugApiHelperCannotGetTariff(response.StatusCode);
             throw new ApiHelperException("Get tenant tariff failed.", response.StatusCode, response.Content);
         }
 
@@ -583,7 +560,7 @@ public class ApiHelper
 
         if (!int.TryParse(json["response"].ToString(), out count))
         {
-            _log.WarnFormat("Upload ics-file to calendar failed. No count number.", _baseUrl.ToString(), response.StatusCode, response.Content);
+            _log.WarningUploadIcsFileToCalendar();
         }
     }
 
@@ -608,11 +585,11 @@ public class ApiHelper
 
         var json = JObject.Parse(response.Content);
 
-        _log.Debug(json["response"].ToString());
+        _log.DebugApiHelperResponse(json["response"].ToString());
 
         var userInfo = new UserInfo
         {
-            ID = Guid.Parse(json["response"]["id"].ToString()),
+            Id = Guid.Parse(json["response"]["id"].ToString()),
             Email = json["response"]["email"].ToString(),
             FirstName = json["response"]["firstName"].ToString(),
             LastName = json["response"]["lastName"].ToString(),

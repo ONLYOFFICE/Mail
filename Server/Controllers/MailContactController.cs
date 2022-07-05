@@ -1,7 +1,8 @@
 ﻿using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
+
 using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
 
@@ -17,13 +18,13 @@ namespace ASC.Mail.Controllers
         /// <short>Get contact list for auto complete</short> 
         /// <category>Contacts</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"emails/search")]
+        [HttpGet(@"emails/search")]
         public IEnumerable<string> SearchEmails(string term)
         {
             if (string.IsNullOrEmpty(term))
                 throw new ArgumentException(@"term parameter empty.", "term");
 
-            return _contactEngine.SearchEmails(TenantId, UserId, term, 
+            return _contactEngine.SearchEmails(TenantId, UserId, term,
                 MailAutocompleteMaxCountPerSystem, MailAutocompleteTimeout);
         }
 
@@ -38,7 +39,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of filtered contacts</returns>
         /// <short>Gets filtered contacts</short> 
         /// <category>Contacts</category>
-        [Read(@"contacts")]
+        [HttpGet(@"contacts")]
         public IEnumerable<MailContactData> GetContacts(string search, int? contactType, int? pageSize, int fromIndex,
             string sortorder)
         {
@@ -59,7 +60,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of filtered contacts</returns>
         /// <short>Gets filtered contacts</short> 
         /// <category>Contacts</category>
-        [Read(@"contacts/bycontactinfo")]
+        [HttpGet(@"contacts/bycontactinfo")]
         public IEnumerable<MailContactData> GetContactsByContactInfo(ContactInfoType infoType, string data, bool? isPrimary)
         {
             var contacts = _contactEngine.GetContactsByContactInfo(infoType, data, isPrimary);
@@ -74,7 +75,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Information about created contact </returns>
         /// <short>Create mail contact</short>
         /// <category>Contacts</category>
-        [Create(@"contact/add")]
+        [HttpPost(@"contact/add")]
         public MailContactData CreateContact(ContactModel model)
         {
             var newContact = _contactEngine.CreateContact(model);
@@ -89,7 +90,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of removed mail contact ids </returns>
         /// <short>Remove mail contact </short> 
         /// <category>Contacts</category>
-        [Update(@"contacts/remove")]
+        [HttpPut(@"contacts/remove")]
         public IEnumerable<int> RemoveContacts(List<int> ids)
         {
             _contactEngine.RemoveContacts(ids);
@@ -108,7 +109,7 @@ namespace ASC.Mail.Controllers
         /// <returns>Information about updated contact </returns>
         /// <short>Update mail contact</short>
         /// <category>Contacts</category>
-        [Update(@"contact/update")]
+        [HttpPut(@"contact/update")]
         public MailContactData UpdateContact(ContactModel model)
         {
             var contact = _contactEngine.UpdateContact(model);
@@ -124,7 +125,7 @@ namespace ASC.Mail.Controllers
         /// <short>Get crm linked entities</short> 
         /// <category>Contacts</category>
         ///<exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"crm/linked/entities")]
+        [HttpGet(@"crm/linked/entities")]
         public IEnumerable<CrmContactData> GetLinkedCrmEntitiesInfo(int messageId)
         {
             if (messageId < 0)

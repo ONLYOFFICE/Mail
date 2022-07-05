@@ -1,11 +1,11 @@
 ﻿using ASC.Api.Core;
 using ASC.Mail.Enums;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
+
 using Microsoft.AspNetCore.Mvc;
+
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Web;
 
@@ -37,7 +37,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of filtered chains</returns>
         /// <short>Gets filtered conversations</short>
         /// <category>Conversations</category>
-        [Read(@"conversations")]
+        [HttpGet(@"conversations")]
         public IEnumerable<MailMessageData> GetFilteredConversations(int? folder,
             bool? unread,
             bool? attachments,
@@ -108,7 +108,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List messages linked in one chain</returns>
         /// <category>Conversations</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"conversation/{id}")]
+        [HttpGet(@"conversation/{id}")]
         public IEnumerable<MailMessageData> GetConversation(int id, bool? loadAll, bool? markRead, bool? needSanitize)
         {
             var list = _messageEngine.GetConversation(id, loadAll, markRead, needSanitize);
@@ -138,7 +138,7 @@ namespace ASC.Mail.Controllers
         /// <param optional="true" name="user_folder_id">id of user's folder</param>
         /// <returns>Head message id of previous or next conversation.</returns>
         /// <category>Conversations</category>
-        [Read(@"conversation/{id}/{direction}")]
+        [HttpGet(@"conversation/{id}/{direction}")]
         public long GetPrevNextConversationId(int id,
             string direction,
             int? folder,
@@ -195,7 +195,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of mesasges ids from conversations.</returns>
         /// <short>Move conversations to folder</short>
         /// <category>Conversations</category>
-        [Update(@"conversations/move")]
+        [HttpPut(@"conversations/move")]
         public IEnumerable<int> MoveConversations(List<int> ids, int folder, int? userFolderId = null)
         {
             if (!ids.Any())
@@ -227,7 +227,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of restored conversations ids</returns>
         /// <short>Restore conversations to original folders</short>
         /// <category>Conversations</category>
-        [Update(@"conversations/restore")]
+        [HttpPut(@"conversations/restore")]
         public IEnumerable<int> RestoreConversations(List<int> ids, bool learnSpamTrainer = false)
         {
             if (!ids.Any())
@@ -251,7 +251,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of removed conversation ids</returns>
         /// <short>Remove conversations</short>
         /// <category>Conversations</category>
-        [Update(@"conversations/remove")]
+        [HttpPut(@"conversations/remove")]
         public IEnumerable<int> RemoveConversations(List<int> ids)
         {
             if (!ids.Any())
@@ -270,7 +270,7 @@ namespace ASC.Mail.Controllers
         /// <returns>List of status changed conversations.</returns>
         /// <short>Set conversations status</short>
         /// <category>Conversations</category>
-        [Update(@"conversations/mark")]
+        [HttpPut(@"conversations/mark")]
         public IEnumerable<int> MarkConversations(List<int> ids, string status)
         {
             if (!ids.Any())
@@ -306,7 +306,7 @@ namespace ASC.Mail.Controllers
         /// <short>Add tag to conversations</short> 
         /// <category>Conversations</category>
         ///<exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"conversations/tag/{tag_id}/set")]
+        [HttpPut(@"conversations/tag/{tag_id}/set")]
         public int SetConversationsTag(int tag_id, List<int> messages)
         {
             if (!messages.Any())
@@ -326,7 +326,7 @@ namespace ASC.Mail.Controllers
         /// <short>Remove tag from conversations</short> 
         /// <category>Conversations</category>
         ///<exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"conversations/tag/{tag_id}/unset")]
+        [HttpPut(@"conversations/tag/{tag_id}/unset")]
         public int UnsetConversationsTag(int tag_id, List<int> messages)
         {
             if (!messages.Any())
@@ -347,7 +347,7 @@ namespace ASC.Mail.Controllers
         /// <returns>none</returns>
         /// <category>Conversations</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"conversations/crm/link")]
+        [HttpPut(@"conversations/crm/link")]
         public void LinkConversationToCrm(int id_message, IEnumerable<CrmContactData> crm_contact_ids)
         {
             if (id_message < 0)
@@ -372,7 +372,7 @@ namespace ASC.Mail.Controllers
         /// <returns>none</returns>
         /// <category>Conversations</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"conversations/crm/mark")]
+        [HttpPut(@"conversations/crm/mark")]
         public void MarkConversationAsCrmLinked(int id_message, IEnumerable<CrmContactData> crm_contact_ids)
         {
             if (id_message < 0)
@@ -393,7 +393,7 @@ namespace ASC.Mail.Controllers
         /// <returns>none</returns>
         /// <category>Conversations</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Update(@"conversations/crm/unmark")]
+        [HttpPut(@"conversations/crm/unmark")]
         public void UnmarkConversationAsCrmLinked(int id_message, IEnumerable<CrmContactData> crm_contact_ids)
         {
             if (id_message < 0)
@@ -411,7 +411,7 @@ namespace ASC.Mail.Controllers
         /// <returns>MailCrmStatus</returns>
         /// <category>Conversations</category>
         /// <exception cref="ArgumentException">Exception happens when in parameters is invalid. Text description contains parameter name and text description.</exception>
-        [Read(@"conversations/link/crm/status")]
+        [HttpGet(@"conversations/link/crm/status")]
         public MailCrmStatus IsConversationLinkedWithCrm(int message_id)
         {
             if (message_id < 0)

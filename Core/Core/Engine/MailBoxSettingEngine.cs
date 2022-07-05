@@ -23,6 +23,8 @@
  *
 */
 
+
+
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 
 namespace ASC.Mail.Core.Engine;
@@ -32,17 +34,17 @@ public class MailBoxSettingEngine
 {
     private readonly MailDbContext _mailDbContext;
     private readonly IMailDaoFactory _mailDaoFactory;
-    private readonly ILog _log;
+    private readonly ILogger _log;
 
     public MailBoxSettingEngine(
         IMailDaoFactory mailDaoFactory,
-        IOptionsMonitor<ILog> option)
+        ILoggerProvider logProvider)
     {
         _mailDbContext = mailDaoFactory.GetContext();
 
         _mailDaoFactory = mailDaoFactory;
 
-        _log = option.Get("ASC.Mail.MailBoxSettingEngine");
+        _log = logProvider.CreateLogger("ASC.Mail.MailBoxSettingEngine");
     }
 
     public Dictionary<string, string> MxToDomainBusinessVendorsList
@@ -71,7 +73,7 @@ public class MailBoxSettingEngine
             }
             catch (Exception ex)
             {
-                _log.Error("MxToDomainBusinessVendorsList failed", ex);
+                _log.ErrorMailBoxSettingEngineMxToDomain(ex.ToString());
             }
 
             return list;
@@ -93,116 +95,120 @@ public class MailBoxSettingEngine
                 throw new Exception("Incorrect config");
             }
 
-            using var tx = _mailDbContext.Database.BeginTransaction();
+            var strategy = _mailDbContext.Database.CreateExecutionStrategy();
 
-            var provider = _mailDaoFactory.GetMailboxProviderDao().GetProvider(config.EmailProvider.Id);
-
-            if (provider == null)
+            strategy.Execute(() =>
             {
-                provider = new MailboxProvider
-                {
-                    Id = 0,
-                    Name = config.EmailProvider.Id,
-                    DisplayName = config.EmailProvider.DisplayName,
-                    DisplayShortName = config.EmailProvider.DisplayShortName,
-                    Url = config.EmailProvider.Documentation.Url
-                };
+                using var tx = _mailDbContext.Database.BeginTransaction();
 
-                provider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(provider);
+                var provider = _mailDaoFactory.GetMailboxProviderDao().GetProvider(config.EmailProvider.Id);
 
-                if (provider.Id < 0)
+                if (provider == null)
                 {
-                    tx.Rollback();
-                    throw new Exception("id_provider not saved into DB");
+                    provider = new MailboxProvider
+                    {
+                        Id = 0,
+                        Name = config.EmailProvider.Id,
+                        DisplayName = config.EmailProvider.DisplayName,
+                        DisplayShortName = config.EmailProvider.DisplayShortName,
+                        Url = config.EmailProvider.Documentation.Url
+                    };
+
+                    provider.Id = _mailDaoFactory.GetMailboxProviderDao().SaveProvider(provider);
+
+                    if (provider.Id < 0)
+                    {
+                        tx.Rollback();
+                        throw new Exception("id_provider not saved into DB");
+                    }
                 }
-            }
 
-            foreach (var domainName in config.EmailProvider.Domain)
-            {
-                var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(domainName);
-
-                if (domain != null)
-                    continue;
-
-                domain = new MailboxDomain
+                foreach (var domainName in config.EmailProvider.Domain)
                 {
-                    Id = 0,
-                    ProviderId = provider.Id,
-                    Name = domainName
-                };
+                    var domain = _mailDaoFactory.GetMailboxDomainDao().GetDomain(domainName);
 
-                domain.Id = _mailDaoFactory.GetMailboxDomainDao().SaveDomain(domain);
-
-                if (domain.Id < 0)
-                {
-                    tx.Rollback();
-                    throw new Exception("id_domain not saved into DB");
-                }
-            }
-
-            var existingServers = _mailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
-
-            var newServers = config.EmailProvider
-                .IncomingServer
-                .ConvertAll(s => new MailboxServer
-                {
-                    Id = 0,
-                    Username = s.Username,
-                    Type = s.Type,
-                    ProviderId = provider.Id,
-                    Hostname = s.Hostname,
-                    Port = s.Port,
-                    SocketType = s.SocketType,
-                    Authentication = s.Authentication,
-                    IsUserData = isUserData
-                });
-
-            newServers.AddRange(config.EmailProvider
-                .OutgoingServer
-                .ConvertAll(s => new MailboxServer
-                {
-                    Id = 0,
-                    Username = s.Username,
-                    Type = s.Type,
-                    ProviderId = provider.Id,
-                    Hostname = s.Hostname,
-                    Port = s.Port,
-                    SocketType = s.SocketType,
-                    Authentication = s.Authentication,
-                    IsUserData = isUserData
-                }));
-
-            foreach (var s in newServers)
-            {
-                var existing =
-                    existingServers.FirstOrDefault(
-                        es =>
-                            es.Type.Equals(s.Type) && es.Port == s.Port &&
-                            es.SocketType.Equals(s.SocketType));
-
-                if (existing != null)
-                {
-                    if (existing.Equals(s))
+                    if (domain != null)
                         continue;
 
-                    s.Id = existing.Id;
+                    domain = new MailboxDomain
+                    {
+                        Id = 0,
+                        ProviderId = provider.Id,
+                        Name = domainName
+                    };
+
+                    domain.Id = _mailDaoFactory.GetMailboxDomainDao().SaveDomain(domain);
+
+                    if (domain.Id < 0)
+                    {
+                        tx.Rollback();
+                        throw new Exception("id_domain not saved into DB");
+                    }
                 }
 
-                s.Id = _mailDaoFactory.GetMailboxServerDao().SaveServer(s);
+                var existingServers = _mailDaoFactory.GetMailboxServerDao().GetServers(provider.Id);
 
-                if (s.Id < 0)
+                var newServers = config.EmailProvider
+                    .IncomingServer
+                    .ConvertAll(s => new MailboxServer
+                    {
+                        Id = 0,
+                        Username = s.Username,
+                        Type = s.Type,
+                        ProviderId = provider.Id,
+                        Hostname = s.Hostname,
+                        Port = s.Port,
+                        SocketType = s.SocketType,
+                        Authentication = s.Authentication,
+                        IsUserData = isUserData
+                    });
+
+                newServers.AddRange(config.EmailProvider
+                    .OutgoingServer
+                    .ConvertAll(s => new MailboxServer
+                    {
+                        Id = 0,
+                        Username = s.Username,
+                        Type = s.Type,
+                        ProviderId = provider.Id,
+                        Hostname = s.Hostname,
+                        Port = s.Port,
+                        SocketType = s.SocketType,
+                        Authentication = s.Authentication,
+                        IsUserData = isUserData
+                    }));
+
+                foreach (var s in newServers)
                 {
-                    tx.Rollback();
-                    throw new Exception("id_server not saved into DB");
+                    var existing =
+                        existingServers.FirstOrDefault(
+                            es =>
+                                es.Type.Equals(s.Type) && es.Port == s.Port &&
+                                es.SocketType.Equals(s.SocketType));
+
+                    if (existing != null)
+                    {
+                        if (existing.Equals(s))
+                            continue;
+
+                        s.Id = existing.Id;
+                    }
+
+                    s.Id = _mailDaoFactory.GetMailboxServerDao().SaveServer(s);
+
+                    if (s.Id < 0)
+                    {
+                        tx.Rollback();
+                        throw new Exception("id_server not saved into DB");
+                    }
                 }
-            }
 
-            tx.Commit();
-
+                tx.Commit();
+            });
         }
         catch (Exception ex)
         {
-            _log.Error("SetMailBoxSettings failed", ex);
+            _log.ErrorMailBoxSettingEngineSetMailBoxSettings(ex.ToString());
 
             return false;
         }
@@ -310,7 +316,7 @@ public class MailBoxSettingEngine
         }
         catch (Exception ex)
         {
-            _log.Error("SearchBusinessVendorsSettings failed", ex);
+            _log.ErrorMailBoxSettingEngineSearchBusinessVendorsSettings(ex.ToString());
         }
 
         return settingsFromDb;

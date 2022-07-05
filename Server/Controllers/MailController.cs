@@ -1,6 +1,5 @@
 ﻿using ASC.Api.Core;
 using ASC.Common;
-using ASC.Common.Logging;
 using ASC.Common.Threading;
 using ASC.Core;
 using ASC.Mail.Configuration;
@@ -11,7 +10,7 @@ using ASC.Web.Api.Routing;
 using ASC.Web.Core.Users;
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 
 using System;
 using System.Configuration;
@@ -24,7 +23,7 @@ namespace ASC.Mail.Controllers
     [Scope]
     public partial class MailController : ControllerBase
     {
-        private int TenantId => _tenantManager.GetCurrentTenant().TenantId;
+        private int TenantId => _tenantManager.GetCurrentTenant().Id;
 
         private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
@@ -59,7 +58,7 @@ namespace ASC.Mail.Controllers
         private readonly TestEngine _testEngine;
         private readonly CoreBaseSettings _coreBaseSettings;
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILog _log;
+        private readonly ILogger _log;
         private readonly MailSettings _mailSettings;
 
         private string Username
@@ -114,7 +113,7 @@ namespace ASC.Mail.Controllers
             CoreBaseSettings coreBaseSettings,
             MailSettings mailSettings,
             IServiceProvider serviceProvider,
-            IOptionsMonitor<ILog> option)
+            ILoggerProvider logProvider)
         {
             _tenantManager = tenantManager;
             _securityContext = securityContext;
@@ -148,10 +147,10 @@ namespace ASC.Mail.Controllers
             _testEngine = testEngine;
             _coreBaseSettings = coreBaseSettings;
             _serviceProvider = serviceProvider;
-            _log = option.Get("ASC.Api.Mail");
+            _log = logProvider.CreateLogger("ASC.Api.MailController");
         }
 
-        [Read("info")]
+        [HttpGet("info")]
         public Module GetModule()
         {
             var product = new MailProduct();

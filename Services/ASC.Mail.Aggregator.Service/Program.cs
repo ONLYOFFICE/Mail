@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using ASC.Api.Core.Extensions;
+
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
 {
@@ -69,23 +71,26 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     services.AddSingleton(new ConsoleParser(args));
     diHelper.TryAdd<AggregatorServiceLauncher>();
     diHelper.TryAdd<AggregatorServiceScope>();
+    services.AddDistributedTaskQueue();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 });
 
-builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
-{
-    builder.Register(context.Configuration, false, false, "search.json");
-});
+builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 
 startup.ConfigureServices(builder.Services);
+
+builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
+{
+    builder.Register(context.Configuration, false, false, "search.json");
+});
 
 var app = builder.Build();
 

@@ -37,7 +37,9 @@ public class MailImapClient : IDisposable
     private readonly FolderEngine _folderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
-    private readonly ILog _log;
+    private readonly ILogger _log;
+    private readonly ILogger _logStat;
+    private readonly ILoggerProvider _logProvider;
     private readonly ApiHelper _apiHelper;
     private readonly TenantManager tenantManager;
     private readonly SecurityContext securityContext;
@@ -76,10 +78,10 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"CheckRedis error: {ex.Message}.");
+            _log.ErrorMailImapClientCheckRedis(ex.Message);
         }
 
-        _log.Debug($"CheckRedis: {iterationCount} keys readed. User have {simpleImapClients.Count} clients");
+        _log.DebugMailImapClientCheckRedis(iterationCount, simpleImapClients.Count);
     }
 
     public async Task<int> ClearUserRedis()
@@ -98,7 +100,14 @@ public class MailImapClient : IDisposable
         return result;
     }
 
-    public MailImapClient(string userName, int tenant, MailSettings mailSettings, IServiceProvider serviceProvider, SignalrServiceClient signalrServiceClient, CancellationToken cancelToken)
+    public MailImapClient(
+        string userName,
+        int tenant,
+        MailSettings mailSettings,
+        IServiceProvider serviceProvider,
+        SignalrServiceClient signalrServiceClient,
+        CancellationToken cancelToken,
+        ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
 
@@ -129,13 +138,18 @@ public class MailImapClient : IDisposable
         _folderEngine = clientScope.GetService<FolderEngine>();
         _signalrServiceClient = signalrServiceClient;
 
-        _log = clientScope.GetService<ILog>();
+        _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
+
+        _logStat = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
+        _logProvider = logProvider;
+
+        if (_mailSettings.Aggregator.CollectStatistics)
+            _logStat = logProvider.CreateLogger("ASC.Mail.Stat");
+
         _apiHelper = clientScope.GetService<ApiHelper>();
 
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
-
-        _log.Name = $"ASC.Mail.User_{userName}";
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -175,7 +189,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"GetUserMailBoxes exception: {ex}");
+            _log.ErrorMailImapClientGetUserMailBoxes(ex.ToString());
 
             return null;
         }
@@ -237,7 +251,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), "", _cancelToken.Token);
+            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, "", _cancelToken.Token);
 
             if (!SetEvents(rootSimpleImapClient)) return;
 
@@ -254,11 +268,11 @@ public class MailImapClient : IDisposable
 
             string isLocked = _mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
 
-            _log.Debug($"CreateSimpleImapClients: MailboxId={mailbox.MailBoxId} created and {isLocked}.");
+            _log.DebugMailImapClientCreateSimpleImapClients(mailbox.MailBoxId, isLocked);
         }
         catch (Exception ex)
         {
-            _log.Error($"CreateSimpleImapClients exception: {ex}");
+            _log.ErrorMailImapClientCreateSimpleImapClients(ex.ToString());
         }
         finally
         {
@@ -270,7 +284,7 @@ public class MailImapClient : IDisposable
     {
         try
         {
-            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, clientScope.GetService<ILog>(), folderName, _cancelToken.Token);
+            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folderName, _cancelToken.Token);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -280,7 +294,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"CreateSimpleImapClient {mailbox.Name}.{folderName} exception: {ex}");
+            _log.ErrorMailImapClientCreateSimpleImapClient(mailbox.Name, folderName, ex.ToString());
         }
     }
 
@@ -329,11 +343,12 @@ public class MailImapClient : IDisposable
 
             string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailBoxData, _mailSettings) ? "unlocked" : "didn`t unlock";
 
-            _log.Debug($"DeleteSimpleImapClients: {deletedSimpleImapClients.Count} clients with MailboxId={mailBoxData.MailBoxId} removed and {isLocked}.");
+            _log.DebugMailImapClientDeleteSimpleImapClients(deletedSimpleImapClients.Count, mailBoxData.MailBoxId, isLocked);
         }
         catch (Exception ex)
         {
-            _log.Error($"DeleteSimpleImapClient exception: {ex}");
+            _log.ErrorMailImapClientDeleteSimpleImapClients(ex.ToString());
+            _log.ErrorMailImapClientDeleteSimpleImapClients(ex.ToString());
         }
         finally
         {
@@ -395,20 +410,20 @@ public class MailImapClient : IDisposable
 
                 if (result) needUserUpdate = true;
 
-                _log.Debug($"ProcessActionFromImapTimer_Elapsed Action {imapAction.FolderAction} complete with result {result.ToString().ToUpper()} for {ids.Count} messages.");
+                _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), result.ToString().ToUpper(), ids.Count);
 
                 StringBuilder sb = new();
 
                 ids.ForEach(x => sb.Append(x.ToString() + ", "));
 
-                _log.Debug($"ProcessActionFromImapTimer_Elapsed ids: {sb}");
+                _log.DebugMailImapClientProcessActionIds(sb.ToString());
 
                 ids.Clear();
             }
         }
         catch (Exception ex)
         {
-            _log.Error($"ProcessActionFromImap exception: {ex}");
+            _log.ErrorMailImapClientProcessAction(ex.ToString());
         }
         finally
         {
@@ -427,7 +442,7 @@ public class MailImapClient : IDisposable
             return;
         }
 
-        _log.Debug($"IAliveTimer. No user online.");
+        _log.DebugMailImapClientNoUserOnline();
 
         OnCriticalError?.Invoke(this, EventArgs.Empty);
     }
@@ -453,7 +468,7 @@ public class MailImapClient : IDisposable
     {
         imapActionsQueue.Enqueue(e);
 
-        _log.Debug($"ImapClient_NewActionFromImap: imapActionsQueue.Count={imapActionsQueue.Count}. Action={e.FolderAction}");
+        _log.DebugMailImapClientNewActionFromImap(imapActionsQueue.Count, e.FolderAction.ToString());
     }
 
     private void ImapClient_MessagesListUpdated(object sender, EventArgs e)
@@ -486,7 +501,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"SetMailboxAuthError(Tenant = {Tenant}, MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}') Exception: {ex}");
+            _log.ErrorMailImapClientMailboxAuth(Tenant, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString(), ex.ToString());
         }
         finally
         {
@@ -498,7 +513,7 @@ public class MailImapClient : IDisposable
     {
         if (simpleImapClient.ImapMessagesList == null)
         {
-            _log.Debug($"UpdateDbFolder: ImapMessagesList==null.");
+            _log.DebugMailImapClientUpdateDbFolder();
 
             return;
         }
@@ -509,13 +524,13 @@ public class MailImapClient : IDisposable
         {
             var workFolderMails = GetMailFolderMessages(simpleImapClient);
 
-            _log.Debug($"UpdateDbFolder: simpleImapClient.WorkFolderMails.Count={workFolderMails.Count}.");
+            _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
 
             if (simpleImapClient.ImapMessagesList != null)
             {
                 foreach (var imap_message in simpleImapClient.ImapMessagesList)
                 {
-                    _log.Debug($"UpdateDbFolder: imap_message_Uidl={imap_message.UniqueId.Id}.");
+                    _log.DebugMailImapClientUpdateDbFolderMessageUidl(imap_message.UniqueId.Id);
 
                     var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
@@ -523,7 +538,7 @@ public class MailImapClient : IDisposable
 
                     if (db_message == null)
                     {
-                        _log.Debug($"UpdateDbFolder: imap_message_Uidl={uidl} not found in DB.");
+                        _log.DebugMailImapClientUpdateDbFolderMessageUidlNotFound(uidl);
 
                         simpleImapClient.TryGetNewMessage(imap_message);
 
@@ -543,7 +558,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"UpdateDbFolder {simpleImapClient.ImapWorkFolderFullName} exception {ex.Message}.");
+            _log.ErrorMailImapClientUpdateDbFolder(simpleImapClient.ImapWorkFolderFullName, ex.Message);
         }
         finally
         {
@@ -559,8 +574,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            _log.Debug($"SetMessageFlagsFromImap: imap_message_Uidl={imap_message.UniqueId.Id}, flag={imap_message.Flags.Value}.");
-            _log.Debug($"SetMessageFlagsFromImap: db_message={db_message.Uidl}, folder={db_message.Folder}, IsRemoved={db_message.IsRemoved}.");
+            _log.DebugMailImapClientSetMessageFlagsFromImap(imap_message.UniqueId.Id, imap_message.Flags.Value.ToString(), db_message.Uidl, db_message.Folder.ToString(), db_message.IsRemoved);
 
             bool unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
             bool important = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
@@ -572,13 +586,13 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"SetMessageFlagsFromImap: {ex.Message}");
+            _log.ErrorMailImapClientSetMessageFlagsFromImap(ex.Message);
         }
     }
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
     {
-        _log.Debug($"NewMessage: Folder={simpleImapClient.ImapWorkFolderFullName} Uidl={imap_message.UniqueId}.");
+        _log.DebugMailImapClientNewMessage(simpleImapClient.ImapWorkFolderFullName, imap_message.UniqueId.ToString());
 
         bool result = true;
 
@@ -592,7 +606,7 @@ public class MailImapClient : IDisposable
 
         _enginesFactorySemaphore.Wait();
 
-        message.FixDateIssues(imap_message?.InternalDate, _log);
+        message.FixDateIssues(_log, imap_message?.InternalDate);
 
         bool unread = false, impotant = false;
 
@@ -602,12 +616,12 @@ public class MailImapClient : IDisposable
             impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
         }
 
-        message.FixEncodingIssues(_log);
+        message.FixEncodingIssues();
 
         var folder = simpleImapClient.MailWorkFolder;
         var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
-        _log.Info($"Get message (UIDL: '{uidl}', MailboxId = {simpleImapClient.Account.MailBoxId}, Address = '{simpleImapClient.Account.EMail}')");
+        _log.InfoMailImapClientGetMessage(uidl, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
 
         try
         {
@@ -617,11 +631,11 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, _log, impotant);
+                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
-                    _log.Debug("CreateMessageInDB: failed.");
+                    _log.DebugMailImapClientCreateMessageInDBFailed();
 
                     return false;
                 }
@@ -630,7 +644,7 @@ public class MailImapClient : IDisposable
 
                 DoOptionalOperations(messageDB, message, simpleImapClient);
 
-                _log.Info($"Message saved (id: {messageDB.Id}, From: '{messageDB.From}', Subject: '{messageDB.Subject}', Unread: {messageDB.IsNew})");
+                _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
 
                 needUserUpdate = true;
 
@@ -665,7 +679,7 @@ public class MailImapClient : IDisposable
                 if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
             }
 
-            _log.Info($"Message updated (id: {messageInfo.Id}, Folder: '{simpleImapClient.Folder}'), Subject: '{messageInfo.Subject}'");
+            _log.InfoMailImapClientMessageUpdated(messageInfo.Id, simpleImapClient.Folder.ToString(), messageInfo.Subject);
 
             SetMessageFlagsFromImap(imap_message, messageInfo);
 
@@ -675,7 +689,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"CreateMessageInDB:{ex.Message}");
+            _log.ErrorMailImapClientCreateMessageInDB(ex.Message);
 
             result = false;
         }
@@ -689,7 +703,7 @@ public class MailImapClient : IDisposable
 
                 LogStat(simpleImapClient, "CreateMessageInDB", watch.Elapsed, result);
 
-                _log.Debug($"CreateMessageInDB time={watch.Elapsed.TotalMilliseconds} ms.");
+                _log.DebugMailImapClientCreateMessageInDB(watch.Elapsed.TotalMilliseconds);
             }
         }
 
@@ -720,13 +734,7 @@ public class MailImapClient : IDisposable
 
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
     {
-        if (!_mailSettings.Aggregator.CollectStatistics) return;
-
-        _log.DebugWithProps(method, new List<KeyValuePair<string, object>>() {
-            new KeyValuePair<string, object>("duration", duration.TotalMilliseconds),
-            new KeyValuePair<string, object>("mailboxId", simpleImapClient.Account.MailBoxId),
-            new KeyValuePair<string, object>("address", simpleImapClient.Account.EMail.ToString()),
-            new KeyValuePair<string, object>("isFailed", failed)});
+        _logStat.DebugStatistic(duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
     }
 
     private bool SendUnreadUser()
@@ -740,14 +748,15 @@ public class MailImapClient : IDisposable
                          select mailFolderInfo.unreadMessages)
                 .FirstOrDefault();
 
-            if (UserName != Constants.LostUser.ID.ToString())
+            if (UserName != Constants.LostUser.Id.ToString())
             {
                 _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
             }
         }
         catch (Exception ex)
         {
-            _log.Error($"SendUnreadUser error {ex.Message}. Inner error: {ex.InnerException?.Message}.");
+            var innerError = ex.InnerException == null ? "No" : ex.InnerException.Message;
+            _log.ErrorMailImapClientSendUnreadUser(ex.Message, innerError);
 
             return false;
         }
@@ -762,16 +771,16 @@ public class MailImapClient : IDisposable
 
             if (simpleImapClient.MailWorkFolder.Tags.Any())
             {
-                _log.Debug("DoOptionalOperations -> GetOrCreateTags()");
+                _log.DebugMailImapClientGetOrCreateTags();
 
                 tagIds = _mailEnginesFactory.TagEngine.GetOrCreateTags(Tenant, UserName, simpleImapClient.MailWorkFolder.Tags);
             }
 
-            _log.Debug("DoOptionalOperations -> IsCrmAvailable()");
+            _log.DebugMailImapClientIsCrmAvailable();
 
             if (crmAvailable)
             {
-                _log.Debug("DoOptionalOperations -> GetCrmTags()");
+                _log.DebugMailImapClientGetCrmTags();
 
                 var crmTagIds = _mailEnginesFactory.TagEngine.GetCrmTags(message.FromEmail);
 
@@ -794,7 +803,7 @@ public class MailImapClient : IDisposable
                 message.TagIds = message.TagIds.Distinct().ToList();
             }
 
-            _log.Debug("DoOptionalOperations -> AddMessageToIndex()");
+            _log.DebugMailImapClientAddMessageToIndex();
 
             var mailMail = message.ToMailMail(Tenant, new Guid(UserName));
 
@@ -804,32 +813,30 @@ public class MailImapClient : IDisposable
             {
                 try
                 {
-                    _log.DebugFormat($"DoOptionalOperations -> SetMessagesTag(tagId: {tagId})");
+                    _log.DebugMailImapClientSetMessagesTag(tagId);
 
                     _mailEnginesFactory.TagEngine.SetMessagesTag(new List<int> { message.Id }, tagId);
                 }
                 catch (Exception e)
                 {
-                    _log.ErrorFormat(
-                        "SetMessagesTag(tenant={0}, userId='{1}', messageId={2}, tagid = {3})\r\nException:{4}\r\n",
-                        Tenant, UserName, message.Id, e.ToString(),
-                        tagIds != null ? string.Join(",", tagIds) : "null");
+                    _log.ErrorMailImapClientSetMessagesTag(Tenant, UserName, message.Id,
+                        tagIds != null ? string.Join(",", tagIds) : "null", e.ToString());
                 }
             }
 
-            _log.Debug("DoOptionalOperations -> AddRelationshipEventForLinkedAccounts()");
+            _log.DebugMailImapClientAddRelationshipEvent();
 
             _mailEnginesFactory.CrmLinkEngine.AddRelationshipEventForLinkedAccounts(simpleImapClient.Account, message);
 
-            _log.Debug("DoOptionalOperations -> SaveEmailInData()");
+            _log.DebugMailImapClientSaveEmailInData();
 
             _mailEnginesFactory.EmailInEngine.SaveEmailInData(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema);
 
-            _log.Debug("DoOptionalOperations -> SendAutoreply()");
+            _log.DebugMailImapClientSendAutoreply();
 
-            _mailEnginesFactory.AutoreplyEngine.SendAutoreply(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema, _log);
+            _mailEnginesFactory.AutoreplyEngine.SendAutoreply(simpleImapClient.Account, message, _mailSettings.Defines.DefaultApiSchema);
 
-            _log.Debug("DoOptionalOperations -> UploadIcsToCalendar()");
+            _log.DebugMailImapClientUploadIcsToCalendar();
 
             if (simpleImapClient.MailWorkFolder.Folder != Enums.FolderType.Spam)
             {
@@ -840,11 +847,11 @@ public class MailImapClient : IDisposable
 
             if (_mailSettings.Defines.SaveOriginalMessage)
             {
-                _log.Debug("DoOptionalOperations -> StoreMailEml()");
+                _log.DebugMailImapClientStoreMailEml();
                 StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage);
             }
 
-            _log.Debug("DoOptionalOperations -> ApplyFilters()");
+            _log.DebugMailImapClientApplyFilters();
 
             var filters = _mailEnginesFactory.FilterEngine.GetList();
 
@@ -874,12 +881,10 @@ public class MailImapClient : IDisposable
                         break;
                 }
             }
-
-            _log.Debug("DoOptionalOperations -> NotifySignalrIfNeed()");
         }
         catch (Exception ex)
         {
-            _log.Error($"DoOptionalOperations() ->\r\nException:{ex}\r\n");
+            _log.ErrorMailImapClientDoOptionalOperations(ex.ToString());
         }
 
         needUserUpdate = true;
@@ -903,13 +908,13 @@ public class MailImapClient : IDisposable
 
             var res = storage.SaveAsync(savePath, stream, MailStoragePathCombiner.EML_FILE_NAME).Result.ToString();
 
-            _log.InfoFormat($"StoreMailEml: Tenant = {tenant}, UserId = {userId}, SaveEmlPath = {savePath}. Result: {res}");
+            _log.InfoMailImapClientStoreMailEml(tenant, userId, savePath, res);
 
             return res;
         }
         catch (Exception ex)
         {
-            _log.Error($"StoreMailEml exception: {ex}");
+            _log.ErrorMailImapClientStoreMailEml(ex.ToString());
         }
 
         return string.Empty;
@@ -934,7 +939,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"Stop exception: {ex}");
+            _log.ErrorMailImapClientStop(ex.ToString());
         }
     }
 
@@ -942,7 +947,7 @@ public class MailImapClient : IDisposable
     {
         Stop();
 
-        _log.Info($"Dispose");
+        _log.InfoMailImapClientDispose();
 
         GC.SuppressFinalize(this);
     }
