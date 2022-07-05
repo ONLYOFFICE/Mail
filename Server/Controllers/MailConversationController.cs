@@ -359,7 +359,7 @@ namespace ASC.Mail.Controllers
                 ? Uri.UriSchemeHttp
                 : HttpContext.Request.GetUrlRewriter().Scheme;
 
-            _crmLinkEngine.LinkChainToCrm(id_message, crm_contact_ids.ToList(), scheme);
+            _crmLinkEngine.LinkChainToCrm(id_message, crm_contact_ids.ToList());
         }
 
         /// <summary>

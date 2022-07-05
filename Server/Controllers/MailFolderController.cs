@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-
-using ASC.Mail.Core.Engine.Operations.Base;
+﻿using ASC.Mail.Core.Engine.Operations.Base;
 using ASC.Mail.Core.Resources;
 using ASC.Mail.Enums;
 using ASC.Mail.Exceptions;
 using ASC.Mail.Extensions;
 using ASC.Mail.Models;
-using ASC.Web.Api.Routing;
 using ASC.Web.Mail.Resources;
 
 using Microsoft.AspNetCore.Mvc;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 
 namespace ASC.Mail.Controllers
 {
@@ -27,7 +26,7 @@ namespace ASC.Mail.Controllers
         [HttpGet(@"folders")]
         public IEnumerable<MailFolderData> GetFolders()
         {
-            if (!_mailSettings.Defines.IsSignalRAvailable)
+            if (!_mailSettings.Aggregator.EnableSignalr)
                 _accountEngine.SetAccountsActivity();
 
             return _folderEngine.GetFolders()

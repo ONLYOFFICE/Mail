@@ -415,7 +415,10 @@ namespace ASC.Mail.Controllers
         [HttpPost(@"notification/address/add")]
         public ServerNotificationAddressData CreateNotificationAddress(string name, string password, int domain_id)
         {
-            var notifyAddress = _serverEngine.CreateNotificationAddress(name, password, domain_id);
+            //need refactoring
+            var notifyAddress = new ServerNotificationAddressData();
+
+            // _serverEngine.CreateNotificationAddress(name, password, domain_id);
             return notifyAddress;
         }
 

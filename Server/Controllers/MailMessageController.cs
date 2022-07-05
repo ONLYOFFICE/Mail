@@ -626,8 +626,10 @@ namespace ASC.Mail.Controllers
                 //Thread.CurrentThread.CurrentCulture = CurrentCulture;
                 //Thread.CurrentThread.CurrentUICulture = CurrentCulture;
 
-                var attachment = _messageEngine
-                    .AttachFileFromDocuments(TenantId, UserId, id, fileId, version, needSaveToTemp);
+                //need refactoring
+                var attachment = new MailAttachmentData();
+                //_messageEngine
+                //.AttachFileFromDocuments(TenantId, UserId, id, fileId, version, needSaveToTemp);
 
                 return attachment;
             }
