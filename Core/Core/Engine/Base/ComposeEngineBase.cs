@@ -168,9 +168,8 @@ public class ComposeEngineBase
 
         if (account.IsGroup)
             throw new InvalidOperationException("Saving emails from a group address is forbidden");
-
         var mbox = _mailboxEngine.GetMailboxData(
-            new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
+                    new ConcreteUserMailboxExp(account.MailboxId, Tenant, User));
 
         if (mbox == null)
             throw new ArgumentException("No such mailbox");

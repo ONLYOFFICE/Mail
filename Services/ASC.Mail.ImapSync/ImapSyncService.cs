@@ -14,10 +14,6 @@
  *
 */
 
-
-
-using ASC.Mail.ImapSync.Loggers;
-
 namespace ASC.Mail.ImapSync;
 
 [Singletone]
@@ -114,7 +110,7 @@ public class ImapSyncService : IHostedService
         {
             if (!clients.TryAdd(cashedTenantUserMailBox.UserName, null))
             {
-                _log.DebugImapSyncServiceTry—reate—lient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Folder);
+                _log.DebugImapSyncServiceTryCreateClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Folder);
 
                 return;
             }

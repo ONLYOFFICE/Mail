@@ -552,7 +552,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         {
             using var tx = mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-            var exp = new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
+            var exp = new ConcreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, true);
 
             var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 

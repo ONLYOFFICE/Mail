@@ -173,7 +173,7 @@ public class MailboxIterator : IMailboxIterator
 
         if (!string.IsNullOrEmpty(user) && tenant > -1)
         {
-            mailboxExp = new СoncreteUserMailboxExp(id, tenant, user, isRemoved);
+            mailboxExp = new ConcreteUserMailboxExp(id, tenant, user, isRemoved);
         }
         else if (tenant > -1)
         {
@@ -197,7 +197,7 @@ public class MailboxIterator : IMailboxIterator
 
         if (!string.IsNullOrEmpty(user) && tenant > -1)
         {
-            mailboxExp = new СoncreteUserNextMailboxExp(id, tenant, user, isRemoved);
+            mailboxExp = new ConcreteUserNextMailboxExp(id, tenant, user, isRemoved);
         }
         else if (tenant > -1)
         {

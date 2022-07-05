@@ -584,11 +584,11 @@ public static class MailUtil
 
         try
         {
-            var indexСolon = domain.IndexOf(":", StringComparison.Ordinal);
+            var indexColon = domain.IndexOf(":", StringComparison.Ordinal);
 
-            if (indexСolon != -1)
+            if (indexColon != -1)
             {
-                domain = domain.Remove(indexСolon, domain.Length - indexСolon);
+                domain = domain.Remove(indexColon, domain.Length - indexColon);
             }
         }
         catch (Exception ex)

@@ -2127,13 +2127,13 @@ public class MessageEngine : BaseEngine
 
             Expression<Func<MailMail, bool>> exp = t => true;
 
-            var сhains = new List<Tuple<int, string>>();
+            var chains = new List<Tuple<int, string>>();
             foreach (var chain in chainsInfo)
             {
                 var key = new Tuple<int, string>(chain.MailboxId, chain.ChainId);
 
-                if (сhains.Any() &&
-                        сhains.Contains(key) &&
+                if (chains.Any() &&
+                        chains.Contains(key) &&
                         (chain.Folder == FolderType.Inbox || chain.Folder == FolderType.Sent))
                 {
                     continue;
@@ -2145,7 +2145,7 @@ public class MessageEngine : BaseEngine
                 {
                     innerWhere = innerWhere.And(m => m.Folder == (int)FolderType.Inbox || m.Folder == (int)FolderType.Sent);
 
-                    сhains.Add(key);
+                    chains.Add(key);
                 }
                 else
                 {

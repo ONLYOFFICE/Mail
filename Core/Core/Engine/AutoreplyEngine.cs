@@ -103,7 +103,7 @@ public class AutoreplyEngine
         };
 
         if (!_mailDaoFactory.GetMailboxDao().CanAccessTo(
-            new СoncreteUserMailboxExp(mailboxId, Tenant, UserId)))
+            new ConcreteUserMailboxExp(mailboxId, Tenant, UserId)))
         {
             throw new AccessViolationException("Mailbox is not owned by user.");
         }

@@ -25,11 +25,11 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class СoncreteUserNextMailboxExp : UserMailboxExp
+public class ConcreteUserNextMailboxExp : UserMailboxExp
 {
     private readonly int _id;
 
-    public СoncreteUserNextMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
+    public ConcreteUserNextMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
         : base(tenant, user, isRemoved)
     {
         _id = id;

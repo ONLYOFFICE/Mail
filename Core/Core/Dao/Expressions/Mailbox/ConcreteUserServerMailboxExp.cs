@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class ConcreteUserServerMailboxExp : СoncreteUserMailboxExp
+public class ConcreteUserServerMailboxExp : ConcreteUserMailboxExp
 {
     public ConcreteUserServerMailboxExp(int id, int tenant, string user, bool? isRemoved = null)
         : base(id, tenant, user, isRemoved)

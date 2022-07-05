@@ -169,7 +169,7 @@ public class AccountEngine
             throw new ArgumentException(@"Email empty", "email");
 
         var mailbox =
-            _mailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), Tenant,
+            _mailboxEngine.GetMailboxData(new ConcreteUserMailboxExp(new MailAddress(email), Tenant,
                 UserId));
 
         if (mailbox == null)
@@ -415,7 +415,7 @@ public class AccountEngine
 
         var mbox =
             _mailDaoFactory.GetMailboxDao().GetMailBox(
-                new СoncreteUserMailboxExp(
+                new ConcreteUserMailboxExp(
                     newMailBoxData.EMail,
                     Tenant, UserId));
 
@@ -546,7 +546,7 @@ public class AccountEngine
             throw new ArgumentNullException("address");
 
 
-        var tuple = _mailboxEngine.GetMailboxFullInfo(new СoncreteUserMailboxExp(address, Tenant, UserId));
+        var tuple = _mailboxEngine.GetMailboxFullInfo(new ConcreteUserMailboxExp(address, Tenant, UserId));
 
         if (tuple == null)
             throw new NullReferenceException(string.Format("Account wasn't found by email: {0}", address.Address));
@@ -571,7 +571,7 @@ public class AccountEngine
         loginResult = null;
         var mailboxId =
             _mailDaoFactory.GetMailboxDao().Enable(
-                new СoncreteUserMailboxExp(tuple.Item2.Id, tuple.Item2.Tenant, tuple.Item2.User),
+                new ConcreteUserMailboxExp(tuple.Item2.Id, tuple.Item2.Tenant, tuple.Item2.User),
                 enabled)
                 ? tuple.Item2.Id
                 : -1;
@@ -592,7 +592,7 @@ public class AccountEngine
         bool saved;
 
         var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
-            new СoncreteUserMailboxExp(
+            new ConcreteUserMailboxExp(
                 mailboxId,
                 Tenant, UserId)
             );

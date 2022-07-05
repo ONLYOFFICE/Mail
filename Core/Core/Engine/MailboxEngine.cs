@@ -296,7 +296,7 @@ public class MailboxEngine : BaseEngine
             using var tx = _mailDbContext.Database.BeginTransaction();
 
             var existingMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
-                new СoncreteUserMailboxExp(
+                new ConcreteUserMailboxExp(
                     mailbox.EMail,
                     mailbox.TenantId, mailbox.UserId));
 
@@ -544,7 +544,7 @@ public class MailboxEngine : BaseEngine
             }
         }
 
-        var exp = new СoncreteUserMailboxExp(account.MailBoxId, account.TenantId, account.UserId);
+        var exp = new ConcreteUserMailboxExp(account.MailBoxId, account.TenantId, account.UserId);
 
         var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
@@ -688,7 +688,7 @@ public class MailboxEngine : BaseEngine
                 throw new Exception("MailBox id is 0");
 
             var mailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(
-                new СoncreteUserMailboxExp(mailBoxData.MailBoxId, mailBoxData.TenantId, mailBoxData.UserId, null));
+                new ConcreteUserMailboxExp(mailBoxData.MailBoxId, mailBoxData.TenantId, mailBoxData.UserId, null));
 
             if (mailbox == null)
             {

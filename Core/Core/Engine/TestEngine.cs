@@ -104,7 +104,7 @@ public class TestEngine
             throw new ArgumentException("Mailbox not found");
 
         var mbox = _mailboxEngine.GetMailboxData(
-            new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
+            new ConcreteUserMailboxExp(account.MailboxId, Tenant, User));
 
         if (mbox == null)
             throw new ArgumentException("no such mailbox");
@@ -206,7 +206,7 @@ public class TestEngine
             throw new ArgumentException("Message with id not found");
 
         var mbox = _mailboxEngine.GetMailboxData(
-            new СoncreteUserMailboxExp(message.MailboxId, Tenant, User));
+            new ConcreteUserMailboxExp(message.MailboxId, Tenant, User));
 
         if (mbox == null)
             throw new ArgumentException("Mailbox not found");
@@ -303,7 +303,7 @@ public class TestEngine
             throw new ArgumentException("Mailbox not found");
 
         var mbox = _mailboxEngine.GetMailboxData(
-            new СoncreteUserMailboxExp(account.MailboxId, Tenant, User));
+            new ConcreteUserMailboxExp(account.MailboxId, Tenant, User));
 
         if (mbox == null)
             throw new ArgumentException("no such mailbox");

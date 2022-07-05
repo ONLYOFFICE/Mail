@@ -272,7 +272,7 @@ namespace ASC.Mail.Controllers
                 throw new ArgumentException(@"Email empty", "email");
 
             var mailbox =
-                _mailboxEngine.GetMailboxData(new СoncreteUserMailboxExp(new MailAddress(email), TenantId,
+                _mailboxEngine.GetMailboxData(new ConcreteUserMailboxExp(new MailAddress(email), TenantId,
                     UserId));
 
             if (mailbox == null)

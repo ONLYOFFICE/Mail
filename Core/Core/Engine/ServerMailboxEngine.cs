@@ -256,7 +256,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var login = string.Format("{0}@{1}", mailboxLocalPart, serverDomain.Name);
 
-        var existMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(new СoncreteUserMailboxExp(new MailAddress(login), Tenant, userId));
+        var existMailbox = _mailDaoFactory.GetMailboxDao().GetMailBox(new ConcreteUserMailboxExp(new MailAddress(login), Tenant, userId));
 
         if (existMailbox != null)
         {
@@ -707,7 +707,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var exp = IsAdmin
             ? (IMailboxExp)new ConcreteTenantMailboxExp(mailboxId, Tenant)
-            : new СoncreteUserMailboxExp(mailboxId, Tenant, User);
+            : new ConcreteUserMailboxExp(mailboxId, Tenant, User);
 
         var mailbox =
                 _mailDaoFactory.GetMailboxDao().GetMailBox(exp);

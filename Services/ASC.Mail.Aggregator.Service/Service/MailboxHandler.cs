@@ -150,7 +150,7 @@ public class MailboxHandler : IDisposable
             _log.DebugMailboxHandlerGetState();
 
             var status = _mailboxEngine.GetMailboxStatus(
-                new СoncreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, null));
+                new ConcreteUserMailboxExp(mailbox.MailBoxId, mailbox.TenantId, mailbox.UserId, null));
 
             if (mailbox.BeginDate != status.BeginDate)
             {

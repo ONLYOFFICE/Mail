@@ -25,18 +25,18 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class СoncreteUserMailboxExp : UserMailboxExp
+public class ConcreteUserMailboxExp : UserMailboxExp
 {
     private readonly string _email;
     private readonly int? _id;
 
-    public СoncreteUserMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
+    public ConcreteUserMailboxExp(int id, int tenant, string user, bool? isRemoved = false)
         : base(tenant, user, isRemoved)
     {
         _id = id;
     }
 
-    public СoncreteUserMailboxExp(MailAddress address, int tenant, string user, bool? isRemoved = false)
+    public ConcreteUserMailboxExp(MailAddress address, int tenant, string user, bool? isRemoved = false)
         : base(tenant, user, isRemoved)
     {
         _email = address.Address.ToLowerInvariant();
