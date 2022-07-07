@@ -28,6 +28,7 @@ public class ImapSyncService : IHostedService
 
     private readonly MailSettings _mailSettings;
     private readonly RedisClient _redisClient;
+    private readonly RedisFactory _redisFactory;
 
     private readonly SignalrServiceClient _signalrServiceClient;
 
@@ -40,6 +41,7 @@ public class ImapSyncService : IHostedService
         IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
         ILoggerProvider loggerProvider)
     {
+        _redisFactory = redisFactory;
         _redisClient = redisFactory.GetRedisClient();
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
@@ -125,7 +127,7 @@ public class ImapSyncService : IHostedService
                 {
                     clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
 
-                    _log.InfoImapSyncServiceCantCreateMailClient(cashedTenantUserMailBox.UserName);
+                    await ClearUserRedis(cashedTenantUserMailBox.UserName);
                 }
                 else
                 {
@@ -134,27 +136,13 @@ public class ImapSyncService : IHostedService
                     client.OnCriticalError += Client_DeleteClient;
                 }
             }
-            catch (TimeoutException exTimeout)
-            {
-                _log.WarnImapSyncServiceCreateClientTimeout(cashedTenantUserMailBox.UserName, exTimeout.ToString());
-            }
-            catch (OperationCanceledException)
-            {
-                _log.InfoImapSyncServiceCreateClientCancel(cashedTenantUserMailBox.UserName);
-            }
-            catch (MailKit.Security.AuthenticationException authEx)
-            {
-                _log.ErrorImapSyncServiceCreateClientAuth(cashedTenantUserMailBox.UserName, authEx.ToString());
-            }
-            catch (WebException webEx)
-            {
-                _log.ErrorImapSyncServiceCreateClientWeb(cashedTenantUserMailBox.UserName, webEx.ToString());
-            }
             catch (Exception ex)
             {
                 clients.TryRemove(cashedTenantUserMailBox.UserName, out _);
 
-                _log.ErrorImapSyncServiceCreateClientException(cashedTenantUserMailBox.UserName, ex.ToString());
+                await ClearUserRedis(cashedTenantUserMailBox.UserName);
+
+                _log.ErrorImapSyncServiceStop($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
             }
         }
     }
@@ -214,5 +202,35 @@ public class ImapSyncService : IHostedService
         }
 
         return Task.CompletedTask;
+    }
+
+    public async Task<int> ClearUserRedis(string UserName)
+    {
+        int result = 0;
+
+        string RedisKey = "ASC.MailAction:" + UserName;
+
+        var localRedisClient= _redisFactory.GetRedisClient();
+
+        if (localRedisClient == null) return 0;
+
+        try
+        {
+            while (true)
+            {
+                var actionFromCache = await localRedisClient.PopFromQueue<CashedMailUserAction>(RedisKey);
+
+                if (actionFromCache == null) break;
+
+                result++;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorImapSyncServiceStop(ex.ToString());
+        }
+
+        return result;
     }
 }

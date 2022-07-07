@@ -46,7 +46,7 @@ builder.Host.ConfigureAppConfiguration((hostContext, config) =>
         .AddJsonFile("appsettings.json")
         .AddJsonFile($"appsettings.{env}.json", true)
         .AddJsonFile("storage.json")
-        .AddJsonFile($"storage.{env}.json")
+        .AddJsonFile($"storage.{env}.json", true)
         .AddJsonFile("mail.json")
         .AddJsonFile($"mail.{env}.json", true)
         .AddJsonFile("elastic.json", true)

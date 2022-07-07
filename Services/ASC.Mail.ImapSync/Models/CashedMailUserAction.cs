@@ -19,7 +19,14 @@
         SetAsDeleted,
         StartImapClient,
         MoveTo,
-        New,
-        RemovedFromFolder
+        ReceiptStatusChanged,
+        SetConversationsAsRead,
+        SetConversationsAsUnread,
+        SetConversationsAsImportant,
+        SetConversationsAsNotImpotant,
+        SetConversationsAsDeleted,
+        MoveConversationsTo,
+        Restore,
+        RestoreConversations
     }
 }
