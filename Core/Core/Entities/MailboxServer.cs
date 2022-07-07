@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Entities;
 
-public class MailboxServer : IEquatable<MailboxServer>
+public sealed class MailboxServer : IEquatable<MailboxServer>
 {
     public int Id { get; set; }
     public int ProviderId { get; set; }

@@ -1,9 +1,6 @@
-﻿using System;
-using ASC.Web.Core;
-
-namespace ASC.Mail
+﻿namespace ASC.Mail
 {
-    public class MailProduct : Product
+    public sealed class MailProduct : Product
     {
         internal const string ProductPath = "/products/mail/";
 
@@ -23,17 +20,17 @@ namespace ASC.Mail
 
         public override string Name
         {
-            get { return "Mail"; }// MailResource.ProductName; }
+            get { return "Mail"; }
         }
 
         public override string Description
         {
-            get { return "Aggregator of mail"; } // MailResource.ProductDescription; }
+            get { return "Aggregator of mail"; }
         }
 
         public override string ExtendedDescription
         {
-            get { return "Mail Aggregator Client"; }// MailResource.ProductDescription; }
+            get { return "Mail Aggregator Client"; }
         }
 
         public override Guid ProductID

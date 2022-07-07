@@ -26,7 +26,7 @@ public static class PredicateBuilder
     }
 }
 
-internal class SubstExpressionVisitor : System.Linq.Expressions.ExpressionVisitor
+internal sealed class SubstExpressionVisitor : System.Linq.Expressions.ExpressionVisitor
 {
     public Dictionary<Expression, Expression> subst = new Dictionary<Expression, Expression>();
 

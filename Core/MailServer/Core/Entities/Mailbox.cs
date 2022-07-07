@@ -26,7 +26,7 @@
 namespace ASC.Mail.Server.Core.Entities;
 
 [Table("mailbox")]
-public partial class Mailbox : BaseEntity
+public sealed class Mailbox : BaseEntity
 {
     [Key]
     [Column("username", TypeName = "varchar(255)")]

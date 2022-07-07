@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Models;
 
-public class Address
+public sealed class Address
 {
     string _email, _name, _localPart, _domain;
     /// <summary>

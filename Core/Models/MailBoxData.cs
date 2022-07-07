@@ -29,7 +29,7 @@ using SaslMechanism = ASC.Mail.Enums.SaslMechanism;
 namespace ASC.Mail.Models;
 
 [DataContract(Namespace = "")]
-public class MailBoxData : IEquatable<MailBoxData>
+public sealed class MailBoxData : IEquatable<MailBoxData>
 {
     public enum AuthProblemType
     {

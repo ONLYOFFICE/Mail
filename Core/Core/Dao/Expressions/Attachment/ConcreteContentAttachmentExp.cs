@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-public class ConcreteContentAttachmentExp : SimpleAttachmentExp
+public sealed class ConcreteContentAttachmentExp : SimpleAttachmentExp
 {
     public ConcreteContentAttachmentExp(int mailId, string contentId, bool? isRemoved = false)
         : base(isRemoved)

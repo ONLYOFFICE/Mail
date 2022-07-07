@@ -27,7 +27,7 @@ using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Models;
 
-public class MailFolder : IEquatable<MailFolder>
+public sealed class MailFolder : IEquatable<MailFolder>
 {
     public static bool IsIdOk(FolderType folderType)
     {

@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class ConcreteUserNextMailboxExp : UserMailboxExp
+public sealed class ConcreteUserNextMailboxExp : UserMailboxExp
 {
     private readonly int _id;
 
@@ -34,15 +34,6 @@ public class ConcreteUserNextMailboxExp : UserMailboxExp
     {
         _id = id;
     }
-
-    //public override Exp GetExpression()
-    //{
-    //    var exp = base.GetExpression();
-
-    //    exp = exp & Exp.Gt(MailboxTable.Columns.Id, _id);
-
-    //    return exp;
-    //}
 
     public override Expression<Func<MailMailbox, bool>> GetExpression()
     {

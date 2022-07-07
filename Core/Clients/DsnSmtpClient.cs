@@ -1,7 +1,7 @@
 ﻿using SmtpClient = MailKit.Net.Smtp.SmtpClient;
 namespace ASC.Mail.Clients;
 
-public class DsnSmtpClient : SmtpClient
+public sealed class DsnSmtpClient : SmtpClient
 {
     public DeliveryStatusNotification? Dsn { get; set; }
 

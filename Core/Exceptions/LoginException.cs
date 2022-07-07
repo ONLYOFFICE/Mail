@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Exceptions;
 
-public class LoginException : Exception
+public sealed class LoginException : Exception
 {
     public LoginResult LoginResult { get; }
 

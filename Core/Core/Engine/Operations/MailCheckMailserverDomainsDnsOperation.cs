@@ -29,7 +29,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class MailCheckMailserverDomainsDnsOperation : MailOperation
+public sealed class MailCheckMailserverDomainsDnsOperation : MailOperation
 {
     private readonly string _domainName;
     private readonly ServerDns _dns;

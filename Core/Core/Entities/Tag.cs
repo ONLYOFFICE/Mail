@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Entities;
 
-public class Tag : IEquatable<Tag>
+public sealed class Tag : IEquatable<Tag>
 {
     public int Id { get; set; }
     public int Tenant { get; set; }

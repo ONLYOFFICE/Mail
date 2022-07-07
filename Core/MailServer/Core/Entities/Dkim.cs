@@ -26,7 +26,7 @@
 namespace ASC.Mail.Server.Core.Entities;
 
 [Table("dkim")]
-public partial class Dkim : BaseEntity
+public sealed class Dkim : BaseEntity
 {
     [Key]
     [Column("id", TypeName = "int(10) unsigned")]

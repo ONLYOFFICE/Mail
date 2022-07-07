@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-public class ConcreteMessageAttachmentsExp : UserAttachmentsExp
+public sealed class ConcreteMessageAttachmentsExp : UserAttachmentsExp
 {
     public ConcreteMessageAttachmentsExp(int mailId, int tenant, string user, List<int> attachIds = null,
         bool? isRemoved = false, bool? onlyEmbedded = false)

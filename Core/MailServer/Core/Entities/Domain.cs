@@ -26,7 +26,7 @@
 namespace ASC.Mail.Server.Core.Entities;
 
 [Table("domain")]
-public partial class Domain : BaseEntity
+public sealed class Domain : BaseEntity
 {
     [Key]
     [Column("domain", TypeName = "varchar(255)")]

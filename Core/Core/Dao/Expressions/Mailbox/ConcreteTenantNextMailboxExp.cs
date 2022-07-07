@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class ConcreteTenantNextMailboxExp : TenantMailboxExp
+public sealed class ConcreteTenantNextMailboxExp : TenantMailboxExp
 {
     private readonly int _id;
 

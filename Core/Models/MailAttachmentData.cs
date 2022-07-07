@@ -26,7 +26,7 @@
 namespace ASC.Mail.Models;
 
 [DataContract(Name = "attachment", Namespace = "")]
-public class MailAttachmentData : ICloneable
+public sealed class MailAttachmentData : ICloneable
 {
     private string _contentId;
     public MailAttachmentData()

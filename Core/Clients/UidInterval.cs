@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Clients.Imap;
 
-public class UidInterval
+public sealed class UidInterval
 {
     public UidInterval(int from, int to)
     {

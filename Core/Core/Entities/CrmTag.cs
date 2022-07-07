@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Entities;
 
-public class CrmTag : IEquatable<CrmTag>
+public sealed class CrmTag : IEquatable<CrmTag>
 {
     public int TagId { get; set; }
     public int EntityType { get; set; }

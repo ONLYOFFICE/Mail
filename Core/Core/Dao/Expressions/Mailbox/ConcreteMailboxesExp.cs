@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class ConcreteMailboxesExp : IMailboxesExp
+public sealed class ConcreteMailboxesExp : IMailboxesExp
 {
     private readonly bool? _isRemoved;
     public string OrderBy { get; private set; }
@@ -44,7 +44,7 @@ public class ConcreteMailboxesExp : IMailboxesExp
         IsProcessed = isProcessd;
     }
 
-    public virtual Expression<Func<MailMailbox, bool>> GetExpression()
+    public Expression<Func<MailMailbox, bool>> GetExpression()
     {
         Expression<Func<MailMailbox, bool>> exp = mb => mb.IsRemoved == _isRemoved;
 

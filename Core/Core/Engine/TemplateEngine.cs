@@ -30,7 +30,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
-public class TemplateEngine : ComposeEngineBase
+public sealed class TemplateEngine : ComposeEngineBase
 {
     public TemplateEngine(
         SecurityContext securityContext,

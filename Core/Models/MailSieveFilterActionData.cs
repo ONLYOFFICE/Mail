@@ -29,7 +29,7 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract(Namespace = "", Name = "FilterAction")]
-public class MailSieveFilterActionData : IEquatable<MailSieveFilterActionData>
+public sealed class MailSieveFilterActionData : IEquatable<MailSieveFilterActionData>
 {
     [DataMember(IsRequired = true, Name = "action")]
     public ActionType Action { get; set; }

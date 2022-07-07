@@ -83,14 +83,14 @@ public class MailClient : IDisposable
     /// </remarks>
     public event EventHandler<MailClientEventArgs> SendMessage;
 
-    protected virtual void OnAuthenticated(string message)
+    protected void OnAuthenticated(string message)
     {
         var eventHandler = Authenticated;
         if (eventHandler != null)
             eventHandler.Invoke(this, new MailClientEventArgs(message, Account));
     }
 
-    protected virtual void OnGetMessage(MimeMessage message, string messageUid, bool unread, MailFolder folder)
+    protected void OnGetMessage(MimeMessage message, string messageUid, bool unread, MailFolder folder)
     {
         var eventHandler = GetMessage;
         if (eventHandler != null)
@@ -98,7 +98,7 @@ public class MailClient : IDisposable
                 new MailClientMessageEventArgs(message, messageUid, unread, folder, Account, Log));
     }
 
-    protected virtual void OnSentMessage(string message)
+    protected void OnSentMessage(string message)
     {
         var eventHandler = SendMessage;
         if (eventHandler != null)

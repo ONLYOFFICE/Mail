@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-public class FilterNextMessageExp : FilterMessagesExp
+public sealed class FilterNextMessageExp : FilterMessagesExp
 {
     public DateTime DateSent { get; private set; }
 

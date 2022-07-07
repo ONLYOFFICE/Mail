@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Clients.Imap;
 
-public class ImapFolderUids
+public sealed class ImapFolderUids
 {
     public int BeginDateUid { get; set; }
     public uint? UidValidity { get; set; }

@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class TenantServerMailboxesExp : TenantMailboxesExp
+public sealed class TenantServerMailboxesExp : TenantMailboxesExp
 {
     public TenantServerMailboxesExp(int tenant, bool? isRemoved = false)
         : base(tenant, isRemoved)

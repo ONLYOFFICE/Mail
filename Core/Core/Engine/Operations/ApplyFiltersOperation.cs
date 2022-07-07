@@ -31,7 +31,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class ApplyFiltersOperation : MailOperation
+public sealed class ApplyFiltersOperation : MailOperation
 {
     private readonly FilterEngine _filterEngine;
     private readonly MessageEngine _messageEngine;

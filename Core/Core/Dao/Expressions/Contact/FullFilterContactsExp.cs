@@ -28,7 +28,7 @@ using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 namespace ASC.Mail.Core.Dao.Expressions.Contact;
 
 [Scope]
-public class FullFilterContactsExp : SimpleFilterContactsExp
+public sealed class FullFilterContactsExp : SimpleFilterContactsExp
 {
     public ContactInfoType? InfoType { get; private set; }
     public bool? IsPrimary { get; private set; }

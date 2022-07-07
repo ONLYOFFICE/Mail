@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Attachment;
 
-public class ConcreteTenantAttachmentExp : TenantAttachmentExp
+public sealed class ConcreteTenantAttachmentExp : TenantAttachmentExp
 {
     public ConcreteTenantAttachmentExp(int id, int tenant, bool? isRemoved = false)
         : base(tenant, isRemoved)

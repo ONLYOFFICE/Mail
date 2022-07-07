@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Entities;
 
-public class ContactInfo : IEquatable<ContactInfo>
+public sealed class ContactInfo : IEquatable<ContactInfo>
 {
     public int Id { get; set; }
     public int Tenant { get; set; }

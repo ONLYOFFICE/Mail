@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Exceptions;
 
-public class ApiHelperException : Exception
+public sealed class ApiHelperException : Exception
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _response;

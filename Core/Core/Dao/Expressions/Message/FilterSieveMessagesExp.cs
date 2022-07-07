@@ -1,6 +1,6 @@
 namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-public class FilterSieveMessagesExp : IMessagesExp
+public sealed class FilterSieveMessagesExp : IMessagesExp
 {
     public List<int> Ids { get; private set; }
     public MailSieveFilterData Filter { get; private set; }
@@ -58,7 +58,7 @@ public class FilterSieveMessagesExp : IMessagesExp
         Limit = pageSize;
     }
 
-    public virtual Expression<Func<MailMail, bool>> GetExpression()
+    public Expression<Func<MailMail, bool>> GetExpression()
     {
         Expression<Func<MailMail, bool>> filterExp = m =>
             m.TenantId == Tenant && m.UserId == User && m.IsRemoved == false;
@@ -80,7 +80,7 @@ public class FilterSieveMessagesExp : IMessagesExp
                             ConditionKeyType.Cc => m => m.Cc == c.Value,
                             ConditionKeyType.Subject => m => m.Subject == c.Value,
                             ConditionKeyType.ToOrCc => m => m.ToText == c.Value || m.Cc == c.Value,
-                            _ => throw new ArgumentOutOfRangeException("c", c, null),
+                            _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
                         };
 
                         break;
@@ -93,7 +93,7 @@ public class FilterSieveMessagesExp : IMessagesExp
                             ConditionKeyType.Subject => m => m.Subject.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase),
                             ConditionKeyType.ToOrCc => m => m.ToText.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase)
                                                          || m.Cc.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase),
-                            _ => throw new ArgumentOutOfRangeException("c", c, null),
+                            _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
                         };
                         break;
                     case ConditionOperationType.NotMatches:
@@ -104,7 +104,7 @@ public class FilterSieveMessagesExp : IMessagesExp
                             ConditionKeyType.Cc => m => m.Cc != c.Value,
                             ConditionKeyType.Subject => m => m.Subject != c.Value,
                             ConditionKeyType.ToOrCc => m => m.ToText != c.Value && m.Cc != c.Value,
-                            _ => throw new ArgumentOutOfRangeException("c", c, null),
+                            _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
                         };
                         break;
                     case ConditionOperationType.NotContains:
@@ -116,7 +116,7 @@ public class FilterSieveMessagesExp : IMessagesExp
                             ConditionKeyType.Subject => m => !m.Subject.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase),
                             ConditionKeyType.ToOrCc => m => !m.ToText.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase)
                                                          && !m.Cc.Contains(c.Value, StringComparison.InvariantCultureIgnoreCase),
-                            _ => throw new ArgumentOutOfRangeException("c", c, null),
+                            _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
                         };
                         break;
                 }
@@ -202,7 +202,7 @@ public class FilterSieveMessagesExp : IMessagesExp
                 ConditionKeyType.To => w => w.ToText,
                 ConditionKeyType.Cc => w => w.Cc,
                 ConditionKeyType.Subject => w => w.Subject,
-                _ => throw new ArgumentOutOfRangeException("c", c, null),
+                _ => throw new ArgumentOutOfRangeException(nameof(c), c, null),
             };
         }
 

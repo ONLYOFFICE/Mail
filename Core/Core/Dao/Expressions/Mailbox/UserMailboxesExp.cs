@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Mailbox;
 
-public class UserMailboxesExp : TenantMailboxesExp
+public sealed class UserMailboxesExp : TenantMailboxesExp
 {
     private readonly string _user;
     private readonly bool? _onlyTeamlab;

@@ -1,6 +1,6 @@
 ﻿namespace ASC.Mail.Models;
 
-public class MailAttachGarbage : MailGarbage
+public sealed class MailAttachGarbage : MailGarbage
 {
     private readonly int _id;
     public override int Id

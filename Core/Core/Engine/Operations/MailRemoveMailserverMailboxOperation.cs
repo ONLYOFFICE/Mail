@@ -29,7 +29,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class MailRemoveMailserverMailboxOperation : MailOperation
+public sealed class MailRemoveMailserverMailboxOperation : MailOperation
 {
     public override MailOperationType OperationType
     {

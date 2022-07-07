@@ -27,7 +27,7 @@ using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-public class FilterChainMessagesExp : FilterMessagesExp
+public sealed class FilterChainMessagesExp : FilterMessagesExp
 {
     public FilterChainMessagesExp(MailSearchFilterData filter, int tenant, string user, List<int> ids = null)
         : base(ids ?? new List<int>(), tenant, user, filter)

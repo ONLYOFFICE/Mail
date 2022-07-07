@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Entities;
 
-public class UserFolder : IEquatable<UserFolder>
+public sealed class UserFolder : IEquatable<UserFolder>
 {
     public int Id { get; set; }
     public int ParentId { get; set; }

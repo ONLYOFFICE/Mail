@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Models;
 
-public class AccountInfo
+public sealed class AccountInfo
 {
     public int Id { get; set; }
 

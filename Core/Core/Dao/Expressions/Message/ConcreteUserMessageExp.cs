@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Core.Dao.Expressions.Message;
 
-public class ConcreteUserMessageExp : UserMessageExp
+public sealed class ConcreteUserMessageExp : UserMessageExp
 {
     public ConcreteUserMessageExp(int id, int tenant, string user, bool? isRemoved = null)
         : base(tenant, user, isRemoved)

@@ -28,7 +28,7 @@ using FolderType = ASC.Mail.Enums.FolderType;
 namespace ASC.Mail.Models;
 
 [DataContract(Namespace = "")]
-public class MailSearchFilterData : ICloneable
+public sealed class MailSearchFilterData : ICloneable
 {
     [DataMember(Name = "PrimaryFolder")]
     public FolderType PrimaryFolder { get; set; }

@@ -551,7 +551,7 @@ public class FilterEngine
     }
 }
 
-public class ShouldSerializeContractResolver : DefaultContractResolver
+public sealed class ShouldSerializeContractResolver : DefaultContractResolver
 {
     private const string ID = "id";
     private const string ENABLED = "enabled";

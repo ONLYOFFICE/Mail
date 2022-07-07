@@ -28,7 +28,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class ApplyFilterOperation : MailOperation
+public sealed class ApplyFilterOperation : MailOperation
 {
     public override MailOperationType OperationType
     {

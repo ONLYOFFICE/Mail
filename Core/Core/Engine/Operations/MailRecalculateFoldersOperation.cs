@@ -29,7 +29,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class MailRecalculateFoldersOperation : MailOperation
+public sealed class MailRecalculateFoldersOperation : MailOperation
 {
     public override MailOperationType OperationType
     {

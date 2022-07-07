@@ -29,7 +29,7 @@ using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
 
-public class MailDownloadAllAttachmentsOperation : MailOperation
+public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 {
     private readonly MessageEngine _messageEngine;
     private readonly TempStream _tempStream;
@@ -50,7 +50,7 @@ public class MailDownloadAllAttachmentsOperation : MailOperation
         StorageFactory storageFactory,
         ILoggerProvider logProvider,
         TempStream tempStream,
-int messageId)
+        int messageId)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider, storageFactory)
     {
         _messageEngine = messageEngine;
