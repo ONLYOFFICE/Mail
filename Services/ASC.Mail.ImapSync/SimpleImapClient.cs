@@ -7,7 +7,7 @@ namespace ASC.Mail.ImapSync;
 public class SimpleImapClient : IDisposable
 {
     public bool IsReady { get; private set; } = false;
-    public int CheckServerAliveMitutes { get; set; } = 1;
+    public int CheckServerAliveMitutes { get; set; } = 0;
     public List<MessageDescriptor> ImapMessagesList { get; set; }
     public IMailFolder ImapWorkFolder { get; private set; }
     public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
@@ -41,6 +41,7 @@ public class SimpleImapClient : IDisposable
     public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
+    public event EventHandler<string> OnNewFolderCreate;
 
     private readonly ILogger _log;
     private readonly MailSettings _mailSettings;
@@ -419,6 +420,26 @@ public class SimpleImapClient : IDisposable
 
             TryGetNewMessage(messageDescriptors);
         });
+    }
+
+    private void UpdateIMAPFolders()
+    {
+        try
+        {
+            var newFoldersList = GetIMAPFolders().Where(x => !foldersDictionary.Keys.Any(y => y.FullName == x.FullName)).ToList();
+
+            foreach (var newFolder in newFoldersList)
+            {
+                if (AddImapFolderToDictionary(newFolder))
+                {
+                    OnNewFolderCreate?.Invoke(this, newFolder.FullName);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            
+        }
     }
 
     public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task(() => GetNewMessage(messageDescriptors)));

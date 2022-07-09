@@ -259,6 +259,8 @@ public class MailImapClient : IDisposable
 
             rootSimpleImapClient.Init("");
 
+            rootSimpleImapClient.OnNewFolderCreate += RootSimpleImapClient_OnNewFolderCreate;
+
             foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
             {
                 CreateSimpleImapClient(mailbox, folder);
@@ -277,6 +279,14 @@ public class MailImapClient : IDisposable
         finally
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+        }
+    }
+
+    private void RootSimpleImapClient_OnNewFolderCreate(object sender, string e)
+    {
+        if (sender is SimpleImapClient simpleImapClient)
+        {
+            CreateSimpleImapClient(simpleImapClient.Account, e);
         }
     }
 
