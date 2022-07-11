@@ -10,7 +10,15 @@ public partial class CrmEntityTag
 
 public static class CrmEntityTagExtension
 {
-    public static ModelBuilder AddCrmEntityTag(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddCrmEntityTag(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddCrmEntityTag, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddCrmEntityTag(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CrmEntityTag>(entity =>
         {
@@ -34,7 +42,5 @@ public static class CrmEntityTagExtension
                 .HasColumnName("entity_type")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

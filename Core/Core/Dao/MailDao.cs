@@ -86,7 +86,7 @@ public class MailDao : BaseMailDao, IMailDao
         if (!string.IsNullOrEmpty(mail.CalendarUid))
             mailMail.CalendarUid = mail.CalendarUid;
 
-        var entry = MailDbContext.AddOrUpdate(m => m.MailMail, mailMail);
+        var entry = MailDbContext.AddOrUpdate(m => m.MailMails, mailMail);
 
         MailDbContext.SaveChanges();
 
@@ -95,7 +95,7 @@ public class MailDao : BaseMailDao, IMailDao
 
     public Core.Entities.Mail GetMail(IMessageExp exp)
     {
-        var mail = MailDbContext.MailMail
+        var mail = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToMail)
@@ -106,7 +106,7 @@ public class MailDao : BaseMailDao, IMailDao
 
     public Core.Entities.Mail GetNextMail(IMessageExp exp)
     {
-        var mail = MailDbContext.MailMail
+        var mail = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .OrderBy(m => m.Id)
@@ -119,7 +119,7 @@ public class MailDao : BaseMailDao, IMailDao
 
     public List<string> GetExistingUidls(int mailboxId, List<string> uidlList)
     {
-        var existingUidls = MailDbContext.MailMail
+        var existingUidls = MailDbContext.MailMails
             .AsNoTracking()
             .Where(m => m.MailboxId == mailboxId && uidlList.Contains(m.Uidl))
             .Select(m => m.Uidl)
@@ -132,7 +132,7 @@ public class MailDao : BaseMailDao, IMailDao
     {
         var now = DateTime.UtcNow;
 
-        var mails = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
+        var mails = MailDbContext.MailMails.Where(m => ids.Contains(m.Id));
 
         foreach (var mail in mails)
         {

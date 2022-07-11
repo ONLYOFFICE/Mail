@@ -32,7 +32,15 @@ public partial class MailContactInfo : BaseEntity, ISearchItem
 
 public static class MailContactInfoExtension
 {
-    public static ModelBuilder AddMailContactInfo(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailContactInfo(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailContactInfo, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailContactInfo(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailContactInfo>(entity =>
         {
@@ -96,7 +104,5 @@ public static class MailContactInfoExtension
                 .WithMany(m => m.InfoList)
                 .HasForeignKey(a => a.IdContact);
         });
-
-        return modelBuilder;
     }
 }

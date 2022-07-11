@@ -40,7 +40,7 @@ public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryD
 
     public List<string> GetAutoreplyHistorySentEmails(int mailboxId, string email, int autoreplyDaysInterval)
     {
-        var emails = MailDbContext.MailMailboxAutoreplyHistory
+        var emails = MailDbContext.MailMailboxAutoreplyHistories
             .AsNoTracking()
             .Where(h => h.IdMailbox == mailboxId
                 && h.SendingEmail == email
@@ -61,7 +61,7 @@ public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryD
             SendingDate = autoreplyHistory.SendingDate
         };
 
-        MailDbContext.MailMailboxAutoreplyHistory.Add(model);
+        MailDbContext.MailMailboxAutoreplyHistories.Add(model);
 
         var count = MailDbContext.SaveChanges();
 
@@ -70,13 +70,13 @@ public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryD
 
     public int DeleteAutoreplyHistory(int mailboxId)
     {
-        var history = MailDbContext.MailMailboxAutoreplyHistory
+        var history = MailDbContext.MailMailboxAutoreplyHistories
             .Where(h => h.IdMailbox == mailboxId && h.Tenant == Tenant)
             .FirstOrDefault();
 
         if (history != null)
         {
-            MailDbContext.MailMailboxAutoreplyHistory.Remove(history);
+            MailDbContext.MailMailboxAutoreplyHistories.Remove(history);
             return MailDbContext.SaveChanges();
         }
 

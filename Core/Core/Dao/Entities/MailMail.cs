@@ -148,7 +148,15 @@ public partial class MailMail : BaseEntity, ISearchItemDocument
 
 public static class MailMailExtension
 {
-    public static ModelBuilder AddMailMail(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMail(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMail, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMail(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMail>(entity =>
         {
@@ -386,7 +394,5 @@ public static class MailMailExtension
                 .HasColumnName("read_request_status")
                 .HasColumnType("tinyint(1) unsigned");
         });
-
-        return modelBuilder;
     }
 }

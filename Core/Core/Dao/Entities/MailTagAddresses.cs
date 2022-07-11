@@ -12,7 +12,15 @@ public partial class MailTagAddresses : BaseEntity
 
 public static class MailTagAddressesExtension
 {
-    public static ModelBuilder AddMailTagAddresses(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailTagAddresses(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailTagAddresses, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailTagAddresses(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailTagAddresses>(entity =>
         {
@@ -35,7 +43,5 @@ public static class MailTagAddressesExtension
                 .HasColumnName("tenant")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

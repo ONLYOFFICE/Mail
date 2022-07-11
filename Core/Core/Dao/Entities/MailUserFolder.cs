@@ -29,7 +29,15 @@ public partial class MailUserFolder : BaseEntity, ISearchItem
 
 public static class MailUserFolderExtension
 {
-    public static ModelBuilder AddMailUserFolder(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailUserFolder(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailUserFolder, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailUserFolder(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailUserFolder>(entity =>
         {
@@ -96,7 +104,5 @@ public static class MailUserFolderExtension
                 .HasColumnName("total_conversations_count")
                 .HasColumnType("int(11) unsigned");
         });
-
-        return modelBuilder;
     }
 }

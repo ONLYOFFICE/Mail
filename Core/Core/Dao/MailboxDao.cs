@@ -53,7 +53,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public Mailbox GetMailBox(IMailboxExp exp)
     {
-        var mailbox = MailDbContext.MailMailbox
+        var mailbox = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToMailbox)
@@ -64,7 +64,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public List<Mailbox> GetMailBoxes(IMailboxesExp exp)
     {
-        var query = MailDbContext.MailMailbox
+        var query = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToMailbox);
@@ -91,7 +91,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public List<Mailbox> GetUniqueMailBoxes(IMailboxesExp exp)
     {
-        var query = MailDbContext.MailMailbox
+        var query = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToMailbox);
@@ -118,7 +118,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public Mailbox GetNextMailBox(IMailboxExp exp)
     {
-        var mailbox = MailDbContext.MailMailbox
+        var mailbox = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .OrderBy(mb => mb.Id)
@@ -131,7 +131,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public Tuple<int, int> GetRangeMailboxes(IMailboxExp exp)
     {
-        var mbIds = MailDbContext.MailMailbox
+        var mbIds = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .OrderBy(mb => mb.Id)
@@ -150,7 +150,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public List<Tuple<int, string>> GetMailUsers(IMailboxExp exp)
     {
-        var list = MailDbContext.MailMailbox
+        var list = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(mb => new Tuple<int, string>(mb.Tenant, mb.IdUser))
@@ -217,7 +217,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
             IsRemoved = true
         };
 
-        MailDbContext.MailMailbox.Attach(mailMailbox);
+        MailDbContext.MailMailboxes.Attach(mailMailbox);
         MailDbContext.Entry(mailMailbox).Property(x => x.IsRemoved).IsModified = true;
 
         var result = MailDbContext.SaveChanges();
@@ -232,7 +232,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
             Id = (uint)mailbox.Id
         };
 
-        context.MailMailbox.Remove(mailMailbox);
+        context.MailMailboxes.Remove(mailMailbox);
 
         var result = context.SaveChanges();
 
@@ -241,7 +241,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool Enable(IMailboxExp exp, bool enabled)
     {
-        var mailboxes = MailDbContext.MailMailbox.Where(exp.GetExpression()).ToList();
+        var mailboxes = MailDbContext.MailMailboxes.Where(exp.GetExpression()).ToList();
 
         if (!mailboxes.Any())
             return false;
@@ -262,7 +262,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool SetNextLoginDelay(IMailboxExp exp, TimeSpan delay)
     {
-        var mailboxes = MailDbContext.MailMailbox
+        var mailboxes = MailDbContext.MailMailboxes
             .Where(exp.GetExpression());
 
         if (mailboxes == null)
@@ -281,7 +281,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool SetMailboxEmailIn(Mailbox mailbox, string emailInFolder)
     {
-        var mailMailbox = MailDbContext.MailMailbox
+        var mailMailbox = MailDbContext.MailMailboxes
             .Where(mb => mb.Id == mailbox.Id
                 && mb.Tenant == mailbox.Tenant
                 && mb.IdUser == mailbox.User
@@ -300,7 +300,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool SetMailboxesActivity(int tenant, string user, bool userOnline = true)
     {
-        var mailMailbox = MailDbContext.MailMailbox
+        var mailMailbox = MailDbContext.MailMailboxes
             .Where(mb => mb.Tenant == tenant
                 && mb.IdUser == user
                 && mb.IsRemoved == false)
@@ -322,7 +322,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
         int result = 0;
         try
         {
-            var box = MailDbContext.MailMailbox
+            var box = MailDbContext.MailMailboxes
                 .Where(b => b.Id == id && b.IsProcessed == false && b.IsRemoved == false)
                 .FirstOrDefault();
 
@@ -346,7 +346,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
         if (rOptions.ServerLoginDelay < delay)
             rOptions.ServerLoginDelay = delay;
 
-        var rBox = MailDbContext.MailMailbox.FirstOrDefault(b => b.Id == mailbox.Id);
+        var rBox = MailDbContext.MailMailboxes.FirstOrDefault(b => b.Id == mailbox.Id);
 
         rBox.IsProcessed = false;
         rBox.DateChecked = DateTime.UtcNow;
@@ -388,7 +388,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool SetMailboxAuthError(int id, DateTime? authErrorDate)
     {
-        var query = MailDbContext.MailMailbox
+        var query = MailDbContext.MailMailboxes
             .Where(mb => mb.Id == id);
 
         if (authErrorDate.HasValue)
@@ -411,7 +411,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public List<int> SetMailboxesProcessed(int timeout)
     {
-        var mailboxes = MailDbContext.MailMailbox
+        var mailboxes = MailDbContext.MailMailboxes
             .Where(mb => mb.IsProcessed == true
                 && mb.DateChecked != null
                 && EF.Functions.DateDiffMinute(mb.DateChecked, DateTime.UtcNow) > timeout)
@@ -430,7 +430,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool CanAccessTo(IMailboxExp exp)
     {
-        var foundIds = MailDbContext.MailMailbox
+        var foundIds = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(mb => mb.Id)
@@ -441,7 +441,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public MailboxStatus GetMailBoxStatus(IMailboxExp exp)
     {
-        var status = MailDbContext.MailMailbox
+        var status = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToMailboxStatus)

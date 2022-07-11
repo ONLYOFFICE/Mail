@@ -42,7 +42,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
     {
         var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
-        var dns = MailDbContext.MailServerDns
+        var dns = MailDbContext.MailServerDnses
             .AsNoTracking()
             .Where(d => tenants.Contains(d.Tenant) && d.IdDomain == domainId)
             .Select(ToServerDns)
@@ -53,7 +53,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
 
     public ServerDns GetById(int id)
     {
-        var dns = MailDbContext.MailServerDns
+        var dns = MailDbContext.MailServerDnses
             .AsNoTracking()
             .Where(d => d.Tenant == Tenant && d.Id == id)
             .Select(ToServerDns)
@@ -64,7 +64,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
 
     public ServerDns GetFree()
     {
-        var dns = MailDbContext.MailServerDns
+        var dns = MailDbContext.MailServerDnses
             .AsNoTracking()
             .Where(d => d.Tenant == Tenant && d.IdUser == UserId && d.IdDomain == DefineConstants.UNUSED_DNS_SETTING_DOMAIN_ID)
             .Select(ToServerDns)
@@ -99,7 +99,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
             TimeModified = dns.TimeModified
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerDns, mailDns);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerDnses, mailDns);
 
         MailDbContext.SaveChanges();
 
@@ -115,7 +115,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
             IdUser = UserId
         };
 
-        MailDbContext.MailServerDns.Remove(mailDns);
+        MailDbContext.MailServerDnses.Remove(mailDns);
 
         var result = MailDbContext.SaveChanges();
 

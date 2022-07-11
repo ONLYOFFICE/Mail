@@ -10,7 +10,14 @@ public partial class MailPopUnorderedDomain : BaseEntity
 
 public static class MailPopUnorderedDomainExtension
 {
-    public static ModelBuilder AddMailPopUnorderedDomain(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailPopUnorderedDomain(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailPopUnorderedDomain, Provider.MySql);
+
+        return modelBuilder;
+    }
+    public static void MySqlAddMailPopUnorderedDomain(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailPopUnorderedDomain>(entity =>
         {
@@ -25,7 +32,5 @@ public static class MailPopUnorderedDomainExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

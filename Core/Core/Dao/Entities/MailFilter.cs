@@ -20,7 +20,15 @@ public partial class MailFilter : BaseEntity
 
 public static class MailFilterExtension
 {
-    public static ModelBuilder AddMailFilter(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailFilter(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailFilter, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailFilter(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailFilter>(entity =>
         {
@@ -75,7 +83,5 @@ public static class MailFilterExtension
             .HasColumnName("date_created")
             .HasColumnType("timestamp");
         });
-
-        return modelBuilder;
     }
 }

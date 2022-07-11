@@ -18,7 +18,15 @@ public partial class MailMailboxAutoreply : BaseEntity
 
 public static class MailMailboxAutoreplyExtension
 {
-    public static ModelBuilder AddMailMailboxAutoreply(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxAutoreply(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxAutoreply, Provider.MySql);
+        
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxAutoreply(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxAutoreply>(entity =>
         {
@@ -67,7 +75,5 @@ public static class MailMailboxAutoreplyExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

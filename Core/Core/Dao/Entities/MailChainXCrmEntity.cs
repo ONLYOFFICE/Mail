@@ -14,7 +14,15 @@ public partial class MailChainXCrmEntity : BaseEntity
 
 public static class MailChainXCrmEntityExtension
 {
-    public static ModelBuilder AddMailChainXCrmEntity(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailChainXCrmEntity(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailChainXCrmEntity, Provider.MySql);
+
+        return modelBuilder;    
+    }
+
+    public static void MySqlAddMailChainXCrmEntity(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailChainXCrmEntity>(entity =>
         {
@@ -45,7 +53,5 @@ public static class MailChainXCrmEntityExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

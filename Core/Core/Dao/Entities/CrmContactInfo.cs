@@ -18,7 +18,15 @@ public partial class CrmContactInfo : BaseEntity
 }
 public static class CrmContactInfoExtension
 {
-    public static ModelBuilder AddCrmContactInfo(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddCrmContactInfo(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddCrmContactInfo, Provider.MySql);
+
+       return modelBuilder;
+    }
+
+    public static void MySqlAddCrmContactInfo(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CrmContactInfo>(entity =>
         {
@@ -75,7 +83,5 @@ public static class CrmContactInfoExtension
                 .HasColumnName("last_modifed_on")
                 .HasColumnType("datetime");
         });
-
-        return modelBuilder;
     }
 }

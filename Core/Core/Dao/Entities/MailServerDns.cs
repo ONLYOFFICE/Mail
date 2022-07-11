@@ -29,7 +29,15 @@ public partial class MailServerDns : BaseEntity
 
 public static class MailServerDnsExtension
 {
-    public static ModelBuilder AddMailServerDns(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerDns(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerDns, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailServerDns(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerDns>(entity =>
         {
@@ -144,7 +152,5 @@ public static class MailServerDnsExtension
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAddOrUpdate();
         });
-
-        return modelBuilder;
     }
 }

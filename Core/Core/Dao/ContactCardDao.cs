@@ -48,7 +48,7 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
             .Select(ToContact)
             .ToList();
 
-        var contactInfos = MailDbContext.MailContactInfo
+        var contactInfos = MailDbContext.MailContactInfos
             .AsNoTracking()
             .Where(c => c.IdContact == id)
             .Select(ToContactInfo)
@@ -94,7 +94,7 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
 
         var ids = contacts.Select(c => c.Id).ToList();
 
-        var contactInfos = MailDbContext.MailContactInfo
+        var contactInfos = MailDbContext.MailContactInfos
             .AsNoTracking()
             .Where(c => ids.Contains(c.IdContact))
             .Select(ToContactInfo)
@@ -108,7 +108,7 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
         var count = MailDbContext.MailContacts
             .AsNoTracking()
             .Where(exp.GetExpression())
-            .Join(MailDbContext.MailContactInfo.DefaultIfEmpty(), c => c.Id, ci => ci.IdContact,
+            .Join(MailDbContext.MailContactInfos.DefaultIfEmpty(), c => c.Id, ci => ci.IdContact,
             (c, ci) => new
             {
                 Contact = c,

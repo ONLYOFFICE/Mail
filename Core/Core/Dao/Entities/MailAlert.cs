@@ -15,7 +15,15 @@ public partial class MailAlert : BaseEntity
 
 public static class MailAlertExtension
 {
-    public static ModelBuilder AddMailAlert(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailAlert(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailAlert, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailAlert(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailAlert>(entity =>
         {
@@ -58,7 +66,5 @@ public static class MailAlertExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

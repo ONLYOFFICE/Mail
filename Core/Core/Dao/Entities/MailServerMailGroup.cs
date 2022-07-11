@@ -14,7 +14,15 @@ public partial class MailServerMailGroup : BaseEntity
 
 public static class MailServerMailGroupExtension
 {
-    public static ModelBuilder AddMailServerMailGroup(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerMailGroup(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerMailGroup, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailServerMailGroup(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerMailGroup>(entity =>
         {
@@ -53,7 +61,5 @@ public static class MailServerMailGroupExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

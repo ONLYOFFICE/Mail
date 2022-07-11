@@ -556,17 +556,17 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
             var mb = mailDaoFactory.GetMailboxDao().GetMailBox(exp);
 
-            var deleteMailboxMessagesQuery = mailDbContext.MailMail
+            var deleteMailboxMessagesQuery = mailDbContext.MailMails
                 .Where(m => m.MailboxId == mb.Id && m.TenantId == mb.Tenant && m.UserId == mb.User);
 
-            mailDbContext.MailMail.RemoveRange(deleteMailboxMessagesQuery);
+            mailDbContext.MailMails.RemoveRange(deleteMailboxMessagesQuery);
 
             mailDbContext.SaveChanges();
 
-            var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachment
+            var deleteMailboxAttachmentsQuery = mailDbContext.MailAttachments
                 .Where(a => a.IdMailbox == mb.Id && a.Tenant == mb.Tenant);
 
-            mailDbContext.MailAttachment.RemoveRange(deleteMailboxAttachmentsQuery);
+            mailDbContext.MailAttachments.RemoveRange(deleteMailboxAttachmentsQuery);
 
             mailDbContext.SaveChanges();
 
@@ -576,10 +576,10 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             {
                 mailDaoFactory.GetFolderDao().Delete();
 
-                var deleteContactInfoQuery = mailDbContext.MailContactInfo
+                var deleteContactInfoQuery = mailDbContext.MailContactInfos
                     .Where(c => c.IdUser == mb.User && c.TenantId == mb.Tenant);
 
-                mailDbContext.MailContactInfo.RemoveRange(deleteContactInfoQuery);
+                mailDbContext.MailContactInfos.RemoveRange(deleteContactInfoQuery);
 
                 mailDbContext.SaveChanges();
 

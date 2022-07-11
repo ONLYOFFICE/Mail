@@ -43,9 +43,9 @@ public class ServerDao : BaseMailDao, IServerDao
 
     public Core.Entities.Server Get(int tenant)
     {
-        var server = MailDbContext.MailServerServer
+        var server = MailDbContext.MailServerServers
             .AsNoTracking()
-            .Join(MailDbContext.MailServerServerXTenant, s => s.Id, x => x.IdServer,
+            .Join(MailDbContext.MailServerServerXTenants, s => s.Id, x => x.IdServer,
                 (s, x) => new
                 {
                     Server = s,
@@ -60,7 +60,7 @@ public class ServerDao : BaseMailDao, IServerDao
 
     public List<Core.Entities.Server> GetList()
     {
-        var list = MailDbContext.MailServerServer
+        var list = MailDbContext.MailServerServers
             .AsNoTracking()
             .Select(ToServer)
             .ToList();
@@ -76,7 +76,7 @@ public class ServerDao : BaseMailDao, IServerDao
             IdTenant = tenant
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailServerServerXTenant, xItem);
+        MailDbContext.AddOrUpdate(t => t.MailServerServerXTenants, xItem);
 
         var result = MailDbContext.SaveChanges();
 
@@ -91,7 +91,7 @@ public class ServerDao : BaseMailDao, IServerDao
             IdTenant = tenant
         };
 
-        MailDbContext.MailServerServerXTenant.Remove(deleteItem);
+        MailDbContext.MailServerServerXTenants.Remove(deleteItem);
 
         var result = MailDbContext.SaveChanges();
 
@@ -110,7 +110,7 @@ public class ServerDao : BaseMailDao, IServerDao
             ImapSettingsId = server.ImapSettingsId
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerServer, mailServer);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerServers, mailServer);
 
         MailDbContext.SaveChanges();
 
@@ -124,7 +124,7 @@ public class ServerDao : BaseMailDao, IServerDao
             IdServer = id
         };
 
-        MailDbContext.MailServerServerXTenant.Remove(deleteItem);
+        MailDbContext.MailServerServerXTenants.Remove(deleteItem);
 
         MailDbContext.SaveChanges();
 
@@ -133,7 +133,7 @@ public class ServerDao : BaseMailDao, IServerDao
             Id = id
         };
 
-        MailDbContext.MailServerServer.Remove(mailServer);
+        MailDbContext.MailServerServers.Remove(mailServer);
 
         var result = MailDbContext.SaveChanges();
 

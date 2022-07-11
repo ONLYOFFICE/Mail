@@ -40,7 +40,7 @@ public class MailboxDomainDao : BaseMailDao, IMailboxDomainDao
 
     public MailboxDomain GetDomain(string domainName)
     {
-        var domain = MailDbContext.MailMailboxDomain
+        var domain = MailDbContext.MailMailboxDomains
             .AsNoTracking()
             .Where(d => d.Name == domainName)
             .Select(ToMailboxDomain)
@@ -58,7 +58,7 @@ public class MailboxDomainDao : BaseMailDao, IMailboxDomainDao
             Name = domain.Name
         };
 
-        var result = MailDbContext.MailMailboxDomain.Add(mailboxDomain).Entity;
+        var result = MailDbContext.MailMailboxDomains.Add(mailboxDomain).Entity;
 
         MailDbContext.SaveChanges();
 

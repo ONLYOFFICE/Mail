@@ -29,7 +29,15 @@ public partial class CrmContact : BaseEntity
 
 public static class CrmContactExtension
 {
-    public static ModelBuilder AddCrmContact(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddCrmContactMail(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddCrmContact, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddCrmContact(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CrmContact>(entity =>
         {
@@ -147,7 +155,5 @@ public static class CrmContactExtension
                 .HasColumnName("is_shared")
                 .HasColumnType("tinyint(4)");
         });
-
-        return modelBuilder;
     }
 }

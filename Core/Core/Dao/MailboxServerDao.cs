@@ -40,7 +40,7 @@ public class MailboxServerDao : BaseMailDao, IMailboxServerDao
 
     public MailboxServer GetServer(int id)
     {
-        var server = MailDbContext.MailMailboxServer
+        var server = MailDbContext.MailMailboxServers
             .AsNoTracking()
             .Where(s => s.Id == id)
             .Select(ToMailboxServer)
@@ -51,7 +51,7 @@ public class MailboxServerDao : BaseMailDao, IMailboxServerDao
 
     public List<MailboxServer> GetServers(int providerId, bool isUserData = false)
     {
-        var servers = MailDbContext.MailMailboxServer
+        var servers = MailDbContext.MailMailboxServers
             .AsNoTracking()
             .Where(s => s.IdProvider == providerId && s.IsUserData == isUserData)
             .Select(ToMailboxServer)
@@ -75,7 +75,7 @@ public class MailboxServerDao : BaseMailDao, IMailboxServerDao
             IsUserData = mailboxServer.IsUserData
         };
 
-        var result = MailDbContext.MailMailboxServer.Add(server).Entity;
+        var result = MailDbContext.MailMailboxServers.Add(server).Entity;
 
         MailDbContext.SaveChanges();
 
@@ -84,12 +84,12 @@ public class MailboxServerDao : BaseMailDao, IMailboxServerDao
 
     public int DeleteServer(int id)
     {
-        var server = MailDbContext.MailMailboxServer
+        var server = MailDbContext.MailMailboxServers
            .Where(s => s.Id == id)
            .First();
 
 
-        var result = MailDbContext.MailMailboxServer.Remove(server);
+        var result = MailDbContext.MailMailboxServers.Remove(server);
 
         return MailDbContext.SaveChanges();
     }

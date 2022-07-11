@@ -16,7 +16,15 @@ public partial class MailImapSpecialMailbox : BaseEntity
 
 public static class MailImapSpecialMailboxExtension
 {
-    public static ModelBuilder AddMailImapSpecialMailbox(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailImapSpecialMailbox(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailImapSpecialMailbox, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailImapSpecialMailbox(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailImapSpecialMailbox>(entity =>
         {
@@ -45,7 +53,5 @@ public static class MailImapSpecialMailboxExtension
                 .HasColumnName("skip")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

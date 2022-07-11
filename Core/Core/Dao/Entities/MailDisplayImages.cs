@@ -15,7 +15,15 @@ public partial class MailDisplayImages : BaseEntity
 
 public static class MailDisplayImagesExtension
 {
-    public static ModelBuilder AddMailDisplayImages(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailDisplayImages(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailDisplayImages, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailDisplayImages(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailDisplayImages>(entity =>
         {
@@ -41,6 +49,5 @@ public static class MailDisplayImagesExtension
                 .UseCollation("utf8_general_ci");
         });
 
-        return modelBuilder;
     }
 }

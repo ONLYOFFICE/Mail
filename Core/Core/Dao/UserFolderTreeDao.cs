@@ -40,7 +40,7 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
 
     public List<UserFolderTreeItem> Get(IUserFoldersTreeExp exp)
     {
-        var list = MailDbContext.MailUserFolderTree
+        var list = MailDbContext.MailUserFolderTrees
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToUserFolderTreeItem)
@@ -58,7 +58,7 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
             Level = item.Level
         };
 
-        MailDbContext.MailUserFolderTree.Add(tree);
+        MailDbContext.MailUserFolderTrees.Add(tree);
 
         var result = MailDbContext.SaveChanges();
 
@@ -67,7 +67,7 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
 
     public int InsertFullPathToRoot(int folderId, int parentId)
     {
-        var treeItems = MailDbContext.MailUserFolderTree
+        var treeItems = MailDbContext.MailUserFolderTrees
             .AsNoTracking()
             .Where(t => t.FolderId == parentId)
             .Select(t => new MailUserFolderTree
@@ -86,10 +86,10 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
 
     public int Remove(IUserFoldersTreeExp exp)
     {
-        var deleteQuery = MailDbContext.MailUserFolderTree
+        var deleteQuery = MailDbContext.MailUserFolderTrees
             .Where(exp.GetExpression());
 
-        MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
+        MailDbContext.MailUserFolderTrees.RemoveRange(deleteQuery);
 
         var result = MailDbContext.SaveChanges();
 
@@ -112,15 +112,15 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
 
         var folderIds = subFolders.Keys;
 
-        var deleteQuery = MailDbContext.MailUserFolderTree
+        var deleteQuery = MailDbContext.MailUserFolderTrees
             .Where(t => folderIds.Contains(t.FolderId) && !folderIds.Contains(t.ParentId));
 
-        MailDbContext.MailUserFolderTree.RemoveRange(deleteQuery);
+        MailDbContext.MailUserFolderTrees.RemoveRange(deleteQuery);
         MailDbContext.SaveChanges();
 
         foreach (var subFolder in subFolders)
         {
-            var newTreeItems = MailDbContext.MailUserFolderTree
+            var newTreeItems = MailDbContext.MailUserFolderTrees
                 .AsNoTracking()
                 .Where(t => t.FolderId == toFolderId)
                 .Select(t => new MailUserFolderTree
@@ -130,7 +130,7 @@ public class UserFolderTreeDao : BaseMailDao, IUserFolderTreeDao
                     Level = t.Level + 1 + subFolder.Value
                 });
 
-            MailDbContext.MailUserFolderTree.AddRange(newTreeItems);
+            MailDbContext.MailUserFolderTrees.AddRange(newTreeItems);
         }
 
         MailDbContext.SaveChanges();

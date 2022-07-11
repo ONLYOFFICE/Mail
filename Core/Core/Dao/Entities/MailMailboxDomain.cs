@@ -12,7 +12,15 @@ public partial class MailMailboxDomain : BaseEntity
 
 public static class MailMailboxDomainExtension
 {
-    public static ModelBuilder AddMailMailboxDomain(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxDomain(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxDomain, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxDomain(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxDomain>(entity =>
         {
@@ -45,7 +53,5 @@ public static class MailMailboxDomainExtension
         {
             Id = 924, IdProvider = 69, Name = "gmail.com"
         });
-
-        return modelBuilder;
     }
 }

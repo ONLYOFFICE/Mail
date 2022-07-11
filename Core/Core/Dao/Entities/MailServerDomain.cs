@@ -15,7 +15,15 @@ public partial class MailServerDomain : BaseEntity
 
 public static class MailServerDomainExtension
 {
-    public static ModelBuilder AddMailServerDomain(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerDomain(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerDomain, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailServerDomain(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerDomain>(entity =>
         {
@@ -63,7 +71,5 @@ public static class MailServerDomainExtension
                 .HasColumnName("date_added")
                 .HasColumnType("datetime");
         });
-
-        return modelBuilder;
     }
 }

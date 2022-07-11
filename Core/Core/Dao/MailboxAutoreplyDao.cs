@@ -41,7 +41,7 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
 
     public MailboxAutoreply GetAutoreply(Mailbox mailbox)
     {
-        var autoreply = MailDbContext.MailMailboxAutoreply
+        var autoreply = MailDbContext.MailMailboxAutoreplies
             .AsNoTracking()
             .Where(a => a.Tenant == mailbox.Tenant && a.IdMailbox == mailbox.Id)
             .Select(ToAutoreply)
@@ -64,7 +64,7 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
 
     public List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds)
     {
-        var autoreplies = MailDbContext.MailMailboxAutoreply
+        var autoreplies = MailDbContext.MailMailboxAutoreplies
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant && mailboxIds.Contains(a.IdMailbox))
             .Select(ToAutoreply)
@@ -93,7 +93,7 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
 
     public int SaveAutoreply(MailboxAutoreply autoreply)
     {
-        MailDbContext.MailMailboxAutoreply.Add(new MailMailboxAutoreply
+        MailDbContext.MailMailboxAutoreplies.Add(new MailMailboxAutoreply
         {
             IdMailbox = autoreply.MailboxId,
             Tenant = autoreply.Tenant,
@@ -113,10 +113,10 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
 
     public int DeleteAutoreply(int mailboxId)
     {
-        var range = MailDbContext.MailMailboxAutoreply
+        var range = MailDbContext.MailMailboxAutoreplies
             .Where(r => r.Tenant == Tenant && r.IdMailbox == mailboxId);
 
-        MailDbContext.MailMailboxAutoreply.RemoveRange(range);
+        MailDbContext.MailMailboxAutoreplies.RemoveRange(range);
 
         var count = MailDbContext.SaveChanges();
 

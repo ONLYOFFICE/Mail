@@ -15,7 +15,15 @@ public partial class MailImapFlags : BaseEntity
 
 public static class MailImapFlagsExtension
 {
-    public static ModelBuilder AddMailImapFlags(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailImapFlags(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailImapFlags, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailImapFlags(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailImapFlags>(entity =>
         {
@@ -38,7 +46,5 @@ public static class MailImapFlagsExtension
                 .HasColumnName("skip")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

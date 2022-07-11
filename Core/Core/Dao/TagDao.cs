@@ -45,7 +45,7 @@ public class TagDao : BaseMailDao, ITagDao
         if (id < 0)
             return GetCrmTag(id);
 
-        var tag = MailDbContext.MailTag
+        var tag = MailDbContext.MailTags
             .AsNoTracking()
             .Where(r => r.TenantId == Tenant && r.IdUser == UserId && r.Id == id)
             .Select(r => new Tag
@@ -68,7 +68,7 @@ public class TagDao : BaseMailDao, ITagDao
     {
         var crmTagId = id < 0 ? -id : id;
 
-        var crmTag = MailDbContext.CrmTag
+        var crmTag = MailDbContext.CrmTags
             .AsNoTracking()
             .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact && r.Id == crmTagId)
             .Select(r => new Tag
@@ -88,7 +88,7 @@ public class TagDao : BaseMailDao, ITagDao
 
     public Tag GetTag(string name)
     {
-        var tag = MailDbContext.MailTag
+        var tag = MailDbContext.MailTags
             .AsNoTracking()
             .Where(r => r.TenantId == Tenant && r.IdUser == UserId && r.Name == name)
             .Select(r => new Tag
@@ -109,7 +109,7 @@ public class TagDao : BaseMailDao, ITagDao
 
     public List<Tag> GetTags()
     {
-        var tags = MailDbContext.MailTag
+        var tags = MailDbContext.MailTags
             .AsNoTracking()
             .Where(r => r.TenantId == Tenant && r.IdUser == UserId)
             .Select(r => new Tag
@@ -129,7 +129,7 @@ public class TagDao : BaseMailDao, ITagDao
 
     public List<Tag> GetCrmTags()
     {
-        var crmTags = MailDbContext.CrmTag
+        var crmTags = MailDbContext.CrmTags
             .AsNoTracking()
             .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact)
             .Select(r => new Tag
@@ -149,9 +149,9 @@ public class TagDao : BaseMailDao, ITagDao
 
     public List<CrmTag> GetCrmTags(List<int> contactIds)
     {
-        var query = MailDbContext.CrmEntityTag
+        var query = MailDbContext.CrmEntityTags
             .AsNoTracking()
-            .Join(MailDbContext.CrmTag,
+            .Join(MailDbContext.CrmTags,
                 cet => cet.TagId,
                 ct => ct.Id,
                 (cet, ct) => new CrmTag
@@ -184,7 +184,7 @@ public class TagDao : BaseMailDao, ITagDao
             CrmId = tag.CrmId
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailTag, dbTag); //maybe memory leak here
+        var entry = MailDbContext.AddOrUpdate(t => t.MailTags, dbTag); //maybe memory leak here
 
         MailDbContext.SaveChanges();
 
@@ -193,20 +193,20 @@ public class TagDao : BaseMailDao, ITagDao
 
     public int DeleteTag(int id)
     {
-        var range = MailDbContext.MailTag
+        var range = MailDbContext.MailTags
             .Where(r => r.TenantId == Tenant && r.IdUser == UserId && r.Id == id);
 
-        MailDbContext.MailTag.RemoveRange(range);
+        MailDbContext.MailTags.RemoveRange(range);
 
         return MailDbContext.SaveChanges();
     }
 
     public int DeleteTags(List<int> tagIds)
     {
-        var range = MailDbContext.MailTag
+        var range = MailDbContext.MailTags
             .Where(r => r.TenantId == Tenant && r.IdUser == UserId && tagIds.Contains(r.Id));
 
-        MailDbContext.MailTag.RemoveRange(range);
+        MailDbContext.MailTags.RemoveRange(range);
 
         return MailDbContext.SaveChanges();
     }

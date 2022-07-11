@@ -40,7 +40,7 @@ public class MailboxProviderDao : BaseMailDao, IMailboxProviderDao
 
     public MailboxProvider GetProvider(int id)
     {
-        var provider = MailDbContext.MailMailboxProvider
+        var provider = MailDbContext.MailMailboxProviders
             .AsNoTracking()
             .Where(d => d.Id == id)
             .Select(ToMailboxProvider)
@@ -51,7 +51,7 @@ public class MailboxProviderDao : BaseMailDao, IMailboxProviderDao
 
     public MailboxProvider GetProvider(string providerName)
     {
-        var provider = MailDbContext.MailMailboxProvider
+        var provider = MailDbContext.MailMailboxProviders
             .AsNoTracking()
             .Where(d => d.Name == providerName)
             .Select(ToMailboxProvider)
@@ -71,7 +71,7 @@ public class MailboxProviderDao : BaseMailDao, IMailboxProviderDao
             Documentation = provider.Url
         };
 
-        var result = MailDbContext.MailMailboxProvider.Add(mailboxProvider).Entity;
+        var result = MailDbContext.MailMailboxProviders.Add(mailboxProvider).Entity;
 
         MailDbContext.SaveChanges();
 

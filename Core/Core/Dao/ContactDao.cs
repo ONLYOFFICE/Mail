@@ -62,12 +62,12 @@ public class ContactDao : BaseMailDao, IContactDao
 
     public int RemoveContacts(List<int> ids)
     {
-        var queryDelete = MailDbContext.MailContactInfo
+        var queryDelete = MailDbContext.MailContactInfos
             .Where(c => c.TenantId == Tenant
                 && c.IdUser == UserId
                 && ids.Contains((int)c.IdContact));
 
-        MailDbContext.MailContactInfo.RemoveRange(queryDelete);
+        MailDbContext.MailContactInfos.RemoveRange(queryDelete);
 
         var result = MailDbContext.SaveChanges();
 

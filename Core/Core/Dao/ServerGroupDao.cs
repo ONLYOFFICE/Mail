@@ -40,7 +40,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
 
     public ServerGroup Get(int id)
     {
-        var group = MailDbContext.MailServerMailGroup
+        var group = MailDbContext.MailServerMailGroups
             .AsNoTracking()
             .Where(g => g.IdTenant == Tenant && g.Id == id)
             .Select(ToServerGroup)
@@ -51,7 +51,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
 
     public List<ServerGroup> GetList()
     {
-        var groups = MailDbContext.MailServerMailGroup
+        var groups = MailDbContext.MailServerMailGroups
             .AsNoTracking()
             .Where(g => g.IdTenant == Tenant)
             .Select(ToServerGroup)
@@ -62,9 +62,9 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
 
     public List<ServerGroup> GetList(int domainId)
     {
-        var groups = MailDbContext.MailServerMailGroup
+        var groups = MailDbContext.MailServerMailGroups
             .AsNoTracking()
-            .Join(MailDbContext.MailServerAddress, g => g.IdAddress, a => a.Id,
+            .Join(MailDbContext.MailServerAddresses, g => g.IdAddress, a => a.Id,
                 (g, a) => new
                 {
                     Group = g,
@@ -88,7 +88,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
             DateCreated = group.DateCreated
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerMailGroup, mailServerGroup);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerMailGroups, mailServerGroup);
 
         MailDbContext.SaveChanges();
 
@@ -102,7 +102,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
             Id = id
         };
 
-        MailDbContext.MailServerMailGroup.Remove(mailServerGroup);
+        MailDbContext.MailServerMailGroups.Remove(mailServerGroup);
 
         var result = MailDbContext.SaveChanges();
 

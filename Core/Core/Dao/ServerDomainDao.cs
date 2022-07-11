@@ -53,7 +53,7 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
             mailServerDomain.DateAdded = DateTime.UtcNow;
         }
 
-        var entry = MailDbContext.MailServerDomain.Add(mailServerDomain).Entity;
+        var entry = MailDbContext.MailServerDomains.Add(mailServerDomain).Entity;
 
         MailDbContext.SaveChanges();
 
@@ -62,21 +62,21 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
 
     public int Delete(int id)
     {
-        var domain = MailDbContext.MailServerDomain
+        var domain = MailDbContext.MailServerDomains
             .Where(d => d.Id == id && d.Tenant == Tenant)
             .FirstOrDefault();
 
         if (domain != null)
         {
-            MailDbContext.MailServerDomain.Remove(domain);
+            MailDbContext.MailServerDomains.Remove(domain);
 
             var result = MailDbContext.SaveChanges();
 
-            var dns = MailDbContext.MailServerDns
+            var dns = MailDbContext.MailServerDnses
             .Where(d => d.IdDomain == id && d.Tenant == Tenant)
             .FirstOrDefault();
 
-            MailDbContext.MailServerDns.Remove(dns);
+            MailDbContext.MailServerDnses.Remove(dns);
 
             MailDbContext.SaveChanges();
 
@@ -90,7 +90,7 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
     {
         var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
-        var list = MailDbContext.MailServerDomain
+        var list = MailDbContext.MailServerDomains
             .AsNoTracking()
             .Where(d => tenants.Contains(d.Tenant))
             .Select(ToServerDomain)
@@ -101,7 +101,7 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
 
     public List<ServerDomain> GetAllDomains()
     {
-        var list = MailDbContext.MailServerDomain
+        var list = MailDbContext.MailServerDomains
             .AsNoTracking()
             .Select(ToServerDomain)
             .ToList();
@@ -113,7 +113,7 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
     {
         var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
-        var domain = MailDbContext.MailServerDomain
+        var domain = MailDbContext.MailServerDomains
             .AsNoTracking()
             .Where(d => tenants.Contains(d.Tenant) && d.Id == id)
             .Select(ToServerDomain)
@@ -124,7 +124,7 @@ public class ServerDomainDao : BaseMailDao, IServerDomainDao
 
     public bool IsDomainExists(string name)
     {
-        var domain = MailDbContext.MailServerDomain
+        var domain = MailDbContext.MailServerDomains
             .AsNoTracking()
             .Where(d => d.Name == name)
             .Select(ToServerDomain)

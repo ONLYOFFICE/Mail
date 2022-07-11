@@ -24,7 +24,15 @@ public partial class MailTagMail : BaseEntity
 
 public static class MailTagMailExtension
 {
-    public static ModelBuilder AddMailTagMail(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailTagMail(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailTagMail, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailTagMail(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailTagMail>(entity =>
         {
@@ -62,7 +70,5 @@ public static class MailTagMailExtension
                 .HasColumnType("timestamp")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
-
-        return modelBuilder;
     }
 }

@@ -13,7 +13,15 @@ public partial class MailMailboxAutoreplyHistory : BaseEntity
 
 public static class MailMailboxAutoreplyHistoryExtension
 {
-    public static ModelBuilder AddMailMailboxAutoreplyHistory(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxAutoreplyHistory(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxAutoreplyHistory, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxAutoreplyHistory(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxAutoreplyHistory>(entity =>
         {
@@ -43,7 +51,5 @@ public static class MailMailboxAutoreplyHistoryExtension
                 .HasColumnName("sending_date")
                 .HasColumnType("datetime");
         });
-
-        return modelBuilder;
     }
 }
