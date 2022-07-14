@@ -41,14 +41,14 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
     public List<MailInfo> GetMailInfoList(IMessagesExp exp, bool skipSelectTags = false)
     {
-        var query = MailDbContext.MailMail
+        var query = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression());
 
         if (exp.TagIds != null && exp.TagIds.Any())
         {
             query = query.Where(m =>
-                            MailDbContext.MailTagMail
+                            MailDbContext.MailTagMails
                             .Where(t => t.IdMail == m.Id
                             && t.Tenant == Tenant
                             && t.IdUser == UserId
@@ -59,7 +59,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         if (exp.ExcludeTagIds != null && exp.ExcludeTagIds.Any())
         {
             query = query.Where(m =>
-                MailDbContext.MailTagMail
+                MailDbContext.MailTagMails
                     .Where(t => t.IdMail == m.Id
                     && t.Tenant == Tenant
                     && t.IdUser == UserId
@@ -70,7 +70,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         if (exp.UserFolderId.HasValue)
         {
             query = query.Where(m =>
-                MailDbContext.MailUserFolderXMail
+                MailDbContext.MailUserFolderXMails
                     .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId && t.IdFolder == exp.UserFolderId.Value)
                     .FirstOrDefault() != null);
         }
@@ -109,7 +109,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
             .Select(m => new
             {
                 Mail = m,
-                LabelsString = skipSelectTags ? "" : string.Join(",", MailDbContext.MailTagMail.Where(t => t.IdMail == m.Id).Select(t => t.IdTag))
+                LabelsString = skipSelectTags ? "" : string.Join(",", MailDbContext.MailTagMails.Where(t => t.IdMail == m.Id).Select(t => t.IdTag))
             })
             .Select(x => ToMailInfo(x.Mail, x.LabelsString))
             .ToList();
@@ -119,14 +119,14 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
     public long GetMailInfoTotal(IMessagesExp exp)
     {
-        var query = MailDbContext.MailMail
+        var query = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression());
 
         if (exp.TagIds != null && exp.TagIds.Any())
         {
             query = query.Where(m =>
-                MailDbContext.MailTagMail
+                MailDbContext.MailTagMails
                     .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId)
                     .Count() == exp.TagIds.Count);
         }
@@ -134,7 +134,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         if (exp.UserFolderId.HasValue)
         {
             query = query.Where(m =>
-                MailDbContext.MailUserFolderXMail
+                MailDbContext.MailUserFolderXMails
                     .Where(t => t.IdMail == m.Id && t.Tenant == Tenant && t.IdUser == UserId && t.IdFolder == exp.UserFolderId.Value)
                     .FirstOrDefault() != null);
         }
@@ -146,7 +146,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
     public Dictionary<int, int> GetMailCount(IMessagesExp exp)
     {
-        var dictionary = MailDbContext.MailMail
+        var dictionary = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .GroupBy(m => m.Folder)
@@ -162,9 +162,9 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
     public Dictionary<int, int> GetMailUserFolderCount(List<int> userFolderIds, bool? unread = null)
     {
-        var query = MailDbContext.MailUserFolderXMail
+        var query = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
-            .Join(MailDbContext.MailMail, x => (int)x.IdMail, m => m.Id,
+            .Join(MailDbContext.MailMails, x => (int)x.IdMail, m => m.Id,
             (x, m) => new
             {
                 UFxMail = x,
@@ -187,9 +187,9 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
 
     public Dictionary<int, int> GetMailUserFolderCount(bool? unread = null)
     {
-        var query = MailDbContext.MailUserFolderXMail
+        var query = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
-            .Join(MailDbContext.MailMail, x => (int)x.IdMail, m => m.Id,
+            .Join(MailDbContext.MailMails, x => (int)x.IdMail, m => m.Id,
             (x, m) => new
             {
                 UFxMail = x,
@@ -214,12 +214,12 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
     {
         //TODO: fix: make one query
 
-        var max = MailDbContext.MailMail
+        var max = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Max(m => m.Id);
 
-        var min = MailDbContext.MailMail
+        var min = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Min(m => m.Id);
@@ -239,7 +239,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         var body = Expression.PropertyOrField(x, field);
         var lambda = Expression.Lambda<Func<MailMail, T>>(body, x);
 
-        var max = MailDbContext.MailMail
+        var max = MailDbContext.MailMails
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(lambda.Compile())
@@ -257,7 +257,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         if (pi == null)
             throw new ArgumentException("Field not found");
 
-        var mails = MailDbContext.MailMail
+        var mails = MailDbContext.MailMails
             .Where(exp.GetExpression())
             .ToList();
 
@@ -283,7 +283,7 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         if (piTo == null)
             throw new ArgumentException("FieldTo not found");
 
-        var mails = MailDbContext.MailMail
+        var mails = MailDbContext.MailMails
             .Where(exp.GetExpression())
             .ToList();
 

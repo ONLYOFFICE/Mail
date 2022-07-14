@@ -40,12 +40,12 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 
     public int GetMailboxAttachsCount(MailBoxData mailBoxData)
     {
-        var count = MailDbContext.MailMail
+        var count = MailDbContext.MailMails
             .AsNoTracking()
             .Where(m => m.MailboxId == mailBoxData.MailBoxId
                 && m.TenantId == mailBoxData.TenantId
                 && m.UserId == mailBoxData.UserId)
-            .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
+            .Join(MailDbContext.MailAttachments, m => m.Id, a => a.IdMail,
                 (m, a) => new
                 {
                     Mail = m,
@@ -59,12 +59,12 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 
     public List<MailAttachGarbage> GetMailboxAttachs(MailBoxData mailBoxData, int limit)
     {
-        var list = MailDbContext.MailMail
+        var list = MailDbContext.MailMails
             .AsNoTracking()
             .Where(m => m.MailboxId == mailBoxData.MailBoxId
                 && m.TenantId == mailBoxData.TenantId
                 && m.UserId == mailBoxData.UserId)
-            .Join(MailDbContext.MailAttachment, m => m.Id, a => a.IdMail,
+            .Join(MailDbContext.MailAttachments, m => m.Id, a => a.IdMail,
                 (m, a) => new
                 {
                     Mail = m,
@@ -86,16 +86,16 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 
         var ids = attachGarbageList.Select(a => a.Id).ToList();
 
-        var deleteQuery = MailDbContext.MailAttachment.Where(m => ids.Contains(m.Id));
+        var deleteQuery = MailDbContext.MailAttachments.Where(m => ids.Contains(m.Id));
 
-        MailDbContext.MailAttachment.RemoveRange(deleteQuery);
+        MailDbContext.MailAttachments.RemoveRange(deleteQuery);
 
         MailDbContext.SaveChanges();
     }
 
     public int GetMailboxMessagesCount(MailBoxData mailBoxData)
     {
-        var count = MailDbContext.MailMail
+        var count = MailDbContext.MailMails
             .AsNoTracking()
             .Where(m => m.MailboxId == mailBoxData.MailBoxId
                 && m.TenantId == mailBoxData.TenantId
@@ -107,7 +107,7 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 
     public List<MailMessageGarbage> GetMailboxMessages(MailBoxData mailBoxData, int limit)
     {
-        var list = MailDbContext.MailMail
+        var list = MailDbContext.MailMails
             .AsNoTracking()
             .Where(m => m.MailboxId == mailBoxData.MailBoxId
                 && m.TenantId == mailBoxData.TenantId
@@ -125,9 +125,9 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
 
         var ids = messageGarbageList.Select(a => a.Id).ToList();
 
-        var deleteQuery = MailDbContext.MailMail.Where(m => ids.Contains(m.Id));
+        var deleteQuery = MailDbContext.MailMails.Where(m => ids.Contains(m.Id));
 
-        MailDbContext.MailMail.RemoveRange(deleteQuery);
+        MailDbContext.MailMails.RemoveRange(deleteQuery);
 
         MailDbContext.SaveChanges();
     }

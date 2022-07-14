@@ -14,7 +14,15 @@ public partial class MailMailboxProvider : BaseEntity
 
 public static class MailMailboxProviderExtension
 {
-    public static ModelBuilder AddMailMailboxProvider(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxProvider(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxProvider, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxProvider(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxProvider>(entity =>
         {
@@ -61,7 +69,5 @@ public static class MailMailboxProviderExtension
             DisplayName = "Google Mail",
             DisplayShortName = "GMail"
         });
-
-        return modelBuilder;
     }
 }

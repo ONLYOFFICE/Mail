@@ -11,7 +11,15 @@ public partial class MailServerServerType : BaseEntity
 
 public static class MailServerServerTypeExtension
 {
-    public static ModelBuilder AddMailServerServerType(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerServerType(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerServerType, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailServerServerType(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerServerType>(entity =>
         {
@@ -32,7 +40,5 @@ public static class MailServerServerTypeExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

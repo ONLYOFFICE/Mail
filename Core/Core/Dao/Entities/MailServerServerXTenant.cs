@@ -11,7 +11,15 @@ public partial class MailServerServerXTenant : BaseEntity
 
 public static class MailServerServerXTenantExtension
 {
-    public static ModelBuilder AddMailServerServerXTenant(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerServerXTenant(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerServerXTenant, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailServerServerXTenant(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerServerXTenant>(entity =>
         {
@@ -28,7 +36,5 @@ public static class MailServerServerXTenantExtension
                 .HasColumnName("id_server")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

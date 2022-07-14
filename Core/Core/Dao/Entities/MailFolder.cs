@@ -20,7 +20,15 @@ public partial class MailFolder : BaseEntity
 
 public static class MailFolderExtension
 {
-    public static ModelBuilder AddMailFolder(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailFolder(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailFolder, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailFolder(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailFolder>(entity =>
         {
@@ -65,7 +73,5 @@ public static class MailFolderExtension
                 .HasColumnName("total_conversations_count")
                 .HasColumnType("int(10) unsigned");
         });
-
-        return modelBuilder;
     }
 }

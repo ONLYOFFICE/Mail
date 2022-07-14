@@ -2,7 +2,6 @@
 global using ASC.Common;
 global using ASC.Common.Caching;
 global using ASC.Common.DependencyInjection;
-global using ASC.Common.Logging;
 global using ASC.Common.Mapping;
 global using ASC.Common.Utils;
 global using ASC.Core;

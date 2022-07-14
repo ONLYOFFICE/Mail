@@ -42,7 +42,7 @@ public class TagAddressDao : BaseMailDao, ITagAddressDao
     {
         var tagIds = MailDbContext.MailTagAddresses
             .AsNoTracking()
-            .Join(MailDbContext.MailTag, ta => (int)ta.IdTag, t => t.Id,
+            .Join(MailDbContext.MailTags, ta => (int)ta.IdTag, t => t.Id,
             (ta, t) => new
             {
                 TagAddress = ta,

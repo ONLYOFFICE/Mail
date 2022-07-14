@@ -20,7 +20,14 @@ public partial class MailChain : BaseEntity
 
 public static class MailChainExtension
 {
-    public static ModelBuilder AddMailChain(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailChain(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailChain, Provider.MySql);
+
+        return modelBuilder;
+    }
+    public static void MySqlAddMailChain(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailChain>(entity =>
         {
@@ -80,7 +87,5 @@ public static class MailChainExtension
                 .HasColumnName("is_crm_chain")
                 .HasColumnType("tinyint(4)");
         });
-
-        return modelBuilder;
     }
 }

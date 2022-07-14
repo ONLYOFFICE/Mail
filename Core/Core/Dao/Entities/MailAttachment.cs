@@ -22,7 +22,15 @@ public partial class MailAttachment : BaseEntity
 
 public static class MailAttachmentExtension
 {
-    public static ModelBuilder AddMailAttachment(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailAttachment(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailAttachment, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailAttachment(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailAttachment>(entity =>
         {
@@ -52,7 +60,7 @@ public static class MailAttachmentExtension
                 .HasColumnType("int(11)")
                 .HasColumnName("id")
                 .ValueGeneratedOnAdd();
-           
+
             entity.Property(e => e.ContentId)
                 .HasColumnName("content_id")
                 .HasColumnType("varchar(255)")
@@ -67,7 +75,7 @@ public static class MailAttachmentExtension
                 .UseCollation("utf8_general_ci");
 
             entity.Property(e => e.StoredName)
-                .HasColumnName("stored_name")   
+                .HasColumnName("stored_name")
                 .HasColumnType("varchar(255)")
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
@@ -81,7 +89,7 @@ public static class MailAttachmentExtension
             entity.Property(e => e.Size)
                 .HasColumnName("size")
                 .HasColumnType("bigint(20)");
-                            
+
             entity.Property(e => e.NeedRemove)
                 .HasColumnName("need_remove")
                 .HasColumnType("int(11)");
@@ -98,7 +106,5 @@ public static class MailAttachmentExtension
                 .WithMany(m => m.Attachments)
                 .HasForeignKey(a => a.IdMail);
         });
-
-        return modelBuilder;
     }
 }

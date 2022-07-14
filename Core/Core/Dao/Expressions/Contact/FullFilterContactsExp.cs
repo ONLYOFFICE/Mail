@@ -93,7 +93,7 @@ public sealed class FullFilterContactsExp : SimpleFilterContactsExp
 
             if (!foundIndex)
             {
-                var contactInfoQuery = MailDbContext.MailContactInfo
+                var contactInfoQuery = MailDbContext.MailContactInfos
                     .AsNoTracking()
                     .Where(o => o.TenantId == Tenant
                         && o.IdUser == User

@@ -17,7 +17,14 @@ public partial class MailServerAddress : BaseEntity
 
 public static class MailServerAddressExtension
 {
-    public static ModelBuilder AddMailServerAddress(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerAddress(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerAddress, Provider.MySql);
+
+        return modelBuilder;
+    }
+    public static void MySqlAddMailServerAddress(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerAddress>(entity =>
         {
@@ -69,7 +76,5 @@ public static class MailServerAddressExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }

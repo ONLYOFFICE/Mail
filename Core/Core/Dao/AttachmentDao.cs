@@ -41,7 +41,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public Attachment GetAttachment(IAttachmentExp exp)
     {
-        var attachemnt = MailDbContext.MailAttachment
+        var attachemnt = MailDbContext.MailAttachments
             .AsNoTracking()
             .Include(a => a.Mail)
             .Where(exp.GetExpression())
@@ -53,7 +53,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public List<Attachment> GetAttachments(IAttachmentsExp exp)
     {
-        var attachemnts = MailDbContext.MailAttachment
+        var attachemnts = MailDbContext.MailAttachments
             .AsNoTracking()
             .Include(a => a.Mail)
             .Where(exp.GetExpression())
@@ -65,7 +65,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public long GetAttachmentsSize(IAttachmentsExp exp)
     {
-        var size = MailDbContext.MailAttachment
+        var size = MailDbContext.MailAttachments
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Sum(a => a.Size);
@@ -75,7 +75,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public int GetAttachmentsMaxFileNumber(IAttachmentsExp exp)
     {
-        var number = MailDbContext.MailAttachment
+        var number = MailDbContext.MailAttachments
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(a => a.FileNumber)
@@ -87,7 +87,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public int GetAttachmentsCount(IAttachmentsExp exp)
     {
-        var count = MailDbContext.MailAttachment
+        var count = MailDbContext.MailAttachments
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Count();
@@ -97,7 +97,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
 
     public bool SetAttachmnetsRemoved(IAttachmentsExp exp)
     {
-        var attachments = MailDbContext.MailAttachment.Where(exp.GetExpression());
+        var attachments = MailDbContext.MailAttachments.Where(exp.GetExpression());
 
         foreach (var att in attachments)
         {
@@ -128,7 +128,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
             ContentId = attachment.ContentId
         };
 
-        var entry = MailDbContext.MailAttachment.Add(mailAttachment);
+        var entry = MailDbContext.MailAttachments.Add(mailAttachment);
 
         MailDbContext.SaveChanges();
 

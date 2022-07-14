@@ -42,7 +42,7 @@ public class ImapSpecialMailboxDao : BaseMailDao, IImapSpecialMailboxDao
     {
         var serverFolderAccessInfoList = new List<ServerFolderAccessInfo>();
 
-        var imapSpecialMailboxes = MailDbContext.MailImapSpecialMailbox
+        var imapSpecialMailboxes = MailDbContext.MailImapSpecialMailboxes
             .AsNoTracking()
             .ToList();
 

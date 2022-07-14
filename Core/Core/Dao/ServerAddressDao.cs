@@ -40,7 +40,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public ServerAddress Get(int id)
     {
-        var address = MailDbContext.MailServerAddress
+        var address = MailDbContext.MailServerAddresses
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant && a.Id == id)
             .Select(ToServerAddress)
@@ -51,7 +51,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public List<ServerAddress> GetList(List<int> ids = null)
     {
-        var query = MailDbContext.MailServerAddress
+        var query = MailDbContext.MailServerAddresses
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant);
 
@@ -69,7 +69,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public List<ServerAddress> GetList(int mailboxId)
     {
-        var list = MailDbContext.MailServerAddress
+        var list = MailDbContext.MailServerAddresses
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant && a.IdMailbox == mailboxId)
             .Select(ToServerAddress)
@@ -80,10 +80,10 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public List<ServerAddress> GetGroupAddresses(int groupId)
     {
-        var list = MailDbContext.MailServerAddress
+        var list = MailDbContext.MailServerAddresses
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant)
-           .Join(MailDbContext.MailServerMailGroupXMailServerAddress, a => a.Id, g => g.IdAddress,
+           .Join(MailDbContext.MailServerMailGroupXMailServerAddresses, a => a.Id, g => g.IdAddress,
             (a, g) => new
             {
                 Address = a,
@@ -99,7 +99,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public List<ServerAddress> GetDomainAddresses(int domainId)
     {
-        var list = MailDbContext.MailServerAddress
+        var list = MailDbContext.MailServerAddresses
             .AsNoTracking()
             .Where(a => a.Tenant == Tenant && a.IdDomain == domainId)
             .Select(ToServerAddress)
@@ -117,7 +117,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
                 IdMailGroup = groupId
             });
 
-        MailDbContext.MailServerMailGroupXMailServerAddress.AddRange(list);
+        MailDbContext.MailServerMailGroupXMailServerAddresses.AddRange(list);
 
         MailDbContext.SaveChanges();
     }
@@ -130,27 +130,27 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
             IdMailGroup = groupId
         };
 
-        MailDbContext.MailServerMailGroupXMailServerAddress.Remove(deleteItem);
+        MailDbContext.MailServerMailGroupXMailServerAddresses.Remove(deleteItem);
 
         MailDbContext.SaveChanges();
     }
 
     public void DeleteAddressesFromMailGroup(int groupId)
     {
-        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
+        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddresses
             .Where(x => x.IdMailGroup == groupId);
 
-        MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+        MailDbContext.MailServerMailGroupXMailServerAddresses.RemoveRange(deleteQuery);
 
         MailDbContext.SaveChanges();
     }
 
     public void DeleteAddressesFromAnyMailGroup(List<int> addressIds)
     {
-        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddress
+        var deleteQuery = MailDbContext.MailServerMailGroupXMailServerAddresses
             .Where(x => addressIds.Contains(x.IdAddress));
 
-        MailDbContext.MailServerMailGroupXMailServerAddress.RemoveRange(deleteQuery);
+        MailDbContext.MailServerMailGroupXMailServerAddresses.RemoveRange(deleteQuery);
 
         MailDbContext.SaveChanges();
     }
@@ -173,7 +173,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
             mailServerAddress.DateCreated = DateTime.UtcNow;
         }
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerAddress, mailServerAddress);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailServerAddresses, mailServerAddress);
 
         MailDbContext.SaveChanges();
 
@@ -188,7 +188,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
             Tenant = Tenant
         };
 
-        MailDbContext.MailServerAddress.Remove(deleteItem);
+        MailDbContext.MailServerAddresses.Remove(deleteItem);
 
         var result = MailDbContext.SaveChanges();
 
@@ -197,10 +197,10 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
     public int Delete(List<int> ids)
     {
-        var queryDelete = MailDbContext.MailServerAddress
+        var queryDelete = MailDbContext.MailServerAddresses
             .Where(a => a.Tenant == Tenant && ids.Contains(a.Id));
 
-        MailDbContext.MailServerAddress.RemoveRange(queryDelete);
+        MailDbContext.MailServerAddresses.RemoveRange(queryDelete);
 
         var result = MailDbContext.SaveChanges();
 
@@ -217,9 +217,9 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
 
         var tenants = new List<int> { Tenant, DefineConstants.SHARED_TENANT_ID };
 
-        var exists = MailDbContext.MailServerAddress
+        var exists = MailDbContext.MailServerAddresses
             .AsNoTracking()
-            .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
+            .Join(MailDbContext.MailServerDomains, a => a.IdDomain, d => d.Id,
             (a, d) => new
             {
                 Address = a,

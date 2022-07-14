@@ -40,9 +40,9 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
 
     public MailboxSignature GetSignature(int mailboxId)
     {
-        var query = MailDbContext.MailMailboxSignature
+        var query = MailDbContext.MailMailboxSignatures
             .AsNoTracking()
-            .Join(MailDbContext.MailMailbox,
+            .Join(MailDbContext.MailMailboxes,
                 s => s.IdMailbox,
                 mb => (int)mb.Id,
                 (s, mb) => new MailboxSignature
@@ -70,9 +70,9 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
 
     public List<MailboxSignature> GetSignatures(List<int> mailboxIds)
     {
-        var query = MailDbContext.MailMailboxSignature
+        var query = MailDbContext.MailMailboxSignatures
             .AsNoTracking()
-            .Join(MailDbContext.MailMailbox,
+            .Join(MailDbContext.MailMailboxes,
                 s => s.IdMailbox,
                 mb => (int)mb.Id,
                 (s, mb) => new MailboxSignature
@@ -107,7 +107,7 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
             IdMailbox = signature.MailboxId
         };
 
-        MailDbContext.MailMailboxSignature.Add(dbSignature);
+        MailDbContext.MailMailboxSignatures.Add(dbSignature);
 
         var result = MailDbContext.Entry(dbSignature);
 
@@ -120,10 +120,10 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
 
     public int DeleteSignature(int mailboxId)
     {
-        var query = MailDbContext.MailMailboxSignature
+        var query = MailDbContext.MailMailboxSignatures
             .Where(r => r.Tenant == Tenant && r.IdMailbox == mailboxId);
 
-        MailDbContext.MailMailboxSignature.RemoveRange(query);
+        MailDbContext.MailMailboxSignatures.RemoveRange(query);
 
         return MailDbContext.SaveChanges();
     }

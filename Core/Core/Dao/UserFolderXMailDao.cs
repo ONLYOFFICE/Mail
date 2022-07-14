@@ -40,7 +40,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public UserFolderXMail Get(int mailId)
     {
-        var result = MailDbContext.MailUserFolderXMail
+        var result = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdMail == mailId)
             .Select(ToUserFolderXMail)
@@ -51,7 +51,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public List<UserFolderXMail> GetList(int? folderId = null, List<int> mailIds = null)
     {
-        var query = MailDbContext.MailUserFolderXMail
+        var query = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
 
@@ -72,7 +72,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public List<int> GetMailIds(int folderId)
     {
-        var list = MailDbContext.MailUserFolderXMail
+        var list = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId && r.IdFolder == folderId)
             .Select(r => r.IdMail)
@@ -104,7 +104,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             if ((i % 100 != 0 || i == 0) && i + 1 != messagessLen)
                 continue;
 
-            MailDbContext.MailUserFolderXMail.AddRange(items);
+            MailDbContext.MailUserFolderXMails.AddRange(items);
 
             MailDbContext.SaveChanges();
 
@@ -122,7 +122,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             IdFolder = item.FolderId
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailUserFolderXMail, newItem);
+        MailDbContext.AddOrUpdate(t => t.MailUserFolderXMails, newItem);
 
         var result = MailDbContext.SaveChanges();
 
@@ -131,7 +131,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public int Remove(int? mailId = null, int? folderId = null)
     {
-        var query = MailDbContext.MailUserFolderXMail
+        var query = MailDbContext.MailUserFolderXMails
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId);
 
         if (mailId.HasValue)
@@ -144,7 +144,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             query.Where(r => r.IdFolder == folderId.Value);
         }
 
-        MailDbContext.MailUserFolderXMail.RemoveRange(query);
+        MailDbContext.MailUserFolderXMails.RemoveRange(query);
 
         var result = MailDbContext.SaveChanges();
 
@@ -153,10 +153,10 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public int Remove(List<int> mailIds)
     {
-        var query = MailDbContext.MailUserFolderXMail
+        var query = MailDbContext.MailUserFolderXMails
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId && mailIds.Contains(r.IdMail));
 
-        MailDbContext.MailUserFolderXMail.RemoveRange(query);
+        MailDbContext.MailUserFolderXMails.RemoveRange(query);
 
         var result = MailDbContext.SaveChanges();
 
@@ -165,8 +165,8 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
     public int RemoveByMailbox(int mailboxId)
     {
-        var queryDelete = MailDbContext.MailUserFolderXMail
-            .Join(MailDbContext.MailMail, r => r.IdMail, r => r.Id, (ufxm, m) => new
+        var queryDelete = MailDbContext.MailUserFolderXMails
+            .Join(MailDbContext.MailMails, r => r.IdMail, r => r.Id, (ufxm, m) => new
             {
                 UserFoldertXMail = ufxm,
                 MailMail = m
@@ -174,7 +174,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             .Where(o => o.MailMail.MailboxId == mailboxId && o.MailMail.TenantId == Tenant && o.MailMail.UserId == UserId)
             .Select(o => o.UserFoldertXMail);
 
-        MailDbContext.MailUserFolderXMail.RemoveRange(queryDelete);
+        MailDbContext.MailUserFolderXMails.RemoveRange(queryDelete);
 
         var result = MailDbContext.SaveChanges();
 

@@ -18,7 +18,15 @@ public partial class MailMailboxServer : BaseEntity
 
 public static class MailMailboxServerExtension
 {
-    public static ModelBuilder AddMailMailboxServer(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxServer(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxServer, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxServer(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxServer>(entity =>
         {
@@ -96,7 +104,5 @@ public static class MailMailboxServerExtension
                 Id = 665, IdProvider = 69, Type = "smtp", Hostname = "smpt.googlemail.com", Port = 465, SocketType = "SSL", Username = "%EMAILADDRESS%", IsUserData = false
             }
         });
-
-        return modelBuilder;
     }
 }

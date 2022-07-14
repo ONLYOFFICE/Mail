@@ -42,7 +42,15 @@ public partial class MailMailbox : BaseEntity
 
 public static class MailMailboxExtension
 {
-    public static ModelBuilder AddMailMailbox(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailbox(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailbox, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailbox(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailbox>(entity =>
         {
@@ -216,8 +224,6 @@ public static class MailMailboxExtension
                 .HasCharSet("utf8")
                 .UseCollation("utf8_general_ci");
         });
-
-        return modelBuilder;
     }
 }
 

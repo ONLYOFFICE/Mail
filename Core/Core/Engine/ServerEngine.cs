@@ -70,9 +70,9 @@ public class ServerEngine : BaseEngine
     {
         var MailDbContext = _mailDaoFactory.GetContext();
 
-        var list = MailDbContext.MailServerAddress
+        var list = MailDbContext.MailServerAddresses
             .AsNoTracking()
-            .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
+            .Join(MailDbContext.MailServerDomains, a => a.IdDomain, d => d.Id,
             (a, d) => new
             {
                 Address = a,
@@ -89,22 +89,22 @@ public class ServerEngine : BaseEngine
     {
         var MailDbContext = _mailDaoFactory.GetContext();
 
-        var list = MailDbContext.MailServerAddress
+        var list = MailDbContext.MailServerAddresses
             .AsNoTracking()
-            .Join(MailDbContext.MailServerDomain, a => a.IdDomain, d => d.Id,
+            .Join(MailDbContext.MailServerDomains, a => a.IdDomain, d => d.Id,
             (a, d) => new
             {
                 Address = a,
                 Domain = d
             })
-            .Join(MailDbContext.MailServerMailGroupXMailServerAddress, a => a.Address.Id, x => x.IdAddress,
+            .Join(MailDbContext.MailServerMailGroupXMailServerAddresses, a => a.Address.Id, x => x.IdAddress,
             (a, x) => new
             {
                 a.Address,
                 a.Domain,
                 XGroup = x
             })
-             .Join(MailDbContext.MailServerMailGroup, x => x.XGroup.IdMailGroup, g => g.Id,
+             .Join(MailDbContext.MailServerMailGroups, x => x.XGroup.IdMailGroup, g => g.Id,
             (x, g) => new
             {
                 x.Address,

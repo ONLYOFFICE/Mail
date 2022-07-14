@@ -40,7 +40,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public UserFolder Get(int id)
     {
-        var userFolder = MailDbContext.MailUserFolder
+        var userFolder = MailDbContext.MailUserFolders
             .AsNoTracking()
             .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Id == id)
             .Select(ToUserFolder)
@@ -51,7 +51,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public UserFolder GetByMail(uint mailId)
     {
-        var folderId = MailDbContext.MailUserFolderXMail
+        var folderId = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
             .Where(ufxm => ufxm.IdMail == mailId)
             .Select(ufxm => ufxm.IdFolder)
@@ -61,7 +61,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
         if (folderId == 0)
             return null;
 
-        var userFolder = MailDbContext.MailUserFolder
+        var userFolder = MailDbContext.MailUserFolders
             .Where(f => f.Id == folderId)
             .Select(ToUserFolder)
             .SingleOrDefault();
@@ -71,7 +71,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public List<UserFolder> GetList(IUserFoldersExp exp)
     {
-        var query = MailDbContext.MailUserFolder
+        var query = MailDbContext.MailUserFolders
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(ToUserFolder);
@@ -111,7 +111,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public UserFolder GetRootFolder(int folderId)
     {
-        var parentId = MailDbContext.MailUserFolderTree
+        var parentId = MailDbContext.MailUserFolderTrees
             .AsNoTracking()
             .Where(t => t.FolderId == folderId)
             .OrderByDescending(t => t.Level)
@@ -122,7 +122,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
         if (parentId == 0)
             return null;
 
-        var userFolder = MailDbContext.MailUserFolder
+        var userFolder = MailDbContext.MailUserFolders
             .Where(f => f.Id == parentId)
             .Select(ToUserFolder)
             .SingleOrDefault();
@@ -132,7 +132,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public UserFolder GetRootFolderByMailId(int mailId)
     {
-        var folderId = MailDbContext.MailUserFolderXMail
+        var folderId = MailDbContext.MailUserFolderXMails
             .AsNoTracking()
             .Where(ufxm => ufxm.IdMail == mailId)
             .Select(ufxm => ufxm.IdFolder)
@@ -147,9 +147,9 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public List<UserFolder> GetParentFolders(int folderId)
     {
-        var list = MailDbContext.MailUserFolder
+        var list = MailDbContext.MailUserFolders
             .AsNoTracking()
-            .Join(MailDbContext.MailUserFolderTree, uf => uf.Id, t => t.ParentId,
+            .Join(MailDbContext.MailUserFolderTrees, uf => uf.Id, t => t.ParentId,
             (uf, t) => new
             {
                 UserFolder = uf,
@@ -180,7 +180,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             ModifiedOn = folder.TimeModified
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailUserFolder, mailUserFolder);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailUserFolders, mailUserFolder);
 
         MailDbContext.SaveChanges();
 
@@ -196,7 +196,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             IdUser = UserId,
         };
 
-        MailDbContext.MailUserFolder.Remove(mailUserFolder);
+        MailDbContext.MailUserFolders.Remove(mailUserFolder);
 
         var count = MailDbContext.SaveChanges();
 
@@ -205,9 +205,9 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public int Remove(IUserFoldersExp exp)
     {
-        var deleteQuery = MailDbContext.MailUserFolder.Where(exp.GetExpression());
+        var deleteQuery = MailDbContext.MailUserFolders.Where(exp.GetExpression());
 
-        MailDbContext.MailUserFolder.RemoveRange(deleteQuery);
+        MailDbContext.MailUserFolders.RemoveRange(deleteQuery);
 
         var count = MailDbContext.SaveChanges();
 
@@ -216,8 +216,8 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
     public void RecalculateFoldersCount(int id)
     {
-        var toUpdate = MailDbContext.MailUserFolder
-            .Where(uf => MailDbContext.MailUserFolderTree
+        var toUpdate = MailDbContext.MailUserFolders
+            .Where(uf => MailDbContext.MailUserFolderTrees
                 .Where(t => t.FolderId == id)
                 .Select(t => t.ParentId)
                 .Any(pId => pId == uf.Id)
@@ -226,7 +226,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
 
         foreach (var f in toUpdate)
         {
-            var count = MailDbContext.MailUserFolderTree
+            var count = MailDbContext.MailUserFolderTrees
                 .Where(r => r.ParentId == f.Id)
                 .Count() - 1;
 
@@ -247,7 +247,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             return -1;
         }
 
-        var userFolder = MailDbContext.MailUserFolder
+        var userFolder = MailDbContext.MailUserFolders
             .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
             .SingleOrDefault();
 
@@ -282,7 +282,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             return -1;
         }
 
-        var userFolder = MailDbContext.MailUserFolder
+        var userFolder = MailDbContext.MailUserFolders
             .Where(uf => uf.TenantId == Tenant && uf.IdUser == UserId && uf.Id == folderId)
             .SingleOrDefault();
 

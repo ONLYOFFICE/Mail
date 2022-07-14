@@ -54,7 +54,7 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
             IsPrimary = contactInfo.IsPrimary
         };
 
-        var entity = MailDbContext.AddOrUpdate(t => t.MailContactInfo, mailContactInfo);
+        var entity = MailDbContext.AddOrUpdate(t => t.MailContactInfos, mailContactInfo);
 
         MailDbContext.SaveChanges();
 
@@ -63,12 +63,12 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
 
     public int RemoveContactInfo(int id)
     {
-        var queryDelete = MailDbContext.MailContactInfo
+        var queryDelete = MailDbContext.MailContactInfos
             .Where(c => c.TenantId == Tenant
                 && c.IdUser == UserId
                 && c.Id == id);
 
-        MailDbContext.MailContactInfo.RemoveRange(queryDelete);
+        MailDbContext.MailContactInfos.RemoveRange(queryDelete);
 
         var result = MailDbContext.SaveChanges();
 

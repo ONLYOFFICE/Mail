@@ -26,7 +26,15 @@ public partial class MailTag : BaseEntity, ISearchItem
 
 public static class MailTagExtension
 {
-    public static ModelBuilder AddMailTag(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailTag(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailTag, Provider.MySql);
+
+        return modelBuilder;    
+    }
+
+    public static void MySqlAddMailTag(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailTag>(entity =>
         {
@@ -84,7 +92,5 @@ public static class MailTagExtension
                 .HasColumnName("crm_id")
                 .HasColumnType("int(10)");
         });
-
-        return modelBuilder;
     }
 }

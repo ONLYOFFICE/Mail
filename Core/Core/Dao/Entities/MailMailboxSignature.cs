@@ -14,7 +14,15 @@ public partial class MailMailboxSignature : BaseEntity
 
 public static class MailMailboxSignatureExtension
 {
-    public static ModelBuilder AddMailMailboxSignature(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailMailboxSignature(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailMailboxSignature, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailMailboxSignature(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailMailboxSignature>(entity =>
         {
@@ -44,7 +52,5 @@ public static class MailMailboxSignatureExtension
                 .HasColumnName("is_active")
                 .HasColumnType("tinyint(4)");
         });
-
-        return modelBuilder;
     }
 }

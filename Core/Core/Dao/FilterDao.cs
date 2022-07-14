@@ -41,7 +41,7 @@ public class FilterDao : BaseMailDao, IFilterDao
 
     public List<Filter> GetList()
     {
-        var filters = MailDbContext.MailFilter
+        var filters = MailDbContext.MailFilters
             .AsNoTracking()
             .Where(f => f.Tenant == Tenant && f.IdUser == UserId)
             .Select(ToFilter)
@@ -52,7 +52,7 @@ public class FilterDao : BaseMailDao, IFilterDao
 
     public Filter Get(int id)
     {
-        var filter = MailDbContext.MailFilter
+        var filter = MailDbContext.MailFilters
             .AsNoTracking()
             .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
             .Select(ToFilter)
@@ -81,7 +81,7 @@ public class FilterDao : BaseMailDao, IFilterDao
             mailFilter.DateCreated = now;
         }
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailFilter, mailFilter);
+        var entry = MailDbContext.AddOrUpdate(t => t.MailFilters, mailFilter);
 
         MailDbContext.SaveChanges();
 
@@ -90,11 +90,11 @@ public class FilterDao : BaseMailDao, IFilterDao
 
     public int Delete(int id)
     {
-        var filter = MailDbContext.MailFilter
+        var filter = MailDbContext.MailFilters
            .Where(f => f.Tenant == Tenant && f.IdUser == UserId && f.Id == id)
            .SingleOrDefault();
 
-        MailDbContext.MailFilter.Remove(filter);
+        MailDbContext.MailFilters.Remove(filter);
 
         var result = MailDbContext.SaveChanges();
 

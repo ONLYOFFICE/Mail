@@ -12,7 +12,15 @@ public partial class MailUserFolderTree: BaseEntity
 
 public static class MailUserFolderTreeExtension
 {
-    public static ModelBuilder AddMailUserFolderTree(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailUserFolderTree(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailUserFolderTree, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailUserFolderTree(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailUserFolderTree>(entity =>
         {
@@ -36,7 +44,5 @@ public static class MailUserFolderTreeExtension
                 .HasColumnName("level")
                 .HasColumnType("int(11) unsigned");
         });
-
-        return modelBuilder;
     }
 }

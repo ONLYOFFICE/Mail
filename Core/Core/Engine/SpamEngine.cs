@@ -104,8 +104,8 @@ public class SpamEngine
         if (!tlMails.Any())
             return;
 
-        var serverInfo = _mailDaoFactory.GetContext().MailServerServer
-                .Join(_mailDaoFactory.GetContext().MailServerServerXTenant, s => s.Id, sxt => sxt.IdServer,
+        var serverInfo = _mailDaoFactory.GetContext().MailServerServers
+                .Join(_mailDaoFactory.GetContext().MailServerServerXTenants, s => s.Id, sxt => sxt.IdServer,
                     (s, x) => new
                     {
                         Server = s,

@@ -14,7 +14,15 @@ public class CrmCurrencyInfo : BaseEntity
 
 public static class CrmCurrencyInfoExtension
 {
-    public static ModelBuilder AddCrmCurrencyInfo(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddCrmCurrencyInfo(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddCrmCurrencyInfo, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddCrmCurrencyInfo(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CrmCurrencyInfo>(entity =>
         {
@@ -50,7 +58,5 @@ public static class CrmCurrencyInfoExtension
                 .HasColumnName("is_basic")
                 .HasColumnType("tinyint(4)");
         });
-
-        return modelBuilder;
     }
 }

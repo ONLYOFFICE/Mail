@@ -40,7 +40,7 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
 
     public List<CrmContactData> GetLinkedCrmContactEntities(string chainId, int mailboxId)
     {
-        var list = MailDbContext.MailChainXCrmEntity
+        var list = MailDbContext.MailChainXCrmEntities
             .AsNoTracking()
             .Where(x => x.IdMailbox == mailboxId && x.IdTenant == Tenant && x.IdChain == chainId)
             .Select(x => new CrmContactData
@@ -66,7 +66,7 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
             })
             .ToList();
 
-        MailDbContext.MailChainXCrmEntity.AddRange(list);
+        MailDbContext.MailChainXCrmEntities.AddRange(list);
 
         var result = MailDbContext.SaveChanges();
 
@@ -75,7 +75,7 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
 
     public int UpdateCrmLinkedMailboxId(string chainId, int oldMailboxId, int newMailboxId)
     {
-        var chainEntities = MailDbContext.MailChainXCrmEntity
+        var chainEntities = MailDbContext.MailChainXCrmEntities
             .Where(x => x.IdChain == chainId && x.IdMailbox == oldMailboxId && x.IdTenant == Tenant)
             .ToList();
 
@@ -91,7 +91,7 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
 
     public int UpdateCrmLinkedChainId(string chainId, int mailboxId, string newChainId)
     {
-        var chainEntities = MailDbContext.MailChainXCrmEntity
+        var chainEntities = MailDbContext.MailChainXCrmEntities
            .Where(x => x.IdChain == chainId && x.IdMailbox == mailboxId && x.IdTenant == Tenant)
            .ToList();
 
@@ -118,17 +118,17 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
             })
             .ToList();
 
-        MailDbContext.MailChainXCrmEntity.RemoveRange(deleteItems);
+        MailDbContext.MailChainXCrmEntities.RemoveRange(deleteItems);
 
         MailDbContext.SaveChanges();
     }
 
     public int RemoveCrmLinks(int mailboxId)
     {
-        var deleteQuery = MailDbContext.MailChainXCrmEntity
+        var deleteQuery = MailDbContext.MailChainXCrmEntities
            .Where(x => x.IdMailbox == mailboxId && x.IdTenant == Tenant);
 
-        MailDbContext.MailChainXCrmEntity.RemoveRange(deleteQuery);
+        MailDbContext.MailChainXCrmEntities.RemoveRange(deleteQuery);
 
         var result = MailDbContext.SaveChanges();
 

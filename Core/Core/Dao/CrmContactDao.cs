@@ -58,9 +58,9 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
             return ids;
         try
         {
-            var contactList = MailDbContext.CrmContact
+            var contactList = MailDbContext.CrmContacts
                 .AsNoTracking()
-                .Join(MailDbContext.CrmContactInfo, c => c.Id, ci => ci.ContactId,
+                .Join(MailDbContext.CrmContactInfos, c => c.Id, ci => ci.ContactId,
                 (c, ci) => new
                 {
                     Contact = c,

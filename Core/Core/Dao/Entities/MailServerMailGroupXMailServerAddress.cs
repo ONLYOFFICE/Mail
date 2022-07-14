@@ -11,7 +11,15 @@ public partial class MailServerMailGroupXMailServerAddress : BaseEntity
 
 public static class MailServerMailGroupXMailServerAddressExtension
 {
-    public static ModelBuilder AddMailServerMailGroupXMailServerAddress(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailServerMailGroupXMailServerAddress(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailServerMailGroupXMailServerAddress, Provider.MySql);
+
+        return modelBuilder;    
+    }
+
+    public static void MySqlAddMailServerMailGroupXMailServerAddress(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailServerMailGroupXMailServerAddress>(entity =>
         {
@@ -28,7 +36,5 @@ public static class MailServerMailGroupXMailServerAddressExtension
                 .HasColumnName("id_mail_group")
                 .HasColumnType("int(11)");
         });
-
-        return modelBuilder;
     }
 }

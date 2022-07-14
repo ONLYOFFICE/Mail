@@ -22,7 +22,15 @@ public partial class MailFolderCounters : BaseEntity
 
 public static class MailFolderCountersExtension
 {
-    public static ModelBuilder AddMailFolderCounters(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailFolderCounters(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailFolderCounters, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailFolderCounters(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailFolderCounters>(entity =>
         {
@@ -67,7 +75,5 @@ public static class MailFolderCountersExtension
                 .HasColumnName("total_conversations_count")
                 .HasColumnType("int(10) unsigned");
         });
-
-        return modelBuilder;
     }
 }

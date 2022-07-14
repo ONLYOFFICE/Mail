@@ -24,7 +24,15 @@ public partial class MailUserFolderXMail : BaseEntity
 
 public static class MailUserFolderXMailExtension
 {
-    public static ModelBuilder AddMailUserFolderXMail(this ModelBuilder modelBuilder)
+    public static ModelBuilderWrapper AddMailUserFolderXMail(this ModelBuilderWrapper modelBuilder)
+    {
+        modelBuilder
+            .Add(MySqlAddMailUserFolderXMail, Provider.MySql);
+
+        return modelBuilder;
+    }
+
+    public static void MySqlAddMailUserFolderXMail(this ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<MailUserFolderXMail>(entity =>
         {
@@ -63,7 +71,5 @@ public static class MailUserFolderXMailExtension
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAddOrUpdate();
         });
-
-        return modelBuilder;
     }
 }
