@@ -78,6 +78,10 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddSingleton(redisConfiguration);
 
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+    var serviceProvider = services.BuildServiceProvider();
+    var logger = serviceProvider.GetService<ILogger<CrmLinkEngine>>();
+    services.AddSingleton(typeof(ILogger), logger);
 });
 
 builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
