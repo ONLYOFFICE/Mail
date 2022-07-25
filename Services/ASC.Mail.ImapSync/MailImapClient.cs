@@ -261,6 +261,8 @@ public class MailImapClient : IDisposable
 
             rootSimpleImapClient.OnNewFolderCreate += RootSimpleImapClient_OnNewFolderCreate;
 
+            rootSimpleImapClient.OnFolderDelete += RootSimpleImapClient_OnFolderDelete;
+
             foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
             {
                 CreateSimpleImapClient(mailbox, folder);
@@ -279,6 +281,16 @@ public class MailImapClient : IDisposable
         finally
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+        }
+    }
+
+    private void RootSimpleImapClient_OnFolderDelete(object sender, string e)
+    {
+        var deletedClient = simpleImapClients.FirstOrDefault(x => x.ImapWorkFolderFullName == e);
+
+        if (deletedClient != null)
+        {
+            DeleteSimpleImapClient(deletedClient);
         }
     }
 

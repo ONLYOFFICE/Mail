@@ -42,6 +42,7 @@ public class SimpleImapClient : IDisposable
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
     public event EventHandler<string> OnNewFolderCreate;
+    public event EventHandler<string> OnFolderDelete;
 
     private readonly ILogger _log;
     private readonly MailSettings _mailSettings;
@@ -426,19 +427,32 @@ public class SimpleImapClient : IDisposable
     {
         try
         {
-            var newFoldersList = GetIMAPFolders().Where(x => !foldersDictionary.Keys.Any(y => y.FullName == x.FullName)).ToList();
+            var newFoldersList = GetIMAPFolders();
 
             foreach (var newFolder in newFoldersList)
             {
-                if (AddImapFolderToDictionary(newFolder))
+                if (!foldersDictionary.Keys.Any(y => y.FullName == newFolder.FullName))
                 {
-                    OnNewFolderCreate?.Invoke(this, newFolder.FullName);
+                    if (AddImapFolderToDictionary(newFolder))
+                    {
+                        OnNewFolderCreate?.Invoke(this, newFolder.FullName);
+                    }
+                }
+            }
+
+            foreach (var oldFolder in foldersDictionary.Keys)
+            {
+                if (!newFoldersList.Any(y => y.FullName == oldFolder.FullName))
+                {
+                    foldersDictionary.Remove(oldFolder);
+
+                    OnFolderDelete?.Invoke(this, oldFolder.FullName);
                 }
             }
         }
         catch (Exception ex)
         {
-            
+
         }
     }
 
@@ -490,6 +504,8 @@ public class SimpleImapClient : IDisposable
 
             DoneToken = null;
         }
+
+        UpdateIMAPFolders();
 
         await UpdateMessagesList();
 
@@ -697,6 +713,7 @@ public class SimpleImapClient : IDisposable
     private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
     {
         var folderName = folder.Name.ToLowerInvariant();
+        var fullFolderName= folder.FullName.ToLowerInvariant();
 
         if (_mailSettings.SkipImapFlags != null &&
             _mailSettings.SkipImapFlags.Any() &&
@@ -760,7 +777,11 @@ public class SimpleImapClient : IDisposable
         }
 
         if (_mailSettings.DefaultFolders == null || !_mailSettings.DefaultFolders.ContainsKey(folderName))
+        {
+            if(fullFolderName.StartsWith("trash")) return null;
+
             return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
+        }
 
         folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
         return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
