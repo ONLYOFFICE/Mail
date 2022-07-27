@@ -175,7 +175,7 @@ public class FolderEngine
         catch (Exception ex)
         {
             _log.ErrorFolderEngineChangeFolderCounters(ex.ToString());
-            //TODO: Fix OperationEngine.RecalculateFolders();
+            //RecalculateFolders();
         }
 
         if (!userFolder.HasValue)

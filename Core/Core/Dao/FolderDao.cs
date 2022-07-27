@@ -122,7 +122,17 @@ public class FolderDao : BaseMailDao, IFolderDao
             if (unreadMessDiff.Value == 0)
                 mailFolder.UnreadMessagesCount = 0;
             else
-                mailFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
+            {
+                try
+                {
+                    checked
+                    {
+                        mailFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
+                    }
+
+                }
+                catch { mailFolder.UnreadMessagesCount = 0; }
+            }
         }
 
         if (totalMessDiff.HasValue)
@@ -130,7 +140,17 @@ public class FolderDao : BaseMailDao, IFolderDao
             if (totalMessDiff.Value == 0)
                 mailFolder.TotalMessagesCount = 0;
             else
-                mailFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
+            {
+                try
+                {
+                    checked
+                    {
+                        mailFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
+                    }
+
+                }
+                catch { mailFolder.TotalMessagesCount = 0; }
+            }
         }
 
         if (unreadConvDiff.HasValue)
@@ -138,7 +158,17 @@ public class FolderDao : BaseMailDao, IFolderDao
             if (unreadConvDiff.Value == 0)
                 mailFolder.UnreadConversationsCount = 0;
             else
-                mailFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
+            {
+                try
+                {
+                    checked
+                    {
+                        mailFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
+                    }
+
+                }
+                catch { mailFolder.UnreadConversationsCount = 0; }
+            }
         }
 
         if (totalConvDiff.HasValue)
@@ -146,13 +176,18 @@ public class FolderDao : BaseMailDao, IFolderDao
             if (totalConvDiff.Value == 0)
                 mailFolder.TotalConversationsCount = 0;
             else
-                mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
-        }
+            {
+                try
+                {
+                    checked
+                    {
+                        mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
+                    }
 
-        if (mailFolder.UnreadMessagesCount < 0) mailFolder.UnreadMessagesCount = 0;
-        if (mailFolder.TotalMessagesCount < 0) mailFolder.TotalMessagesCount = 0;
-        if (mailFolder.UnreadConversationsCount < 0) mailFolder.UnreadConversationsCount = 0;
-        if (mailFolder.TotalConversationsCount < 0) mailFolder.TotalConversationsCount = 0;
+                }
+                catch { mailFolder.TotalConversationsCount = 0; }
+            }
+        }
 
         var result = MailDbContext.SaveChanges();
 
