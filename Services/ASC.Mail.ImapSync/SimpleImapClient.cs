@@ -7,6 +7,7 @@ namespace ASC.Mail.ImapSync;
 public class SimpleImapClient : IDisposable
 {
     public bool IsReady { get; private set; } = false;
+    public bool IsUserFolder => MailWorkFolder.Folder == FolderType.UserFolder;
     public int CheckServerAliveMitutes { get; set; } = 0;
     public List<MessageDescriptor> ImapMessagesList { get; set; }
     public IMailFolder ImapWorkFolder { get; private set; }
@@ -713,7 +714,7 @@ public class SimpleImapClient : IDisposable
     private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
     {
         var folderName = folder.Name.ToLowerInvariant();
-        var fullFolderName= folder.FullName.ToLowerInvariant();
+        var fullFolderName = folder.FullName.ToLowerInvariant();
 
         if (_mailSettings.SkipImapFlags != null &&
             _mailSettings.SkipImapFlags.Any() &&
@@ -778,7 +779,12 @@ public class SimpleImapClient : IDisposable
 
         if (_mailSettings.DefaultFolders == null || !_mailSettings.DefaultFolders.ContainsKey(folderName))
         {
-            if(fullFolderName.StartsWith("trash")) return null;
+            if (fullFolderName.StartsWith("trash")) return null;
+
+            if (folder.ParentFolder == null)
+            {
+                return new ASC.Mail.Models.MailFolder(FolderType.UserFolder, folder.Name, new[] { folder.FullName });
+            }
 
             return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
         }

@@ -35,6 +35,7 @@ public class MailImapClient : IDisposable
     private readonly IMailInfoDao _mailInfoDao;
     private readonly StorageFactory _storageFactory;
     private readonly FolderEngine _folderEngine;
+    private readonly UserFolderEngine _userFolderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
     private readonly ILogger _log;
@@ -136,6 +137,7 @@ public class MailImapClient : IDisposable
         _mailInfoDao = clientScope.GetService<IMailInfoDao>();
 
         _folderEngine = clientScope.GetService<FolderEngine>();
+        _userFolderEngine = clientScope.GetService<UserFolderEngine>();
         _signalrServiceClient = signalrServiceClient;
 
         _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
