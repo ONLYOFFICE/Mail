@@ -860,7 +860,8 @@ public class MailImapClient : IDisposable
             {
                 _mailEnginesFactory.CalendarEngine
                     .UploadIcsToCalendar(simpleImapClient.Account, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
-                        message.CalendarEventCharset, message.CalendarEventMimeType);
+                        message.CalendarEventCharset, message.CalendarEventMimeType,
+                        message.Attachments, mimeMessage.Attachments);
             }
 
             if (_mailSettings.Defines.SaveOriginalMessage)
