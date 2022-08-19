@@ -51,17 +51,6 @@ public class DraftEngine : ComposeEngineBase
     private readonly FactoryIndexer FactoryIndexerCommon;
     private readonly IServiceProvider ServiceProvider;
 
-    public enum MailNotificationState
-    {
-        SendReceiptError = -2,
-        SendMessageError = -1,
-        SentMessageSuccess = 0,
-        SentIcalRequest = 1,
-        SentIcalResponse = 2,
-        SentIcalCancel = 3,
-        ReadingConfirmed = 4
-    }
-
     public DraftEngine(
         SecurityContext securityContext,
         TenantManager tenantManager,
@@ -461,7 +450,7 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)MailNotificationState.SendMessageError);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
         }
         catch (Exception ex)
         {
@@ -491,7 +480,7 @@ public class DraftEngine : ComposeEngineBase
             }
 
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)state);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
         }
         catch (Exception ex)
         {
