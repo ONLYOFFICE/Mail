@@ -426,6 +426,8 @@ public class MailImapClient : IDisposable
                         break;
                 }
 
+                if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
+
                 if (result) needUserUpdate = true;
 
                 _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), result.ToString().ToUpper(), ids.Count);
@@ -583,6 +585,8 @@ public class MailImapClient : IDisposable
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
 
             needUserUpdate = true;
+
+            if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
         }
     }
 
@@ -606,6 +610,8 @@ public class MailImapClient : IDisposable
         {
             _log.ErrorMailImapClientSetMessageFlagsFromImap(ex.Message);
         }
+
+        if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
     }
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
