@@ -7,6 +7,8 @@ namespace ASC.Mail.ImapSync;
 public class SimpleImapClient : IDisposable
 {
     public bool IsReady { get; private set; } = false;
+    public bool IsUserFolder => MailWorkFolder.Folder == FolderType.UserFolder;
+    public int? UserFolderID { get; set; } = null;
     public int CheckServerAliveMitutes { get; set; } = 0;
     public List<MessageDescriptor> ImapMessagesList { get; set; }
     public IMailFolder ImapWorkFolder { get; private set; }
@@ -713,7 +715,7 @@ public class SimpleImapClient : IDisposable
     private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
     {
         var folderName = folder.Name.ToLowerInvariant();
-        var fullFolderName= folder.FullName.ToLowerInvariant();
+        var fullFolderName = folder.FullName.ToLowerInvariant();
 
         if (_mailSettings.SkipImapFlags != null &&
             _mailSettings.SkipImapFlags.Any() &&
@@ -778,13 +780,32 @@ public class SimpleImapClient : IDisposable
 
         if (_mailSettings.DefaultFolders == null || !_mailSettings.DefaultFolders.ContainsKey(folderName))
         {
-            if(fullFolderName.StartsWith("trash")) return null;
+            if (fullFolderName.StartsWith("trash")) return null;
+
+            if (DetectUserFolder(folder))
+            {
+                return new ASC.Mail.Models.MailFolder(FolderType.UserFolder, folder.Name);
+            }
 
             return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
         }
 
         folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
         return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
+    }
+
+    private bool DetectUserFolder(IMailFolder folder)
+    {
+        if (folder == null) return false;
+
+        if (folder.Attributes > FolderAttributes.All) return false;
+
+        var parentFolder = folder.ParentFolder;
+
+        if (parentFolder.ParentFolder == null &&
+            parentFolder.Attributes < FolderAttributes.All) return true;
+
+        return DetectUserFolder(parentFolder);
     }
 
     public void Stop()

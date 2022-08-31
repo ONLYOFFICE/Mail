@@ -49,11 +49,11 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
         return userFolder;
     }
 
-    public UserFolder GetByName(string name)
+    public UserFolder GetByName(string name, int parentId=0)
     {
         var userFolder = MailDbContext.MailUserFolders
             .AsNoTracking()
-            .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Name == name)
+            .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Name == name && f.ParentId == parentId)
             .Select(ToUserFolder)
             .SingleOrDefault();
 

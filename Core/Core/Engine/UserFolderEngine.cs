@@ -25,6 +25,7 @@
 
 
 
+using System.Linq;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -66,13 +67,17 @@ public class UserFolderEngine
         return ToMailUserFolderData(userFolder);
     }
 
-    public MailUserFolderData GetByNameOrCreate(string name)
+    public MailUserFolderData GetByNameOrCreate(string name, int parentId = 0)
     {
-        var userFolder = _mailDaoFactory.GetUserFolderDao().GetByName(name);
+        var path = name.Split('/');
 
-        if (userFolder == null) return Create(name);
+        var userFolder = ToMailUserFolderData(_mailDaoFactory.GetUserFolderDao().GetByName(path[0]));
 
-        return ToMailUserFolderData(userFolder);
+        if (userFolder == null) userFolder=Create(path[0], parentId);
+
+        if (path.Length == 1) return userFolder;
+
+        return GetByNameOrCreate(String.Join('/', path.Skip(1)), userFolder.Id);
     }
 
     public List<MailUserFolderData> GetList(List<int> ids = null, int? parentId = null)

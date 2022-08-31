@@ -812,7 +812,7 @@ public class MessageEngine : BaseEngine
         _userFolderEngine.RecalculateCounters(MailDaoFactory, userFolderIds);
     }
 
-    public void SetRemoved(List<int> ids)
+    public void SetRemoved(List<int> ids, int? userFolderId=null)
     {
         if (!ids.Any())
             throw new ArgumentNullException("ids");
@@ -833,7 +833,7 @@ public class MessageEngine : BaseEngine
         {
             using var tx = _mailDaoFactory.BeginTransaction(IsolationLevel.ReadUncommitted);
 
-            usedQuota = SetRemoved(_mailDaoFactory, mailInfoList);
+            usedQuota = SetRemoved(_mailDaoFactory, mailInfoList, userFolderId);
 
             tx.Commit();
         });
@@ -847,7 +847,7 @@ public class MessageEngine : BaseEngine
         _indexEngine.Remove(ids, Tenant, new Guid(User));
     }
 
-    public long SetRemoved(IMailDaoFactory MailDaoFactory, List<MailInfo> deleteInfo)
+    public long SetRemoved(IMailDaoFactory MailDaoFactory, List<MailInfo> deleteInfo, int? userFolderId = null)
     {
         if (!deleteInfo.Any())
             return 0;
@@ -914,7 +914,7 @@ public class MessageEngine : BaseEngine
             var unreadMessDiff = unreadInFolder != null ? unreadInFolder.diff : (int?)null;
             var totalMessDiff = folder.diff != 0 ? folder.diff : (int?)null;
 
-            _folderEngine.ChangeFolderCounters(folder.id, null,
+            _folderEngine.ChangeFolderCounters(folder.id, userFolderId,
                 unreadMessDiff, totalMessDiff);
         }
 

@@ -32,7 +32,7 @@ public interface IUserFolderDao
 
     UserFolder GetByMail(uint mailId);
 
-    UserFolder GetByName(string name);
+    UserFolder GetByName(string name, int parentId=0);
 
     List<UserFolder> GetList(IUserFoldersExp exp);
 

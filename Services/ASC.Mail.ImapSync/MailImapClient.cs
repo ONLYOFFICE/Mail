@@ -35,6 +35,7 @@ public class MailImapClient : IDisposable
     private readonly IMailInfoDao _mailInfoDao;
     private readonly StorageFactory _storageFactory;
     private readonly FolderEngine _folderEngine;
+    private readonly UserFolderEngine _userFolderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
     private readonly ILogger _log;
@@ -136,6 +137,7 @@ public class MailImapClient : IDisposable
         _mailInfoDao = clientScope.GetService<IMailInfoDao>();
 
         _folderEngine = clientScope.GetService<FolderEngine>();
+        _userFolderEngine = clientScope.GetService<UserFolderEngine>();
         _signalrServiceClient = signalrServiceClient;
 
         _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
@@ -313,6 +315,13 @@ public class MailImapClient : IDisposable
             simpleImapClients.Add(simpleImapClient);
 
             simpleImapClient.Init(folderName);
+
+            if(simpleImapClient.IsUserFolder)
+            {
+                var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+
+                simpleImapClient.UserFolderID = userFolder.Id;
+            }
         }
         catch (Exception ex)
         {
@@ -542,7 +551,10 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var workFolderMails = GetMailFolderMessages(simpleImapClient);
+            List<MailInfo> workFolderMails;
+
+            if (simpleImapClient.IsUserFolder) workFolderMails = GetMailUserFolderMessages(simpleImapClient);
+            else workFolderMails = GetMailFolderMessages(simpleImapClient);
 
             _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
 
@@ -573,7 +585,7 @@ public class MailImapClient : IDisposable
                 }
             }
 
-            if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList());
+            if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList(), simpleImapClient.UserFolderID);
 
         }
         catch (Exception ex)
@@ -655,7 +667,8 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, impotant);
+                var messageDB = _mailEnginesFactory.MessageEngine
+                    .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
@@ -758,9 +771,11 @@ public class MailImapClient : IDisposable
 
     private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
     {
+        if (simpleImapClient.UserFolderID == null) return null;
+
         var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
             .SetMailboxId(simpleImapClient.Account.MailBoxId)
-            .SetFolder(simpleImapClient.FolderTypeInt);
+            .SetUserFolderId(simpleImapClient.UserFolderID.Value);
 
         return _mailInfoDao.GetMailInfoList(exp.Build());
     }
