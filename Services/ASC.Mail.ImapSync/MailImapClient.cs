@@ -315,6 +315,13 @@ public class MailImapClient : IDisposable
             simpleImapClients.Add(simpleImapClient);
 
             simpleImapClient.Init(folderName);
+
+            if(simpleImapClient.IsUserFolder)
+            {
+                var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+
+                simpleImapClient.UserFolderID = userFolder.Id;
+            }
         }
         catch (Exception ex)
         {
@@ -578,7 +585,7 @@ public class MailImapClient : IDisposable
                 }
             }
 
-            if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList());
+            if (workFolderMails.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(workFolderMails.Select(x => x.Id).ToList(), simpleImapClient.UserFolderID);
 
         }
         catch (Exception ex)
@@ -683,13 +690,6 @@ public class MailImapClient : IDisposable
 
                 _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
 
-                //if(simpleImapClient.IsUserFolder)
-                //{
-                //    var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
-
-                //    _userFolderEngine.SetFolderMessages(userFolder.Id, new List<int>() { imap_message.MessageIdInDB });
-                //}
-
                 needUserUpdate = true;
 
                 return true;
@@ -778,11 +778,11 @@ public class MailImapClient : IDisposable
 
     private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
     {
-        var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+        if (simpleImapClient.UserFolderID == null) return null;
 
         var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
             .SetMailboxId(simpleImapClient.Account.MailBoxId)
-            .SetUserFolderId(userFolder.Id);
+            .SetUserFolderId(simpleImapClient.UserFolderID.Value);
 
         return _mailInfoDao.GetMailInfoList(exp.Build());
     }
