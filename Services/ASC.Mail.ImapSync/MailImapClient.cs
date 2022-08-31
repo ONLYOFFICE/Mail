@@ -14,8 +14,6 @@
  *
 */
 
-using ASC.Mail.Core.Engine;
-
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -662,7 +660,15 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, null, unread, impotant);
+                int? userFolderId = null;
+
+                if (simpleImapClient.IsUserFolder)
+                {
+                    var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+                    userFolderId=userFolder?.Id;
+                }
+
+                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, userFolderId, unread, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
@@ -676,6 +682,13 @@ public class MailImapClient : IDisposable
                 DoOptionalOperations(messageDB, message, simpleImapClient);
 
                 _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
+
+                //if(simpleImapClient.IsUserFolder)
+                //{
+                //    var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+
+                //    _userFolderEngine.SetFolderMessages(userFolder.Id, new List<int>() { imap_message.MessageIdInDB });
+                //}
 
                 needUserUpdate = true;
 
