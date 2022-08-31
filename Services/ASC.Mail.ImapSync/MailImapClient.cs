@@ -756,6 +756,15 @@ public class MailImapClient : IDisposable
         return _mailInfoDao.GetMailInfoList(exp.Build());
     }
 
+    private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
+    {
+        var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
+            .SetMailboxId(simpleImapClient.Account.MailBoxId)
+            .SetFolder(simpleImapClient.FolderTypeInt);
+
+        return _mailInfoDao.GetMailInfoList(exp.Build());
+    }
+
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
     {
         _logStat.DebugStatistic(duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());

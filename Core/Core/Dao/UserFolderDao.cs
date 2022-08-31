@@ -49,6 +49,17 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
         return userFolder;
     }
 
+    public UserFolder GetByName(string name)
+    {
+        var userFolder = MailDbContext.MailUserFolders
+            .AsNoTracking()
+            .Where(f => f.TenantId == Tenant && f.IdUser == UserId && f.Name == name)
+            .Select(ToUserFolder)
+            .SingleOrDefault();
+
+        return userFolder;
+    }
+
     public UserFolder GetByMail(uint mailId)
     {
         var folderId = MailDbContext.MailUserFolderXMails

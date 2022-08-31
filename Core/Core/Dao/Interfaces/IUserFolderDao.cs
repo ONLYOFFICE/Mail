@@ -32,6 +32,8 @@ public interface IUserFolderDao
 
     UserFolder GetByMail(uint mailId);
 
+    UserFolder GetByName(string name);
+
     List<UserFolder> GetList(IUserFoldersExp exp);
 
     int Save(UserFolder folder);
