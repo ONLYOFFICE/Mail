@@ -123,15 +123,9 @@ public class FolderDao : BaseMailDao, IFolderDao
                 mailFolder.UnreadMessagesCount = 0;
             else
             {
-                try
-                {
-                    checked
-                    {
-                        mailFolder.UnreadMessagesCount += (uint)unreadMessDiff.Value;
-                    }
-
-                }
-                catch { mailFolder.UnreadMessagesCount = 0; }
+                var newValue= mailFolder.UnreadMessagesCount + unreadMessDiff.Value;
+                if (newValue >= 0) mailFolder.UnreadMessagesCount = (uint)newValue;
+                else throw new Exception("Folder Counter error. Need recalculation.");
             }
         }
 
@@ -141,15 +135,9 @@ public class FolderDao : BaseMailDao, IFolderDao
                 mailFolder.TotalMessagesCount = 0;
             else
             {
-                try
-                {
-                    checked
-                    {
-                        mailFolder.TotalMessagesCount += (uint)totalMessDiff.Value;
-                    }
-
-                }
-                catch { mailFolder.TotalMessagesCount = 0; }
+                var newValue = mailFolder.TotalMessagesCount + totalMessDiff.Value;
+                if (newValue >= 0) mailFolder.TotalMessagesCount = (uint)newValue;
+                else throw new Exception("Folder Counter error. Need recalculation.");
             }
         }
 
@@ -159,15 +147,9 @@ public class FolderDao : BaseMailDao, IFolderDao
                 mailFolder.UnreadConversationsCount = 0;
             else
             {
-                try
-                {
-                    checked
-                    {
-                        mailFolder.UnreadConversationsCount += (uint)unreadConvDiff.Value;
-                    }
-
-                }
-                catch { mailFolder.UnreadConversationsCount = 0; }
+                var newValue = mailFolder.UnreadConversationsCount + unreadConvDiff.Value;
+                if (newValue >= 0) mailFolder.UnreadConversationsCount = (uint)newValue;
+                else throw new Exception("Folder Counter error. Need recalculation.");
             }
         }
 
@@ -177,15 +159,9 @@ public class FolderDao : BaseMailDao, IFolderDao
                 mailFolder.TotalConversationsCount = 0;
             else
             {
-                try
-                {
-                    checked
-                    {
-                        mailFolder.TotalConversationsCount += (uint)totalConvDiff.Value;
-                    }
-
-                }
-                catch { mailFolder.TotalConversationsCount = 0; }
+                var newValue = mailFolder.TotalConversationsCount + totalConvDiff.Value;
+                if (newValue >= 0) mailFolder.TotalConversationsCount = (uint)newValue;
+                else throw new Exception("Folder Counter error. Need recalculation.");
             }
         }
 

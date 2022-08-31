@@ -42,6 +42,8 @@ public class FolderEngine
     private readonly UserFolderEngine _userFolderEngine;
     private readonly ILogger _log;
 
+    public bool needRecalculateFolders {get; private set;} = false;
+
     public class MailFolderInfo
     {
         public FolderType id;
@@ -175,7 +177,7 @@ public class FolderEngine
         catch (Exception ex)
         {
             _log.ErrorFolderEngineChangeFolderCounters(ex.ToString());
-            //RecalculateFolders();
+            needRecalculateFolders = true;
         }
 
         if (!userFolder.HasValue)
@@ -334,6 +336,8 @@ public class FolderEngine
 
             tx.Commit();
         });
+
+        needRecalculateFolders = false;
     }
 
     public static List<FolderType> DefaultFolders

@@ -16,7 +16,7 @@
       "TenantMinQuotaBalance": 26214400,
       "ProtocolLogPath": "",
       "CollectStatistics": true,
-      "EnableSignalr": false,
+      "EnableSignalr": true,
       "AggregateModeValue": "all",
       "MaxMessageSizeLimit": 67108864
     },

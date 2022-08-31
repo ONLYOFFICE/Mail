@@ -28,6 +28,10 @@
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
 
+using Ical.Net.CalendarComponents;
+
+using MimeKit;
+
 namespace ASC.Mail.Utils;
 
 [Scope]
@@ -537,13 +541,36 @@ public class ApiHelper
         }
     }
 
-    public void UploadIcsToCalendar(int calendarId, Stream fileStream, string filename, string contentType)
+    public void UploadIcsToCalendar(int calendarId, Stream fileStream, string filename, string contentType,
+        CalendarEvent eventObj,
+        IEnumerable<MimeEntity> mimeAttachments,
+        List<MailAttachmentData> mailAttachments)
     {
         var request = new RestRequest("calendar/import.json", Method.POST);
 
         request.AddParameter("calendarId", calendarId);
 
         request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+
+        foreach (var attachment in eventObj.Attachments)
+        {
+            if (attachment.Uri.AbsoluteUri.StartsWith("cid:", StringComparison.OrdinalIgnoreCase))
+            {
+                var contentId = attachment.Uri.AbsoluteUri.Replace("cid:", "");
+                var mimeEntity = mimeAttachments.FirstOrDefault(a => a.ContentId == contentId);
+
+                if (mimeEntity != null)
+                {
+                    var file = mailAttachments.FirstOrDefault(a => a.fileName == mimeEntity.ContentDisposition.FileName);
+
+                    if (file != null)
+                    {
+                        file.dataStream.Position = 0;
+                        request.AddFile(contentId, file.dataStream.CopyTo, string.Format("{0}/{1}", contentId, file.fileName), file.dataStream.Length, file.contentType);
+                    }
+                }
+            }
+        }
 
         var response = Execute(request);
 

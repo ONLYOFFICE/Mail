@@ -66,6 +66,15 @@ public class UserFolderEngine
         return ToMailUserFolderData(userFolder);
     }
 
+    public MailUserFolderData GetByNameOrCreate(string name)
+    {
+        var userFolder = _mailDaoFactory.GetUserFolderDao().GetByName(name);
+
+        if (userFolder == null) return Create(name);
+
+        return ToMailUserFolderData(userFolder);
+    }
+
     public List<MailUserFolderData> GetList(List<int> ids = null, int? parentId = null)
     {
         var builder = SimpleUserFoldersExp.CreateBuilder(Tenant, UserId);

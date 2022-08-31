@@ -428,6 +428,8 @@ public class MailImapClient : IDisposable
                         break;
                 }
 
+                if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
+
                 if (result) needUserUpdate = true;
 
                 _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), result.ToString().ToUpper(), ids.Count);
@@ -585,6 +587,8 @@ public class MailImapClient : IDisposable
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
 
             needUserUpdate = true;
+
+            if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
         }
     }
 
@@ -608,6 +612,8 @@ public class MailImapClient : IDisposable
         {
             _log.ErrorMailImapClientSetMessageFlagsFromImap(ex.Message);
         }
+
+        if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
     }
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
@@ -752,6 +758,15 @@ public class MailImapClient : IDisposable
         return _mailInfoDao.GetMailInfoList(exp.Build());
     }
 
+    private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
+    {
+        var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
+            .SetMailboxId(simpleImapClient.Account.MailBoxId)
+            .SetFolder(simpleImapClient.FolderTypeInt);
+
+        return _mailInfoDao.GetMailInfoList(exp.Build());
+    }
+
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
     {
         _logStat.DebugStatistic(duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
@@ -862,7 +877,8 @@ public class MailImapClient : IDisposable
             {
                 _mailEnginesFactory.CalendarEngine
                     .UploadIcsToCalendar(simpleImapClient.Account, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
-                        message.CalendarEventCharset, message.CalendarEventMimeType);
+                        message.CalendarEventCharset, message.CalendarEventMimeType,
+                        message.Attachments, mimeMessage.Attachments);
             }
 
             if (_mailSettings.Defines.SaveOriginalMessage)

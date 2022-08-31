@@ -48,8 +48,15 @@ public class CalendarEngine
         _log = logProvider.CreateLogger("ASC.Mail.CalendarEngine");
     }
 
-    public void UploadIcsToCalendar(MailBoxData mailBoxData, int calendarId, string calendarEventUid, string calendarIcs,
-        string calendarCharset, string calendarContentType)
+    public void UploadIcsToCalendar(MailBoxData mailBoxData, 
+        int calendarId, 
+        string calendarEventUid, 
+        string calendarIcs,
+        string calendarCharset, 
+        string calendarContentType,
+        List<MailAttachmentData> mailAttachments,
+        IEnumerable<MimeEntity> mimeAttachments
+        )
     {
         try
         {
@@ -63,13 +70,14 @@ public class CalendarEngine
             if (calendar == null)
                 return;
 
+            var eventObj = calendar.Events[0];
             var alienEvent = true;
 
-            var organizer = calendar.Events[0].Organizer;
+            var organizer = eventObj.Organizer;
 
             if (organizer != null)
             {
-                var orgEmail = calendar.Events[0].Organizer.Value.ToString()
+                var orgEmail = eventObj.Organizer.Value.ToString()
                     .ToLowerInvariant()
                     .Replace("mailto:", "");
 
@@ -83,7 +91,7 @@ public class CalendarEngine
 
             if (alienEvent)
             {
-                if (calendar.Events[0].Attendees.Any(
+                if (eventObj.Attendees.Any(
                     a =>
                         a.Value.ToString()
                             .ToLowerInvariant()
@@ -102,7 +110,8 @@ public class CalendarEngine
 
             using (var ms = new MemoryStream(EncodingTools.GetEncodingByCodepageName(calendarCharset).GetBytes(calendarIcs)))
             {
-                _apiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType);
+                _apiHelper.UploadIcsToCalendar(calendarId, ms, "calendar.ics", calendarContentType,
+                    eventObj, mimeAttachments, mailAttachments);
             }
 
             _log.InfoCalendarSucceededUploadIcs();

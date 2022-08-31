@@ -457,7 +457,8 @@ public class MailboxHandler : IDisposable
                 _log.DebugMailboxHandlerUploadIcs();
 
                 calendarEngine.UploadIcsToCalendar(box, message.CalendarId, message.CalendarUid, message.CalendarEventIcs,
-                    message.CalendarEventCharset, message.CalendarEventMimeType);
+                    message.CalendarEventCharset, message.CalendarEventMimeType,
+                    message.Attachments, boxSaveInfo.MimeMessage.Attachments);
             }
 
             if (_settings.Defines.SaveOriginalMessage)
