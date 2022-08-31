@@ -782,7 +782,7 @@ public class SimpleImapClient : IDisposable
         {
             if (fullFolderName.StartsWith("trash")) return null;
 
-            if (folder.ParentFolder.ParentFolder == null)
+            if (DetectUserFolder(folder))
             {
                 return new ASC.Mail.Models.MailFolder(FolderType.UserFolder, folder.Name);
             }
@@ -792,6 +792,20 @@ public class SimpleImapClient : IDisposable
 
         folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
         return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
+    }
+
+    private bool DetectUserFolder(IMailFolder folder)
+    {
+        if (folder == null) return false;
+
+        if (folder.Attributes > FolderAttributes.All) return false;
+
+        var parentFolder = folder.ParentFolder;
+
+        if (parentFolder.ParentFolder == null &&
+            parentFolder.Attributes < FolderAttributes.All) return true;
+
+        return DetectUserFolder(parentFolder);
     }
 
     public void Stop()

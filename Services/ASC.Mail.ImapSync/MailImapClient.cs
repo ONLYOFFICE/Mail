@@ -667,15 +667,8 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
-                int? userFolderId = null;
-
-                if (simpleImapClient.IsUserFolder)
-                {
-                    var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
-                    userFolderId=userFolder?.Id;
-                }
-
-                var messageDB = _mailEnginesFactory.MessageEngine.SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, userFolderId, unread, impotant);
+                var messageDB = _mailEnginesFactory.MessageEngine
+                    .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
 
                 if (messageDB == null || messageDB.Id <= 0)
                 {
