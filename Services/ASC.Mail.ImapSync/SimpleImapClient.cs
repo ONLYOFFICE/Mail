@@ -781,7 +781,7 @@ public class SimpleImapClient : IDisposable
         {
             if (fullFolderName.StartsWith("trash")) return null;
 
-            if (folder.ParentFolder == null)
+            if (folder.ParentFolder.ParentFolder == null)
             {
                 return new ASC.Mail.Models.MailFolder(FolderType.UserFolder, folder.Name, new[] { folder.FullName });
             }
