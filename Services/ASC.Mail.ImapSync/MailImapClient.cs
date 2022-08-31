@@ -14,6 +14,8 @@
  *
 */
 
+using ASC.Mail.Core.Engine;
+
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -544,7 +546,10 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var workFolderMails = GetMailFolderMessages(simpleImapClient);
+            List<MailInfo> workFolderMails;
+
+            if (simpleImapClient.IsUserFolder) workFolderMails = GetMailUserFolderMessages(simpleImapClient);
+            else workFolderMails = GetMailFolderMessages(simpleImapClient);
 
             _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
 
@@ -760,9 +765,11 @@ public class MailImapClient : IDisposable
 
     private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
     {
+        var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+
         var exp = SimpleMessagesExp.CreateBuilder(Tenant, UserName, isRemoved)
             .SetMailboxId(simpleImapClient.Account.MailBoxId)
-            .SetFolder(simpleImapClient.FolderTypeInt);
+            .SetUserFolderId(userFolder.Id);
 
         return _mailInfoDao.GetMailInfoList(exp.Build());
     }
