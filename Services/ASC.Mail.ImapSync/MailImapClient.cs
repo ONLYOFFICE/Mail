@@ -316,7 +316,7 @@ public class MailImapClient : IDisposable
 
             simpleImapClient.Init(folderName);
 
-            if (simpleImapClient.UserFolderID.HasValue)
+            if (simpleImapClient.Folder==FolderType.UserFolder)
             {
                 var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
 
