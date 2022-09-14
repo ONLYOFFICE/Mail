@@ -50,7 +50,7 @@ builder.Host.ConfigureAppConfiguration((hostContext, config) =>
         .AddJsonFile("appsettings.json")
         .AddJsonFile($"appsettings.{env}.json", true)
         .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json")
+        .AddJsonFile($"mail.{env}.json", true)
         .AddEnvironmentVariables()
         .AddCommandLine(args)
         .AddInMemoryCollection(new Dictionary<string, string>
