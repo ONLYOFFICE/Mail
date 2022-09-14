@@ -4,7 +4,6 @@
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../../../Data",
         "log__dir": "../../../../../Logs",
         "log__name": "mail.agg",
         "ASPNETCORE_URLS": "http://localhost:5025",
@@ -16,7 +15,6 @@
       "commandName": "WSL2",
       "launchBrowser": false,
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../../../Data",
         "log__dir": "../../../../../Logs",
         "log__name": "mail.agg",
         "ASPNETCORE_URLS": "http://localhost:5025",

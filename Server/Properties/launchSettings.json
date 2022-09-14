@@ -5,7 +5,6 @@
       "launchBrowser": false,
       "launchUrl": "http://localhost:5022/api/2.0/mail/info",
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../Data",
         "log__dir": "../../../Logs",
         "log__name": "mail",
         "ASPNETCORE_URLS": "http://localhost:5022",
@@ -17,7 +16,6 @@
       "launchBrowser": false,
       "launchUrl": "http://localhost:5022/api/2.0/mail/info",
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../Data",
         "log__dir": "../../../Logs",
         "log__name": "mail",
         "ASPNETCORE_URLS": "http://localhost:5022",

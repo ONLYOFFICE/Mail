@@ -4,7 +4,6 @@
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../../../Data",
         "log__dir": "../../../../../Logs",
         "log__name": "mail.cleaner",
         "ASPNETCORE_URLS": "http://localhost:5032",
@@ -16,7 +15,6 @@
       "commandName": "Project",
       "launchBrowser": false,
       "environmentVariables": {
-        "$STORAGE_ROOT": "../../../../../Data",
         "log__dir": "../../../../../Logs",
         "log__name": "mail.cleaner",
         "ASPNETCORE_URLS": "http://localhost:5032",
