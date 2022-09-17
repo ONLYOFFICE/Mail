@@ -74,7 +74,12 @@ public class MailImapClient : IDisposable
 
                 if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
 
-                simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache.Uds, actionFromCache.Action, actionFromCache.Destination));
+                if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
+                {
+                    actionFromCache.Data = simpleImapClients.FirstOrDefault(x => x.UserFolderID == (int?)actionFromCache.UserFolderId)?.ImapWorkFolderFullName;
+                }
+
+                simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache));
             }
         }
         catch (Exception ex)
@@ -296,7 +301,7 @@ public class MailImapClient : IDisposable
         }
     }
 
-    private void RootSimpleImapClient_OnNewFolderCreate(object sender, string e)
+    private void RootSimpleImapClient_OnNewFolderCreate(object sender, (string, bool) e)
     {
         if (sender is SimpleImapClient simpleImapClient)
         {
@@ -304,28 +309,28 @@ public class MailImapClient : IDisposable
         }
     }
 
-    private void CreateSimpleImapClient(MailBoxData mailbox, string folderName)
+    private void CreateSimpleImapClient(MailBoxData mailbox, (string folderName, bool IsUserFolder) folder)
     {
         try
         {
-            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folderName, _cancelToken.Token);
+            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
 
             if (!SetEvents(simpleImapClient)) return;
 
             simpleImapClients.Add(simpleImapClient);
 
-            simpleImapClient.Init(folderName);
-
-            if (simpleImapClient.Folder==FolderType.UserFolder)
+            if (folder.IsUserFolder)
             {
-                var userFolder = _userFolderEngine.GetByNameOrCreate(simpleImapClient.ImapWorkFolderFullName);
+                var userFolder = _userFolderEngine.GetByNameOrCreate(folder.folderName);
 
                 simpleImapClient.UserFolderID = userFolder.Id;
             }
+
+            simpleImapClient.Init(folder.folderName);
         }
         catch (Exception ex)
         {
-            _log.ErrorMailImapClientCreateSimpleImapClient(mailbox.Name, folderName, ex.ToString());
+            _log.ErrorMailImapClientCreateSimpleImapClient(mailbox.Name, folder.folderName, ex.ToString());
         }
     }
 
@@ -486,7 +491,7 @@ public class MailImapClient : IDisposable
             }
             else
             {
-                CreateSimpleImapClient(simpleImapClient.Account, simpleImapClient.ImapWorkFolderFullName);
+                CreateSimpleImapClient(simpleImapClient.Account, (simpleImapClient.ImapWorkFolderFullName, simpleImapClient.UserFolderID.HasValue));
             }
 
             DeleteSimpleImapClient(simpleImapClient);
@@ -916,27 +921,31 @@ public class MailImapClient : IDisposable
 
             foreach (var filterAppliedSuccessfull in filtersAppliedSuccessfull)
             {
-                switch (filterAppliedSuccessfull.Action)
+                int destination = -1;
+
+                if (filterAppliedSuccessfull.Action == Enums.Filter.ActionType.MoveTo)
                 {
-                    case Enums.Filter.ActionType.MarkAsImportant:
-                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsImportant, 0);
-                        break;
-                    case Enums.Filter.ActionType.MarkAsRead:
-                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsRead, 0);
-                        break;
-                    case Enums.Filter.ActionType.DeleteForever:
-                        simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.SetAsDeleted, 0);
-                        break;
-                    case Enums.Filter.ActionType.MoveTo:
-                        string destination = new(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
-                        if (int.TryParse(destination, out int result))
-                        {
-                            simpleImapClient.ExecuteUserAction(new List<int>() { message.Id }, MailUserAction.MoveTo, result);
-                        }
-                        break;
-                    case Enums.Filter.ActionType.MarkTag:
-                        break;
+                    string destinationString = new(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
+
+                    int.TryParse(destinationString, out destination);
                 }
+
+                CashedMailUserAction action = new()
+                {
+                    Uds = new List<int>() { message.Id },
+                    Action = filterAppliedSuccessfull.Action switch
+                    {
+                        Enums.Filter.ActionType.MarkAsImportant => MailUserAction.SetAsImportant,
+                        Enums.Filter.ActionType.MarkAsRead => MailUserAction.SetAsRead,
+                        Enums.Filter.ActionType.DeleteForever => MailUserAction.SetAsDeleted,
+                        Enums.Filter.ActionType.MoveTo => MailUserAction.MoveTo,
+                        Enums.Filter.ActionType.MarkTag => MailUserAction.Nothing,
+                        _ => MailUserAction.Nothing
+                    },
+                    Destination = destination
+                };
+
+                simpleImapClient.ExecuteUserAction(action);
             }
         }
         catch (Exception ex)

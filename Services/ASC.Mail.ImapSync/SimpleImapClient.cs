@@ -33,14 +33,14 @@ public class SimpleImapClient : IDisposable
         }
     }
 
-    public IEnumerable<string> ImapFoldersFullName => foldersDictionary.Keys.Where(x => x != ImapWorkFolder).Select(x => x.FullName);
+    public IEnumerable<(string Fullname, bool IsUserFolder)> ImapFoldersFullName => foldersDictionary.Where(x => x.Key != ImapWorkFolder).Select(x => (x.Key.FullName, x.Value.Folder == FolderType.UserFolder));
 
     public readonly MailBoxData Account;
     public event EventHandler<ImapAction> NewActionFromImap;
     public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
-    public event EventHandler<string> OnNewFolderCreate;
+    public event EventHandler<(string, bool)> OnNewFolderCreate;
     public event EventHandler<string> OnFolderDelete;
 
     private readonly ILogger _log;
@@ -103,30 +103,40 @@ public class SimpleImapClient : IDisposable
         return _mailSettings.Defines.SslCertificatesErrorsPermit;
     }
 
-    internal void ExecuteUserAction(List<int> clientMessages, MailUserAction action, int destination)
+    internal void ExecuteUserAction(CashedMailUserAction cachedMailUserAction)
     {
-        if (clientMessages.Count == 0 || ImapMessagesList == null) return;
+        if (cachedMailUserAction.Uds.Count == 0 || ImapMessagesList == null) return;
 
         try
         {
-            var messagesOfThisClient = ImapMessagesList.Where(x => clientMessages.Contains(x.MessageIdInDB)).ToList();
+            var messagesOfThisClient = ImapMessagesList.Where(x => cachedMailUserAction.Uds.Contains(x.MessageIdInDB)).ToList();
 
             if (messagesOfThisClient.Count == 0) return;
 
-            if ((FolderType)destination == FolderType.Trash)
+            if ((FolderType)cachedMailUserAction.Destination == FolderType.Trash)
             {
                 AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, _trashFolder)));
 
                 return;
             }
 
-            if (action == MailUserAction.MoveTo)
+            if (cachedMailUserAction.Action == MailUserAction.MoveTo)
             {
-                var imapDestinationFolder = GetImapFolderByType(destination);
+                IMailFolder imapDestinationFolder;
+
+                if ((FolderType)cachedMailUserAction.Destination == FolderType.UserFolder)
+                {
+                    imapDestinationFolder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == cachedMailUserAction.Data);
+                }
+                else
+                {
+
+                    imapDestinationFolder = GetImapFolderByType(cachedMailUserAction.Destination);
+                }
 
                 if (imapDestinationFolder == null)
                 {
-                    _log.ErrorSimpleImapClientExecuteUserActionDest(destination);
+                    _log.ErrorSimpleImapClientExecuteUserActionDest(cachedMailUserAction.Destination);
 
                     return;
                 }
@@ -135,7 +145,7 @@ public class SimpleImapClient : IDisposable
             }
             else
             {
-                AddTask(new Task(() => SetFlagsInImap(messagesOfThisClient, action)));
+                AddTask(new Task(() => SetFlagsInImap(messagesOfThisClient, cachedMailUserAction.Action)));
             }
         }
         catch (Exception ex)
@@ -434,7 +444,7 @@ public class SimpleImapClient : IDisposable
                 {
                     if (AddImapFolderToDictionary(newFolder))
                     {
-                        OnNewFolderCreate?.Invoke(this, newFolder.FullName);
+                        OnNewFolderCreate?.Invoke(this, (newFolder.FullName, foldersDictionary[newFolder].Folder == FolderType.UserFolder));
                     }
                 }
             }
@@ -860,7 +870,8 @@ public class SimpleImapClient : IDisposable
             MessageUniqueId = messageDescriptor.UniqueId,
             MessageFolderType = Folder,
             MailBoxId = Account.MailBoxId,
-            MessageIdInDB = messageDescriptor.MessageIdInDB
+            MessageIdInDB = messageDescriptor.MessageIdInDB,
+            UserFolderId = UserFolderID
         });
     }
 

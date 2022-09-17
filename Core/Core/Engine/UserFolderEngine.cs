@@ -67,17 +67,19 @@ public class UserFolderEngine
         return ToMailUserFolderData(userFolder);
     }
 
-    public MailUserFolderData GetByNameOrCreate(string name, int parentId = 0)
+    public MailUserFolderData GetByNameOrCreate(string name, int parentId = 0, IUserFolderDao userFolderDao=null)
     {
         var path = name.Split('/');
 
-        var userFolder = ToMailUserFolderData(_mailDaoFactory.GetUserFolderDao().GetByName(path[0]));
+        if(userFolderDao==null) userFolderDao= _mailDaoFactory.GetUserFolderDao();
+
+        var userFolder = ToMailUserFolderData(userFolderDao.GetByName(path[0], parentId));
 
         if (userFolder == null) userFolder=Create(path[0], parentId);
 
         if (path.Length == 1) return userFolder;
 
-        return GetByNameOrCreate(String.Join('/', path.Skip(1)), userFolder.Id);
+        return GetByNameOrCreate(String.Join('/', path.Skip(1)), userFolder.Id, userFolderDao);
     }
 
     public List<MailUserFolderData> GetList(List<int> ids = null, int? parentId = null)

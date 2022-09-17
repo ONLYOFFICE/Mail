@@ -8,6 +8,7 @@
         public FolderType MessageFolderType { set; get; }
         public MailUserAction FolderAction { set; get; }
         public int MessageIdInDB { set; get; }
+        public int? UserFolderId     { set; get; }
 
         public bool IsSameImapFolderAndAction(ImapAction imapAction)
         {
