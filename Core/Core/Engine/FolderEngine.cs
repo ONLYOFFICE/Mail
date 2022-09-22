@@ -42,7 +42,7 @@ public class FolderEngine
     private readonly UserFolderEngine _userFolderEngine;
     private readonly ILogger _log;
 
-    public bool needRecalculateFolders {get; private set;} = false;
+    public bool needRecalculateFolders { get; private set; } = false;
 
     public class MailFolderInfo
     {
@@ -72,8 +72,6 @@ public class FolderEngine
     {
         List<MailFolderInfo> folders;
 
-        var needRecalculation = false;
-
         var folderList = userId == null
             ? _mailDaoFactory.GetFolderDao().GetFolders()
             : _mailDaoFactory.GetFolderDao().GetFolders(userId);
@@ -83,7 +81,7 @@ public class FolderEngine
             if (folderList.Exists(f => f.FolderType == folder))
                 continue;
 
-            needRecalculation = true;
+            needRecalculateFolders = true;
 
             var newFolder = new Folder
             {
@@ -112,11 +110,6 @@ public class FolderEngine
                 total = x.TotalChainCount,
                 totalMessages = x.TotalCount
             });
-
-        if (!needRecalculation)
-            return folders;
-
-        //TODO: Fix OperationEngine.RecalculateFolders();
 
         return folders;
     }
@@ -338,6 +331,15 @@ public class FolderEngine
         });
 
         needRecalculateFolders = false;
+    }
+
+    public int GetUserUnreadMessageCount(string userId)
+    {
+        var userFolders = GetFolders(userId);
+
+        var result = userFolders.Where(x => x.id == FolderType.Inbox || x.id == FolderType.UserFolder).Sum(x => x.unreadMessages);
+
+        return result;
     }
 
     public static List<FolderType> DefaultFolders

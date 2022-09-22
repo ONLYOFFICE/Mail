@@ -157,11 +157,7 @@ public class SocketIoNotifier : IDisposable
             {
                 _log.DebugSocketIoNotifierSendStart();
 
-                var mailFolderInfos = folderEngine.GetFolders(userId);
-                var count = (from mailFolderInfo in mailFolderInfos
-                             where mailFolderInfo.id == FolderType.Inbox
-                             select mailFolderInfo.unreadMessages)
-                    .FirstOrDefault();
+                var count = folderEngine.GetUserUnreadMessageCount(userId);
 
                 _signalrServiceClient.SendUnreadUser(tenant, userId, count);
             }

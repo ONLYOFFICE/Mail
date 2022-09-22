@@ -800,19 +800,13 @@ public class MailImapClient : IDisposable
 
     private bool SendUnreadUser()
     {
+        if (UserName == Constants.LostUser.Id.ToString()) return true;
+
         try
         {
-            var mailFolderInfos = _folderEngine.GetFolders(UserName);
+            var count = _folderEngine.GetUserUnreadMessageCount(UserName);
 
-            var count = (from mailFolderInfo in mailFolderInfos
-                         where mailFolderInfo.id == FolderType.Inbox
-                         select mailFolderInfo.unreadMessages)
-                .FirstOrDefault();
-
-            if (UserName != Constants.LostUser.Id.ToString())
-            {
-                _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
-            }
+            _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
         }
         catch (Exception ex)
         {
