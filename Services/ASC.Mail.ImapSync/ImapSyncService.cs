@@ -56,7 +56,7 @@ public class ImapSyncService : IHostedService
             _log = loggerProvider.CreateLogger("ASC.Mail.ImapSyncService");
             _logProvider = loggerProvider;
 
-            _log.InfoImapSyncServiceReady();
+            _log.InfoImapSyncService("created");
         }
         catch (Exception ex)
         {
@@ -68,21 +68,25 @@ public class ImapSyncService : IHostedService
 
     public Task RedisSubscribe(CancellationToken cancellationToken)
     {
-        if (_redisClient == null) return StopAsync(cancellationToken);
-
-        try
+        if (_redisClient == null)
         {
-            return _redisClient.SubscribeQueueKey<ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorImapSyncServiceSubscribeRedis(ex.Message);
+            _log.CritImapSyncServiceConstruct("Don't connect to Redis.");
 
             return StopAsync(cancellationToken);
         }
-        finally
+        try
         {
-            _log.InfoImapSyncServiceTrySubscribeRedis();
+            var result= _redisClient.SubscribeQueueKey<ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
+
+            _log.InfoImapSyncService("subscrube to Redis chanel");
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _log.CritImapSyncServiceConstruct($"Don't subscribe to Redis chanel.\n {ex.Message}");
+
+            return StopAsync(cancellationToken);
         }
     }
 
@@ -112,7 +116,7 @@ public class ImapSyncService : IHostedService
         {
             if (!clients.TryAdd(cashedTenantUserMailBox.UserName, null))
             {
-                _log.DebugImapSyncServiceTryCreateClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Folder);
+                _log.InfoImapSyncService($"create new client for {cashedTenantUserMailBox.UserName}");
 
                 return;
             }
@@ -142,7 +146,7 @@ public class ImapSyncService : IHostedService
 
                 await ClearUserRedis(cashedTenantUserMailBox.UserName);
 
-                _log.ErrorImapSyncServiceStop($"Create mail client for user {cashedTenantUserMailBox.UserName}. {ex}");
+                _log.ErrorImapSyncCreateClient($"user {cashedTenantUserMailBox.UserName}. {ex}");
             }
         }
     }
@@ -158,30 +162,16 @@ public class ImapSyncService : IHostedService
                 trashValue.OnCriticalError -= Client_DeleteClient;
                 trashValue?.Stop();
 
-                _log.InfoImapSyncServiceClientDiedAndWasRemove(clientKey);
+                _log.InfoImapSyncService($"delete client {clientKey}");
             }
             else
             {
-                _log.InfoImapSyncServiceClientDiedAndWasntRemove(clientKey);
+                _log.InfoImapSyncService($"client {clientKey} died but don`t remove.");
             }
         }
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            _log.InfoImapSyncServiceStart();
-
-            return RedisSubscribe(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorImapSyncService(ex.Message);
-
-            return StopAsync(cancellationToken);
-        }
-    }
+    public Task StartAsync(CancellationToken cancellationToken) => RedisSubscribe(cancellationToken);
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
@@ -189,16 +179,12 @@ public class ImapSyncService : IHostedService
         {
             _cancelTokenSource.Cancel();
 
-            _log.InfoImapSyncServiceStoping();
+            _log.InfoImapSyncService("stopping");
 
         }
         catch (Exception ex)
         {
             _log.ErrorImapSyncServiceStop(ex.ToString());
-        }
-        finally
-        {
-            _log.InfoImapSyncServiceStop();
         }
 
         return Task.CompletedTask;
@@ -210,7 +196,7 @@ public class ImapSyncService : IHostedService
 
         string RedisKey = "ASC.MailAction:" + UserName;
 
-        var localRedisClient= _redisFactory.GetRedisClient();
+        var localRedisClient = _redisFactory.GetRedisClient();
 
         if (localRedisClient == null) return 0;
 
