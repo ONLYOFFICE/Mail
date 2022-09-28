@@ -467,12 +467,10 @@ public class FilterEngine
         switch (action.Action)
         {
             case ActionType.DeleteForever:
-                _messageEngine.SetRemoved(ids);
-                result = true;
+                result = _messageEngine.SetRemoved(ids);
                 break;
             case ActionType.MarkAsRead:
-                _messageEngine.SetUnread(ids, false);
-                result = true;
+                result = _messageEngine.SetUnread(ids, false);
                 break;
             case ActionType.MoveTo:
                 var dataJson = JObject.Parse(action.Data);

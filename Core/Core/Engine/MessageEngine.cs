@@ -812,8 +812,9 @@ public class MessageEngine : BaseEngine
         _userFolderEngine.RecalculateCounters(MailDaoFactory, userFolderIds);
     }
 
-    public void SetRemoved(List<int> ids, int? userFolderId=null)
+    public bool SetRemoved(List<int> ids, int? userFolderId=null)
     {
+        bool result = false;
         if (!ids.Any())
             throw new ArgumentNullException("ids");
 
@@ -825,7 +826,7 @@ public class MessageEngine : BaseEngine
                     .SetMessageIds(ids)
                     .Build());
 
-        if (!mailInfoList.Any()) return;
+        if (!mailInfoList.Any()) return false;
 
         var strategy = _mailDaoFactory.GetContext().Database.CreateExecutionStrategy();
 
@@ -836,15 +837,19 @@ public class MessageEngine : BaseEngine
             usedQuota = SetRemoved(_mailDaoFactory, mailInfoList, userFolderId);
 
             tx.Commit();
+
+            result = usedQuota > 0;
         });
 
         _quotaEngine.QuotaUsedDelete(usedQuota);
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
-            return;
+            return result;
 
         _indexEngine.Remove(ids, Tenant, new Guid(User));
+
+        return result;
     }
 
     public long SetRemoved(IMailDaoFactory MailDaoFactory, List<MailInfo> deleteInfo, int? userFolderId = null)

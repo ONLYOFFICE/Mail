@@ -16,6 +16,6 @@ internal static partial class ImapSyncServiceLogger
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Error, Message = "Stop service Error: {error}\r\n")]
     public static partial void ErrorImapSyncServiceStop(this ILogger logger, string error);
-    [LoggerMessage(EventId = 2, Level = LogLevel.Error, Message = "Create client Error: {error}\r\n")]
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Create client Error: {error}\r\n")]
     public static partial void ErrorImapSyncCreateClient(this ILogger logger, string error);
 }
