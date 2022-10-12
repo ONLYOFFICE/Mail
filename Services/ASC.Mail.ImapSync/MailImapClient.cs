@@ -14,9 +14,6 @@
  *
 */
 
-using ASC.Mail.ImapSync.Loggers;
-using Google.Api.Gax.ResourceNames;
-
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -28,7 +25,7 @@ public class MailImapClient : IDisposable
     public bool IsReady { get; private set; } = false;
 
     private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
-    private readonly List<SimpleImapClient> simpleImapClients;
+    private readonly List<MailIMAPBox> mailIMAPBoxes;
 
     private readonly SemaphoreSlim _enginesFactorySemaphore;
 
@@ -165,8 +162,8 @@ public class MailImapClient : IDisposable
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
-        simpleImapClients = new List<SimpleImapClient>();
-        imapActionsQueue = new ConcurrentQueue<ImapAction>();
+        mailIMAPBoxes = new();
+        imapActionsQueue = new();
 
         aliveTimer = new System.Timers.Timer((_mailSettings.ImapSync.AliveTimeInMinutes ?? 1) * 60 * 1000);
 
@@ -228,9 +225,14 @@ public class MailImapClient : IDisposable
 
         foreach (var mailBox in mailBoxes)
         {
-            if (simpleImapClients.Any(x => x.Account.MailBoxId == mailBox.MailBoxId)) continue;
+            var mailIMAPBox = mailIMAPBoxes.FirstOrDefault(x => x.Account.MailBoxId == mailBox.MailBoxId);
 
-            CreateSimpleImapClients(mailBox);
+            if (mailIMAPBox == null)
+            {
+                mailIMAPBox = new(mailBox);
+
+                mailIMAPBoxes.Add(mailIMAPBox);
+            }
         }
 
         var mailBoxIds = mailBoxes.Select(x => x.MailBoxId).ToList();

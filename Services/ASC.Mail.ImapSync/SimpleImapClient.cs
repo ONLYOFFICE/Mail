@@ -35,7 +35,6 @@ public class SimpleImapClient : IDisposable
 
     public IEnumerable<(string Fullname, bool IsUserFolder)> ImapFoldersFullName => foldersDictionary.Where(x => x.Key != ImapWorkFolder).Select(x => (x.Key.FullName, x.Value.Folder == FolderType.UserFolder));
 
-    public readonly MailBoxData Account;
     public event EventHandler<ImapAction> NewActionFromImap;
     public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
     public event EventHandler MessagesListUpdated;
