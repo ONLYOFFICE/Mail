@@ -17,5 +17,7 @@ namespace ASC.Mail.ImapSync
         {
             Account = account;
         }
+
+
     }
 }

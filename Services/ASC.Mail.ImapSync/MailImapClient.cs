@@ -237,9 +237,11 @@ public class MailImapClient : IDisposable
 
         var mailBoxIds = mailBoxes.Select(x => x.MailBoxId).ToList();
 
-        foreach (var client in simpleImapClients)
+        foreach (var mailIMAPBox in mailIMAPBoxes)
         {
-            if (mailBoxIds.Contains(client.Account.MailBoxId)) continue;
+            if (mailBoxIds.Contains(mailIMAPBox.Account.MailBoxId)) continue;
+
+
 
             DeleteSimpleImapClients(client.Account);
         }
@@ -249,7 +251,7 @@ public class MailImapClient : IDisposable
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
 
-        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+        crmAvailable = mailIMAPBoxes.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
 
         needUserMailBoxUpdate = false;
 
