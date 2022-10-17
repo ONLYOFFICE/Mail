@@ -14,9 +14,6 @@
  *
 */
 
-using ASC.Mail.ImapSync.Loggers;
-using Google.Api.Gax.ResourceNames;
-
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -996,5 +993,27 @@ public class MailImapClient : IDisposable
         _log.InfoMailImapClientDispose();
 
         GC.SuppressFinalize(this);
+    }
+
+    public bool CreateMessageInIMAP(MailInfo message)
+    {
+        var messageIMAP = new MimeMessage();
+        messageIMAP.From. = message.From;
+        messageIMAP.To.Add(message.To);
+        messageIMAP.Subject = message.Subject;
+
+        var attachment = new MimePart("image", "gif")
+        {
+            Content = new MimeContent(File.OpenRead(path), ContentEncoding.Default),
+            ContentDisposition = new ContentDisposition(ContentDisposition.Attachment),
+            ContentTransferEncoding = ContentEncoding.Base64,
+            FileName = Path.GetFileName(path)
+        };
+
+        var multipart = new Multipart("mixed");
+        multipart.Add(body);
+        multipart.Add(attachment);
+
+        message.Body = multipart;
     }
 }

@@ -269,6 +269,34 @@ public static class Converter
         return message;
     }
 
+    public static MimeMessage ConvertToMimeMessage(this MailMessageData mailInDB,
+    TenantManager tenantManager, CoreSettings coreSettings,
+    Models.MailFolder folder, bool unread, string chainId, DateTime? chainDate, string streamId, int mailboxId, ILogger log,
+    bool createFailedFake = true)
+    {
+        MimeMessage message;
+
+        try
+        {
+            message = mimeMessage.CreateMailMessage(tenantManager, coreSettings, log,
+                mailboxId, folder.Folder, unread, chainId, chainDate, streamId);
+        }
+        catch (Exception ex)
+        {
+            if (!createFailedFake)
+                throw;
+
+            log.ErrorMessageEngineConvertMimeMessage(ex.ToString());
+
+            log.DebugMessageEngineCreatingFakeMessage();
+
+            message = mimeMessage.CreateCorruptedMesage(tenantManager, coreSettings,
+                folder.Folder, unread, chainId, streamId);
+        }
+
+        return message;
+    }
+
     public static MailContact ToMailContactWrapper(this ContactCard contactCard)
     {
         var now = DateTime.UtcNow;

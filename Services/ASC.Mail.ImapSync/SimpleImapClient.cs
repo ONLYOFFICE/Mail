@@ -902,6 +902,7 @@ public class SimpleImapClient : IDisposable
     }
 
     public void TryCreateFolderInIMAP(string name) => AddTask(new Task(() => CreateFolderInIMAP(name)));
+    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags) => AddTask(new Task(() => CreateMessageInIMAP(message, flags)));
 
     private bool CreateFolderInIMAP(string name)
     {
@@ -912,6 +913,22 @@ public class SimpleImapClient : IDisposable
         if (newFolder == null) return false;
 
         AddImapFolderToDictionary(newFolder);
+
+        return true;
+    }
+
+    private bool CreateMessageInIMAP(MimeMessage message, MessageFlags flags)
+    {
+        var newMessageUid =ImapWorkFolder.Append(message, flags);
+
+        if (newMessageUid == null) return false;
+
+        ImapMessagesList.Add(new MessageDescriptor()
+        {
+            Flags = flags,
+            Index = -1,
+            UniqueId = newMessageUid.Value
+        });
 
         return true;
     }
