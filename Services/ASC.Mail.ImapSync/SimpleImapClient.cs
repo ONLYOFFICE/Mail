@@ -1,6 +1,4 @@
-﻿
-using Google.Cloud.Storage.V1;
-using System.Net.Security;
+﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -43,12 +41,13 @@ public class SimpleImapClient : IDisposable
     public event EventHandler<(string, bool)> OnNewFolderCreate;
     public event EventHandler<string> OnFolderDelete;
 
+    private string domain;
     private readonly ILogger _log;
     private readonly MailSettings _mailSettings;
     private IMailFolder _trashFolder;
     private CancellationTokenSource DoneToken;
     private readonly CancellationTokenSource CancelToken;
-    private readonly ImapClient imap;
+    private ImapClient imap;
     private readonly ConcurrentQueue<Task> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
 
@@ -58,34 +57,16 @@ public class SimpleImapClient : IDisposable
 
     private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e) => DoneToken?.Cancel();
 
-    public SimpleImapClient(MailSettings mailSettings, ILogger log, string folderName, CancellationToken cancelToken)
+    public SimpleImapClient(MailSettings mailSettings, ILogger log, CancellationToken cancelToken)
     {
         _mailSettings = mailSettings;
         _log = log;
-
-        folderName = string.IsNullOrEmpty(folderName) ? "INBOX" : folderName.Replace('/', '_');
-
-        var protocolLogger = mailSettings.ImapSync.WriteIMAPLog && _mailSettings.Aggregator.ProtocolLogPath != "" ?
-            new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
-            (IProtocolLogger)new NullProtocolLogger();
 
         CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
         asyncTasks = new ConcurrentQueue<Task>();
 
         foldersDictionary = new Dictionary<IMailFolder, ASC.Mail.Models.MailFolder>();
-
-        imap = new ImapClient(protocolLogger)
-        {
-            Timeout = _mailSettings.Aggregator.TcpTimeout
-        };
-
-        imap.ServerCertificateValidationCallback = CertificateValidationCallback;
-        imap.CheckCertificateRevocation = true;
-
-        imap.Disconnected += Imap_Disconnected;
-
-        imap.Authenticate()
     }
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -154,22 +135,33 @@ public class SimpleImapClient : IDisposable
 
     private void Imap_Disconnected(object sender, DisconnectedEventArgs e)
     {
-        if (e.IsRequested)
-        {
-            _log.InfoSimpleImapClientReconnectToIMAP();
-
-            Authenticate();
-        }
-        else
-        {
-            CriticalError("Imap disconected without chance to reconect.");
-        }
+        CriticalError("Imap disconected without chance to reconect.");
     }
 
     #region Load Folders from Imap to foldersList
 
-    internal void Init(string folderName)
+    internal void Init(MailBoxData mailBoxData, string folderName)
     {
+        domain = mailBoxData.Server;
+
+        folderName = string.IsNullOrEmpty(folderName) ? "INBOX" : folderName.Replace('/', '_');
+
+        var protocolLogger = _mailSettings.ImapSync.WriteIMAPLog && _mailSettings.Aggregator.ProtocolLogPath != "" ?
+            new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{mailBoxData.MailBoxId}_{folderName}.log", true) :
+            (IProtocolLogger)new NullProtocolLogger();
+
+        imap = new ImapClient(protocolLogger)
+        {
+            Timeout = _mailSettings.Aggregator.TcpTimeout
+        };
+
+        imap.ServerCertificateValidationCallback = CertificateValidationCallback;
+        imap.CheckCertificateRevocation = true;
+
+        imap.Disconnected += Imap_Disconnected;
+
+        imap.Authenticate(mailBoxData, _log, CancelToken.Token);
+
         if (string.IsNullOrEmpty(folderName))
         {
             SetNewImapWorkFolder(imap.Inbox).ContinueWith(TaskManager);
@@ -701,9 +693,9 @@ public class SimpleImapClient : IDisposable
         }
 
         if (_mailSettings.SpecialDomainFolders.Any() &&
-            _mailSettings.SpecialDomainFolders.ContainsKey(Account.Server))
+            _mailSettings.SpecialDomainFolders.ContainsKey(domain))
         {
-            var domainSpecialFolders = _mailSettings.SpecialDomainFolders[Account.Server];
+            var domainSpecialFolders = _mailSettings.SpecialDomainFolders[domain];
 
             if (domainSpecialFolders.Any() &&
                 domainSpecialFolders.ContainsKey(folderName))
