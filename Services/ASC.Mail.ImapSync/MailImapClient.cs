@@ -14,6 +14,9 @@
  *
 */
 
+using Google.Api.Gax.ResourceNames;
+using System.Security.Cryptography;
+
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -264,10 +267,13 @@ public class MailImapClient : IDisposable
         {
             DeleteSimpleImapClients(mailbox);
         }
-
         try
         {
+            logProvider.CreateLogger($"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}");
+
             var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, "", _cancelToken.Token);
+
+            rootSimpleImapClient.imap.Authenticate
 
             if (!SetEvents(rootSimpleImapClient)) return;
 

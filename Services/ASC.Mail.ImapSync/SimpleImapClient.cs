@@ -1,4 +1,5 @@
 ﻿
+using Google.Cloud.Storage.V1;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -57,14 +58,12 @@ public class SimpleImapClient : IDisposable
 
     private void ImapWorkFolder_MessageExpunged(object sender, MessageEventArgs e) => DoneToken?.Cancel();
 
-    public SimpleImapClient(MailBoxData mailbox, MailSettings mailSettings, ILoggerProvider logProvider, string folderName, CancellationToken cancelToken)
+    public SimpleImapClient(MailSettings mailSettings, ILogger log, string folderName, CancellationToken cancelToken)
     {
-        Account = mailbox;
         _mailSettings = mailSettings;
+        _log = log;
 
         folderName = string.IsNullOrEmpty(folderName) ? "INBOX" : folderName.Replace('/', '_');
-
-        _log = logProvider.CreateLogger($"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}");
 
         var protocolLogger = mailSettings.ImapSync.WriteIMAPLog && _mailSettings.Aggregator.ProtocolLogPath != "" ?
             new ProtocolLogger(_mailSettings.Aggregator.ProtocolLogPath + $"/imap_{Account.MailBoxId}_{folderName}.log", true) :
@@ -86,7 +85,7 @@ public class SimpleImapClient : IDisposable
 
         imap.Disconnected += Imap_Disconnected;
 
-        if (Authenticate()) LoadFoldersFromIMAP();
+        imap.Authenticate()
     }
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -168,76 +167,6 @@ public class SimpleImapClient : IDisposable
     }
 
     #region Load Folders from Imap to foldersList
-
-    private bool Authenticate(bool enableUtf8 = true)
-    {
-        if (imap.IsAuthenticated) return true;
-
-        _log.InfoSimpleImapClientAuth(Account.Name);
-
-        var secureSocketOptions = SecureSocketOptions.Auto;
-        var sslProtocols = SslProtocols.None;
-
-        switch (Account.Encryption)
-        {
-            case EncryptionType.StartTLS:
-                secureSocketOptions = SecureSocketOptions.StartTlsWhenAvailable;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
-                break;
-            case EncryptionType.SSL:
-                secureSocketOptions = SecureSocketOptions.SslOnConnect;
-                sslProtocols = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
-                break;
-            case EncryptionType.None:
-                secureSocketOptions = SecureSocketOptions.None;
-                sslProtocols = SslProtocols.None;
-                break;
-        }
-
-        _log.DebugSimpleImapConnectTo(Account.Server, Account.Port, secureSocketOptions.ToString());
-
-        imap.SslProtocols = sslProtocols;
-
-        if (!imap.IsConnected)
-        {
-            imap.Connect(Account.Server, Account.Port, secureSocketOptions, CancelToken.Token);
-        }
-
-        try
-        {
-            if (enableUtf8 && (imap.Capabilities & ImapCapabilities.UTF8Accept) != ImapCapabilities.None)
-            {
-                _log.DebugSimpleImapEnableUTF8();
-
-                imap.EnableUTF8(CancelToken.Token);
-            }
-
-            if (string.IsNullOrEmpty(Account.OAuthToken))
-            {
-                _log.DebugSimpleImapAuth(Account.Account);
-
-                imap.Authenticate(Account.Account, Account.Password, CancelToken.Token);
-            }
-            else
-            {
-                _log.DebugSimpleImapAuthByOAuth(Account.Account);
-
-                var oauth2 = new SaslMechanismOAuth2(Account.Account, Account.AccessToken);
-
-                imap.Authenticate(oauth2, CancelToken.Token);
-            }
-        }
-        catch (Exception ex)
-        {
-            CriticalError($"Authentication error: {ex}", true);
-
-            return false;
-        }
-
-        _log.DebugSimpleImapLoggedIn();
-
-        return true;
-    }
 
     internal void Init(string folderName)
     {
@@ -868,7 +797,6 @@ public class SimpleImapClient : IDisposable
             MessageFolderName = ImapWorkFolderFullName,
             MessageUniqueId = messageDescriptor.UniqueId,
             MessageFolderType = Folder,
-            MailBoxId = Account.MailBoxId,
             MessageIdInDB = messageDescriptor.MessageIdInDB,
             UserFolderId = UserFolderID
         });
