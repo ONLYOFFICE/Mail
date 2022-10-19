@@ -1,22 +1,3 @@
-/*
- *
- * (c) Copyright Ascensio System Limited 2010-2020
- * 
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
-*/
-
-using Google.Api.Gax.ResourceNames;
-using System.Security.Cryptography;
-
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -92,7 +73,7 @@ public class MailImapClient : IDisposable
             _log.ErrorMailImapClient("CheckRedis method", ex.Message);
         }
 
-        _log.DebugMailImapClient($"Read {iterationCount} keys. Total IMAP clients: {simpleImapClients.Count}");
+        _log.DebugMailImapClient($"Read {iterationCount} keys. Total IMAP clients: {mailIMAPBoxes.Sum(x => x.ClientCount)}");
     }
 
     public async Task<int> ClearUserRedis()
@@ -240,16 +221,16 @@ public class MailImapClient : IDisposable
 
         var mailBoxIds = mailBoxes.Select(x => x.MailBoxId).ToList();
 
-        foreach (var mailIMAPBox in mailIMAPBoxes)
+        for (int i = mailIMAPBoxes.Count - 1; i >= 0; i--)
         {
-            if (mailBoxIds.Contains(mailIMAPBox.Account.MailBoxId)) continue;
+            if (mailBoxIds.Contains(mailIMAPBoxes[i].Account.MailBoxId)) continue;
 
+            mailIMAPBoxes[i].StopSync();
 
-
-            DeleteSimpleImapClients(client.Account);
+            mailIMAPBoxes.Remove(mailIMAPBoxes[i]);
         }
 
-        if (simpleImapClients.Count == 0)
+        if (mailIMAPBoxes.Count == 0)
         {
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
@@ -259,151 +240,6 @@ public class MailImapClient : IDisposable
         needUserMailBoxUpdate = false;
 
         return true;
-    }
-
-    private void CreateSimpleImapClients(MailBoxData mailbox)
-    {
-        if (simpleImapClients.Any(x => x.Account.MailBoxId == mailbox.MailBoxId))
-        {
-            DeleteSimpleImapClients(mailbox);
-        }
-        try
-        {
-            logProvider.CreateLogger($"ASC.Mail.SImap_{Account.MailBoxId}_{folderName}");
-
-            var rootSimpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, "", _cancelToken.Token);
-
-            rootSimpleImapClient.imap.Authenticate
-
-            if (!SetEvents(rootSimpleImapClient)) return;
-
-            simpleImapClients.Add(rootSimpleImapClient);
-
-            rootSimpleImapClient.Init("");
-
-            rootSimpleImapClient.OnNewFolderCreate += RootSimpleImapClient_OnNewFolderCreate;
-
-            rootSimpleImapClient.OnFolderDelete += RootSimpleImapClient_OnFolderDelete;
-
-            foreach (var folder in rootSimpleImapClient.ImapFoldersFullName)
-            {
-                CreateSimpleImapClient(mailbox, folder);
-            }
-
-            _enginesFactorySemaphore.Wait();
-
-            string isLocked = _mailEnginesFactory.MailboxEngine.LockMaibox(mailbox.MailBoxId) ? "locked" : "didn`t lock";
-
-            _log.DebugMailImapClientCreateSimpleImapClients(mailbox.MailBoxId, isLocked);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorMailImapClient($"Create IMAP clients for {mailbox.EMail.Address}", ex.Message);
-        }
-        finally
-        {
-            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-        }
-    }
-
-    private void RootSimpleImapClient_OnFolderDelete(object sender, string e)
-    {
-        var deletedClient = simpleImapClients.FirstOrDefault(x => x.ImapWorkFolderFullName == e);
-
-        if (deletedClient != null)
-        {
-            DeleteSimpleImapClient(deletedClient);
-        }
-    }
-
-    private void RootSimpleImapClient_OnNewFolderCreate(object sender, (string, bool) e)
-    {
-        if (sender is SimpleImapClient simpleImapClient)
-        {
-            CreateSimpleImapClient(simpleImapClient.Account, e);
-        }
-    }
-
-    private void CreateSimpleImapClient(MailBoxData mailbox, (string folderName, bool IsUserFolder) folder)
-    {
-        try
-        {
-            var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
-
-            if (!SetEvents(simpleImapClient)) return;
-
-            simpleImapClients.Add(simpleImapClient);
-
-            if (folder.IsUserFolder)
-            {
-                var userFolder = _userFolderEngine.GetByNameOrCreate(folder.folderName);
-
-                simpleImapClient.UserFolderID = userFolder.Id;
-            }
-
-            simpleImapClient.Init(folder.folderName);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorMailImapClient($"Create IMAP client for {mailbox.EMail.Address}, folder {folder.folderName}", ex.Message);
-        }
-    }
-
-    private bool SetEvents(SimpleImapClient simpleImapClient)
-    {
-        if (simpleImapClient == null) return false;
-
-        simpleImapClient.NewMessage += ImapClient_NewMessage;
-        simpleImapClient.MessagesListUpdated += ImapClient_MessagesListUpdated;
-        simpleImapClient.NewActionFromImap += ImapClient_NewActionFromImap;
-        simpleImapClient.OnCriticalError += ImapClient_OnCriticalError;
-
-        return true;
-    }
-
-    private bool UnSetEvents(SimpleImapClient simpleImapClient)
-    {
-        if (simpleImapClient == null) return false;
-
-        simpleImapClient.NewMessage -= ImapClient_NewMessage;
-        simpleImapClient.MessagesListUpdated -= ImapClient_MessagesListUpdated;
-        simpleImapClient.NewActionFromImap -= ImapClient_NewActionFromImap;
-        simpleImapClient.OnCriticalError -= ImapClient_OnCriticalError;
-
-        return true;
-    }
-
-    private void DeleteSimpleImapClient(SimpleImapClient simpleImapClient)
-    {
-        UnSetEvents(simpleImapClient);
-
-        simpleImapClient.Stop();
-
-        simpleImapClients.Remove(simpleImapClient);
-    }
-
-    private void DeleteSimpleImapClients(MailBoxData mailbox)
-    {
-        try
-        {
-            var deletedSimpleImapClients = simpleImapClients.Where(x => x.Account.MailBoxId == mailbox.MailBoxId).ToList();
-
-            deletedSimpleImapClients.ForEach(DeleteSimpleImapClient);
-
-            _enginesFactorySemaphore.Wait();
-
-            string isLocked = _mailEnginesFactory.MailboxEngine.ReleaseMailbox(mailbox, _mailSettings) ? "unlocked" : "didn`t unlock";
-
-            _log.DebugMailImapClientDeleteSimpleImapClients(deletedSimpleImapClients.Count, mailbox.MailBoxId, isLocked);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorMailImapClient($"Delete IMAP clients for {mailbox.EMail.Address}", ex.Message);
-        }
-        finally
-        {
-            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-        }
     }
 
     private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -417,38 +253,27 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var ids = new List<int>();
-
             while (imapActionsQueue.TryDequeue(out ImapAction imapAction))
             {
-                ids.Add(imapAction.MessageIdInDB);
-
-                if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
-                {
-                    if (imapAction.IsSameImapFolderAndAction(nextImapAction)) continue;
-                }
-
-                needUserUpdate = imapAction.FolderAction switch
+                needUserUpdate = imapAction.Action switch
                 {
                     MailUserAction.Nothing => true,
-                    MailUserAction.SetAsRead => _mailEnginesFactory.MessageEngine.SetUnread(ids, false),
-                    MailUserAction.SetAsUnread => _mailEnginesFactory.MessageEngine.SetUnread(ids, true),
-                    MailUserAction.SetAsImportant => _mailEnginesFactory.MessageEngine.SetImportant(ids, true),
-                    MailUserAction.SetAsNotImpotant => _mailEnginesFactory.MessageEngine.SetImportant(ids, false),
-                    MailUserAction.SetAsDeleted => _mailEnginesFactory.MessageEngine.SetRemoved(ids)
+                    MailUserAction.SetAsRead => _mailEnginesFactory.MessageEngine.SetUnread(imapAction.MessageIdsInDB, false),
+                    MailUserAction.SetAsUnread => _mailEnginesFactory.MessageEngine.SetUnread(imapAction.MessageIdsInDB, true),
+                    MailUserAction.SetAsImportant => _mailEnginesFactory.MessageEngine.SetImportant(imapAction.MessageIdsInDB, true),
+                    MailUserAction.SetAsNotImpotant => _mailEnginesFactory.MessageEngine.SetImportant(imapAction.MessageIdsInDB, false),
+                    MailUserAction.SetAsDeleted => _mailEnginesFactory.MessageEngine.SetRemoved(imapAction.MessageIdsInDB)
                 };
 
                 if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
 
-                _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), needUserUpdate.ToString().ToUpper(), ids.Count);
+                _log.DebugMailImapClientProcessAction(imapAction.Action.ToString(), needUserUpdate.ToString().ToUpper(), imapAction.MessageIdsInDB.Count);
 
                 StringBuilder sb = new();
 
-                ids.ForEach(x => sb.Append(x.ToString() + ", "));
+                imapAction.MessageIdsInDB.ForEach(x => sb.Append(x.ToString() + ", "));
 
                 _log.DebugMailImapClientProcessActionIds(sb.ToString());
-
-                ids.Clear();
             }
         }
         catch (Exception ex)
@@ -981,9 +806,7 @@ public class MailImapClient : IDisposable
         IsReady = false;
         try
         {
-            var mailBoxes = simpleImapClients.Select(x => x.Account).Distinct().ToList();
-
-            mailBoxes.ForEach(DeleteSimpleImapClients);
+            mailIMAPBoxes.ForEach(box => box.StopSync());
 
             aliveTimer.Stop();
             aliveTimer.Elapsed -= AliveTimer_Elapsed;

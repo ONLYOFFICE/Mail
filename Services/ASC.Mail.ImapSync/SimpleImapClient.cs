@@ -1,4 +1,5 @@
-﻿using System.Net.Security;
+﻿using ASC.Common.Log;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -10,36 +11,29 @@ public class SimpleImapClient : IDisposable
     public int CheckServerAliveMitutes { get; set; } = 0;
     public List<MessageDescriptor> ImapMessagesList { get; set; }
     public IMailFolder ImapWorkFolder { get; private set; }
-    public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
-    public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
-    public FolderType Folder => MailWorkFolder.Folder;
-    public IMailFolder GetImapFolderByType(int folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == (FolderType)folderType).Key;
-    public string[] ExcludeTags
-    {
-        get
-        {
-            List<string> result = new();
+    //public IMailFolder GetImapFolderByType(int folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == (FolderType)folderType).Key;
+    //public string[] ExcludeTags
+    //{
+    //    get
+    //    {
+    //        List<string> result = new();
 
-            foreach (var item in foldersDictionary)
-            {
-                if (item.Key != ImapWorkFolder)
-                {
-                    result.AddRange(item.Value.Tags);
-                }
-            }
+    //        foreach (var item in foldersDictionary)
+    //        {
+    //            if (item.Key != ImapWorkFolder)
+    //            {
+    //                result.AddRange(item.Value.Tags);
+    //            }
+    //        }
 
-            return result.ToArray();
-        }
-    }
+    //        return result.ToArray();
+    //    }
+    //}
 
-    public IEnumerable<(string Fullname, bool IsUserFolder)> ImapFoldersFullName => foldersDictionary.Where(x => x.Key != ImapWorkFolder).Select(x => (x.Key.FullName, x.Value.Folder == FolderType.UserFolder));
+    //public IEnumerable<(string Fullname, bool IsUserFolder)> ImapFoldersFullName => foldersDictionary.Where(x => x.Key != ImapWorkFolder).Select(x => (x.Key.FullName, x.Value.Folder == FolderType.UserFolder));
 
     public event EventHandler<ImapAction> NewActionFromImap;
     public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
-    public event EventHandler MessagesListUpdated;
-    public event EventHandler<bool> OnCriticalError;
-    public event EventHandler<(string, bool)> OnNewFolderCreate;
-    public event EventHandler<string> OnFolderDelete;
 
     private string domain;
     private readonly ILogger _log;
@@ -49,7 +43,7 @@ public class SimpleImapClient : IDisposable
     private readonly CancellationTokenSource CancelToken;
     private ImapClient imap;
     private readonly ConcurrentQueue<Task> asyncTasks;
-    private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
+    private List<IMailFolder> IMAPFolders;
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e) => DoneToken?.Cancel();
 
@@ -66,7 +60,7 @@ public class SimpleImapClient : IDisposable
 
         asyncTasks = new ConcurrentQueue<Task>();
 
-        foldersDictionary = new Dictionary<IMailFolder, ASC.Mail.Models.MailFolder>();
+        IMAPFolders = new();
     }
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -101,17 +95,7 @@ public class SimpleImapClient : IDisposable
 
             if (cachedMailUserAction.Action == MailUserAction.MoveTo)
             {
-                IMailFolder imapDestinationFolder;
-
-                if ((FolderType)cachedMailUserAction.Destination == FolderType.UserFolder)
-                {
-                    imapDestinationFolder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == cachedMailUserAction.Data);
-                }
-                else
-                {
-
-                    imapDestinationFolder = GetImapFolderByType(cachedMailUserAction.Destination);
-                }
+                IMailFolder imapDestinationFolder = IMAPFolders.FirstOrDefault(x => x.FullName == cachedMailUserAction.Data);
 
                 if (imapDestinationFolder == null)
                 {
@@ -168,7 +152,7 @@ public class SimpleImapClient : IDisposable
         }
         else
         {
-            var folder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == folderName);
+            var folder = IMAPFolders.FirstOrDefault(x => x.FullName == folderName);
 
             if (folder != null) SetNewImapWorkFolder(folder).ContinueWith(TaskManager);
         }
@@ -182,7 +166,8 @@ public class SimpleImapClient : IDisposable
 
         DoneToken?.Cancel();
 
-        OnCriticalError?.Invoke(this, IsAuthenticationError);
+        if (IsAuthenticationError) InvokeImapAction(new ImapAction(MailUserAction.AuthError));
+        else InvokeImapAction(new ImapAction(MailUserAction.CriticalError));
     }
 
     private void LoadFoldersFromIMAP()
@@ -191,9 +176,9 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            GetIMAPFolders().ForEach(x => AddImapFolderToDictionary(x));
+            IMAPFolders=GetIMAPFolders();
 
-            _log.DebugSimpleImapLoadFoldersCount(foldersDictionary.Count);
+            _log.DebugSimpleImapLoadFoldersCount(IMAPFolders.Count);
         }
         catch (AggregateException aggEx)
         {
@@ -274,22 +259,17 @@ public class SimpleImapClient : IDisposable
         _log.DebugSimpleImapSetNewWorkFolder(imapFolder.FullName);
     }
 
-    private async Task UpdateMessagesList()
+    private async Task<List<MessageDescriptor>> GetNewMessageDescriptors()
     {
-        List<MessageDescriptor> newMessageDescriptors;
-
+        List<MessageDescriptor> result = new();
         try
         {
             await ImapWorkFolder.StatusAsync(StatusItems.Count);
 
             if (ImapWorkFolder.Count > 0)
             {
-                newMessageDescriptors = (await ImapWorkFolder.FetchAsync(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
+                result = (await ImapWorkFolder.FetchAsync(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
                     .Select(x => new MessageDescriptor(x)).ToList();
-            }
-            else
-            {
-                newMessageDescriptors = new List<MessageDescriptor>();
             }
         }
         catch (Exception ex)
@@ -297,16 +277,22 @@ public class SimpleImapClient : IDisposable
             var fName = ImapWorkFolder == null ? "" : ImapWorkFolder.FullName;
             _log.ErrorSimpleImapUpdateMessagesList(fName, ex.Message);
 
-            newMessageDescriptors = null;
-
-            return;
+            return null;
         }
+
+        return result;
+    }
+
+
+    private async Task UpdateMessagesList()
+    {
+        List<MessageDescriptor> newMessageDescriptors = await GetNewMessageDescriptors();
 
         if (ImapMessagesList == null)
         {
             ImapMessagesList = newMessageDescriptors;
 
-            MessagesListUpdated?.Invoke(this, EventArgs.Empty);
+            InvokeImapAction(new ImapAction(MailUserAction.StartImapClient));
 
             var count = ImapMessagesList == null ? 0 : ImapMessagesList.Count;
 
@@ -315,7 +301,11 @@ public class SimpleImapClient : IDisposable
             return;
         }
 
-        List<MessageDescriptor> deleteList = new();
+        ImapAction imapActionDeleted = new(MailUserAction.SetAsDeleted);
+        ImapAction imapActionRead = new(MailUserAction.SetAsRead);
+        ImapAction imapActionUnread = new(MailUserAction.SetAsUnread);
+        ImapAction imapActionImportant = new(MailUserAction.SetAsImportant);
+        ImapAction imapActionNotImpotant = new(MailUserAction.SetAsNotImpotant);
 
         foreach (var oldMessage in ImapMessagesList)
         {
@@ -323,7 +313,7 @@ public class SimpleImapClient : IDisposable
 
             if (newMessage == null)
             {
-                deleteList.Add(oldMessage);
+                imapActionDeleted.MessageIdsInDB.Add(oldMessage.MessageIdInDB);
 
                 _log.DebugSimpleImapDeleteMessageDetect(oldMessage.UniqueId.ToString(), oldMessage.MessageIdInDB, oldMessage.Index);
             }
@@ -336,13 +326,52 @@ public class SimpleImapClient : IDisposable
                     oldMessage.Index = newMessage.Index;
                 }
 
-                CompareImapFlags(oldMessage, newMessage);
+                if (!(oldMessage.Flags.HasValue && oldMessage.Flags.HasValue))
+                {
+                    _log.Error($"CompareImapFlags: no Flags in message {oldMessage.MessageIdInDB}.");
 
-                newMessageDescriptors.Remove(newMessage);
+                    continue;
+                }
+
+                if (oldMessage.Flags == newMessage.Flags) continue;
+
+                try
+                {
+                    bool oldSeen = oldMessage.Flags.Value.HasFlag(MessageFlags.Seen);
+                    bool newSeen = newMessage.Flags.Value.HasFlag(MessageFlags.Seen);
+
+                    bool oldImportant = oldMessage.Flags.Value.HasFlag(MessageFlags.Flagged);
+                    bool newImportant = newMessage.Flags.Value.HasFlag(MessageFlags.Flagged);
+
+                    if (oldSeen != newSeen)
+                    {
+                        if (oldSeen) imapActionUnread.MessageIdsInDB.Add(oldMessage.MessageIdInDB);
+                        else imapActionRead.MessageIdsInDB.Add(oldMessage.MessageIdInDB);
+                    }
+
+                    if (oldImportant != newImportant)
+                    {
+                        if (oldImportant) imapActionNotImpotant.MessageIdsInDB.Add(oldMessage.MessageIdInDB);
+                        else imapActionImportant.MessageIdsInDB.Add(oldMessage.MessageIdInDB);
+                    }
+
+                    oldMessage.Flags = newMessage.Flags;
+
+                    newMessageDescriptors.Remove(newMessage);
+                }
+                catch (Exception ex)
+                {
+                    _log.ErrorSimpleImapCompareImapFlags(newMessage.UniqueId.ToString(), ex.Message);
+                }
             }
         }
 
-        deleteList.ForEach(InvokeImapDeleteAction);
+        if (imapActionDeleted.MessageIdsInDB.Any()) InvokeImapAction(imapActionDeleted);
+        if (imapActionRead.MessageIdsInDB.Any()) InvokeImapAction(imapActionRead);
+        if (imapActionUnread.MessageIdsInDB.Any()) InvokeImapAction(imapActionUnread);
+        if (imapActionImportant.MessageIdsInDB.Any()) InvokeImapAction(imapActionImportant);
+        if (imapActionNotImpotant.MessageIdsInDB.Any()) InvokeImapAction(imapActionNotImpotant);
+
 
         newMessageDescriptors.ForEach(messageDescriptors =>
         {
@@ -360,22 +389,22 @@ public class SimpleImapClient : IDisposable
 
             foreach (var newFolder in newFoldersList)
             {
-                if (!foldersDictionary.Keys.Any(y => y.FullName == newFolder.FullName))
+                if (!IMAPFolders.Any(y => y.FullName == newFolder.FullName))
                 {
-                    if (AddImapFolderToDictionary(newFolder))
-                    {
-                        OnNewFolderCreate?.Invoke(this, (newFolder.FullName, foldersDictionary[newFolder].Folder == FolderType.UserFolder));
-                    }
+                    IMAPFolders.Add(newFolder);
+
+                    InvokeImapAction(new ImapAction(MailUserAction.CreateFolder));
                 }
             }
 
-            foreach (var oldFolder in foldersDictionary.Keys)
+            foreach (var oldFolder in IMAPFolders)
             {
+                //TODO: Check if this folder deleted
                 if (!newFoldersList.Any(y => y.FullName == oldFolder.FullName))
                 {
-                    foldersDictionary.Remove(oldFolder);
+                    IMAPFolders.Remove(oldFolder);
 
-                    OnFolderDelete?.Invoke(this, oldFolder.FullName);
+                    InvokeImapAction(new ImapAction(MailUserAction.DeleteFolder));
                 }
             }
         }
@@ -524,50 +553,6 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private void CompareImapFlags(MessageDescriptor oldMessageDescriptor, MessageDescriptor newMessageDescriptor)
-    {
-        if (!(oldMessageDescriptor.Flags.HasValue && oldMessageDescriptor.Flags.HasValue))
-        {
-            _log.ErrorSimpleImapCompareImapFlagsNoFlags();
-        }
-
-        if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags)
-        {
-            _log.DebugSimpleImapCompareImapFlagsEqual();
-
-            return;
-        }
-
-        _log.DebugSimpleImapCompareImapFlagsNewOld(oldMessageDescriptor.Flags.ToString(), newMessageDescriptor.Flags.ToString());
-
-        try
-        {
-            bool oldSeen = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-            bool newSeen = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-
-            bool oldImportant = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-            bool newImportant = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-
-            if (oldSeen != newSeen)
-            {
-                InvokeImapAction(oldSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
-                    oldMessageDescriptor);
-            }
-
-            if (oldImportant != newImportant)
-            {
-                InvokeImapAction(oldImportant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
-                    oldMessageDescriptor);
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorSimpleImapCompareImapFlags(newMessageDescriptor.UniqueId.ToString(), ex.Message);
-        }
-
-        oldMessageDescriptor.Flags = newMessageDescriptor.Flags;
-    }
-
     private void TaskManager(Task previosTask)
     {
         if (previosTask.Exception != null)
@@ -591,7 +576,7 @@ public class SimpleImapClient : IDisposable
             var fName = ImapWorkFolder == null ? "" : ImapWorkFolder.FullName;
             _log.DebugSimpleImapTaskManagerCancellationRequested(fName);
 
-            OnCriticalError?.Invoke(this, false);
+            InvokeImapAction(new ImapAction(MailUserAction.CriticalError));
         }
         else
         {
@@ -639,87 +624,7 @@ public class SimpleImapClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private ASC.Mail.Models.MailFolder DetectFolder(IMailFolder folder)
-    {
-        var folderName = folder.Name.ToLowerInvariant();
-        var fullFolderName = folder.FullName.ToLowerInvariant();
 
-        if (_mailSettings.SkipImapFlags != null &&
-            _mailSettings.SkipImapFlags.Any() &&
-            _mailSettings.SkipImapFlags.Contains(folderName))
-        {
-            return null;
-        }
-
-        FolderType folderId;
-
-        if ((folder.Attributes & FolderAttributes.Inbox) != 0)
-        {
-            return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name);
-        }
-        if ((folder.Attributes & FolderAttributes.Sent) != 0)
-        {
-            return new ASC.Mail.Models.MailFolder(FolderType.Sent, folder.Name);
-        }
-        if ((folder.Attributes & FolderAttributes.Junk) != 0)
-        {
-            return new ASC.Mail.Models.MailFolder(FolderType.Spam, folder.Name);
-        }
-
-        if ((folder.Attributes & FolderAttributes.Trash) != 0)
-        {
-            _trashFolder = folder;
-
-            return null;
-        }
-
-        if ((folder.Attributes &
-             (FolderAttributes.All |
-              FolderAttributes.NoSelect |
-              FolderAttributes.NonExistent |
-              FolderAttributes.Archive |
-              FolderAttributes.Drafts |
-              FolderAttributes.Flagged)) != 0)
-        {
-            return null; // Skip folders
-        }
-
-        if (_mailSettings.ImapFlags != null &&
-            _mailSettings.ImapFlags.Any() &&
-            _mailSettings.ImapFlags.ContainsKey(folderName))
-        {
-            folderId = (FolderType)_mailSettings.ImapFlags[folderName];
-            return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
-        }
-
-        if (_mailSettings.SpecialDomainFolders.Any() &&
-            _mailSettings.SpecialDomainFolders.ContainsKey(domain))
-        {
-            var domainSpecialFolders = _mailSettings.SpecialDomainFolders[domain];
-
-            if (domainSpecialFolders.Any() &&
-                domainSpecialFolders.ContainsKey(folderName))
-            {
-                var info = domainSpecialFolders[folderName];
-                return info.skip ? null : new ASC.Mail.Models.MailFolder(info.folder_id, folder.Name);
-            }
-        }
-
-        if (_mailSettings.DefaultFolders == null || !_mailSettings.DefaultFolders.ContainsKey(folderName))
-        {
-            if (fullFolderName.StartsWith("trash")) return null;
-
-            if (DetectUserFolder(folder))
-            {
-                return new ASC.Mail.Models.MailFolder(FolderType.UserFolder, folder.Name);
-            }
-
-            return new ASC.Mail.Models.MailFolder(FolderType.Inbox, folder.Name, new[] { folder.FullName });
-        }
-
-        folderId = (FolderType)_mailSettings.DefaultFolders[folderName];
-        return new ASC.Mail.Models.MailFolder(folderId, folder.Name);
-    }
 
     private bool DetectUserFolder(IMailFolder folder)
     {
@@ -763,43 +668,8 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private bool AddImapFolderToDictionary(IMailFolder folder)
-    {
-        var mailFolder = DetectFolder(folder);
+    private void InvokeImapAction(ImapAction imapAction) => NewActionFromImap?.Invoke(this, imapAction);
 
-        if (mailFolder == null)
-        {
-            return false;
-        }
-        else
-        {
-            foldersDictionary.Add(folder, mailFolder);
-
-            _log.DebugSimpleImapDetectFolder(folder.Name);
-
-            return true;
-        }
-    }
-
-    private void InvokeImapAction(MailUserAction mailUserAction, MessageDescriptor messageDescriptor)
-    {
-        NewActionFromImap?.Invoke(this, new ImapAction()
-        {
-            FolderAction = mailUserAction,
-            MessageFolderName = ImapWorkFolderFullName,
-            MessageUniqueId = messageDescriptor.UniqueId,
-            MessageFolderType = Folder,
-            MessageIdInDB = messageDescriptor.MessageIdInDB,
-            UserFolderId = UserFolderID
-        });
-    }
-
-    private void InvokeImapDeleteAction(MessageDescriptor messageDescriptor)
-    {
-        InvokeImapAction(MailUserAction.SetAsDeleted, messageDescriptor);
-
-        ImapMessagesList?.Remove(messageDescriptor);
-    }
     private void SetEventHandler()
     {
         if (ImapWorkFolder != null)
@@ -829,8 +699,6 @@ public class SimpleImapClient : IDisposable
         var newFolder = rootFolder.Create(name, true);
 
         if (newFolder == null) return false;
-
-        AddImapFolderToDictionary(newFolder);
 
         return true;
     }

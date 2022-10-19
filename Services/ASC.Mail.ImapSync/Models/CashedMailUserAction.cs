@@ -23,6 +23,9 @@
         MoveTo,
         ReceiptStatusChanged,
         Restore,
-        CreateFolder
+        CreateFolder,
+        DeleteFolder,
+        AuthError,
+        CriticalError
     }
 }
