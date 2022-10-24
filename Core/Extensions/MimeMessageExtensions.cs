@@ -221,8 +221,6 @@ public static class MimeMessageExtensions
         if (headers.Exists(h => h.Id == HeaderId.DispositionNotificationTo))
             mail.ReadRequestStatus = true;
 
-        mail.ReadRequestStatus = true;
-
         mail.Folder = folder;
 
         mail.IsNew = unread;
