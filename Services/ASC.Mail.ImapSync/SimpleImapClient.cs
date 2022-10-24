@@ -1,5 +1,4 @@
-﻿
-using System.Net.Security;
+﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -477,6 +476,16 @@ public class SimpleImapClient : IDisposable
 
             var mimeMessage = ImapWorkFolder.GetMessage(messageDescriptors.UniqueId, CancelToken.Token);
 
+            if (mimeMessage == null)
+            {
+                return;
+            }
+
+            if (messageDescriptors.HasFlags && mimeMessage.GetImportance() && !messageDescriptors.IsImpornant)
+            {
+                SetFlagsInImap(new List<MessageDescriptor>() { messageDescriptors }, MailUserAction.SetAsImportant);
+            }
+
             NewMessage?.Invoke(this, (mimeMessage, messageDescriptors));
         }
         catch (Exception ex)
@@ -606,7 +615,7 @@ public class SimpleImapClient : IDisposable
 
     private void CompareImapFlags(MessageDescriptor oldMessageDescriptor, MessageDescriptor newMessageDescriptor)
     {
-        if (!(oldMessageDescriptor.Flags.HasValue && oldMessageDescriptor.Flags.HasValue))
+        if (!(oldMessageDescriptor.HasFlags && oldMessageDescriptor.HasFlags))
         {
             _log.ErrorSimpleImapCompareImapFlagsNoFlags();
         }
@@ -622,21 +631,15 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            bool oldSeen = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-            bool newSeen = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-
-            bool oldImportant = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-            bool newImportant = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-
-            if (oldSeen != newSeen)
+            if (oldMessageDescriptor.IsSeen != newMessageDescriptor.IsSeen)
             {
-                InvokeImapAction(oldSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
+                InvokeImapAction(oldMessageDescriptor.IsSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
                     oldMessageDescriptor);
             }
 
-            if (oldImportant != newImportant)
+            if (oldMessageDescriptor.IsImpornant != newMessageDescriptor.IsImpornant)
             {
-                InvokeImapAction(oldImportant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
+                InvokeImapAction(oldMessageDescriptor.IsImpornant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
                     oldMessageDescriptor);
             }
         }

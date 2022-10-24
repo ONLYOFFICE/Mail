@@ -196,7 +196,7 @@ public static class MimeMessageExtensions
 
         mail.Subject = message.Subject ?? string.Empty;
 
-        mail.Important = message.Importance == MessageImportance.High || message.Priority == MessagePriority.Urgent || message.XPriority == XMessagePriority.Highest;
+        mail.Important = message.GetImportance();
 
         mail.TextBodyOnly = false;
 
@@ -220,6 +220,8 @@ public static class MimeMessageExtensions
 
         if (headers.Exists(h => h.Id == HeaderId.DispositionNotificationTo))
             mail.ReadRequestStatus = true;
+
+        mail.ReadRequestStatus = true;
 
         mail.Folder = folder;
 
@@ -323,5 +325,22 @@ public static class MimeMessageExtensions
         });
 
         return mailMessage;
+    }
+
+    public static bool GetImportanceFromHeader(this MimeMessage message)
+    {
+        var headerPriority = message.Headers.FirstOrDefault(x => x.Id == HeaderId.XPriority);
+
+        if (headerPriority == null) return false;
+
+        return !string.IsNullOrEmpty(headerPriority.Value);
+    }
+
+    public static bool GetImportance(this MimeMessage message)
+    {
+        return message.Importance == MessageImportance.High
+            || message.Priority == MessagePriority.Urgent
+            || message.XPriority == XMessagePriority.Highest
+            || message.GetImportanceFromHeader();
     }
 }
