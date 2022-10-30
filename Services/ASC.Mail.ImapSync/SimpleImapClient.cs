@@ -1,4 +1,6 @@
 ﻿
+using Microsoft.AspNetCore.Components.Forms;
+using net.openstack.Core.Domain.Queues;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -746,6 +748,11 @@ public class SimpleImapClient : IDisposable
             return new ASC.Mail.Models.MailFolder(FolderType.Spam, folder.Name);
         }
 
+        if ((folder.Attributes & FolderAttributes.Drafts) != 0)
+        {
+            return new ASC.Mail.Models.MailFolder(FolderType.Draft, folder.Name);
+        }
+
         if ((folder.Attributes & FolderAttributes.Trash) != 0)
         {
             _trashFolder = folder;
@@ -902,7 +909,7 @@ public class SimpleImapClient : IDisposable
     }
 
     public void TryCreateFolderInIMAP(string name) => AddTask(new Task(() => CreateFolderInIMAP(name)));
-    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags) => AddTask(new Task(() => CreateMessageInIMAP(message, flags)));
+    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task(() => CreateMessageInIMAP(message, flags, messageId)));
 
     private bool CreateFolderInIMAP(string name)
     {
@@ -917,17 +924,20 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private bool CreateMessageInIMAP(MimeMessage message, MessageFlags flags)
+    private bool CreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId)
     {
-        var newMessageUid =ImapWorkFolder.Append(message, flags);
+        var newMessageUid = ImapWorkFolder.Append(message, flags);
 
         if (newMessageUid == null) return false;
 
-        ImapMessagesList.Add(new MessageDescriptor()
+        var messageSamary = ImapWorkFolder.Fetch(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags)
+            .FirstOrDefault();
+
+        if (messageSamary == null) return false;
+
+        ImapMessagesList.Add(new MessageDescriptor(messageSamary)
         {
-            Flags = flags,
-            Index = -1,
-            UniqueId = newMessageUid.Value
+            MessageIdInDB = messageId
         });
 
         return true;

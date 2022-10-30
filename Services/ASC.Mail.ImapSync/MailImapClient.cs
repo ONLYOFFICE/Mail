@@ -575,6 +575,21 @@ public class MailImapClient : IDisposable
 
             if (workFolderMails.Any())
             {
+
+                if (simpleImapClient.Folder == FolderType.Draft)
+                {
+                    foreach (var workFolderMail in workFolderMails)
+                    {
+                        var mimeMessage = ConvertMessageToMimeMessage(workFolderMail.Id, simpleImapClient);
+
+                        MessageFlags messageFlags = workFolderMail.Importance ? MessageFlags.Flagged : MessageFlags.None;
+
+                        simpleImapClient.TryCreateMessageInIMAP(mimeMessage, messageFlags, workFolderMail.Id);
+                    }
+
+                    return;
+                }
+
                 if (!simpleImapClient.UserFolderID.HasValue)
                 {
                     _mailEnginesFactory.MessageEngine.SetRemoved(
@@ -995,25 +1010,56 @@ public class MailImapClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public bool CreateMessageInIMAP(MailInfo message)
+    public MimeMessage ConvertMessageToMimeMessage(int messageId, SimpleImapClient simpleImapClient)
     {
-        var messageIMAP = new MimeMessage();
-        messageIMAP.From. = message.From;
-        messageIMAP.To.Add(message.To);
-        messageIMAP.Subject = message.Subject;
 
-        var attachment = new MimePart("image", "gif")
+        var message = _mailEnginesFactory.MessageEngine.GetMessage(messageId, new MailMessageData.Options
         {
-            Content = new MimeContent(File.OpenRead(path), ContentEncoding.Default),
-            ContentDisposition = new ContentDisposition(ContentDisposition.Attachment),
-            ContentTransferEncoding = ContentEncoding.Base64,
-            FileName = Path.GetFileName(path)
+            LoadImages = false,
+            LoadBody = true,
+            NeedProxyHttp = _mailSettings.NeedProxyHttp,
+            NeedSanitizer = false
+        });
+
+        if (message == null) return null;
+
+
+
+        var to = message.To == null || string.IsNullOrEmpty(message.To) ? new List<string>() : message.To.Split(',').ToList<string>();
+        var cc = message.Cc == null||string.IsNullOrEmpty(message.Cc) ? new List<string>() : message.Cc.Split(',').ToList<string>();
+        var bcc = message.Bcc == null || string.IsNullOrEmpty(message.Bcc) ? new List<string>() : message.Bcc.Split(',').ToList<string>();
+
+        var model = new MessageModel
+        {
+            Id = message.Id,
+            From = simpleImapClient.Account.EMail.Address,
+            To = to,
+            Cc = cc,
+            MimeReplyToId = message.MimeReplyToId,
+            Importance = message.Important,
+            Subject = message.Subject,
+            Tags = message.TagIds,
+            Body = message.HtmlBody,
+            Attachments = message.Attachments,
+            CalendarIcs = message.CalendarEventIcs
         };
 
-        var multipart = new Multipart("mixed");
-        multipart.Add(body);
-        multipart.Add(attachment);
+        var mimeMessageId = message.MimeMessageId;
 
-        message.Body = multipart;
+        var streamId = message.StreamId;
+
+        var previousMailboxId = message.MailboxId;
+
+        var fromAddress = MailUtil.CreateFullEmail(simpleImapClient.Account.Name, simpleImapClient.Account.EMail.Address);
+
+        var compose = new MailDraftData(model.Id, simpleImapClient.Account, fromAddress, model.To, model.Cc, model.Bcc, model.Subject, mimeMessageId,
+                model.MimeReplyToId, model.Importance, model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
+        {
+            PreviousMailboxId = previousMailboxId
+        };
+
+        var _storageManager = clientScope.GetService<StorageManager>();
+
+        return compose.ToMimeMessage(_storageManager);
     }
 }
