@@ -62,3 +62,5 @@ global using System.Threading;
 global using System.Threading.Tasks;
 
 global using ILogger = Microsoft.Extensions.Logging.ILogger;
+
+public delegate MimeMessage ConvertMessageToMimeMessage(int messageId, SimpleImapClient simpleImapClient);

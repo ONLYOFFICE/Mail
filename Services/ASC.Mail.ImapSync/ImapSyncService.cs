@@ -76,7 +76,7 @@ public class ImapSyncService : IHostedService
         }
         try
         {
-            var result= _redisClient.SubscribeQueueKey<ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
+            var result= _redisClient.SubscribeQueueKey<Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
 
             _log.InfoImapSyncService("subscrube to Redis chanel");
 
@@ -90,15 +90,13 @@ public class ImapSyncService : IHostedService
         }
     }
 
-    public async Task CreateNewClient(ASC.Mail.ImapSync.Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
+    public async Task CreateNewClient(Models.RedisCachePubSubItem<CachedTenantUserMailBox> redisCachePubSubItem)
     {
         _log.DebugImapSyncServiceOnlineUsersCount(clients.Count);
 
         var cashedTenantUserMailBox = redisCachePubSubItem.Object;
 
-        if (cashedTenantUserMailBox == null) return;
-
-        if (string.IsNullOrEmpty(cashedTenantUserMailBox.UserName)) return;
+        if (string.IsNullOrEmpty(cashedTenantUserMailBox?.UserName)) return;
 
         if (clients.ContainsKey(cashedTenantUserMailBox.UserName))
         {

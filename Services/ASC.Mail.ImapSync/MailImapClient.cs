@@ -80,31 +80,6 @@ public class MailImapClient : IDisposable
 
                 if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
 
-                if (actionFromCache.Action == MailUserAction.SendDraft || actionFromCache.Action == MailUserAction.UpdateDrafts)
-                {
-                    var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Draft);
-                    try
-                    {
-                        _enginesFactorySemaphore.Wait();
-
-                        foreach (var workFolderMail in actionFromCache.Uds)
-                        {
-                            var mimeMessage = ConvertMessageToMimeMessage(workFolderMail, simpleImapClient);
-
-                            simpleImapClient.TryCreateMessageInIMAP(mimeMessage, MessageFlags.None, workFolderMail);
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                    finally
-                    {
-                        if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-                    }
-                }
-
                 if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
                 {
                     actionFromCache.Data = simpleImapClients.FirstOrDefault(x => x.UserFolderID == (int?)actionFromCache.UserFolderId)?.ImapWorkFolderFullName;
@@ -347,6 +322,8 @@ public class MailImapClient : IDisposable
         try
         {
             var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
+
+            simpleImapClient.convertMessageToMimeMessage = new ConvertMessageToMimeMessage(ConvertMessageToMimeMessage);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -615,7 +592,7 @@ public class MailImapClient : IDisposable
 
                         MessageFlags messageFlags = workFolderMail.Importance ? MessageFlags.Flagged : MessageFlags.None;
 
-                        simpleImapClient.TryCreateMessageInIMAP(mimeMessage, messageFlags, workFolderMail.Id);
+                        simpleImapClient.TryCreateMessageInIMAP(mimeMessage, messageFlags| MessageFlags.Draft, workFolderMail.Id);
                     }
 
                     return;
@@ -1045,8 +1022,6 @@ public class MailImapClient : IDisposable
     {
         MailMessageData message = null;
 
-
-
         try
         {
             message = _mailEnginesFactory.MessageEngine.GetMessage(messageId, new MailMessageData.Options
@@ -1062,7 +1037,6 @@ public class MailImapClient : IDisposable
 
         }
 
-
         if (message == null) return null;
 
         var to = message.To == null || string.IsNullOrEmpty(message.To) ? new List<string>() : message.To.Split(',').ToList<string>();
@@ -1072,7 +1046,7 @@ public class MailImapClient : IDisposable
         var model = new MessageModel
         {
             Id = message.Id,
-            From = simpleImapClient.Account.EMail.Address,
+            From = message.From,
             To = to,
             Cc = cc,
             MimeReplyToId = message.MimeReplyToId,

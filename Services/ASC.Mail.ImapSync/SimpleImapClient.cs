@@ -53,6 +53,7 @@ public class SimpleImapClient : IDisposable
     private readonly ImapClient imap;
     private readonly ConcurrentQueue<Task> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
+    public ConvertMessageToMimeMessage convertMessageToMimeMessage;
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e) => DoneToken?.Cancel();
 
@@ -108,6 +109,27 @@ public class SimpleImapClient : IDisposable
     internal void ExecuteUserAction(CashedMailUserAction cachedMailUserAction)
     {
         if (cachedMailUserAction.Uds.Count == 0 || ImapMessagesList == null) return;
+
+        if (cachedMailUserAction.Action == MailUserAction.SendDraft || cachedMailUserAction.Action == MailUserAction.UpdateDrafts)
+        {
+            if(Folder != FolderType.Draft) return;
+
+            try
+            {
+
+                foreach (var workFolderMail in cachedMailUserAction.Uds)
+                {
+                    var mimeMessage = convertMessageToMimeMessage.Invoke(workFolderMail, this);
+
+                    TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, workFolderMail);
+                }
+
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
 
         try
         {
@@ -928,7 +950,7 @@ public class SimpleImapClient : IDisposable
     {
         if (message == null) return false;
 
-        var newMessageUid = ImapWorkFolder.Append(message, flags);
+        var newMessageUid = ImapWorkFolder.Append(message, MessageFlags.Draft);
 
         if (newMessageUid == null) return false;
 
