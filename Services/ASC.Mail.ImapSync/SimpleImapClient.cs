@@ -926,6 +926,8 @@ public class SimpleImapClient : IDisposable
 
     private bool CreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId)
     {
+        if (message == null) return false;
+
         var newMessageUid = ImapWorkFolder.Append(message, flags);
 
         if (newMessageUid == null) return false;

@@ -23,6 +23,8 @@
         MoveTo,
         ReceiptStatusChanged,
         Restore,
-        CreateFolder
+        CreateFolder,
+        UpdateDrafts,
+        SendDraft
     }
 }

@@ -14,6 +14,8 @@
  *
 */
 
+using ASC.Mail.Core.Engine;
+
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -34,6 +36,8 @@ public class MailImapClient : IDisposable
     private readonly MailSettings _mailSettings;
     private readonly IMailInfoDao _mailInfoDao;
     private readonly StorageFactory _storageFactory;
+    private readonly StorageManager _storageManager;
+
     private readonly FolderEngine _folderEngine;
     private readonly UserFolderEngine _userFolderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
@@ -75,6 +79,31 @@ public class MailImapClient : IDisposable
                 iterationCount++;
 
                 if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
+
+                if (actionFromCache.Action == MailUserAction.SendDraft || actionFromCache.Action == MailUserAction.UpdateDrafts)
+                {
+                    var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Draft);
+                    try
+                    {
+                        _enginesFactorySemaphore.Wait();
+
+                        foreach (var workFolderMail in actionFromCache.Uds)
+                        {
+                            var mimeMessage = ConvertMessageToMimeMessage(workFolderMail, simpleImapClient);
+
+                            simpleImapClient.TryCreateMessageInIMAP(mimeMessage, MessageFlags.None, workFolderMail);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+                    }
+                }
 
                 if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
                 {
@@ -159,6 +188,8 @@ public class MailImapClient : IDisposable
 
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
+
+        _storageManager = clientScope.GetService<StorageManager>();
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -1012,21 +1043,30 @@ public class MailImapClient : IDisposable
 
     public MimeMessage ConvertMessageToMimeMessage(int messageId, SimpleImapClient simpleImapClient)
     {
+        MailMessageData message = null;
 
-        var message = _mailEnginesFactory.MessageEngine.GetMessage(messageId, new MailMessageData.Options
+
+
+        try
         {
-            LoadImages = false,
-            LoadBody = true,
-            NeedProxyHttp = _mailSettings.NeedProxyHttp,
-            NeedSanitizer = false
-        });
+            message = _mailEnginesFactory.MessageEngine.GetMessage(messageId, new MailMessageData.Options
+            {
+                LoadImages = false,
+                LoadBody = true,
+                NeedProxyHttp = _mailSettings.NeedProxyHttp,
+                NeedSanitizer = false
+            });
+        }
+        catch (Exception ex)
+        {
+
+        }
+
 
         if (message == null) return null;
 
-
-
         var to = message.To == null || string.IsNullOrEmpty(message.To) ? new List<string>() : message.To.Split(',').ToList<string>();
-        var cc = message.Cc == null||string.IsNullOrEmpty(message.Cc) ? new List<string>() : message.Cc.Split(',').ToList<string>();
+        var cc = message.Cc == null || string.IsNullOrEmpty(message.Cc) ? new List<string>() : message.Cc.Split(',').ToList<string>();
         var bcc = message.Bcc == null || string.IsNullOrEmpty(message.Bcc) ? new List<string>() : message.Bcc.Split(',').ToList<string>();
 
         var model = new MessageModel
@@ -1058,7 +1098,7 @@ public class MailImapClient : IDisposable
             PreviousMailboxId = previousMailboxId
         };
 
-        var _storageManager = clientScope.GetService<StorageManager>();
+        
 
         return compose.ToMimeMessage(_storageManager);
     }
