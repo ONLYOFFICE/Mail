@@ -14,8 +14,6 @@
  *
 */
 
-using ASC.Mail.Core.Engine;
-
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -303,6 +301,7 @@ public class MailImapClient : IDisposable
             var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
 
             simpleImapClient.convertMessageToMimeMessage = new ConvertMessageToMimeMessage(ConvertMessageToMimeMessage);
+            simpleImapClient.changeMessageId = new ChangeMessageId(ChangeMessageId);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -487,6 +486,8 @@ public class MailImapClient : IDisposable
     {
         if (sender is SimpleImapClient simpleImapClient)
         {
+            if (simpleImapClient.Folder == FolderType.Draft) CreateDraftMessageInDB(simpleImapClient, e.Item1, e.Item2);
+
             CreateMessageInDB(simpleImapClient, e.Item1, e.Item2);
         }
     }
@@ -562,21 +563,6 @@ public class MailImapClient : IDisposable
 
             if (workFolderMails.Any())
             {
-
-                if (simpleImapClient.Folder == FolderType.Draft)
-                {
-                    foreach (var workFolderMail in workFolderMails)
-                    {
-                        var mimeMessage = ConvertMessageToMimeMessage(workFolderMail.Id, simpleImapClient);
-
-                        MessageFlags messageFlags = workFolderMail.Importance ? MessageFlags.Flagged : MessageFlags.None;
-
-                        simpleImapClient.TryCreateMessageInIMAP(mimeMessage, messageFlags| MessageFlags.Draft, workFolderMail.Id);
-                    }
-
-                    return;
-                }
-
                 if (!simpleImapClient.UserFolderID.HasValue)
                 {
                     _mailEnginesFactory.MessageEngine.SetRemoved(
@@ -625,6 +611,127 @@ public class MailImapClient : IDisposable
     }
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
+    {
+        _log.DebugMailImapClientNewMessage(simpleImapClient.ImapWorkFolderFullName, imap_message.UniqueId.ToString());
+
+        bool result = true;
+
+        Stopwatch watch = null;
+
+        if (_mailSettings.Aggregator.CollectStatistics)
+        {
+            watch = new Stopwatch();
+            watch.Start();
+        }
+
+        _enginesFactorySemaphore.Wait();
+
+        message.FixDateIssues(_log, imap_message?.InternalDate);
+
+        bool unread = false, impotant = false;
+
+        if ((imap_message != null) && imap_message.Flags.HasValue)
+        {
+            unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
+            impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
+        }
+
+        message.FixEncodingIssues();
+
+        var folder = simpleImapClient.MailWorkFolder;
+        var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
+
+        _log.InfoMailImapClientGetMessage(uidl, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
+
+        try
+        {
+            var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, null);
+
+            findedMessages.RemoveAll(x => simpleImapClient.IsMessageTracked(x.Id));
+
+            if (findedMessages.Count == 0)
+            {
+                var messageDB = _mailEnginesFactory.MessageEngine
+                    .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
+
+                if (messageDB == null || messageDB.Id <= 0)
+                {
+                    _log.DebugMailImapClientCreateMessageInDBFailed();
+
+                    return false;
+                }
+
+                imap_message.MessageIdInDB = messageDB.Id;
+
+                DoOptionalOperations(messageDB, message, simpleImapClient);
+
+                _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
+
+                needUserUpdate = true;
+
+                return true;
+            }
+
+            MailInfo messageInfo = findedMessages.FirstOrDefault(x => x.IsRemoved == false);
+
+            if (messageInfo == null)
+            {
+                messageInfo = findedMessages[0];
+
+                var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
+                                                    .SetMessageId(messageInfo.Id)
+                                                    .Build();
+
+                if (_mailEnginesFactory.MailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
+            }
+
+            imap_message.MessageIdInDB = messageInfo.Id;
+
+            string imap_message_uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
+
+            if (imap_message_uidl != messageInfo.Uidl)
+            {
+                var updateUidlQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
+                            .SetMessageId(messageInfo.Id)
+                            .Build();
+
+                int resultSetFieldValue = _mailEnginesFactory.MailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
+
+                if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
+            }
+
+            _log.InfoMailImapClientMessageUpdated(messageInfo.Id, simpleImapClient.Folder.ToString(), messageInfo.Subject);
+
+            SetMessageFlagsFromImap(imap_message, messageInfo);
+
+            needUserUpdate = true;
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorMailImapClient($"Create message in DB", ex.Message);
+
+            result = false;
+        }
+        finally
+        {
+            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
+            if (_mailSettings.Aggregator.CollectStatistics && watch != null)
+            {
+                watch.Stop();
+
+                LogStat(simpleImapClient, "CreateMessageInDB", watch.Elapsed, result);
+
+                _log.DebugMailImapClientCreateMessageInDB(watch.Elapsed.TotalMilliseconds);
+            }
+        }
+
+        return result;
+    }
+
+    private bool CreateDraftMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
     {
         _log.DebugMailImapClientNewMessage(simpleImapClient.ImapWorkFolderFullName, imap_message.UniqueId.ToString());
 
@@ -1001,6 +1108,8 @@ public class MailImapClient : IDisposable
     {
         MailMessageData message = null;
 
+        _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
+
         try
         {
             message = _mailEnginesFactory.MessageEngine.GetMessage(messageId, new MailMessageData.Options
@@ -1028,6 +1137,7 @@ public class MailImapClient : IDisposable
             From = message.From,
             To = to,
             Cc = cc,
+            Bcc = bcc,
             MimeReplyToId = message.MimeReplyToId,
             Importance = message.Important,
             Subject = message.Subject,
@@ -1051,8 +1161,15 @@ public class MailImapClient : IDisposable
             PreviousMailboxId = previousMailboxId
         };
 
-        
-
         return compose.ToMimeMessage(_mailEnginesFactory.StorageManager);
+    }
+
+    public bool ChangeMessageId(int id, string newUidl)
+    {
+        _mailEnginesFactory.MailInfoDao.SetFieldValue(
+            SimpleMessagesExp.CreateBuilder(Tenant, UserName)
+            .SetMessageId(id).Build(),
+            "Uidl", newUidl);
+        return true;
     }
 }

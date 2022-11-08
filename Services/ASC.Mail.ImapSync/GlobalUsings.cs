@@ -64,3 +64,4 @@ global using System.Threading.Tasks;
 global using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 public delegate MimeMessage ConvertMessageToMimeMessage(int messageId, SimpleImapClient simpleImapClient);
+public delegate bool ChangeMessageId(int messageId, string newUidl);

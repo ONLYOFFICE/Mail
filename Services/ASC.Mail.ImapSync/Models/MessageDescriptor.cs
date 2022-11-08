@@ -7,6 +7,7 @@ public class MessageDescriptor
     public UniqueId UniqueId;
     public DateTimeOffset? InternalDate;
     public int MessageIdInDB;
+    public int MessageIdOutDB;
 
     public MessageDescriptor(IMessageSummary message)
     {

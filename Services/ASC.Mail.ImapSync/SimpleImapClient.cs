@@ -54,6 +54,7 @@ public class SimpleImapClient : IDisposable
     private readonly ConcurrentQueue<Task> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
     public ConvertMessageToMimeMessage convertMessageToMimeMessage;
+    public ChangeMessageId changeMessageId;
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e) => DoneToken?.Cancel();
 
@@ -116,14 +117,12 @@ public class SimpleImapClient : IDisposable
 
             try
             {
-
                 foreach (var workFolderMail in cachedMailUserAction.Uds)
                 {
                     var mimeMessage = convertMessageToMimeMessage.Invoke(workFolderMail, this);
 
                     TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, workFolderMail);
                 }
-
             }
             catch (Exception ex)
             {
@@ -950,9 +949,9 @@ public class SimpleImapClient : IDisposable
     {
         if (message == null) return false;
 
-        var newMessageUid = ImapWorkFolder.Append(message, MessageFlags.Draft);
+        var newMessageUid = ImapWorkFolder.Append(message, flags|MessageFlags.Draft);
 
-        if (newMessageUid == null) return false;
+        if (!newMessageUid.HasValue) return false;
 
         var messageSamary = ImapWorkFolder.Fetch(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags)
             .FirstOrDefault();
@@ -963,6 +962,8 @@ public class SimpleImapClient : IDisposable
         {
             MessageIdInDB = messageId
         });
+
+        changeMessageId.Invoke(messageId, newMessageUid.Value.ToUidl(Folder));
 
         return true;
     }
