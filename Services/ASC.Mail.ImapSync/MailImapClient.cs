@@ -31,23 +31,16 @@ public class MailImapClient : IDisposable
 
     private readonly SemaphoreSlim _enginesFactorySemaphore;
 
-    private readonly IServiceProvider clientScope;
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly MailSettings _mailSettings;
-    private readonly IMailInfoDao _mailInfoDao;
-    private readonly StorageFactory _storageFactory;
-    private readonly StorageManager _storageManager;
 
-    private readonly FolderEngine _folderEngine;
-    private readonly UserFolderEngine _userFolderEngine;
     private readonly SignalrServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
+
     private readonly ILogger _log;
     private readonly ILogger _logStat;
     private readonly ILoggerProvider _logProvider;
-    private readonly ApiHelper _apiHelper;
-    private readonly TenantManager tenantManager;
-    private readonly SecurityContext securityContext;
+
     private readonly System.Timers.Timer aliveTimer;
     private readonly System.Timers.Timer processActionFromImapTimer;
 
@@ -127,7 +120,7 @@ public class MailImapClient : IDisposable
         Tenant = tenant;
         RedisKey = "ASC.MailAction:" + userName;
 
-        clientScope = serviceProvider.CreateScope().ServiceProvider;
+        var clientScope = serviceProvider.CreateScope().ServiceProvider;
 
         var redisFactory = clientScope.GetService<RedisFactory>();
 
@@ -138,33 +131,19 @@ public class MailImapClient : IDisposable
             throw new Exception($"No redis connection. UserName={UserName}");
         }
 
-        tenantManager = clientScope.GetService<TenantManager>();
-        tenantManager.SetCurrentTenant(tenant);
+        _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
+        _mailEnginesFactory.SetTenantAndUser(tenant, UserName);
 
-        securityContext = clientScope.GetService<SecurityContext>();
-        securityContext.AuthenticateMe(new Guid(UserName));
-
-        _storageFactory = clientScope.GetService<StorageFactory>();
-        _mailInfoDao = clientScope.GetService<IMailInfoDao>();
-
-        _folderEngine = clientScope.GetService<FolderEngine>();
-        _userFolderEngine = clientScope.GetService<UserFolderEngine>();
         _signalrServiceClient = signalrServiceClient;
 
         _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
-
         _logStat = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
         _logProvider = logProvider;
 
         if (_mailSettings.Aggregator.CollectStatistics)
             _logStat = logProvider.CreateLogger("ASC.Mail.Stat");
 
-        _apiHelper = clientScope.GetService<ApiHelper>();
-
-        _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _enginesFactorySemaphore = new SemaphoreSlim(1, 1);
-
-        _storageManager = clientScope.GetService<StorageManager>();
 
         _cancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
@@ -250,7 +229,7 @@ public class MailImapClient : IDisposable
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
 
-        crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
+        //crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
 
         needUserMailBoxUpdate = false;
 
@@ -331,7 +310,7 @@ public class MailImapClient : IDisposable
 
             if (folder.IsUserFolder)
             {
-                var userFolder = _userFolderEngine.GetByNameOrCreate(folder.folderName);
+                var userFolder = _mailEnginesFactory.UserFolderEngine.GetByNameOrCreate(folder.folderName);
 
                 simpleImapClient.UserFolderID = userFolder.Id;
             }
@@ -433,7 +412,7 @@ public class MailImapClient : IDisposable
                     MailUserAction.SetAsDeleted => _mailEnginesFactory.MessageEngine.SetRemoved(ids)
                 };
 
-                if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
+                if (_mailEnginesFactory.FolderEngine.needRecalculateFolders) _mailEnginesFactory.FolderEngine.RecalculateFolders();
 
                 _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), needUserUpdate.ToString().ToUpper(), ids.Count);
 
@@ -617,7 +596,7 @@ public class MailImapClient : IDisposable
 
             needUserUpdate = true;
 
-            if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
+            if (_mailEnginesFactory.FolderEngine.needRecalculateFolders) _mailEnginesFactory.FolderEngine.RecalculateFolders();
         }
     }
 
@@ -642,7 +621,7 @@ public class MailImapClient : IDisposable
             _log.ErrorMailImapClient($"Set massage flag from IMAP", ex.Message);
         }
 
-        if (_folderEngine.needRecalculateFolders) _folderEngine.RecalculateFolders();
+        if (_mailEnginesFactory.FolderEngine.needRecalculateFolders) _mailEnginesFactory.FolderEngine.RecalculateFolders();
     }
 
     private bool CreateMessageInDB(SimpleImapClient simpleImapClient, MimeMessage message, MessageDescriptor imap_message)
@@ -717,7 +696,7 @@ public class MailImapClient : IDisposable
                                                     .SetMessageId(messageInfo.Id)
                                                     .Build();
 
-                if (_mailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
+                if (_mailEnginesFactory.MailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
             }
 
             imap_message.MessageIdInDB = messageInfo.Id;
@@ -730,7 +709,7 @@ public class MailImapClient : IDisposable
                             .SetMessageId(messageInfo.Id)
                             .Build();
 
-                int resultSetFieldValue = _mailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
+                int resultSetFieldValue = _mailEnginesFactory.MailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
 
                 if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
             }
@@ -785,7 +764,7 @@ public class MailImapClient : IDisposable
 
         exp.SetExcludeTagIds(excludetags);
 
-        return _mailInfoDao.GetMailInfoList(exp.Build());
+        return _mailEnginesFactory.MailInfoDao.GetMailInfoList(exp.Build());
     }
 
     private List<MailInfo> GetMailUserFolderMessages(SimpleImapClient simpleImapClient, bool? isRemoved = false)
@@ -796,7 +775,7 @@ public class MailImapClient : IDisposable
             .SetMailboxId(simpleImapClient.Account.MailBoxId)
             .SetUserFolderId(simpleImapClient.UserFolderID.Value);
 
-        return _mailInfoDao.GetMailInfoList(exp.Build());
+        return _mailEnginesFactory.MailInfoDao.GetMailInfoList(exp.Build());
     }
 
     private void LogStat(SimpleImapClient simpleImapClient, string method, TimeSpan duration, bool failed)
@@ -810,7 +789,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var count = _folderEngine.GetUserUnreadMessageCount(UserName);
+            var count = _mailEnginesFactory.FolderEngine.GetUserUnreadMessageCount(UserName);
 
             _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
         }
@@ -964,7 +943,7 @@ public class MailImapClient : IDisposable
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetEmlKey(userId, streamId);
 
-        var storage = _storageFactory.GetMailStorage(tenant);
+        var storage = _mailEnginesFactory.StorageFactory.GetMailStorage(tenant);
 
         try
         {
@@ -1074,6 +1053,6 @@ public class MailImapClient : IDisposable
 
         
 
-        return compose.ToMimeMessage(_storageManager);
+        return compose.ToMimeMessage(_mailEnginesFactory.StorageManager);
     }
 }

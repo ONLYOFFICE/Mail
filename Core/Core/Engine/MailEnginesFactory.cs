@@ -1,4 +1,5 @@
-﻿using SecurityContext = ASC.Core.SecurityContext;
+﻿using ASC.Data.Storage;
+using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
 
@@ -20,6 +21,12 @@ public class MailEnginesFactory
     private FilterEngine _filterEngine;
     private MailboxEngine _mailboxEngine;
     private MessageEngine _messageEngine;
+    private StorageFactory _storageFactory;
+    private StorageManager _storageManager;
+    private FolderEngine _folderEngine;
+    private UserFolderEngine _userFolderEngine;
+    private ApiHelper _apiHelper;
+    private MailInfoDao _mailInfoDao;
 
     public AutoreplyEngine AutoreplyEngine => _autoreplyEngine;
     public CalendarEngine CalendarEngine => _calendarEngine;
@@ -30,6 +37,12 @@ public class MailEnginesFactory
     public FilterEngine FilterEngine => _filterEngine;
     public MailboxEngine MailboxEngine => _mailboxEngine;
     public MessageEngine MessageEngine => _messageEngine;
+    public StorageFactory StorageFactory => _storageFactory;
+    public StorageManager StorageManager => _storageManager;
+    public FolderEngine FolderEngine => _folderEngine;
+    public UserFolderEngine UserFolderEngine => _userFolderEngine;
+    public ApiHelper ApiHelper => _apiHelper;
+    public MailInfoDao MailInfoDao => _mailInfoDao;
 
     public MailEnginesFactory(
         AutoreplyEngine autoreplyEngine,
@@ -42,7 +55,13 @@ public class MailEnginesFactory
         MailboxEngine mailboxEngine,
         MessageEngine messageEngine,
         TenantManager tenantManager,
-        SecurityContext securityContext)
+        SecurityContext securityContext,
+        StorageFactory storageFactory,
+        StorageManager storageManager,
+        FolderEngine folderEngine,
+        UserFolderEngine userFolderEngine,
+        ApiHelper apiHelper,
+        MailInfoDao mailInfoDao)
     {
         _autoreplyEngine = autoreplyEngine;
         _calendarEngine = calendarEngine;
@@ -56,5 +75,17 @@ public class MailEnginesFactory
 
         _tenantManager = tenantManager;
         _securityContext = securityContext;
+        _storageFactory = storageFactory;
+        _folderEngine = folderEngine;
+        _storageManager = storageManager;
+        _userFolderEngine = userFolderEngine;
+        _apiHelper = apiHelper;
+        _mailInfoDao = mailInfoDao;
+    }
+
+    public void SetTenantAndUser(int tenant, string username)
+    {
+        _tenantManager.SetCurrentTenant(tenant);
+        _securityContext.AuthenticateMe(new Guid(username));
     }
 }
