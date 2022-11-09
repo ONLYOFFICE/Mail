@@ -1,7 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Components.Forms;
-using net.openstack.Core.Domain.Queues;
-using System.Net.Security;
+﻿using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -113,7 +110,7 @@ public class SimpleImapClient : IDisposable
 
         if (cachedMailUserAction.Action == MailUserAction.SendDraft || cachedMailUserAction.Action == MailUserAction.UpdateDrafts)
         {
-            if(Folder != FolderType.Draft) return;
+            if (Folder != FolderType.Draft) return;
 
             try
             {
@@ -949,7 +946,14 @@ public class SimpleImapClient : IDisposable
     {
         if (message == null) return false;
 
-        var newMessageUid = ImapWorkFolder.Append(message, flags|MessageFlags.Draft);
+        var oldUidl = ImapMessagesList.FirstOrDefault(x => x.MessageIdInDB == messageId)?.UniqueId;
+
+        var newMessageUid = ImapWorkFolder.Append(message, flags | MessageFlags.Draft);
+
+        if (oldUidl.HasValue && newMessageUid != oldUidl.Value)
+        {
+            ImapWorkFolder.AddFlags(oldUidl.Value, MessageFlags.Deleted, true);
+        }
 
         if (!newMessageUid.HasValue) return false;
 

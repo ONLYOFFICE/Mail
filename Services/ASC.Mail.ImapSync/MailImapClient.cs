@@ -768,7 +768,17 @@ public class MailImapClient : IDisposable
         {
             var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, null);
 
-            findedMessages.RemoveAll(x => simpleImapClient.IsMessageTracked(x.Id));
+            if (findedMessages.Count == 1)
+            {
+                var deleteQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
+                                    .SetMessageId(findedMessages[0].Id)
+                                    .Build();
+
+                _mailEnginesFactory.MailInfoDao.SetFieldValue(deleteQuery, "IsRemoved", true);
+
+                findedMessages.RemoveAt(0);
+            }
+
 
             if (findedMessages.Count == 0)
             {
