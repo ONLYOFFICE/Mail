@@ -108,25 +108,6 @@ public class SimpleImapClient : IDisposable
     {
         if (cachedMailUserAction.Uds.Count == 0 || ImapMessagesList == null) return;
 
-        if (cachedMailUserAction.Action == MailUserAction.SendDraft || cachedMailUserAction.Action == MailUserAction.UpdateDrafts)
-        {
-            if (Folder != FolderType.Draft) return;
-
-            try
-            {
-                foreach (var workFolderMail in cachedMailUserAction.Uds)
-                {
-                    var mimeMessage = convertMessageToMimeMessage.Invoke(workFolderMail, this);
-
-                    TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, workFolderMail);
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
-        }
-
         try
         {
             var messagesOfThisClient = ImapMessagesList.Where(x => cachedMailUserAction.Uds.Contains(x.MessageIdInDB)).ToList();

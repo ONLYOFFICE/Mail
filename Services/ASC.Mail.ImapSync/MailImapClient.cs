@@ -14,6 +14,8 @@
  *
 */
 
+using ASC.Common.Log;
+
 namespace ASC.Mail.ImapSync;
 
 public class MailImapClient : IDisposable
@@ -70,6 +72,39 @@ public class MailImapClient : IDisposable
                 iterationCount++;
 
                 if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
+
+                if (actionFromCache.Action == MailUserAction.SendDraft || actionFromCache.Action == MailUserAction.UpdateDrafts)
+                {
+                    try
+                    {
+                        _enginesFactorySemaphore.Wait();
+
+                        foreach (var mailId in actionFromCache.Uds)
+                        {
+                            var mail=_mailEnginesFactory.GetMailInfo(mailId);
+
+                            if (mail == null) continue;
+
+                            var simpleImapClient = simpleImapClients.Where(x => x.Account.MailBoxId == mail.MailboxId && x.Folder == FolderType.Draft).FirstOrDefault();
+
+                            if (simpleImapClient == null) continue;
+
+                            var mimeMessage = GetMimeMessage(mailId, simpleImapClient.Account);
+
+                            if (mimeMessage == null) continue;
+
+                            simpleImapClient.TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, mailId);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                    finally
+                    {
+                        if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+                    }
+                }
 
                 if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
                 {
@@ -167,6 +202,7 @@ public class MailImapClient : IDisposable
 
         IsReady = true;
         needUserUpdate = false;
+        crmAvailable = _mailEnginesFactory.ApiHelper.IsCrmModuleAvailable();
     }
 
     private List<MailBoxData> GetUserMailBoxes()
@@ -226,8 +262,6 @@ public class MailImapClient : IDisposable
         {
             OnCriticalError?.Invoke(this, EventArgs.Empty);
         }
-
-        //crmAvailable = simpleImapClients.Any(client => client.Account.IsCrmAvailable(tenantManager, securityContext, _apiHelper, _log));
 
         needUserMailBoxUpdate = false;
 
@@ -300,8 +334,7 @@ public class MailImapClient : IDisposable
         {
             var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
 
-            simpleImapClient.convertMessageToMimeMessage = new ConvertMessageToMimeMessage(ConvertMessageToMimeMessage);
-            simpleImapClient.changeMessageId = new ChangeMessageId(ChangeMessageId);
+            simpleImapClient.changeMessageId = new ChangeMessageId(_mailEnginesFactory.ChangeMessageId);
 
             if (!SetEvents(simpleImapClient)) return;
 
@@ -678,26 +711,17 @@ public class MailImapClient : IDisposable
             {
                 messageInfo = findedMessages[0];
 
-                var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
-                                                    .SetMessageId(messageInfo.Id)
-                                                    .Build();
-
-                if (_mailEnginesFactory.MailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
+                if (_mailEnginesFactory.SetUnRemoved(messageInfo.Id)) messageInfo.IsRemoved = false;
             }
 
             imap_message.MessageIdInDB = messageInfo.Id;
 
             string imap_message_uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
 
-            if (imap_message_uidl != messageInfo.Uidl)
+            if (imap_message_uidl != messageInfo.Uidl &&
+                _mailEnginesFactory.ChangeMessageId(messageInfo.Id, imap_message_uidl))
             {
-                var updateUidlQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-                            .SetMessageId(messageInfo.Id)
-                            .Build();
-
-                int resultSetFieldValue = _mailEnginesFactory.MailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
-
-                if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
+                messageInfo.Uidl = imap_message_uidl;
             }
 
             _log.InfoMailImapClientMessageUpdated(messageInfo.Id, simpleImapClient.Folder.ToString(), messageInfo.Subject);
@@ -768,72 +792,26 @@ public class MailImapClient : IDisposable
         {
             var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, null);
 
-            if (findedMessages.Count == 1)
+            if (findedMessages.Any())
             {
-                var deleteQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-                                    .SetMessageId(findedMessages[0].Id)
-                                    .Build();
-
-                _mailEnginesFactory.MailInfoDao.SetFieldValue(deleteQuery, "IsRemoved", true);
-
-                findedMessages.RemoveAt(0);
+                _mailEnginesFactory.MessageEngine.SetRemoved(findedMessages.Select(x => x.Id).ToList());
             }
 
+            var messageDB = _mailEnginesFactory.MessageEngine
+                .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
 
-            if (findedMessages.Count == 0)
+            if (messageDB == null || messageDB.Id <= 0)
             {
-                var messageDB = _mailEnginesFactory.MessageEngine
-                    .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
+                _log.DebugMailImapClientCreateMessageInDBFailed();
 
-                if (messageDB == null || messageDB.Id <= 0)
-                {
-                    _log.DebugMailImapClientCreateMessageInDBFailed();
-
-                    return false;
-                }
-
-                imap_message.MessageIdInDB = messageDB.Id;
-
-                DoOptionalOperations(messageDB, message, simpleImapClient);
-
-                _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
-
-                needUserUpdate = true;
-
-                return true;
+                return false;
             }
 
-            MailInfo messageInfo = findedMessages.FirstOrDefault(x => x.IsRemoved == false);
+            imap_message.MessageIdInDB = messageDB.Id;
 
-            if (messageInfo == null)
-            {
-                messageInfo = findedMessages[0];
+            DoOptionalOperations(messageDB, message, simpleImapClient);
 
-                var restoreQuery = SimpleMessagesExp.CreateBuilder(simpleImapClient.Account.TenantId, simpleImapClient.Account.UserId, isRemoved: true)
-                                                    .SetMessageId(messageInfo.Id)
-                                                    .Build();
-
-                if (_mailEnginesFactory.MailInfoDao.SetFieldValue(restoreQuery, "IsRemoved", false) > 0) messageInfo.IsRemoved = false;
-            }
-
-            imap_message.MessageIdInDB = messageInfo.Id;
-
-            string imap_message_uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
-
-            if (imap_message_uidl != messageInfo.Uidl)
-            {
-                var updateUidlQuery = SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-                            .SetMessageId(messageInfo.Id)
-                            .Build();
-
-                int resultSetFieldValue = _mailEnginesFactory.MailInfoDao.SetFieldValue(updateUidlQuery, "Uidl", imap_message_uidl);
-
-                if (resultSetFieldValue > 0) messageInfo.Uidl = imap_message_uidl;
-            }
-
-            _log.InfoMailImapClientMessageUpdated(messageInfo.Id, simpleImapClient.Folder.ToString(), messageInfo.Subject);
-
-            SetMessageFlagsFromImap(imap_message, messageInfo);
+            _log.InfoMailImapClientMessageSaved(messageDB.Id, messageDB.From, messageDB.Subject, messageDB.IsNew);
 
             needUserUpdate = true;
 
@@ -1114,7 +1092,7 @@ public class MailImapClient : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public MimeMessage ConvertMessageToMimeMessage(int messageId, SimpleImapClient simpleImapClient)
+    public MimeMessage GetMimeMessage(int messageId, MailBoxData mailBoxData)
     {
         MailMessageData message = null;
 
@@ -1132,7 +1110,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-
+            _log.Error($"ConvertMessageToMimeMessage: Can't get message from DB. {ex.Message}");
         }
 
         if (message == null) return null;
@@ -1163,23 +1141,14 @@ public class MailImapClient : IDisposable
 
         var previousMailboxId = message.MailboxId;
 
-        var fromAddress = MailUtil.CreateFullEmail(simpleImapClient.Account.Name, simpleImapClient.Account.EMail.Address);
+        var fromAddress = message.From;
 
-        var compose = new MailDraftData(model.Id, simpleImapClient.Account, fromAddress, model.To, model.Cc, model.Bcc, model.Subject, mimeMessageId,
+        var compose = new MailDraftData(model.Id, mailBoxData, fromAddress, model.To, model.Cc, model.Bcc, model.Subject, mimeMessageId,
                 model.MimeReplyToId, model.Importance, model.Tags, model.Body, streamId, model.Attachments, model.CalendarIcs)
         {
             PreviousMailboxId = previousMailboxId
         };
 
         return compose.ToMimeMessage(_mailEnginesFactory.StorageManager);
-    }
-
-    public bool ChangeMessageId(int id, string newUidl)
-    {
-        _mailEnginesFactory.MailInfoDao.SetFieldValue(
-            SimpleMessagesExp.CreateBuilder(Tenant, UserName)
-            .SetMessageId(id).Build(),
-            "Uidl", newUidl);
-        return true;
     }
 }
