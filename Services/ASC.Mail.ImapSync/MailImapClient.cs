@@ -75,35 +75,7 @@ public class MailImapClient : IDisposable
 
                 if (actionFromCache.Action == MailUserAction.SendDraft || actionFromCache.Action == MailUserAction.UpdateDrafts)
                 {
-                    try
-                    {
-                        _enginesFactorySemaphore.Wait();
-
-                        foreach (var mailId in actionFromCache.Uds)
-                        {
-                            var mail=_mailEnginesFactory.GetMailInfo(mailId);
-
-                            if (mail == null) continue;
-
-                            var simpleImapClient = simpleImapClients.Where(x => x.Account.MailBoxId == mail.MailboxId && x.Folder == FolderType.Draft).FirstOrDefault();
-
-                            if (simpleImapClient == null) continue;
-
-                            var mimeMessage = GetMimeMessage(mailId, simpleImapClient.Account);
-
-                            if (mimeMessage == null) continue;
-
-                            simpleImapClient.TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, mailId);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-
-                    }
-                    finally
-                    {
-                        if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-                    }
+                    ExecutActionUpdateDrafts(actionFromCache);
                 }
 
                 if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
@@ -432,6 +404,8 @@ public class MailImapClient : IDisposable
                 if (imapActionsQueue.TryPeek(out ImapAction nextImapAction))
                 {
                     if (imapAction.IsSameImapFolderAndAction(nextImapAction)) continue;
+
+                    _log.Debug($"Process action from IMAP. Added to chain: {imapAction}");
                 }
 
                 needUserUpdate = imapAction.FolderAction switch
@@ -446,13 +420,7 @@ public class MailImapClient : IDisposable
 
                 if (_mailEnginesFactory.FolderEngine.needRecalculateFolders) _mailEnginesFactory.FolderEngine.RecalculateFolders();
 
-                _log.DebugMailImapClientProcessAction(imapAction.FolderAction.ToString(), needUserUpdate.ToString().ToUpper(), ids.Count);
-
-                StringBuilder sb = new();
-
-                ids.ForEach(x => sb.Append(x.ToString() + ", "));
-
-                _log.DebugMailImapClientProcessActionIds(sb.ToString());
+                _log.Debug($"Process action from IMAP. Chain executed.");
 
                 ids.Clear();
             }
@@ -511,7 +479,14 @@ public class MailImapClient : IDisposable
     {
         if (sender is SimpleImapClient simpleImapClient)
         {
-            UpdateDbFolder(simpleImapClient);
+            if (simpleImapClient.Folder == FolderType.Draft)
+            {
+                UpdateDraftDbFolder(simpleImapClient);
+            }
+            else
+            {
+                UpdateDbFolder(simpleImapClient);
+            }
         }
     }
 
@@ -602,6 +577,71 @@ public class MailImapClient : IDisposable
                         workFolderMails.Select(x => x.Id).ToList(),
                         simpleImapClient.UserFolderID);
                 }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorMailImapClient($"Update folder {simpleImapClient.ImapWorkFolderFullName}", ex.Message);
+        }
+        finally
+        {
+            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+
+            needUserUpdate = true;
+
+            if (_mailEnginesFactory.FolderEngine.needRecalculateFolders) _mailEnginesFactory.FolderEngine.RecalculateFolders();
+        }
+    }
+
+    private void UpdateDraftDbFolder(SimpleImapClient simpleImapClient)
+    {
+        if (simpleImapClient.ImapMessagesList == null)
+        {
+            _log.DebugMailImapClientUpdateDbFolder();
+
+            return;
+        }
+
+        _enginesFactorySemaphore.Wait();
+
+        try
+        {
+            List<MailInfo> workFolderMails = GetMailFolderMessages(simpleImapClient);
+
+            _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
+
+            foreach (var imap_message in simpleImapClient.ImapMessagesList)
+            {
+                _log.DebugMailImapClientUpdateDbFolderMessageUidl(imap_message.UniqueId.Id);
+
+                var uidl = imap_message.UniqueId.ToUidl(simpleImapClient.Folder);
+
+                var db_message = workFolderMails.FirstOrDefault(x => x.Uidl == uidl && (!simpleImapClient.IsMessageTracked(x.Id)));
+
+                if (db_message == null)
+                {
+                    _log.DebugMailImapClientUpdateDbFolderMessageUidlNotFound(uidl);
+
+                    simpleImapClient.TryGetNewMessage(imap_message);
+
+                    continue;
+                }
+
+                imap_message.MessageIdInDB = db_message.Id;
+
+                SetMessageFlagsFromImap(imap_message, db_message);
+
+                workFolderMails.Remove(db_message);
+            }
+
+            if (workFolderMails.Any())
+            {
+                ExecutActionUpdateDrafts(new CashedMailUserAction()
+                {
+                    Action = MailUserAction.UpdateDrafts,
+                    Uds = workFolderMails.Select(x => x.Id).ToList()
+                }, false);
             }
 
         }
@@ -1150,5 +1190,40 @@ public class MailImapClient : IDisposable
         };
 
         return compose.ToMimeMessage(_mailEnginesFactory.StorageManager);
+    }
+
+    private void ExecutActionUpdateDrafts(CashedMailUserAction action, bool needSemaphore = true)
+    {
+        try
+        {
+            if (needSemaphore) _enginesFactorySemaphore.Wait();
+
+            _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
+
+            foreach (var mailId in action.Uds)
+            {
+                var mail = _mailEnginesFactory.GetMailInfo(mailId);
+
+                if (mail == null) continue;
+
+                var simpleImapClient = simpleImapClients.Where(x => x.Account.MailBoxId == mail.MailboxId && x.Folder == FolderType.Draft).FirstOrDefault();
+
+                if (simpleImapClient == null) continue;
+
+                var mimeMessage = GetMimeMessage(mailId, simpleImapClient.Account);
+
+                if (mimeMessage == null) continue;
+
+                simpleImapClient.TryCreateMessageInIMAP(mimeMessage, MessageFlags.Draft, mailId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"ExecutActionUpdateDrafts: {ex.Message}");
+        }
+        finally
+        {
+            if (needSemaphore && _enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+        }
     }
 }

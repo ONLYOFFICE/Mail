@@ -19,5 +19,15 @@
             if (!MessageFolderName.Equals(imapAction.MessageFolderName)) return false;
             return true;
         }
+
+        public override string ToString()
+        {
+            string userFolderString = "Not userFolder.";
+
+            if(UserFolderId.HasValue) userFolderString = $"User Folder Id: {UserFolderId.Value}"; 
+
+            return $"MailBoxId:{MailBoxId}. UniqueId: {MessageUniqueId} in {MessageFolderName} ({MessageFolderType}, {userFolderString}).\n" +
+                $"Action is {FolderAction}. Message Id in DB: {MessageIdInDB}.";
+        }
     }
 }

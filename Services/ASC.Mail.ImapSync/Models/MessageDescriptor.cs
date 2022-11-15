@@ -2,12 +2,11 @@
 
 public class MessageDescriptor
 {
-    public MessageFlags? Flags;
-    public int Index;
-    public UniqueId UniqueId;
-    public DateTimeOffset? InternalDate;
-    public int MessageIdInDB;
-    public int MessageIdOutDB;
+    public MessageFlags? Flags { get; set; }
+    public int Index { get; set; }
+    public UniqueId UniqueId { get; set; }
+    public DateTimeOffset? InternalDate { get; set; }
+    public int MessageIdInDB { get; set; }
 
     public MessageDescriptor(IMessageSummary message)
     {

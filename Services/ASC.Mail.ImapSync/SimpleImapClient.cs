@@ -50,7 +50,6 @@ public class SimpleImapClient : IDisposable
     private readonly ImapClient imap;
     private readonly ConcurrentQueue<Task> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
-    public ConvertMessageToMimeMessage convertMessageToMimeMessage;
     public ChangeMessageId changeMessageId;
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e) => DoneToken?.Cancel();
