@@ -1348,8 +1348,6 @@ public class MessageEngine : BaseEngine
             chainInfo.ChainDate, streamId,
             mailbox.MailBoxId, _log, true);
 
-        message.Important = impotant;
-
         _log.DebugMessageEngineTryStoreMailData(md5);
 
         if (!TryStoreMailData(message, mailbox))

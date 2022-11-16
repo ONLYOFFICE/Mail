@@ -16,4 +16,8 @@ public class MessageDescriptor
         InternalDate = message.InternalDate;
         MessageIdInDB = -1;
     }
+
+    public bool HasFlags=>Flags.HasValue;
+    public bool IsSeen=>Flags.Value.HasFlag(MessageFlags.Seen);
+    public bool IsImpornant=>Flags.Value.HasFlag(MessageFlags.Flagged);
 }

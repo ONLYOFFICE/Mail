@@ -586,7 +586,7 @@ public class SimpleImapClient : IDisposable
 
     private void CompareImapFlags(MessageDescriptor oldMessageDescriptor, MessageDescriptor newMessageDescriptor)
     {
-        if (!(oldMessageDescriptor.Flags.HasValue && oldMessageDescriptor.Flags.HasValue))
+        if (!(oldMessageDescriptor.HasFlags && oldMessageDescriptor.HasFlags))
         {
             _log.ErrorSimpleImapCompareImapFlagsNoFlags();
         }
@@ -602,21 +602,15 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            bool oldSeen = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-            bool newSeen = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Seen);
-
-            bool oldImportant = oldMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-            bool newImportant = newMessageDescriptor.Flags.Value.HasFlag(MessageFlags.Flagged);
-
-            if (oldSeen != newSeen)
+            if (oldMessageDescriptor.IsSeen != newMessageDescriptor.IsSeen)
             {
-                InvokeImapAction(oldSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
+                InvokeImapAction(oldMessageDescriptor.IsSeen ? MailUserAction.SetAsUnread : MailUserAction.SetAsRead,
                     oldMessageDescriptor);
             }
 
-            if (oldImportant != newImportant)
+            if (oldMessageDescriptor.IsImpornant != newMessageDescriptor.IsImpornant)
             {
-                InvokeImapAction(oldImportant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
+                InvokeImapAction(oldMessageDescriptor.IsImpornant ? MailUserAction.SetAsNotImpotant : MailUserAction.SetAsImportant,
                     oldMessageDescriptor);
             }
         }
