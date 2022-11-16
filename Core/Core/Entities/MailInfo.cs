@@ -53,4 +53,5 @@ public class MailInfo
     public string Uidl { get; set; }
     public bool IsRemoved { get; set; }
     public string Intoduction { get; set; }
+    public string MimeMessageId { get; set; }
 }

@@ -370,7 +370,8 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
             Stream = r.Stream,
             Uidl = r.Uidl,
             IsRemoved = r.IsRemoved,
-            Intoduction = r.Introduction
+            Intoduction = r.Introduction,
+            MimeMessageId = r.MimeMessageId
         };
 
         return mailInfo;

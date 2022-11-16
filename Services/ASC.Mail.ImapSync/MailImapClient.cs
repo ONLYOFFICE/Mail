@@ -609,6 +609,8 @@ public class MailImapClient : IDisposable
         {
             List<MailInfo> workFolderMails = GetMailFolderMessages(simpleImapClient);
 
+            var mail= workFolderMails.GroupBy(x=>x.M)
+
             _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
 
             foreach (var imap_message in simpleImapClient.ImapMessagesList)
