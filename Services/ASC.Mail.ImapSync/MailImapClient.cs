@@ -73,6 +73,11 @@ public class MailImapClient : IDisposable
 
                 if (actionFromCache.Action == MailUserAction.StartImapClient) continue;
 
+                if (actionFromCache.Action == MailUserAction.CreateFolder)
+                {
+                    ExecutActionCreateUserFolder(actionFromCache);
+                }
+
                 if (actionFromCache.Action == MailUserAction.SendDraft || actionFromCache.Action == MailUserAction.UpdateDrafts)
                 {
                     ExecutActionUpdateDrafts(actionFromCache);
@@ -92,22 +97,6 @@ public class MailImapClient : IDisposable
         }
 
         _log.DebugMailImapClient($"Read {iterationCount} keys. Total IMAP clients: {simpleImapClients.Count}");
-    }
-
-    public async Task<int> ClearUserRedis()
-    {
-        int result = 0;
-
-        while (true)
-        {
-            var actionFromCache = await _redisClient.PopFromQueue<CashedMailUserAction>(RedisKey);
-
-            if (actionFromCache == null) break;
-
-            result++;
-        }
-
-        return result;
     }
 
     public MailImapClient(
@@ -609,7 +598,16 @@ public class MailImapClient : IDisposable
         {
             List<MailInfo> workFolderMails = GetMailFolderMessages(simpleImapClient);
 
-            var mail= workFolderMails.GroupBy(x=>x.M)
+            if (workFolderMails.Any())
+            {
+                var filteredMail = workFolderMails.GroupBy(x => x.MimeMessageId).Select(x => x.FirstOrDefault(y => y.DateSent == x.Max(z => z.DateSent))).ToList();
+
+                List<int> ids = workFolderMails.Where(x => !(filteredMail.Any(y => y.Id == x.Id))).Select(x => x.Id).ToList();
+
+                if(ids.Any()) _mailEnginesFactory.MessageEngine.SetRemoved(ids);
+
+                workFolderMails = filteredMail;
+            }
 
             _log.DebugMailImapClientUpdateDbFolderMailsCount(workFolderMails.Count);
 
@@ -1226,6 +1224,40 @@ public class MailImapClient : IDisposable
         finally
         {
             if (needSemaphore && _enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+        }
+    }
+
+    private void ExecutActionCreateUserFolder(CashedMailUserAction action)
+    {
+        _enginesFactorySemaphore.Wait();
+
+        try
+        {
+            _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
+
+            var accounts=simpleImapClients.GroupBy(x => x.Account.MailBoxId).Select(x => x.Key).ToList();
+
+            if(accounts.Count==1)
+            {
+                var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Inbox);
+
+                var newFolders=_mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
+
+                foreach(var folder in newFolders)
+                {
+                    var perentFolder = _mailEnginesFactory.UserFolderEngine.Get(folder.ParentId);
+
+                    if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolder.Name);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"ExecutActionCreateUserFolder: {ex.Message}");
+        }
+        finally
+        {
+            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
     }
 }

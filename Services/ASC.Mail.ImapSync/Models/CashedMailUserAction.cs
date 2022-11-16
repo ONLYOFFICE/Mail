@@ -25,6 +25,8 @@
         Restore,
         CreateFolder,
         UpdateDrafts,
-        SendDraft
+        SendDraft,
+        DeleteUserFolder,
+        UpdateUserFolder
     }
 }
