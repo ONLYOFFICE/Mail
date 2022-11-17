@@ -1,4 +1,5 @@
-﻿using System.Net.Security;
+﻿using ASC.Mail.ImapSync.Models;
+using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
 namespace ASC.Mail.ImapSync;
@@ -36,7 +37,7 @@ public class SimpleImapClient : IDisposable
 
     public readonly MailBoxData Account;
     public event EventHandler<ImapAction> NewActionFromImap;
-    public event EventHandler<(MimeMessage, MessageDescriptor)> NewMessage;
+    public event EventHandler<NewMessageFromIMAPData> NewMessage;
     public event EventHandler MessagesListUpdated;
     public event EventHandler<bool> OnCriticalError;
     public event EventHandler<(string, bool)> OnNewFolderCreate;
@@ -881,53 +882,47 @@ public class SimpleImapClient : IDisposable
     }
 
     public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task(() => CreateFolderInIMAP(name, parentName)));
-    public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task(() => DeleteFolderInIMAP(name, parentName)));
+    public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task(() => DeleteFolderInIMAP(name)));
     public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task(() => CreateMessageInIMAP(message, flags, messageId)));
     public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task(() => GetNewMessage(messageDescriptors)));
 
     private async Task CreateFolderInIMAP(string name, string parentName)
     {
-        var parentFolder=foldersDictionary.Keys.FirstOrDefault(x=>x.Name== parentName);
+        var parentFolder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == parentName);
 
-        var newFolder = parentFolder.CreateAsync(name, true);
+        var newFolder = await parentFolder.CreateAsync(name, true);
 
         if (newFolder == null) return;
 
         AddImapFolderToDictionary(newFolder);
-
-        return true;
     }
 
     private async Task DeleteFolderInIMAP(string name)
     {
         var folder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == name);
 
-        folder.DeleteAsync(name, true);
-
-        //foldersDictionary.Remove(folder);
-
-        return true;
+        await folder.DeleteAsync();
     }
 
     private async Task CreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId)
     {
-        if (message == null) return false;
+        if (message == null) return;
 
         var oldUidl = ImapMessagesList.FirstOrDefault(x => x.MessageIdInDB == messageId)?.UniqueId;
 
-        var newMessageUid = ImapWorkFolder.AppendAsync(message, flags | MessageFlags.Draft);
+        var newMessageUid = await ImapWorkFolder.AppendAsync(message, flags | MessageFlags.Draft);
 
         if (oldUidl.HasValue && newMessageUid != oldUidl.Value)
         {
-            ImapWorkFolder.AddFlags(oldUidl.Value, MessageFlags.Deleted, true);
+            await ImapWorkFolder.AddFlagsAsync(oldUidl.Value, MessageFlags.Deleted, true);
         }
 
-        if (!newMessageUid.HasValue) return false;
+        if (!newMessageUid.HasValue) return;
 
-        var messageSamary = ImapWorkFolder.FetchAsync(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags)
+        var messageSamary = (await ImapWorkFolder.FetchAsync(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
             .FirstOrDefault();
 
-        if (messageSamary == null) return false;
+        if (messageSamary == null) return;
 
         ImapMessagesList.Add(new MessageDescriptor(messageSamary)
         {
@@ -936,7 +931,7 @@ public class SimpleImapClient : IDisposable
 
         changeMessageId.Invoke(messageId, newMessageUid.Value.ToUidl(Folder));
 
-        return true;
+        return;
     }
 
     private async Task GetNewMessage(MessageDescriptor messageDescriptors)
@@ -947,9 +942,14 @@ public class SimpleImapClient : IDisposable
         {
             _log.DebugSimpleImapGetNewMessageTaskRun(messageDescriptors.UniqueId.ToString());
 
-            var mimeMessage = ImapWorkFolder.GetMessageAsync(messageDescriptors.UniqueId, CancelToken.Token);
+            var mimeMessage = await ImapWorkFolder.GetMessageAsync(messageDescriptors.UniqueId, CancelToken.Token);
 
-            NewMessage?.Invoke(this, (mimeMessage, messageDescriptors));
+            NewMessage?.Invoke(this, new NewMessageFromIMAPData()
+            {
+                MessageDescriptor = messageDescriptors,
+                MimeMessage = mimeMessage,
+                SimpleImapClient = this
+            });
         }
         catch (Exception ex)
         {
