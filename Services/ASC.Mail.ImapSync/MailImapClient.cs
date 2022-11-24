@@ -717,8 +717,6 @@ public class MailImapClient : IDisposable
             watch.Start();
         }
 
-        _enginesFactorySemaphore.Wait();
-
         message.FixDateIssues(_log, imap_message?.InternalDate);
 
         bool unread = false, impotant = false;
@@ -800,8 +798,6 @@ public class MailImapClient : IDisposable
         }
         finally
         {
-            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-
             if (_mailSettings.Aggregator.CollectStatistics && watch != null)
             {
                 watch.Stop();
@@ -828,8 +824,6 @@ public class MailImapClient : IDisposable
             watch = new Stopwatch();
             watch.Start();
         }
-
-        _enginesFactorySemaphore.Wait();
 
         message.FixDateIssues(_log, imap_message?.InternalDate);
 
@@ -885,8 +879,6 @@ public class MailImapClient : IDisposable
         }
         finally
         {
-            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
-
             if (_mailSettings.Aggregator.CollectStatistics && watch != null)
             {
                 watch.Stop();

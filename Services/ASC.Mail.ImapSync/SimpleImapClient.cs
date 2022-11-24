@@ -1,4 +1,5 @@
 ﻿using ASC.Mail.ImapSync.Models;
+using Nest;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -6,6 +7,7 @@ namespace ASC.Mail.ImapSync;
 
 public class SimpleImapClient : IDisposable
 {
+    int counter= 0;
     public bool IsReady { get; private set; } = false;
     public int? UserFolderID { get; set; } = null;
     public int CheckServerAliveMitutes { get; set; } = 0;
@@ -49,7 +51,7 @@ public class SimpleImapClient : IDisposable
     private CancellationTokenSource DoneToken;
     private readonly CancellationTokenSource CancelToken;
     private readonly ImapClient imap;
-    private readonly ConcurrentQueue<Task> asyncTasks;
+    private readonly ConcurrentQueue<Task<bool>> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
     public ChangeMessageId changeMessageId;
 
@@ -74,7 +76,7 @@ public class SimpleImapClient : IDisposable
 
         CancelToken = CancellationTokenSource.CreateLinkedTokenSource(cancelToken);
 
-        asyncTasks = new ConcurrentQueue<Task>();
+        asyncTasks = new ConcurrentQueue<Task<bool>>();
 
         foldersDictionary = new Dictionary<IMailFolder, ASC.Mail.Models.MailFolder>();
 
@@ -116,7 +118,7 @@ public class SimpleImapClient : IDisposable
 
             if ((FolderType)cachedMailUserAction.Destination == FolderType.Trash)
             {
-                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, _trashFolder)));
+                AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, _trashFolder).Result));
 
                 return;
             }
@@ -142,11 +144,11 @@ public class SimpleImapClient : IDisposable
                     return;
                 }
 
-                AddTask(new Task(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder)));
+                AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
             }
             else
             {
-                AddTask(new Task(() => SetFlagsInImap(messagesOfThisClient, cachedMailUserAction.Action)));
+                AddTask(new Task<bool>(() => SetFlagsInImap(messagesOfThisClient, cachedMailUserAction.Action).Result));
             }
         }
         catch (Exception ex)
@@ -326,9 +328,9 @@ public class SimpleImapClient : IDisposable
     #endregion
 
 
-    private async Task SetNewImapWorkFolder(IMailFolder imapFolder)
+    private async Task<bool> SetNewImapWorkFolder(IMailFolder imapFolder)
     {
-        if (imapFolder == ImapWorkFolder) return;
+        if (imapFolder == ImapWorkFolder) return false;
 
         try
         {
@@ -350,12 +352,16 @@ public class SimpleImapClient : IDisposable
             _log.ErrorSimpleImapSetNewWorkFolder(imapFolder.FullName, ex.Message);
 
             IsReady = false;
+
+            return false;
         }
 
         _log.DebugSimpleImapSetNewWorkFolder(imapFolder.FullName);
+
+        return true;
     }
 
-    private async Task UpdateMessagesList()
+    private async Task<bool> UpdateMessagesList()
     {
         List<MessageDescriptor> newMessageDescriptors;
 
@@ -380,7 +386,7 @@ public class SimpleImapClient : IDisposable
 
             newMessageDescriptors = null;
 
-            return;
+            return false;
         }
 
         if (ImapMessagesList == null)
@@ -393,7 +399,7 @@ public class SimpleImapClient : IDisposable
 
             _log.DebugSimpleImapLoadCountMessages(count);
 
-            return;
+            return true;
         }
 
         List<MessageDescriptor> deleteList = new();
@@ -431,6 +437,8 @@ public class SimpleImapClient : IDisposable
 
             TryGetNewMessage(messageDescriptors);
         });
+
+        return true;
     }
 
     private void UpdateIMAPFolders()
@@ -502,7 +510,7 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private void MoveMessageInImap(IMailFolder sourceFolder, List<MessageDescriptor> messageDescriptors, IMailFolder destinationFolder)
+    private async Task<bool> MoveMessageInImap(IMailFolder sourceFolder, List<MessageDescriptor> messageDescriptors, IMailFolder destinationFolder)
     {
         var sFolder = sourceFolder == null ? "" : sourceFolder.Name;
         var dFolder = destinationFolder == null ? "" : destinationFolder.Name;
@@ -511,7 +519,7 @@ public class SimpleImapClient : IDisposable
         {
             _log.DebugSimpleImapBadParametrs(sFolder, dFolder);
 
-            return;
+            return false;
         }
 
         var uniqueIds = messageDescriptors.Select(x => x.UniqueId).ToList();
@@ -520,17 +528,21 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-            var returnedUidl = sourceFolder.MoveTo(uniqueIds, destinationFolder);
+            var returnedUidl = await sourceFolder.MoveToAsync(uniqueIds, destinationFolder);
 
             messageDescriptors.ForEach(messageDescriptor => ImapMessagesList.Remove(messageDescriptor));
         }
         catch (Exception ex)
         {
             _log.ErrorSimpleImapMoveMessageInImap(ex.Message);
+
+            return false;
         }
+
+        return true;
     }
 
-    private bool SetFlagsInImap(List<MessageDescriptor> messageDescriptors, MailUserAction action)
+    private async Task<bool> SetFlagsInImap(List<MessageDescriptor> messageDescriptors, MailUserAction action)
     {
         if (messageDescriptors.Count == 0) return false;
 
@@ -544,7 +556,7 @@ public class SimpleImapClient : IDisposable
             {
                 case MailUserAction.SetAsRead:
 
-                    ImapWorkFolder.AddFlags(uniqueIds, MessageFlags.Seen, true);
+                    await ImapWorkFolder.AddFlagsAsync(uniqueIds, MessageFlags.Seen, true);
 
                     messageDescriptors.ForEach(x => x.Flags |= MessageFlags.Seen);
 
@@ -552,7 +564,7 @@ public class SimpleImapClient : IDisposable
 
                 case MailUserAction.SetAsUnread:
 
-                    ImapWorkFolder.RemoveFlags(uniqueIds, MessageFlags.Seen, true);
+                    await ImapWorkFolder.RemoveFlagsAsync(uniqueIds, MessageFlags.Seen, true);
 
                     messageDescriptors.ForEach(x => x.Flags = x.Flags.Value.HasFlag(MessageFlags.Seen) ? x.Flags.Value ^ MessageFlags.Seen : x.Flags.Value);
 
@@ -560,7 +572,7 @@ public class SimpleImapClient : IDisposable
 
                 case MailUserAction.SetAsImportant:
 
-                    ImapWorkFolder.AddFlags(uniqueIds, MessageFlags.Flagged, true);
+                    await ImapWorkFolder.AddFlagsAsync(uniqueIds, MessageFlags.Flagged, true);
 
                     messageDescriptors.ForEach(x => x.Flags |= MessageFlags.Flagged);
 
@@ -568,7 +580,7 @@ public class SimpleImapClient : IDisposable
 
                 case MailUserAction.SetAsNotImpotant:
 
-                    ImapWorkFolder.RemoveFlags(uniqueIds, MessageFlags.Flagged, true);
+                    await ImapWorkFolder.RemoveFlagsAsync(uniqueIds, MessageFlags.Flagged, true);
 
                     messageDescriptors.ForEach(x => x.Flags = x.Flags.Value.HasFlag(MessageFlags.Flagged) ? x.Flags.Value ^ MessageFlags.Flagged : x.Flags.Value);
 
@@ -623,7 +635,7 @@ public class SimpleImapClient : IDisposable
         oldMessageDescriptor.Flags = newMessageDescriptor.Flags;
     }
 
-    private void TaskManager(Task previosTask)
+    private async Task TaskManager(Task<bool> previosTask)
     {
         if (previosTask.Exception != null)
         {
@@ -632,13 +644,15 @@ public class SimpleImapClient : IDisposable
 
         if (CancelToken.IsCancellationRequested) return;
 
-        if (asyncTasks.TryDequeue(out var task))
-        {
-            task.ContinueWith(TaskManager);
+        var result = previosTask.Result;
 
+        while (asyncTasks.TryDequeue(out var task))
+        {
             task.Start();
 
-            return;
+            result= await task.WaitAsync(CancelToken.Token);
+
+            //return;
         }
 
         if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
@@ -654,7 +668,7 @@ public class SimpleImapClient : IDisposable
         }
     }
 
-    private void AddTask(Task task)
+    private void AddTask(Task<bool> task)
     {
         asyncTasks.Enqueue(task);
 
@@ -881,32 +895,36 @@ public class SimpleImapClient : IDisposable
         }
     }
 
-    public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task(() => CreateFolderInIMAP(name, parentName)));
-    public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task(() => DeleteFolderInIMAP(name)));
-    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task(() => CreateMessageInIMAP(message, flags, messageId)));
-    public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task(() => GetNewMessage(messageDescriptors)));
+    public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => CreateFolderInIMAP(name, parentName).Result));
+    public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => DeleteFolderInIMAP(name).Result));
+    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task<bool>(() =>CreateMessageInIMAP(message, flags, messageId).Result));
+    public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task<bool>(() => GetNewMessage(messageDescriptors).Result));
 
-    private async Task CreateFolderInIMAP(string name, string parentName)
+    private async Task<bool> CreateFolderInIMAP(string name, string parentName)
     {
         var parentFolder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == parentName);
 
         var newFolder = await parentFolder.CreateAsync(name, true);
 
-        if (newFolder == null) return;
+        if (newFolder == null) return false;
 
         AddImapFolderToDictionary(newFolder);
+
+        return true;
     }
 
-    private async Task DeleteFolderInIMAP(string name)
+    private async Task<bool> DeleteFolderInIMAP(string name)
     {
         var folder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == name);
 
         await folder.DeleteAsync();
+
+        return true;
     }
 
-    private async Task CreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId)
+    private async Task<bool> CreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId)
     {
-        if (message == null) return;
+        if (message == null) return false;
 
         var oldUidl = ImapMessagesList.FirstOrDefault(x => x.MessageIdInDB == messageId)?.UniqueId;
 
@@ -917,12 +935,12 @@ public class SimpleImapClient : IDisposable
             await ImapWorkFolder.AddFlagsAsync(oldUidl.Value, MessageFlags.Deleted, true);
         }
 
-        if (!newMessageUid.HasValue) return;
+        if (!newMessageUid.HasValue) return false;
 
         var messageSamary = (await ImapWorkFolder.FetchAsync(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
             .FirstOrDefault();
 
-        if (messageSamary == null) return;
+        if (messageSamary == null) return false;
 
         ImapMessagesList.Add(new MessageDescriptor(messageSamary)
         {
@@ -931,12 +949,12 @@ public class SimpleImapClient : IDisposable
 
         changeMessageId.Invoke(messageId, newMessageUid.Value.ToUidl(Folder));
 
-        return;
+        return true;
     }
 
-    private async Task GetNewMessage(MessageDescriptor messageDescriptors)
+    private async Task<bool> GetNewMessage(MessageDescriptor messageDescriptors)
     {
-        if (messageDescriptors == null) return;
+        if (messageDescriptors == null) return false;
 
         try
         {
@@ -950,10 +968,14 @@ public class SimpleImapClient : IDisposable
                 MimeMessage = mimeMessage,
                 SimpleImapClient = this
             });
+
+            return true;
         }
         catch (Exception ex)
         {
             _log.ErrorSimpleImapGetNewMessageTryFetchMime(messageDescriptors.UniqueId.ToString(), ex.Message);
+
+            return false;
         }
     }
 }
