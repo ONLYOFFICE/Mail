@@ -1,5 +1,4 @@
 ﻿using ASC.Mail.ImapSync.Models;
-using Nest;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -7,7 +6,7 @@ namespace ASC.Mail.ImapSync;
 
 public class SimpleImapClient : IDisposable
 {
-    int counter= 0;
+    public readonly MessageSummaryItems messageSummaryItems = MessageSummaryItems.Envelope | MessageSummaryItems.UniqueId | MessageSummaryItems.Flags;
     public bool IsReady { get; private set; } = false;
     public int? UserFolderID { get; set; } = null;
     public int CheckServerAliveMitutes { get; set; } = 0;
@@ -53,7 +52,6 @@ public class SimpleImapClient : IDisposable
     private readonly ImapClient imap;
     private readonly ConcurrentQueue<Task<bool>> asyncTasks;
     private readonly Dictionary<IMailFolder, ASC.Mail.Models.MailFolder> foldersDictionary;
-    public ChangeMessageId changeMessageId;
 
     private void ImapMessageFlagsChanged(object sender, MessageFlagsChangedEventArgs e) => DoneToken?.Cancel();
 
@@ -371,7 +369,8 @@ public class SimpleImapClient : IDisposable
 
             if (ImapWorkFolder.Count > 0)
             {
-                newMessageDescriptors = (await ImapWorkFolder.FetchAsync(0, -1, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
+                newMessageDescriptors = (await ImapWorkFolder.FetchAsync(0, -1, messageSummaryItems))
+                    .Where(x => x.Flags.HasValue && !x.Flags.Value.HasFlag(MessageFlags.Deleted))
                     .Select(x => new MessageDescriptor(x)).ToList();
             }
             else
@@ -644,15 +643,13 @@ public class SimpleImapClient : IDisposable
 
         if (CancelToken.IsCancellationRequested) return;
 
-        var result = previosTask.Result;
-
         while (asyncTasks.TryDequeue(out var task))
         {
             task.Start();
 
-            result= await task.WaitAsync(CancelToken.Token);
+            var result = await task.WaitAsync(CancelToken.Token);
 
-            //return;
+            if (!result) _log.WarnSimpleImapAddTask($"Task {task.Id} fault.");
         }
 
         if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
@@ -897,7 +894,7 @@ public class SimpleImapClient : IDisposable
 
     public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => CreateFolderInIMAP(name, parentName).Result));
     public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => DeleteFolderInIMAP(name).Result));
-    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task<bool>(() =>CreateMessageInIMAP(message, flags, messageId).Result));
+    public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task<bool>(() => CreateMessageInIMAP(message, flags, messageId).Result));
     public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task<bool>(() => GetNewMessage(messageDescriptors).Result));
 
     private async Task<bool> CreateFolderInIMAP(string name, string parentName)
@@ -926,28 +923,34 @@ public class SimpleImapClient : IDisposable
     {
         if (message == null) return false;
 
-        var oldUidl = ImapMessagesList.FirstOrDefault(x => x.MessageIdInDB == messageId)?.UniqueId;
+        var oldMessage = ImapMessagesList.FirstOrDefault(x => x.MessageIdInDB == messageId);
 
         var newMessageUid = await ImapWorkFolder.AppendAsync(message, flags | MessageFlags.Draft);
 
-        if (oldUidl.HasValue && newMessageUid != oldUidl.Value)
-        {
-            await ImapWorkFolder.AddFlagsAsync(oldUidl.Value, MessageFlags.Deleted, true);
-        }
-
         if (!newMessageUid.HasValue) return false;
 
-        var messageSamary = (await ImapWorkFolder.FetchAsync(new List<UniqueId>() { newMessageUid.Value }, MessageSummaryItems.UniqueId | MessageSummaryItems.Flags))
+        if (oldMessage != null && newMessageUid != oldMessage.UniqueId)
+        {
+            await ImapWorkFolder.AddFlagsAsync(oldMessage.UniqueId, MessageFlags.Deleted, true);
+
+            await ImapWorkFolder.ExpungeAsync();
+
+            ImapMessagesList.Remove(oldMessage);
+        }
+
+        var messageSamary = (await ImapWorkFolder.FetchAsync(new List<UniqueId>() { newMessageUid.Value }, messageSummaryItems))
             .FirstOrDefault();
 
         if (messageSamary == null) return false;
 
-        ImapMessagesList.Add(new MessageDescriptor(messageSamary)
+        var newMessageDescriptor = new MessageDescriptor(messageSamary)
         {
             MessageIdInDB = messageId
-        });
+        };
 
-        changeMessageId.Invoke(messageId, newMessageUid.Value.ToUidl(Folder));
+        ImapMessagesList.Add(newMessageDescriptor);
+
+        InvokeImapAction(MailUserAction.MessageUidlUpdate, newMessageDescriptor);
 
         return true;
     }

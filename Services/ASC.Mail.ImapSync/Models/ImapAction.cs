@@ -13,6 +13,7 @@
         public bool IsSameImapFolderAndAction(ImapAction imapAction)
         {
             if (imapAction == null) return false;
+            if (imapAction.FolderAction == MailUserAction.MessageUidlUpdate) return false;
             if (MailBoxId != imapAction.MailBoxId) return false;
             if (MessageFolderType != imapAction.MessageFolderType) return false;
             if (FolderAction != imapAction.FolderAction) return false;

@@ -57,5 +57,3 @@ global using System.Threading;
 global using System.Threading.Tasks;
 
 global using ILogger = Microsoft.Extensions.Logging.ILogger;
-
-public delegate bool ChangeMessageId(int messageId, string newUidl);

@@ -7,6 +7,7 @@ public class MessageDescriptor
     public UniqueId UniqueId { get; set; }
     public DateTimeOffset? InternalDate { get; set; }
     public int MessageIdInDB { get; set; }
+    public string IMAPMessageId { get; set; }
 
     public MessageDescriptor(IMessageSummary message)
     {
@@ -15,9 +16,10 @@ public class MessageDescriptor
         UniqueId = message.UniqueId;
         InternalDate = message.InternalDate;
         MessageIdInDB = -1;
+        IMAPMessageId = message.Envelope?.MessageId;
     }
 
-    public bool HasFlags=>Flags.HasValue;
-    public bool IsSeen=>Flags.Value.HasFlag(MessageFlags.Seen);
-    public bool IsImpornant=>Flags.Value.HasFlag(MessageFlags.Flagged);
+    public bool HasFlags => Flags.HasValue;
+    public bool IsSeen => Flags.Value.HasFlag(MessageFlags.Seen);
+    public bool IsImpornant => Flags.Value.HasFlag(MessageFlags.Flagged);
 }

@@ -314,8 +314,6 @@ public class MailImapClient : IDisposable
         {
             var simpleImapClient = new SimpleImapClient(mailbox, _mailSettings, _logProvider, folder.folderName, _cancelToken.Token);
 
-            simpleImapClient.changeMessageId = new ChangeMessageId(_mailEnginesFactory.ChangeMessageId);
-
             if (!SetEvents(simpleImapClient)) return;
 
             simpleImapClients.Add(simpleImapClient);
@@ -429,6 +427,8 @@ public class MailImapClient : IDisposable
                     MailUserAction.ReceiptStatusChanged => false,
                     MailUserAction.Restore => false,
                     MailUserAction.CreateFolder => false,
+                    MailUserAction.MessageUidlUpdate => _mailEnginesFactory.ChangeMessageId(imapAction.MessageIdInDB,
+                    imapAction.MessageUniqueId.ToUidl(imapAction.MessageFolderType)),
                     _ => false
                 };
 
@@ -641,11 +641,16 @@ public class MailImapClient : IDisposable
 
                 if (db_message == null)
                 {
-                    _log.DebugMailImapClientDBPipeline($"Update folder {simpleImapClient.ImapWorkFolderFullName} in DB. Message {uidl} didn't found.");
+                    db_message = workFolderMails.FirstOrDefault(x => x.MimeMessageId == imap_message.IMAPMessageId);
 
-                    simpleImapClient.TryGetNewMessage(imap_message);
+                    if (db_message == null)
+                    {
+                        _log.DebugMailImapClientDBPipeline($"Update folder {simpleImapClient.ImapWorkFolderFullName} in DB. Message {uidl} didn't found.");
 
-                    continue;
+                        simpleImapClient.TryGetNewMessage(imap_message);
+
+                        continue;
+                    }
                 }
 
                 imap_message.MessageIdInDB = db_message.Id;
@@ -844,7 +849,7 @@ public class MailImapClient : IDisposable
 
         try
         {
-            var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, null);
+            var findedMessages = GetMailFolderMessages(simpleImapClient, message.MessageId, false);
 
             if (findedMessages.Any())
             {

@@ -2,8 +2,6 @@
 {
     public class CashedMailUserAction
     {
-        public string UserName { get; set; }
-        public int Tenant { get; set; }
         public List<int> Uds { get; set; }
         public MailUserAction Action { get; set; }
         public int Destination { get; set; }
@@ -27,6 +25,7 @@
         UpdateDrafts,
         SendDraft,
         DeleteUserFolder,
-        UpdateUserFolder
+        UpdateUserFolder,
+        MessageUidlUpdate
     }
 }
