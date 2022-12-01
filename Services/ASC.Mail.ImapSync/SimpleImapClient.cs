@@ -108,15 +108,25 @@ public class SimpleImapClient : IDisposable
     {
         if (cachedMailUserAction.Uds.Count == 0 || ImapMessagesList == null) return;
 
+        var messagesOfThisClient = ImapMessagesList.Where(x => cachedMailUserAction.Uds.Contains(x.MessageIdInDB)).ToList();
+
+        if (messagesOfThisClient.Count == 0) return;
+
         try
         {
-            var messagesOfThisClient = ImapMessagesList.Where(x => cachedMailUserAction.Uds.Contains(x.MessageIdInDB)).ToList();
-
-            if (messagesOfThisClient.Count == 0) return;
 
             if ((FolderType)cachedMailUserAction.Destination == FolderType.Trash)
             {
                 AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, _trashFolder).Result));
+
+                return;
+            }
+
+            if (Folder == FolderType.Draft && cachedMailUserAction.Action == MailUserAction.SendDraft)
+            {
+                IMailFolder imapDestinationFolder= foldersDictionary.FirstOrDefault(x => x.Value.Folder== FolderType.Draft).Key;
+
+                AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
 
                 return;
             }
@@ -131,7 +141,6 @@ public class SimpleImapClient : IDisposable
                 }
                 else
                 {
-
                     imapDestinationFolder = GetImapFolderByType(cachedMailUserAction.Destination);
                 }
 

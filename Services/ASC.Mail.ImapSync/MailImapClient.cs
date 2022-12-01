@@ -16,6 +16,7 @@
 
 using ASC.Common.Log;
 using ASC.Mail.ImapSync.Models;
+using System.Linq;
 
 namespace ASC.Mail.ImapSync;
 
@@ -662,6 +663,22 @@ public class MailImapClient : IDisposable
 
             if (workFolderMails.Any())
             {
+                //Checking emails in work folder, if it was sent already
+
+                var sentFolderIMAPClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Sent);
+
+                if (sentFolderIMAPClient != null)
+                {
+                    for(int i=workFolderMails.Count-1; i>=0; i--)
+                    {
+                        var workFolderMail = workFolderMails[i];
+
+                        if(sentFolderIMAPClient.ImapMessagesList.Any(x=>x.IMAPMessageId== workFolderMail.MimeMessageId))
+                        {
+                            workFolderMails.Remove(workFolderMail);
+                        }
+                    }
+                }
                 ExecutActionUpdateDrafts(new CashedMailUserAction()
                 {
                     Action = MailUserAction.UpdateDrafts,
