@@ -76,10 +76,11 @@ public class MailImapClient : IDisposable
 
                 switch (actionFromCache.Action)
                 {
-                    case MailUserAction.SendDraft:
-                        break;
                     case MailUserAction.StartImapClient:
                     case MailUserAction.Nothing:
+                        break;
+                    case MailUserAction.SendDraft:
+                        simpleImapClients.FirstOrDefault(x=>x.Folder==FolderType.Draft).ExecuteUserAction(actionFromCache);
                         break;
                     case MailUserAction.SetAsRead:
                     case MailUserAction.SetAsUnread:

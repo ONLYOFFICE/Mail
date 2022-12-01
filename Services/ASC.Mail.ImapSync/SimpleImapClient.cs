@@ -124,7 +124,7 @@ public class SimpleImapClient : IDisposable
 
             if (Folder == FolderType.Draft && cachedMailUserAction.Action == MailUserAction.SendDraft)
             {
-                IMailFolder imapDestinationFolder= foldersDictionary.FirstOrDefault(x => x.Value.Folder== FolderType.Draft).Key;
+                IMailFolder imapDestinationFolder= foldersDictionary.FirstOrDefault(x => x.Value.Folder== FolderType.Sent).Key;
 
                 AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
 
