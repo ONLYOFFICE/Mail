@@ -30,15 +30,15 @@
 			"ConnectRetry": 2,
 			"Database": 0,
 			"Hosts": [
-        {
-          "Host": "localhost",
-          "Port": "6379"
-        }
+			  {
+				"Host": "192.168.0.100",
+				"Port": "6379"
+			  }
 			]
 			}
     },
     "Defines": {
-      "ImapSyncStartDate":"9999-12-31",
+      "ImapSyncStartDate":"2021-12-31",
       "AuthErrorWarningTimeout": "00:05:00",
       "AuthErrorDisableMailboxTimeout": "00:30:00",
       "CheckTimerInterval": "00:00:10",
