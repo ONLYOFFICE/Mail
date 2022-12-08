@@ -34,7 +34,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class AccountEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly SecurityContext _securityContext;

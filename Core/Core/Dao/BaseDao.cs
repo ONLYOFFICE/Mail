@@ -27,7 +27,7 @@ namespace ASC.Mail.Core.Dao;
 using SecurityContext = ASC.Core.SecurityContext;
 public abstract class BaseMailDao
 {
-    protected int Tenant => _tenantManager.GetCurrentTenant().Id;
+    protected int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     protected string UserId => _securityContext.CurrentAccount.ID.ToString();
     public Lazy<MailDbContext> LazyMailDbContext { get; }
     public MailDbContext MailDbContext => LazyMailDbContext.Value;

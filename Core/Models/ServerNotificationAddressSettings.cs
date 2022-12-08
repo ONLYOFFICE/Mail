@@ -27,7 +27,7 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract]
-public class ServerNotificationAddressSettings : ISettings<ServerNotificationAddressSettings>
+public class ServerNotificationAddressSettings 
 {
     [DataMember]
     public string NotificationAddress { get; set; }

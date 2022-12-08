@@ -70,10 +70,10 @@ public class OperationEngine
         FactoryIndexer<MailMail> factoryIndexer,
         TempStream tempStream,
         IServiceProvider serviceProvider,
-        IDistributedTaskQueueFactory queueFactory,
         ILoggerProvider logProvider)
     {
-        _tasks = queueFactory.CreateQueue("mailOperations");
+        _tasks = _serviceProvider.GetRequiredService<DistributedTaskQueue>();
+        _tasks.Name = "mailOperations";
 
         _tenantManager = tenantManager;
         _securityContext = securityContext;
@@ -102,13 +102,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.RemoveMailbox;
             })
@@ -153,13 +153,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.DownloadAllAttachments;
             })
@@ -201,13 +201,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.RecalculateFolders;
             });
@@ -235,14 +235,14 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
                 var oSource = o.GetProperty<string>(MailOperation.SOURCE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.CheckDomainDns &&
                        oSource == domainName;
@@ -272,13 +272,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.RemoveUserFolder;
             })
@@ -322,7 +322,7 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
@@ -391,13 +391,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.RemoveDomain;
             })
@@ -433,13 +433,13 @@ public class OperationEngine
         var tenant = _tenantManager.GetCurrentTenant();
         var user = _securityContext.CurrentAccount;
 
-        var operations = _tasks.GetAllTasks()
+        var operations = _tasks.GetTasks()
             .Where(o =>
             {
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.RemoveMailbox;
             })
@@ -473,7 +473,7 @@ public class OperationEngine
     public MailOperationStatus QueueTask(MailOperation op, Func<DistributedTask, string> translateMailOperationStatus = null)
     {
         var task = op.GetDistributedTask();
-        _tasks.EnqueueTask(op.RunJob, task);
+        _tasks.QueueTask(op.RunJob, task);
         return GetMailOperationStatus(task.Id, translateMailOperationStatus);
     }
 
@@ -481,7 +481,7 @@ public class OperationEngine
     {
         var tenant = _tenantManager.GetCurrentTenant().Id;
 
-        var operations = _tasks.GetAllTasks().Where(
+        var operations = _tasks.GetTasks().Where(
                 o =>
                     o.GetProperty<int>(MailOperation.TENANT) == tenant &&
                     o.GetProperty<string>(MailOperation.OWNER) == _securityContext.CurrentAccount.ID.ToString());
@@ -515,7 +515,7 @@ public class OperationEngine
         if (string.IsNullOrEmpty(operationId))
             return defaultResult;
 
-        var operations = _tasks.GetAllTasks().ToList();
+        var operations = _tasks.GetTasks().ToList();
 
         foreach (var o in operations)
         {
@@ -523,7 +523,7 @@ public class OperationEngine
                 continue;
 
             o.SetProperty(MailOperation.PROGRESS, 100);
-            _tasks.DequeueTask(o.Id);
+            _tasks.GetTask(o.Id);
         }
 
         var tenant = _tenantManager.GetCurrentTenant().Id;

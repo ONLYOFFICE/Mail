@@ -110,7 +110,7 @@ public class ApiHelper
                         _httpContext.Request.Url().ToString())
                       : "null";
 
-        _log.DebugApiHelperSetup(Tenant.Id, user.ID, user.IsAuthenticated, _scheme, httpCon);
+        _log.DebugApiHelperSetup(Tenant.TenantId, user.ID, user.IsAuthenticated, _scheme, httpCon);
 
         if (!user.IsAuthenticated)
             throw new AuthenticationException("User not authenticated");
@@ -139,7 +139,7 @@ public class ApiHelper
         _token = _securityContext.AuthenticateMe(_securityContext.CurrentAccount.ID);
     }
 
-    public IRestResponse Execute(RestRequest request)
+    public RestResponse Execute(RestRequest request)
     {
         Setup();
 
@@ -165,7 +165,7 @@ public class ApiHelper
     public DefineConstants.TariffType GetTenantTariff(int tenantOverdueDays)
     {
         _log.DebugApiHelperCreateTariffRequest();
-        var request = new RestRequest("portal/tariff.json", Method.GET);
+        var request = new RestRequest("portal/tariff.json", Method.Get);
 
         request.AddHeader("Payment-Info", "false");
 
@@ -222,7 +222,7 @@ public class ApiHelper
 
     public void RemoveTeamlabMailbox(int mailboxId)
     {
-        var request = new RestRequest("mailserver/mailboxes/remove/{id}", Method.DELETE);
+        var request = new RestRequest("mailserver/mailboxes/remove/{id}", Method.Delete);
 
         request.AddUrlSegment("id", mailboxId.ToString(CultureInfo.InvariantCulture));
 
@@ -238,7 +238,7 @@ public class ApiHelper
 
     public void SendMessage(MailMessageData message, bool isAutoreply = false)
     {
-        var request = new RestRequest("mail/messages/send.json", Method.PUT);
+        var request = new RestRequest("mail/messages/send.json", Method.Put);
 
         var jObject = new JObject { { "id", message.Id } };
 
@@ -288,7 +288,7 @@ public class ApiHelper
 
     public List<string> SearchEmails(string term)
     {
-        var request = new RestRequest("mail/emails/search.json", Method.GET);
+        var request = new RestRequest("mail/emails/search.json", Method.Get);
 
         request.AddParameter("term", term);
 
@@ -313,7 +313,7 @@ public class ApiHelper
 
     public List<string> SearchCrmEmails(string term, int maxCount)
     {
-        var request = new RestRequest("crm/contact/simple/byEmail.json", Method.GET);
+        var request = new RestRequest("crm/contact/simple/byEmail.json", Method.Get);
 
         request.AddParameter("term", term)
             .AddParameter("maxCount", maxCount.ToString());
@@ -360,7 +360,7 @@ public class ApiHelper
 
     public List<string> SearchPeopleEmails(string term, int startIndex, int count)
     {
-        var request = new RestRequest("people/filter.json?filterValue={FilterValue}&StartIndex={StartIndex}&Count={Count}", Method.GET);
+        var request = new RestRequest("people/filter.json?filterValue={FilterValue}&StartIndex={StartIndex}&Count={Count}", Method.Get);
 
         request.AddParameter("FilterValue", term, ParameterType.UrlSegment)
             .AddParameter("StartIndex", startIndex.ToString(), ParameterType.UrlSegment)
@@ -412,7 +412,7 @@ public class ApiHelper
 
     public void AddToCrmHistory(MailMessageData message, CrmContactData entity, IEnumerable<object> fileIds)
     {
-        var request = new RestRequest("crm/history.json", Method.POST);
+        var request = new RestRequest("crm/history.json", Method.Post);
 
         var contentJson = string.Format("{{ message_id : {0} }}", message.Id);
 
@@ -546,7 +546,7 @@ public class ApiHelper
         IEnumerable<MimeEntity> mimeAttachments,
         List<MailAttachmentData> mailAttachments)
     {
-        var request = new RestRequest("calendar/import.json", Method.POST);
+        var request = new RestRequest("calendar/import.json", Method.Post);
 
         request.AddParameter("calendarId", calendarId);
 
@@ -616,7 +616,7 @@ public class ApiHelper
 
         var userInfo = new UserInfo
         {
-            Id = Guid.Parse(json["response"]["id"].ToString()),
+            ID = Guid.Parse(json["response"]["id"].ToString()),
             Email = json["response"]["email"].ToString(),
             FirstName = json["response"]["firstName"].ToString(),
             LastName = json["response"]["lastName"].ToString(),
@@ -628,7 +628,7 @@ public class ApiHelper
 
     public JObject GetPortalSettings()
     {
-        var request = new RestRequest("settings/security.json", Method.GET);
+        var request = new RestRequest("settings/security.json", Method.Get);
 
         var response = Execute(request);
 

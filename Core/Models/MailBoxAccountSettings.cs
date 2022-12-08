@@ -27,7 +27,7 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract]
-public class MailBoxAccountSettings : ISettings<MailBoxAccountSettings>
+public class MailBoxAccountSettings 
 {
     [DataMember]
     public string DefaultEmail { get; set; }
