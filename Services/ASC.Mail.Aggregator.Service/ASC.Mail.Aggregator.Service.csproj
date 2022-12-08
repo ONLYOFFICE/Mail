@@ -98,9 +98,6 @@
 		<Reference Include="ASC.Textile">
 			<HintPath>..\..\redistributable\ASC.Textile.dll</HintPath>
 		</Reference>
-		<Reference Include="ASC.VoipService">
-			<HintPath>..\..\redistributable\ASC.VoipService.dll</HintPath>
-		</Reference>
 		<Reference Include="ASC.Web.Core">
 			<HintPath>..\..\redistributable\ASC.Web.Core.dll</HintPath>
 		</Reference>
