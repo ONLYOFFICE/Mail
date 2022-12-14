@@ -80,7 +80,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var attachments =
                 _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
-                    CurrentTenant.Id, CurrentUser.ID.ToString()));
+                    CurrentTenant.TenantId, CurrentUser.ID.ToString()));
 
             if (!attachments.Any())
             {
@@ -93,7 +93,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var damagedAttachments = 0;
 
-            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.Id);
+            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
 
             using (var stream = _tempStream.Create())
             {

@@ -39,7 +39,7 @@ public class ComposeEngineBase
     protected readonly bool _sslCertificatePermit;
     protected const string EMPTY_HTML_BODY = "<div dir=\"ltr\"><br></div>"; // GMail style
 
-    public int Tenant => _tenantManager.GetCurrentTenant().Id;
+    public int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     public string User => _securityContext.CurrentAccount.ID.ToString();
 
     private protected readonly AccountEngine _accountEngine;

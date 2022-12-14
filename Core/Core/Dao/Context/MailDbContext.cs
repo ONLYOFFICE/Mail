@@ -109,7 +109,7 @@ public class MailDbContext : BaseDbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ModelBuilderWrapper
-            .From(modelBuilder, _provider)
+            .From(modelBuilder, Provider)
             .AddDbTenant()
             .AddMailAlert()
             .AddMailAttachment()

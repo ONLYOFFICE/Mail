@@ -34,7 +34,7 @@ public class StorageManager
 {
     public const string CKEDITOR_IMAGES_DOMAIN = "mail";
 
-    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly ILogger _log;

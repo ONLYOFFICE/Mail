@@ -30,7 +30,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class SpamEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
 
     private readonly StorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;

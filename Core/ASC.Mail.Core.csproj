@@ -101,9 +101,6 @@
 		<Reference Include="ASC.Core.Common">
 			<HintPath>..\redistributable\ASC.Core.Common.dll</HintPath>
 		</Reference>
-		<Reference Include="ASC.CRM">
-			<HintPath>..\redistributable\ASC.CRM.dll</HintPath>
-		</Reference>
 		<Reference Include="ASC.Data.Encryption">
 			<HintPath>..\redistributable\ASC.Data.Encryption.dll</HintPath>
 		</Reference>
@@ -133,9 +130,6 @@
 		</Reference>
 		<Reference Include="ASC.Textile">
 			<HintPath>..\redistributable\ASC.Textile.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.VoipService">
-			<HintPath>..\redistributable\ASC.VoipService.dll</HintPath>
 		</Reference>
 		<Reference Include="ASC.Web.Core">
 			<HintPath>..\redistributable\ASC.Web.Core.dll</HintPath>

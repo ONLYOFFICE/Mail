@@ -27,7 +27,7 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract]
-public class MailCommonSettings
+public class MailCommonSettings: ISettings
 {
     [DataMember(Name = "EnableConversations")]
     public bool EnableConversationsSetting { get; set; }
@@ -44,7 +44,7 @@ public class MailCommonSettings
     [DataMember(Name = "ReplaceMessageBody")]
     public bool ReplaceMessageBodySetting { get; set; }
 
-    public MailCommonSettings GetDefault()
+    public ISettings GetDefault(IServiceProvider serviceProvider)
     {
         return new MailCommonSettings
         {

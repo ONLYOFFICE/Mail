@@ -35,7 +35,7 @@ public partial class MailServerDbContext : BaseDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        ModelBuilderWrapper.From(modelBuilder, _provider)
+        ModelBuilderWrapper.From(modelBuilder, Provider)
             .AddDbTenant();
 
         modelBuilder.Entity<Alias>(entity =>

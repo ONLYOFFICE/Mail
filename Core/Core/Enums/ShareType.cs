@@ -1,6 +1,6 @@
 /*
  *
- * (c) Copyright Ascensio System Limited 2010-2020
+ * (c) Copyright Ascensio System Limited 2010-2018
  *
  * This program is freeware. You can redistribute it and/or modify it under the terms of the GNU 
  * General Public License (GPL) version 3 as published by the Free Software Foundation (https://www.gnu.org/copyleft/gpl.html). 
@@ -23,22 +23,15 @@
  *
 */
 
-namespace ASC.Mail.Models;
 
-[Serializable]
-[DataContract]
-public class ServerNotificationAddressSettings :ISettings
+
+
+namespace ASC.Mail.Core.Enums
 {
-    [DataMember]
-    public string NotificationAddress { get; set; }
-
-    public ISettings GetDefault(IServiceProvider serviceProvider)
+    public enum ShareType
     {
-        return new ServerNotificationAddressSettings { NotificationAddress = string.Empty };
-    }
-
-    public Guid ID
-    {
-        get { return new Guid("{C440A7BE-A336-4071-A57E-5E89725E1CF8}"); }
+        None,
+        ReadWrite,
+        Read
     }
 }

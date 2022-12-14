@@ -25,12 +25,9 @@
 
 
 
+using Ical.Net.CalendarComponents;
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
-
-using Ical.Net.CalendarComponents;
-
-using MimeKit;
 
 namespace ASC.Mail.Utils;
 
@@ -145,7 +142,7 @@ public class ApiHelper
 
         _log.DebugApiHelperExecuteRequest(_baseUrl.Uri, request.Resource);
 
-        var client = new RestClient { BaseUrl = _baseUrl.Uri };
+        var client = new RestClient(_baseUrl.Uri);
 
         request.AddHeader("Authorization", _token);
 
@@ -462,7 +459,7 @@ public class ApiHelper
         if (entity == null)
             throw new ArgumentNullException("entity");
 
-        var request = new RestRequest("crm/{entityType}/{entityId}/files/upload.json", Method.POST);
+        var request = new RestRequest("crm/{entityType}/{entityId}/files/upload.json", Method.Post);
 
         request.AddUrlSegment("entityType", entity.EntityTypeName)
             .AddUrlSegment("entityId", entity.Id.ToString())
@@ -488,7 +485,7 @@ public class ApiHelper
 
     public object UploadToDocuments(Stream fileStream, string filename, string contentType, string folderId, bool createNewIfExist)
     {
-        var request = new RestRequest("files/{folderId}/upload.json", Method.POST);
+        var request = new RestRequest("files/{folderId}/upload.json", Method.Post);
 
         request.AddUrlSegment("folderId", folderId)
                .AddParameter("createNewIfExist", createNewIfExist);
@@ -526,7 +523,7 @@ public class ApiHelper
         var saLearnRequest =
             new RestRequest(
                 string.Format("/api/{0}/spam/training.json?auth_token={1}", serverApiVersion,
-                              serverApiToken), Method.POST);
+                              serverApiToken), Method.Post);
 
         saLearnRequest.AddParameter("url", urlEml)
                       .AddParameter("is_spam", isSpam ? 1 : 0);
@@ -593,7 +590,7 @@ public class ApiHelper
 
     public UserInfo CreateEmployee(bool isVisitor, string email, string firstname, string lastname, string password)
     {
-        var request = new RestRequest("people.json", Method.POST);
+        var request = new RestRequest("people.json", Method.Post);
 
         request.AddParameter("isVisitor", isVisitor)
             .AddParameter("email", email)

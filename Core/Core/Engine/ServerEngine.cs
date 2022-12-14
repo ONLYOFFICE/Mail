@@ -30,7 +30,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
     private readonly SecurityContext _securityContext;
@@ -390,7 +390,7 @@ public class ServerEngine : BaseEngine
 
         engine.RemoveMailbox(deleteAddress);
 
-        var addressSettings = notificationAddressSettings.GetDefault() as ServerNotificationAddressSettings;
+        var addressSettings = notificationAddressSettings.GetDefault(null) as ServerNotificationAddressSettings;
         if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
         {
             throw new Exception("Could not delete notification address setting.");

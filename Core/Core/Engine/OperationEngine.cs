@@ -328,7 +328,7 @@ public class OperationEngine
                 var oTenant = o.GetProperty<int>(MailOperation.TENANT);
                 var oUser = o.GetProperty<string>(MailOperation.OWNER);
                 var oType = o.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-                return oTenant == tenant.Id &&
+                return oTenant == tenant.TenantId &&
                        oUser == user.ID.ToString() &&
                        oType == MailOperationType.ApplyFilter;
             })
@@ -479,7 +479,7 @@ public class OperationEngine
 
     public List<MailOperationStatus> GetMailOperations(Func<DistributedTask, string> translateMailOperationStatus = null)
     {
-        var tenant = _tenantManager.GetCurrentTenant().Id;
+        var tenant = _tenantManager.GetCurrentTenant().TenantId;
 
         var operations = _tasks.GetTasks().Where(
                 o =>
@@ -526,7 +526,7 @@ public class OperationEngine
             _tasks.GetTask(o.Id);
         }
 
-        var tenant = _tenantManager.GetCurrentTenant().Id;
+        var tenant = _tenantManager.GetCurrentTenant().TenantId;
 
         var operation = operations
             .FirstOrDefault(

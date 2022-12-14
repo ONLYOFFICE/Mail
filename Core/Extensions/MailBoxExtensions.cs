@@ -96,7 +96,7 @@ public static class MailBoxExtensions
             log.DebugMailExtensionsGetCurrentTenantInfo();
             var tenantInfo = tenantManager.GetCurrentTenant();
 
-            log.DebugMailExtensionsReturnedTenantStatus(tenantInfo.Status.ToString(), tenantInfo.ID, tenantInfo.OwnerId);
+            log.DebugMailExtensionsReturnedTenantStatus(tenantInfo.Status.ToString(), tenantInfo.TenantId, tenantInfo.OwnerId);
 
             if (tenantInfo.Status == TenantStatus.RemovePending)
                 return DefineConstants.TariffType.LongDead;

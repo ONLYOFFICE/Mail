@@ -32,7 +32,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerMailboxEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().Id;
+    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
     private string User => _securityContext.CurrentAccount.ID.ToString();
     private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
@@ -370,7 +370,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var userInfo = _userManager.GetUsers(_securityContext.CurrentAccount.ID);
 
-        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.Id.ToString());
+        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.UserName.ToString());
     }
 
     public ServerMailboxData UpdateMailboxDisplayName(int mailboxId, string name)

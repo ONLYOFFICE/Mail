@@ -82,7 +82,7 @@ public sealed class MailRemoveMailserverDomainOperation : MailOperation
 
             SetProgress((int?)MailOperationRemoveDomainProgress.RemoveFromDb, "Remove domain from Db");
 
-            var tenant = CurrentTenant.Id;
+            var tenant = CurrentTenant.TenantId;
 
             var mailboxes = new List<MailBoxData>();
 

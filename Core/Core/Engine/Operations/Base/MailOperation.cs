@@ -161,7 +161,7 @@ public abstract class MailOperation
     {
         TaskInfo.SetProperty(SOURCE, Source);
         TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
-        TaskInfo.SetProperty(TENANT, CurrentTenant.Id);
+        TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
         TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
         TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
         TaskInfo.SetProperty(STATUS, Status);
