@@ -41,7 +41,7 @@ public class ServerDao : BaseMailDao, IServerDao
     private const string SERVER_ALIAS = "ms";
     private const string SERVER_X_TENANT_ALIAS = "st";
 
-    public Core.Entities.Server Get(int tenant)
+    public ASC.Core.Common.EF.Model.Mail.ServerServer Get(int tenant)
     {
         var server = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -58,7 +58,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return server;
     }
 
-    public List<Core.Entities.Server> GetList()
+    public List<ASC.Core.Common.EF.Model.Mail.ServerServer> GetList()
     {
         var list = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -68,7 +68,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return list;
     }
 
-    public int Link(Core.Entities.Server server, int tenant)
+    public int Link(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
     {
         var xItem = new MailServerServerXTenant
         {
@@ -83,7 +83,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int UnLink(Core.Entities.Server server, int tenant)
+    public int UnLink(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
     {
         var deleteItem = new MailServerServerXTenant
         {
@@ -98,7 +98,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int Save(Core.Entities.Server server)
+    public int Save(ASC.Core.Common.EF.Model.Mail.ServerServer server)
     {
         var mailServer = new MailServerServer
         {
@@ -140,9 +140,9 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    protected static Core.Entities.Server ToServer(MailServerServer r)
+    protected static ASC.Core.Common.EF.Model.Mail.ServerServer ToServer(MailServerServer r)
     {
-        var s = new Core.Entities.Server
+        var s = new ASC.Core.Common.EF.Model.Mail.ServerServer
         {
             Id = r.Id,
             MxRecord = r.MxRecord,

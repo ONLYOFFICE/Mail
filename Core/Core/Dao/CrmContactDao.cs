@@ -1,3 +1,4 @@
+using ASC.Mail.Core.Core.Entities;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
 using ShareType = ASC.Mail.Enums.ShareType;
@@ -51,11 +52,11 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
             foreach (var info in contactList)
             {
                 var contact = info.Company
-                    ? new Company()
-                    : (Contact)new Person();
+                    ? new CrmCompany()
+                    : (ASC.Core.Common.EF.Model.CrmContact)new CrmPerson();
 
-                contact.ID = info.Id;
-                contact.ShareType = (ASC.Mail.Core.Enums.ShareType)info.ShareType;
+                contact.CompanyId = info.Id;
+                contact.ContactTypeId = (ASC.Mail.Core.Enums.ShareType)info..ShareType;
 
                 if (_crmSecurity.CanAccessTo(contact))
                 {
