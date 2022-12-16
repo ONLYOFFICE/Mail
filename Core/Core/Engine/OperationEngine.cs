@@ -541,7 +541,7 @@ public class OperationEngine
         if (DistributedTaskStatus.Running < operation.Status)
         {
             operation.SetProperty(MailOperation.PROGRESS, 100);
-            _tasks.DequeueTask(operation.Id);
+            _tasks.RemoveTask(operation.Id);
         }
 
         var operationTypeIndex = (int)operation.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);

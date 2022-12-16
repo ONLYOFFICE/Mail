@@ -1,6 +1,4 @@
-﻿using ASC.Api.Core.Extensions;
-
-using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
 {

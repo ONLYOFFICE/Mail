@@ -1,4 +1,6 @@
 using SecurityContext = ASC.Core.SecurityContext;
+using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
+using ASC.CRM.Core;
 
 namespace ASC.Mail.Core.Engine;
 
@@ -15,6 +17,7 @@ public class CrmLinkEngine
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly MessageEngine _messageEngine;
     private readonly StorageFactory _storageFactory;
+    private readonly CrmSecurity _crmSecurity;
     private readonly IServiceProvider _serviceProvider;
 
     public CrmLinkEngine(
@@ -25,6 +28,7 @@ public class CrmLinkEngine
         MessageEngine messageEngine,
         StorageFactory storageFactory,
         ILoggerProvider logProvider,
+        CrmSecurity crmSecurity,
         IServiceProvider serviceProvider)
     {
         _securityContext = securityContext;
@@ -34,7 +38,7 @@ public class CrmLinkEngine
         _messageEngine = messageEngine;
         _storageFactory = storageFactory;
         _serviceProvider = serviceProvider;
-
+        _crmSecurity = crmSecurity;
         _log = logProvider.CreateLogger("ASC.Mail.CrmLinkEngine");
     }
 

@@ -105,7 +105,7 @@ public class ServerDao : BaseMailDao, IServerDao
             Id = server.Id,
             MxRecord = server.MxRecord,
             ConnectionString = server.ConnectionString,
-            ServerType = server.Type,
+            ServerType = server.ServerType,
             SmtpSettingsId = server.SmtpSettingsId,
             ImapSettingsId = server.ImapSettingsId
         };
@@ -147,7 +147,7 @@ public class ServerDao : BaseMailDao, IServerDao
             Id = r.Id,
             MxRecord = r.MxRecord,
             ConnectionString = r.ConnectionString,
-            Type = r.ServerType,
+            ServerType = r.ServerType,
             SmtpSettingsId = r.SmtpSettingsId,
             ImapSettingsId = r.ImapSettingsId
         };

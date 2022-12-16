@@ -150,7 +150,7 @@ public class ServerDomainEngine : BaseEngine
         return _mailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
     }
 
-    public ServerDomainDnsData GetOrCreateUnusedDnsData(Entities.Server server)
+    public ServerDomainDnsData GetOrCreateUnusedDnsData(ASC.Core.Common.EF.Model.Mail.ServerServer server)
     {
         var dnsSettings = _mailDaoFactory.GetServerDnsDao().GetFree();
 

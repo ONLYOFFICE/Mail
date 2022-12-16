@@ -23,6 +23,9 @@
  *
 */
 
+using ASC.Common.Logging;
+using Microsoft.Extensions.Options;
+
 namespace ASC.Mail.Core.Search;
 
 [Scope(Additional = typeof(FactoryIndexerMailContactExtension))]
@@ -32,7 +35,7 @@ public sealed class FactoryIndexerMailContact : FactoryIndexer<MailContact>
     private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
 
     public FactoryIndexerMailContact(
-        ILoggerProvider options,
+        IOptionsMonitor<ILog> options,
         TenantManager tenantManager,
         SearchSettingsHelper searchSettingsHelper,
         FactoryIndexer factoryIndexer,

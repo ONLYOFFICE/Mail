@@ -415,7 +415,7 @@ public class ApiHelper
 
         request.AddParameter("content", contentJson)
                .AddParameter("categoryId", MAIL_CRM_HISTORY_CATEGORY)
-               .AddParameter("created", _apiDateTimeHelper.Get(message.Date));
+               .AddParameter("created", _apiDateTimeHelper.Get(message.Date).ToString());
 
         var crmEntityType = entity.EntityTypeName;
 
@@ -438,7 +438,7 @@ public class ApiHelper
         if (fileIds != null)
         {
             fileIds.ToList().ForEach(
-                id => request.AddParameter("fileId[]", id));
+                id => request.AddParameter("fileId[]", id.ToString()));
         }
 
         var response = Execute(request);
@@ -465,7 +465,7 @@ public class ApiHelper
             .AddUrlSegment("entityId", entity.Id.ToString())
             .AddParameter("storeOriginalFileFlag", false);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         var response = Execute(request);
 
@@ -490,7 +490,7 @@ public class ApiHelper
         request.AddUrlSegment("folderId", folderId)
                .AddParameter("createNewIfExist", createNewIfExist);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         var response = Execute(request);
 
@@ -547,7 +547,7 @@ public class ApiHelper
 
         request.AddParameter("calendarId", calendarId);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         foreach (var attachment in eventObj.Attachments)
         {
@@ -563,7 +563,7 @@ public class ApiHelper
                     if (file != null)
                     {
                         file.dataStream.Position = 0;
-                        request.AddFile(contentId, file.dataStream.CopyTo, string.Format("{0}/{1}", contentId, file.fileName), file.dataStream.Length, file.contentType);
+                        request.AddFile(contentId, () => file.dataStream, string.Format("{0}/{1}", contentId, file.fileName), file.contentType);
                     }
                 }
             }

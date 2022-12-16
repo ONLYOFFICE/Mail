@@ -27,7 +27,7 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract]
-public class MailBoxAccountSettings 
+public class MailBoxAccountSettings : ISettings
 {
     [DataMember]
     public string DefaultEmail { get; set; }
@@ -37,7 +37,7 @@ public class MailBoxAccountSettings
         get { return new Guid("{C550A7BE-A756-4071-A33E-3E89625E7CF8}"); }
     }
 
-    public MailBoxAccountSettings GetDefault()
+    public ISettings GetDefault(IServiceProvider serviceProvider)
     {
         return new MailBoxAccountSettings { DefaultEmail = String.Empty };
     }

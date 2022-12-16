@@ -25,6 +25,7 @@
 
 
 
+using ASC.Mail.Core.Core.Enums;
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -450,7 +451,7 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)MailNotificationState.SendMessageError);
         }
         catch (Exception ex)
         {
@@ -480,7 +481,7 @@ public class DraftEngine : ComposeEngineBase
             }
 
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)state);
         }
         catch (Exception ex)
         {

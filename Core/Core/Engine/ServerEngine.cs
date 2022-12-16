@@ -119,21 +119,21 @@ public class ServerEngine : BaseEngine
         return list;
     }
 
-    public Entities.Server GetLinkedServer()
+    public ASC.Core.Common.EF.Model.Mail.ServerServer GetLinkedServer()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
         return linkedServer;
     }
 
-    private List<Entities.Server> GetAllServers()
+    private List<ASC.Core.Common.EF.Model.Mail.ServerServer> GetAllServers()
     {
         var servers = _mailDaoFactory.GetServerDao().GetList();
 
         return servers;
     }
 
-    public void Link(Entities.Server server, int tenant)
+    public void Link(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -144,7 +144,7 @@ public class ServerEngine : BaseEngine
             throw new Exception("Invalid insert operation");
     }
 
-    public void UnLink(Entities.Server server, int tenant)
+    public void UnLink(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -152,7 +152,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().UnLink(server, Tenant);
     }
 
-    public int Save(Entities.Server server)
+    public int Save(ASC.Core.Common.EF.Model.Mail.ServerServer server)
     {
         if (server == null)
             throw new ArgumentNullException("server");
@@ -170,7 +170,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().Delete(serverId);
     }
 
-    public Entities.Server GetOrCreate()
+    public ASC.Core.Common.EF.Model.Mail.ServerServer GetOrCreate()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 

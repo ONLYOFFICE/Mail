@@ -1,15 +1,18 @@
-﻿namespace ASC.Mail.Core.Core.Entities
+﻿using ASC.Common.Security;
+
+namespace ASC.Mail.Core.Core.Entities
 {
     [Serializable]
-    public class CrmPerson : ASC.Core.Common.EF.Model.CrmContact
+    public class CrmPerson : ASC.Core.Common.EF.Model.CrmContact, ISecurityObjectId
     {
-        public string FirstName { get; set; }
-
-        public string LastName { get; set; }
 
         public int CompanyID { get; set; }
 
         public string JobTitle { get; set; }
+
+        public object SecurityId => throw new NotImplementedException();
+
+        public Type ObjectType => throw new NotImplementedException();
 
         public CrmPerson()
         {

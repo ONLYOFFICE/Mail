@@ -1,3 +1,4 @@
+using ASC.CRM.Core;
 using ASC.Mail.Core.Core.Entities;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -9,14 +10,18 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
 {
     private readonly ILogger _log;
 
+    private readonly CrmSecurity _crmSecurity;
+
     public CrmContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
          DbContextManager<MailDbContext> dbContext,
-         ILoggerProvider logProvider)
+         ILoggerProvider logProvider,
+         CrmSecurity crmSecurity)
         : base(tenantManager, securityContext, dbContext)
     {
         _log = logProvider.CreateLogger("ASC.Mail.CrmContactDao");
+        _crmSecurity = crmSecurity; 
     }
 
     public List<int> GetCrmContactIds(string email)
@@ -56,12 +61,12 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
                     : (ASC.Core.Common.EF.Model.CrmContact)new CrmPerson();
 
                 contact.CompanyId = info.Id;
-                contact.ContactTypeId = (ASC.Mail.Core.Enums.ShareType)info..ShareType;
+                contact.ContactTypeId = (int)info.ShareType;
 
-                if (_crmSecurity.CanAccessTo(contact))
-                {
+                //if (_crmSecurity.CanAccessTo(contact))
+                //{
                     ids.Add(info.Id);
-                }
+                //}
             }
         }
         catch (Exception e)

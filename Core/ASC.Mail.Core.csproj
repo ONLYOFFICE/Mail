@@ -34,32 +34,30 @@
 
 	<ItemGroup>
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="5.0.1" />
-		<PackageReference Include="Grpc.Tools" Version="2.50.0">
+		<PackageReference Include="Grpc.Tools" Version="2.51.0">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
 		<PackageReference Include="Ical.Net" Version="4.2.0" />
 		<PackageReference Include="MailKit" Version="3.4.3" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Graph.Core" Version="2.0.14" />
-		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="7.0.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="7.0.1" />
 		<PackageReference Include="MimeKit" Version="3.4.3" />
 		<PackageReference Include="RestSharp" Version="108.0.3" />
 		<PackageReference Include="SharpZipLib" Version="1.4.1" />
 		<PackageReference Include="Ude.NetStandard" Version="1.2.0" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.0" />
 		<PackageReference Include="ARSoft.Tools.NetStandard.DXSdata" Version="1.0.0" />
 		<PackageReference Include="Autofac.Configuration" Version="6.0.0" />
 		<PackageReference Include="AutoMapper" Version="12.0.0" />
 		<PackageReference Include="Confluent.Kafka" Version="1.9.3" />
-		<PackageReference Include="Google.Protobuf" Version="3.21.10" />
+		<PackageReference Include="Google.Protobuf" Version="3.21.12" />
 		<PackageReference Include="JWT" Version="9.0.3" />
 		<PackageReference Include="log4net" Version="2.0.15" />
-		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="7.0.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="7.0.1" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
 		<PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
@@ -69,14 +67,14 @@
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="NVelocity" Version="1.2.0" />
 		<PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
-		<PackageReference Include="AWSSDK.Core" Version="3.7.101" />
-		<PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.100.28" />
+		<PackageReference Include="AWSSDK.Core" Version="3.7.103" />
+		<PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.100.38" />
 		<PackageReference Include="EntityFramework" Version="6.4.4" />
 		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.0" />
 		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
 		<PackageReference Include="Telegram.Bot" Version="18.0.0" />
-		<PackageReference Include="AWSSDK.CloudFront" Version="3.7.101.7" />
-		<PackageReference Include="AWSSDK.S3" Version="3.7.101.28" />
+		<PackageReference Include="AWSSDK.CloudFront" Version="3.7.102.7" />
+		<PackageReference Include="AWSSDK.S3" Version="3.7.101.38" />
 		<PackageReference Include="Google.Api.Gax" Version="4.2.0" />
 		<PackageReference Include="Google.Api.Gax.Rest" Version="4.2.0" />
 		<PackageReference Include="Google.Apis.Auth" Version="1.58.0" />
@@ -136,6 +134,9 @@
 		</Reference>
 		<Reference Include="ASC.Webhooks.Core">
 			<HintPath>..\redistributable\ASC.Webhooks.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\redistributable\ASC.CRM.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
