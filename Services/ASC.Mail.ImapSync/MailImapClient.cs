@@ -124,7 +124,8 @@ public class MailImapClient : IDisposable
         IServiceProvider serviceProvider,
         SignalrServiceClient signalrServiceClient,
         CancellationToken cancelToken,
-        ILoggerProvider logProvider)
+        ILoggerProvider logProvider,
+        RedisClient redisClient)
     {
         _mailSettings = mailSettings;
 
@@ -134,9 +135,7 @@ public class MailImapClient : IDisposable
 
         var clientScope = serviceProvider.CreateScope().ServiceProvider;
 
-        var redisFactory = clientScope.GetService<RedisFactory>();
-
-        _redisClient = redisFactory.GetRedisClient();
+        _redisClient = redisClient;
 
         if (_redisClient == null)
         {

@@ -14,6 +14,8 @@
  *
 */
 
+using StackExchange.Redis.Extensions.Core.Implementations;
+
 namespace ASC.Mail.ImapSync;
 
 [Singletone]
@@ -28,21 +30,19 @@ public class ImapSyncService : IHostedService
 
     private readonly MailSettings _mailSettings;
     private readonly RedisClient _redisClient;
-    private readonly RedisFactory _redisFactory;
 
     private readonly SignalrServiceClient _signalrServiceClient;
 
     private readonly IServiceProvider _serviceProvider;
 
     public ImapSyncService(
-        RedisFactory redisFactory,
+        RedisClient redisClient,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
         IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
         ILoggerProvider loggerProvider)
     {
-        _redisFactory = redisFactory;
-        _redisClient = redisFactory.GetRedisClient();
+        _redisClient = redisClient;
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
         _signalrServiceClient = optionsSnapshot.Get("mail");
@@ -118,12 +118,19 @@ public class ImapSyncService : IHostedService
 
                 return;
             }
-
             MailImapClient client;
 
             try
             {
-                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _mailSettings, _serviceProvider, _signalrServiceClient, _cancelTokenSource.Token, _logProvider);
+                client = new MailImapClient(
+                    cashedTenantUserMailBox.UserName,
+                    cashedTenantUserMailBox.Tenant,
+                    _mailSettings,
+                    _serviceProvider,
+                    _signalrServiceClient,
+                    _cancelTokenSource.Token,
+                    _logProvider,
+                    _redisClient);
 
                 if (client == null)
                 {
@@ -194,7 +201,7 @@ public class ImapSyncService : IHostedService
 
         string RedisKey = "ASC.MailAction:" + UserName;
 
-        var localRedisClient = _redisFactory.GetRedisClient();
+        var localRedisClient = _redisClient;
 
         if (localRedisClient == null) return 0;
 

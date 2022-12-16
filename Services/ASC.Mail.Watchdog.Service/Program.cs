@@ -68,7 +68,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<WatchdogLauncher>();
     services.AddHostedService<WatchdogLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
     services.AddSingleton(new ConsoleParser(args));
     services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));

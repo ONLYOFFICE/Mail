@@ -68,7 +68,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
     diHelper.TryAdd<MailEnginesFactory>();
     diHelper.TryAdd<ImapSyncService>();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));

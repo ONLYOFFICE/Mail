@@ -18,6 +18,7 @@
 	<ItemGroup>
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.542" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />
 		<PackageReference Include="MySql.Data" Version="8.0.31" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.2.0" />
 		<PackageReference Include="SixLabors.ImageSharp" Version="2.0.0" />

@@ -40,8 +40,6 @@ global using MimeKit;
 global using StackExchange.Redis;
 global using StackExchange.Redis.Extensions.Core.Abstractions;
 global using StackExchange.Redis.Extensions.Core.Configuration;
-global using StackExchange.Redis.Extensions.Core.Implementations;
-global using StackExchange.Redis.Extensions.Newtonsoft;
 
 global using System;
 global using System.Collections.Concurrent;
@@ -52,7 +50,6 @@ global using System.Linq;
 global using System.Reflection;
 global using System.Runtime.InteropServices;
 global using System.Security.Authentication;
-global using System.Text;
 global using System.Threading;
 global using System.Threading.Tasks;
 

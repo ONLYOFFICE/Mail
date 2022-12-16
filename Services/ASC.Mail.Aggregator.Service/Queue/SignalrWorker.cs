@@ -149,11 +149,11 @@ public class SocketIoNotifier : IDisposable
 
             tenantManager.SetCurrentTenant(tenant);
 
-            _log.DebugSocketIoNotifierCurrentTenant(tenantManager.GetCurrentTenant().Id);
+            _log.DebugSocketIoNotifierCurrentTenant(tenantManager.GetCurrentTenant().TenantId);
 
             var userInfo = userManager.GetUsers(Guid.Parse(userId));
 
-            if (userInfo.Id != Constants.LostUser.Id)
+            if (userInfo.ID != Constants.LostUser.ID)
             {
                 _log.DebugSocketIoNotifierSendStart();
 
