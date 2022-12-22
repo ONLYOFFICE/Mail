@@ -4,7 +4,7 @@ using Nest;
 namespace ASC.Mail.Core.Core.Entities
 {
     [Serializable]
-    public class CrmCompany : ASC.Core.Common.EF.Model.CrmContact, ISecurityObjectId
+    public class CrmCompany : CrmContact, ISecurityObjectId
     {
         public CrmCompany()
         {
@@ -14,5 +14,7 @@ namespace ASC.Mail.Core.Core.Entities
         public Type ObjectType => GetType();
 
         public object SecurityId => Id;
+
+        public string FullId => "";
     }
 }

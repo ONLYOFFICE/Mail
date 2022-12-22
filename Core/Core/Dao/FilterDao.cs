@@ -34,7 +34,7 @@ public class FilterDao : BaseMailDao, IFilterDao
     public FilterDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

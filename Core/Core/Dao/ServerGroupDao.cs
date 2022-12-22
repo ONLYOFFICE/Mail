@@ -33,7 +33,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
     public ServerGroupDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

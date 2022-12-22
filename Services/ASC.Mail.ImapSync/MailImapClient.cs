@@ -14,6 +14,7 @@
  *
 */
 
+using ASC.Core.Notify.Socket;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
@@ -35,7 +36,7 @@ public class MailImapClient : IDisposable
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly MailSettings _mailSettings;
 
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
 
     private readonly ILogger _log;
@@ -122,7 +123,7 @@ public class MailImapClient : IDisposable
         int tenant,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         CancellationToken cancelToken,
         ILoggerProvider logProvider,
         RedisClient redisClient)
@@ -950,7 +951,7 @@ public class MailImapClient : IDisposable
 
     private bool SendUnreadUser()
     {
-        if (UserName == Constants.LostUser.ID.ToString()) return true;
+        if (UserName == Constants.LostUser.Id.ToString()) return true;
 
         try
         {

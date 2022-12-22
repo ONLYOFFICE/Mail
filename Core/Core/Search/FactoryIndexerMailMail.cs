@@ -10,17 +10,17 @@ public sealed class FactoryIndexerMailMail : FactoryIndexer<MailMail>
     private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
 
     public FactoryIndexerMailMail(
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider options,
         TenantManager tenantManager,
         SearchSettingsHelper searchSettingsHelper,
         FactoryIndexer factoryIndexer,
         BaseIndexer<MailMail> baseIndexer,
         IServiceProvider serviceProvider,
-        DbContextManager<MailDbContext> dbContext,
+        MailDbContext dbContext,
         ICache cache)
         : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
     {
-        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
+        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext);
     }
 }
 

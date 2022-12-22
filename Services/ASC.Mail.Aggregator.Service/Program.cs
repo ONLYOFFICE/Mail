@@ -1,4 +1,5 @@
-﻿using ASC.Common.Threading;
+﻿using ASC.Common.Mapping;
+using ASC.Common.Threading;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -70,12 +71,12 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     services.AddSingleton(new ConsoleParser(args));
     diHelper.TryAdd<AggregatorServiceLauncher>();
     diHelper.TryAdd<AggregatorServiceScope>();
     services.AddTransient<DistributedTaskQueue>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 

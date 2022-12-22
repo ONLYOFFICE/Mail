@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Utils;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -30,7 +31,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 
     private readonly SecurityContext _securityContext;
@@ -119,21 +120,21 @@ public class ServerEngine : BaseEngine
         return list;
     }
 
-    public ASC.Core.Common.EF.Model.Mail.ServerServer GetLinkedServer()
+    public MailServerServer GetLinkedServer()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
         return linkedServer;
     }
 
-    private List<ASC.Core.Common.EF.Model.Mail.ServerServer> GetAllServers()
+    private List<MailServerServer> GetAllServers()
     {
         var servers = _mailDaoFactory.GetServerDao().GetList();
 
         return servers;
     }
 
-    public void Link(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
+    public void Link(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -144,7 +145,7 @@ public class ServerEngine : BaseEngine
             throw new Exception("Invalid insert operation");
     }
 
-    public void UnLink(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
+    public void UnLink(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -152,7 +153,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().UnLink(server, Tenant);
     }
 
-    public int Save(ASC.Core.Common.EF.Model.Mail.ServerServer server)
+    public int Save(MailServerServer server)
     {
         if (server == null)
             throw new ArgumentNullException("server");
@@ -170,7 +171,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().Delete(serverId);
     }
 
-    public ASC.Core.Common.EF.Model.Mail.ServerServer GetOrCreate()
+    public MailServerServer GetOrCreate()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
@@ -390,7 +391,7 @@ public class ServerEngine : BaseEngine
 
         engine.RemoveMailbox(deleteAddress);
 
-        var addressSettings = notificationAddressSettings.GetDefault(null) as ServerNotificationAddressSettings;
+        var addressSettings = notificationAddressSettings.GetDefault();
         if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
         {
             throw new Exception("Could not delete notification address setting.");

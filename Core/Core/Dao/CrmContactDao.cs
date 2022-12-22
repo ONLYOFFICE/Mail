@@ -12,7 +12,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
     public CrmContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext,
+         MailDbContext dbContext,
          ILoggerProvider logProvider)
         : base(tenantManager, securityContext, dbContext)
     {
@@ -53,7 +53,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
             {
                 var contact = info.Company
                     ? new CrmCompany()
-                    : (ASC.Core.Common.EF.Model.CrmContact)new CrmPerson();
+                    : (CrmContact)new CrmPerson();
 
                 contact.CompanyId = info.Id;
                 contact.ContactTypeId = (int)info.ShareType;
@@ -106,7 +106,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
             {
                 var contact = info.Company
                     ? new CrmCompany()
-                    : (ASC.Core.Common.EF.Model.CrmContact)new CrmPerson();
+                    : (CrmContact)new CrmPerson();
 
                 contact.CompanyId = info.Id;
                 contact.ContactTypeId = (int)info.ShareType;

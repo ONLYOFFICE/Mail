@@ -29,6 +29,6 @@ public static class MailDataStoreExtensions
 {
     public static IDataStore GetMailStorage(this StorageFactory storageFactory, int tenant)
     {
-        return storageFactory.GetStorage(tenant.ToString(CultureInfo.InvariantCulture), DefineConstants.MODULE_NAME);
+        return storageFactory.GetStorage(tenant, DefineConstants.MODULE_NAME);
     }
 }

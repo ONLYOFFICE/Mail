@@ -37,7 +37,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class FilterEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly ILogger _log;

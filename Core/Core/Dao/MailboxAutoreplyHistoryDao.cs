@@ -33,7 +33,7 @@ public class MailboxAutoreplyHistoryDao : BaseMailDao, IMailboxAutoreplyHistoryD
     public MailboxAutoreplyHistoryDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

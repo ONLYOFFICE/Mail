@@ -3,10 +3,10 @@ namespace ASC.Mail.Core.Dao.Interfaces;
 [Scope(typeof(ServerDao))]
 public interface IServerDao
 {
-    ASC.Core.Common.EF.Model.Mail.ServerServer Get(int tenant);
-    List<ASC.Core.Common.EF.Model.Mail.ServerServer> GetList();
-    int Link(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant);
-    int UnLink(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant);
-    int Save(ASC.Core.Common.EF.Model.Mail.ServerServer server);
+    MailServerServer Get(int tenant);
+    List<MailServerServer> GetList();
+    int Link(MailServerServer server, int tenant);
+    int UnLink(MailServerServer server, int tenant);
+    int Save(MailServerServer server);
     int Delete(int id);
 }

@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Common.Logging;
+using log4net;
 using Microsoft.Extensions.Options;
 
 namespace ASC.Mail.Core.Search;
@@ -35,17 +35,17 @@ public sealed class FactoryIndexerMailContact : FactoryIndexer<MailContact>
     private MailDbContext MailDbContext { get => _lazyMailDbContext.Value; }
 
     public FactoryIndexerMailContact(
-        IOptionsMonitor<ILog> options,
+        ILoggerProvider options,
         TenantManager tenantManager,
         SearchSettingsHelper searchSettingsHelper,
         FactoryIndexer factoryIndexer,
         BaseIndexer<MailContact> baseIndexer,
         IServiceProvider serviceProvider,
-        DbContextManager<MailDbContext> dbContext,
+        MailDbContext dbContext,
         ICache cache)
         : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
     {
-        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
+        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext);
     }
 }
 

@@ -23,6 +23,7 @@
  *
 */
 
+
 using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -32,7 +33,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerMailboxEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
     private bool IsAdmin => _webItemSecurity.IsProductAdministrator(WebItemManager.MailProductID, _securityContext.CurrentAccount.ID);
 

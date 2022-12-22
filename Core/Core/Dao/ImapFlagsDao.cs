@@ -33,7 +33,7 @@ public class ImapFlagsDao : BaseMailDao, IImapFlagsDao
     public ImapFlagsDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

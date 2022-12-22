@@ -33,7 +33,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
     public ServerDnsDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

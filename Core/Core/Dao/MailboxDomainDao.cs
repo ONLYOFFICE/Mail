@@ -33,7 +33,7 @@ public class MailboxDomainDao : BaseMailDao, IMailboxDomainDao
     public MailboxDomainDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

@@ -23,7 +23,7 @@ namespace ASC.Mail.Controllers
     [Scope]
     public partial class MailController : ControllerBase
     {
-        private int TenantId => _tenantManager.GetCurrentTenant().TenantId;
+        private int TenantId => _tenantManager.GetCurrentTenant().Id;
 
         private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
@@ -166,14 +166,14 @@ namespace ASC.Mail.Controllers
         /// <returns>translated status text</returns>
         private static string TranslateMailOperationStatus(DistributedTask op)
         {
-            var type = op.GetProperty<MailOperationType>(MailOperation.OPERATION_TYPE);
-            var status = op.GetProperty<string>(MailOperation.STATUS);
+            var type = op[MailOperation.OPERATION_TYPE];
+            var status = op[MailOperation.STATUS];
             //TODO: Move strings to Resource file
             switch (type)
             {
                 case MailOperationType.DownloadAllAttachments:
                     {
-                        var progress = op.GetProperty<MailOperationDownloadAllAttachmentsProgress>(MailOperation.PROGRESS);
+                        var progress = op[MailOperation.PROGRESS];
                         switch (progress)
                         {
                             case MailOperationDownloadAllAttachmentsProgress.Init:
@@ -194,7 +194,7 @@ namespace ASC.Mail.Controllers
                     }
                 case MailOperationType.RemoveMailbox:
                     {
-                        var progress = op.GetProperty<MailOperationRemoveMailboxProgress>(MailOperation.PROGRESS);
+                        var progress = op[MailOperation.PROGRESS];
                         switch (progress)
                         {
                             case MailOperationRemoveMailboxProgress.Init:
@@ -215,7 +215,7 @@ namespace ASC.Mail.Controllers
                     }
                 case MailOperationType.RecalculateFolders:
                     {
-                        var progress = op.GetProperty<MailOperationRecalculateMailboxProgress>(MailOperation.PROGRESS);
+                        var progress = op[MailOperation.PROGRESS];
                         switch (progress)
                         {
                             case MailOperationRecalculateMailboxProgress.Init:
@@ -248,7 +248,7 @@ namespace ASC.Mail.Controllers
                     }
                 case MailOperationType.RemoveUserFolder:
                     {
-                        var progress = op.GetProperty<MailOperationRemoveUserFolderProgress>(MailOperation.PROGRESS);
+                        var progress = op[MailOperation.PROGRESS];
                         switch (progress)
                         {
                             case MailOperationRemoveUserFolderProgress.Init:

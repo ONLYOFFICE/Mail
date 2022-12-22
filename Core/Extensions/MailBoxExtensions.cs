@@ -96,7 +96,7 @@ public static class MailBoxExtensions
             log.DebugMailExtensionsGetCurrentTenantInfo();
             var tenantInfo = tenantManager.GetCurrentTenant();
 
-            log.DebugMailExtensionsReturnedTenantStatus(tenantInfo.Status.ToString(), tenantInfo.TenantId, tenantInfo.OwnerId);
+            log.DebugMailExtensionsReturnedTenantStatus(tenantInfo.Status.ToString(), tenantInfo.Id, tenantInfo.OwnerId);
 
             if (tenantInfo.Status == TenantStatus.RemovePending)
                 return DefineConstants.TariffType.LongDead;
@@ -129,23 +129,23 @@ public static class MailBoxExtensions
     {
         var quotaEnded = false;
 
-        try
-        {
-            var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
-            var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
-            var usedQuota = quotaController.QuotaCurrentGet();
-            quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
+        //try
+        //{
+        //    var quotaController = new TenantQuotaController(tenantManager);
+        //    var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
+        //    var usedQuota = quotaController.QuotaCurrentGet();
+        //    quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
 
-            var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
-            var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
+        //    var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
+        //    var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
 
 
-            log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
-        }
-        catch (Exception ex)
-        {
-            log.ErrorMailExtensionsIsQuotaExhausted(mailbox.TenantId, ex.Message, ex.StackTrace);
-        }
+        //    log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
+        //}
+        //catch (Exception ex)
+        //{
+        //    log.ErrorMailExtensionsIsQuotaExhausted(mailbox.TenantId, ex.Message, ex.StackTrace);
+        //}
 
         return quotaEnded;
     }

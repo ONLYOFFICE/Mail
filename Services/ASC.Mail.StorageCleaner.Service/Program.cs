@@ -71,9 +71,9 @@ builder.Host.ConfigureServices((hostContext, services) =>
 
     diHelper.TryAdd<StorageCleanerLauncher>();
     services.AddHostedService<StorageCleanerLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<StorageCleanerScope>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 });
 

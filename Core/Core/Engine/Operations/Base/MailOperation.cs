@@ -97,7 +97,7 @@ public abstract class MailOperation
         Log = logProvider.CreateLogger("ASC.Mail.Operation");
     }
 
-    public void RunJob(DistributedTask _, CancellationToken cancellationToken)
+    public Task RunJob(DistributedTask _, CancellationToken cancellationToken)
     {
         try
         {
@@ -141,7 +141,7 @@ public abstract class MailOperation
         {
             try
             {
-                TaskInfo.SetProperty(FINISHED, true);
+                TaskInfo[FINISHED] = true;
                 PublishTaskInfo();
             }
             catch
@@ -149,6 +149,8 @@ public abstract class MailOperation
                 /* ignore */
             }
         }
+
+        return Task.CompletedTask;
     }
 
     public virtual DistributedTask GetDistributedTask()
@@ -159,13 +161,13 @@ public abstract class MailOperation
 
     protected virtual void FillDistributedTask()
     {
-        TaskInfo.SetProperty(SOURCE, Source);
-        TaskInfo.SetProperty(OPERATION_TYPE, OperationType);
-        TaskInfo.SetProperty(TENANT, CurrentTenant.TenantId);
-        TaskInfo.SetProperty(OWNER, CurrentUser.ID.ToString());
-        TaskInfo.SetProperty(PROGRESS, Progress < 100 ? Progress : 100);
-        TaskInfo.SetProperty(STATUS, Status);
-        TaskInfo.SetProperty(ERROR, Error);
+        TaskInfo[SOURCE] = Source;
+        TaskInfo[OPERATION_TYPE] = OperationType;
+        TaskInfo[TENANT] = CurrentTenant.Id;
+        TaskInfo[OWNER] = CurrentUser.ID.ToString();
+        TaskInfo[PROGRESS] = Progress < 100 ? Progress : 100;
+        TaskInfo[STATUS] = Status;
+        TaskInfo[ERROR] = Error;
     }
 
     protected int GetProgress()

@@ -36,7 +36,7 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
     public ContactInfoDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

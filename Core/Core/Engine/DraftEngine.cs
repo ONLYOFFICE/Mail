@@ -25,7 +25,6 @@
 
 
 
-using ASC.Mail.Core.Core.Enums;
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -75,7 +74,7 @@ public class DraftEngine : ComposeEngineBase
         FactoryIndexer factoryIndexerCommon,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        SignalrServiceClient optionsSnapshot,
+        SocketServiceClient optionsSnapshot,
         MailSettings mailSettings,
         ILoggerProvider logProvider,
         DeliveryFailureMessageTranslates daemonLabels = null)
@@ -451,7 +450,7 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)MailNotificationState.SendMessageError);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
         }
         catch (Exception ex)
         {
@@ -469,7 +468,7 @@ public class DraftEngine : ComposeEngineBase
                 switch (draft.CalendarMethod)
                 {
                     case DefineConstants.ICAL_REQUEST:
-                        state = MailNotificationState.SentIcalRequest;
+                        state = ASC.Core.Notify.Socket.MailNotificationState.SentIcalRequest;
                         break;
                     case DefineConstants.ICAL_REPLY:
                         state = MailNotificationState.SentIcalResponse;
@@ -481,7 +480,7 @@ public class DraftEngine : ComposeEngineBase
             }
 
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, (int)state);
+            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
         }
         catch (Exception ex)
         {

@@ -80,7 +80,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var attachments =
                 _messageEngine.GetAttachments(new ConcreteMessageAttachmentsExp(_messageId,
-                    CurrentTenant.TenantId, CurrentUser.ID.ToString()));
+                    CurrentTenant.Id, CurrentUser.ID.ToString()));
 
             if (!attachments.Any())
             {
@@ -93,7 +93,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var damagedAttachments = 0;
 
-            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.TenantId);
+            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.Id);
 
             using (var stream = _tempStream.Create())
             {
@@ -163,7 +163,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var source = string.Format("{0}?{1}=bulk",
                 "/products/files/httphandlers/filehandler.ashx",
-                FilesLinkUtility.Action);
+                "action");
 
             if (damagedAttachments > 1)
                 Error = string.Format(MailCoreResource.FilesNotFound, damagedAttachments);

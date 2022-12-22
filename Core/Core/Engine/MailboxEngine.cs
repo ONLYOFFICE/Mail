@@ -35,7 +35,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class MailboxEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly TenantManager _tenantManager;
@@ -676,7 +676,7 @@ public class MailboxEngine : BaseEngine
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
         tenantManager.SetCurrentTenant(mailBoxData.TenantId);
-        _log.DebugMailboxEngineRemoveMailboxTenant(tenantManager.GetCurrentTenant().TenantId);
+        _log.DebugMailboxEngineRemoveMailboxTenant(tenantManager.GetCurrentTenant().Id);
 
         var strategy = _mailDbContext.Database.CreateExecutionStrategy();
 

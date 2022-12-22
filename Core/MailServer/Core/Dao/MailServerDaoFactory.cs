@@ -11,10 +11,10 @@ public class MailServerDaoFactory : IMailServerDaoFactory
 
     public MailServerDaoFactory(
         IServiceProvider serviceProvider,
-        DbContextManager<MailServerDbContext> dbContextManager)
+        MailServerDbContext dbContextManager)
     {
         _serviceProvider = serviceProvider;
-        _mailServerDbContext = dbContextManager.Get("mailServer");
+        _mailServerDbContext = dbContextManager;
     }
 
     public IDbContextTransaction BeginTransaction(IsolationLevel? level = null)

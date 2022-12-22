@@ -33,7 +33,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
     public UserFolderDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

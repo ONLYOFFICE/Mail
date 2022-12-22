@@ -14,6 +14,7 @@
  *
 */
 
+using ASC.Core.Notify.Socket;
 using StackExchange.Redis.Extensions.Core.Implementations;
 
 namespace ASC.Mail.ImapSync;
@@ -31,7 +32,7 @@ public class ImapSyncService : IHostedService
     private readonly MailSettings _mailSettings;
     private readonly RedisClient _redisClient;
 
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
 
     private readonly IServiceProvider _serviceProvider;
 
@@ -39,14 +40,14 @@ public class ImapSyncService : IHostedService
         RedisClient redisClient,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
+        IOptionsSnapshot<SocketServiceClient> optionsSnapshot,
         ILoggerProvider loggerProvider)
     {
         _redisClient = redisClient;
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
         _signalrServiceClient = optionsSnapshot.Get("mail");
-        _signalrServiceClient.EnableSignalr = true;
+        _signalrServiceClient.EnableSocket = true;
         clients = new ConcurrentDictionary<string, MailImapClient>();
 
         _cancelTokenSource = new CancellationTokenSource();

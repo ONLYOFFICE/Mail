@@ -1,7 +1,4 @@
-using ASC.CRM.Core;
-using ASC.CRM.Resources;
 using ASC.Mail.Core.Core.Entities;
-using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
 using IAction = ASC.Common.Security.Authorizing.IAction;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -10,7 +7,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class CrmLinkEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     public readonly IAction _actionRead = new ASC.Common.Security.Authorizing.Action(new Guid("{6F05C382-8BCA-4469-9424-C807A98C40D7}"), "", administratorAlwaysAllow: true, conjunction: false);
@@ -61,7 +58,7 @@ public class CrmLinkEngine
     {
         using (var scope = _serviceProvider.CreateScope())
         {
-            var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
+            var factory = scope.ServiceProvider.GetService<CrmContactDao>();
 
             contactIds.ForEach(x=> CheckCRMPermisions(x, factory));
         }
@@ -200,7 +197,7 @@ public class CrmLinkEngine
             securityContext.AuthenticateMe(new Guid(mailbox.UserId));
         }
 
-        var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
+        var factory = scope.ServiceProvider.GetService<CrmContactDao>();
         foreach (var contactEntity in message.LinkedCrmEntityIds)
         {
             CheckCRMPermisions(contactEntity, factory);
@@ -243,37 +240,37 @@ public class CrmLinkEngine
         }
     }
 
-    private void CheckCRMPermisions(CrmContactData crmContactEntity, CrmDaoFactory factory)
+    private void CheckCRMPermisions(CrmContactData crmContactEntity, CrmContactDao factory)
     {
-        switch (crmContactEntity.Type)
-        {
-            case CrmContactData.EntityTypes.Contact:
-                var crmContact = factory.GetContactDao().GetByID(crmContactEntity.Id);
-                if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
-                    || _permissionContext.CheckPermissions(crmContact, new CrmSecurityObjectProvider(), _actionRead)))
-                {
-                    throw new SecurityException();
-                }
+        //switch (crmContactEntity.Type)
+        //{
+        //    case CrmContactData.EntityTypes.Contact:
+        //        var crmContact = factory.GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmContact, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
 
-                break;
-            case CrmContactData.EntityTypes.Case:
-                var crmCase = factory.GetCasesDao().GetByID(crmContactEntity.Id);
-                if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
-                    || _permissionContext.CheckPermissions(crmCase, new CrmSecurityObjectProvider(), _actionRead)))
-                {
-                    throw new SecurityException();
-                }
+        //        break;
+        //    case CrmContactData.EntityTypes.Case:
+        //        var crmCase = factory.GetCasesDao().GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmCase, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
 
-                break;
-            case CrmContactData.EntityTypes.Opportunity:
-                var crmOpportunity = factory.GetDealDao().GetByID(crmContactEntity.Id);
-                if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
-                    || _permissionContext.CheckPermissions(crmOpportunity, new CrmSecurityObjectProvider(), _actionRead)))
-                {
-                    throw new SecurityException();
-                }
+        //        break;
+        //    case CrmContactData.EntityTypes.Opportunity:
+        //        var crmOpportunity = factory.GetDealDao().GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmOpportunity, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
 
-                break;
-        }
+        //        break;
+        //}
     }
 }

@@ -35,11 +35,11 @@ namespace ASC.Mail.Core.Engine;
 public class ComposeEngineBase
 {
     protected ILogger _log;
-    protected static SignalrServiceClient _signalrServiceClient;
+    protected static SocketServiceClient _signalrServiceClient;
     protected readonly bool _sslCertificatePermit;
     protected const string EMPTY_HTML_BODY = "<div dir=\"ltr\"><br></div>"; // GMail style
 
-    public int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    public int Tenant => _tenantManager.GetCurrentTenant().Id;
     public string User => _securityContext.CurrentAccount.ID.ToString();
 
     private protected readonly AccountEngine _accountEngine;
@@ -124,7 +124,7 @@ public class ComposeEngineBase
         TenantManager tenantManager,
         CoreSettings coreSettings,
         StorageFactory storageFactory,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)

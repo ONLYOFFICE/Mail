@@ -30,7 +30,7 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class AliasDao : BaseServerDao, IAliasDao
 {
-    public AliasDao(DbContextManager<MailServerDbContext> dbContext)
+    public AliasDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }

@@ -33,7 +33,7 @@ public class ServerDao : BaseMailDao, IServerDao
     public ServerDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -41,7 +41,7 @@ public class ServerDao : BaseMailDao, IServerDao
     private const string SERVER_ALIAS = "ms";
     private const string SERVER_X_TENANT_ALIAS = "st";
 
-    public ASC.Core.Common.EF.Model.Mail.ServerServer Get(int tenant)
+    public MailServerServer Get(int tenant)
     {
         var server = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -58,7 +58,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return server;
     }
 
-    public List<ASC.Core.Common.EF.Model.Mail.ServerServer> GetList()
+    public List<MailServerServer> GetList()
     {
         var list = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -68,7 +68,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return list;
     }
 
-    public int Link(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
+    public int Link(MailServerServer server, int tenant)
     {
         var xItem = new MailServerServerXTenant
         {
@@ -83,7 +83,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int UnLink(ASC.Core.Common.EF.Model.Mail.ServerServer server, int tenant)
+    public int UnLink(MailServerServer server, int tenant)
     {
         var deleteItem = new MailServerServerXTenant
         {
@@ -98,7 +98,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int Save(ASC.Core.Common.EF.Model.Mail.ServerServer server)
+    public int Save(MailServerServer server)
     {
         var mailServer = new MailServerServer
         {
@@ -140,9 +140,9 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    protected static ASC.Core.Common.EF.Model.Mail.ServerServer ToServer(MailServerServer r)
+    protected static MailServerServer ToServer(MailServerServer r)
     {
-        var s = new ASC.Core.Common.EF.Model.Mail.ServerServer
+        var s = new MailServerServer
         {
             Id = r.Id,
             MxRecord = r.MxRecord,

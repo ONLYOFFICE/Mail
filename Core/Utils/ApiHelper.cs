@@ -107,7 +107,7 @@ public class ApiHelper
                         _httpContext.Request.Url().ToString())
                       : "null";
 
-        _log.DebugApiHelperSetup(Tenant.TenantId, user.ID, user.IsAuthenticated, _scheme, httpCon);
+        _log.DebugApiHelperSetup(Tenant.Id, user.ID, user.IsAuthenticated, _scheme, httpCon);
 
         if (!user.IsAuthenticated)
             throw new AuthenticationException("User not authenticated");
@@ -613,7 +613,7 @@ public class ApiHelper
 
         var userInfo = new UserInfo
         {
-            ID = Guid.Parse(json["response"]["id"].ToString()),
+            Id = Guid.Parse(json["response"]["id"].ToString()),
             Email = json["response"]["email"].ToString(),
             FirstName = json["response"]["firstName"].ToString(),
             LastName = json["response"]["lastName"].ToString(),

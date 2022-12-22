@@ -28,7 +28,7 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class DkimDao : BaseServerDao, IDkimDao
 {
-    public DkimDao(DbContextManager<MailServerDbContext> dbContext)
+    public DkimDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }

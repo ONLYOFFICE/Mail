@@ -27,12 +27,12 @@ namespace ASC.Mail.Models;
 
 [Serializable]
 [DataContract]
-public class ServerNotificationAddressSettings :ISettings
+public class ServerNotificationAddressSettings :ISettings<ServerNotificationAddressSettings>
 {
     [DataMember]
     public string NotificationAddress { get; set; }
 
-    public ISettings GetDefault(IServiceProvider serviceProvider)
+    public ServerNotificationAddressSettings GetDefault()
     {
         return new ServerNotificationAddressSettings { NotificationAddress = string.Empty };
     }

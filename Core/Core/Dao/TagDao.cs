@@ -36,7 +36,7 @@ public class TagDao : BaseMailDao, ITagDao
     public TagDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

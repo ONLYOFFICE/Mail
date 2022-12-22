@@ -115,7 +115,7 @@ public sealed class MailRemoveUserFolderOperation : MailOperation
                 removeFolderIds.Add(folderId);
 
             //Remove folder with subfolders
-            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.TenantId, CurrentUser.ID.ToString())
+            var expFolders = SimpleUserFoldersExp.CreateBuilder(CurrentTenant.Id, CurrentUser.ID.ToString())
                 .SetIds(removeFolderIds)
                 .Build();
 

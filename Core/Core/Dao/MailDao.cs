@@ -36,7 +36,7 @@ public class MailDao : BaseMailDao, IMailDao
          TenantManager tenantManager,
          SecurityContext securityContext,
          MessageEngine messageEngine,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
         _messageEngine = messageEngine;

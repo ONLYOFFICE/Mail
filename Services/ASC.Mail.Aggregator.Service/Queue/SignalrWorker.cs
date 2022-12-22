@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Aggregator.Service.Queue;
+﻿using ASC.Core.Notify.Socket;
+
+namespace ASC.Mail.Aggregator.Service.Queue;
 
 [Singletone]
 public class SocketIoNotifier : IDisposable
@@ -12,13 +14,13 @@ public class SocketIoNotifier : IDisposable
     private readonly EventWaitHandle _waitHandle;
     private readonly TimeSpan _timeSpan;
     private readonly ILogger _log;
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
     private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     public SocketIoNotifier(
         ILoggerProvider logProvider,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         IServiceProvider serviceProvider)
     {
         _log = logProvider.CreateLogger("ASC.Mail.SignalrWorker");
@@ -149,11 +151,11 @@ public class SocketIoNotifier : IDisposable
 
             tenantManager.SetCurrentTenant(tenant);
 
-            _log.DebugSocketIoNotifierCurrentTenant(tenantManager.GetCurrentTenant().TenantId);
+            _log.DebugSocketIoNotifierCurrentTenant(tenantManager.GetCurrentTenant().Id);
 
             var userInfo = userManager.GetUsers(Guid.Parse(userId));
 
-            if (userInfo.ID != Constants.LostUser.ID)
+            if (userInfo.Id != Constants.LostUser.Id)
             {
                 _log.DebugSocketIoNotifierSendStart();
 

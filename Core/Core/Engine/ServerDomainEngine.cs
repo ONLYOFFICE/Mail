@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Utils;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -30,7 +31,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ServerDomainEngine : BaseEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
 
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
@@ -150,7 +151,7 @@ public class ServerDomainEngine : BaseEngine
         return _mailDaoFactory.GetServerDomainDao().IsDomainExists(domainName);
     }
 
-    public ServerDomainDnsData GetOrCreateUnusedDnsData(ASC.Core.Common.EF.Model.Mail.ServerServer server)
+    public ServerDomainDnsData GetOrCreateUnusedDnsData(MailServerServer server)
     {
         var dnsSettings = _mailDaoFactory.GetServerDnsDao().GetFree();
 

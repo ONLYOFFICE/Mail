@@ -28,7 +28,7 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class DomainDao : BaseServerDao, IDomainDao
 {
-    public DomainDao(DbContextManager<MailServerDbContext> dbContext)
+    public DomainDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }

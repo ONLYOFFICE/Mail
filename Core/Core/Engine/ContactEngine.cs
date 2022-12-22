@@ -34,7 +34,7 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class ContactEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
     private readonly ILogger _log;
@@ -53,7 +53,7 @@ public class ContactEngine
 
     public ContactEngine(
         SecurityContext securityContext,
-        DbContextManager<MailDbContext> dbContextManager,
+        MailDbContext dbContextManager,
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
         IndexEngine indexEngine,
@@ -67,7 +67,7 @@ public class ContactEngine
         ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
-        _mailDbContext = dbContextManager.Get("mail");
+        _mailDbContext = dbContextManager;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
         _indexEngine = indexEngine;

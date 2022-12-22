@@ -3,7 +3,7 @@
 namespace ASC.Mail.Core.Core.Entities
 {
     [Serializable]
-    public class CrmPerson : ASC.Core.Common.EF.Model.CrmContact, ISecurityObjectId
+    public class CrmPerson : CrmContact, ISecurityObjectId
     {
 
         public int CompanyID { get; set; }
@@ -13,6 +13,8 @@ namespace ASC.Mail.Core.Core.Entities
         public object SecurityId => throw new NotImplementedException();
 
         public Type ObjectType => throw new NotImplementedException();
+
+        public string FullId => "";
 
         public CrmPerson()
         {

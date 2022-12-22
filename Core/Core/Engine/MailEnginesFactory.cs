@@ -9,7 +9,7 @@ public class MailEnginesFactory
     private TenantManager _tenantManager;
     private SecurityContext _securityContext;
 
-    public int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    public int Tenant => _tenantManager.GetCurrentTenant().Id;
     public string UserId => _securityContext.CurrentAccount.ID.ToString();
 
     private AutoreplyEngine _autoreplyEngine;

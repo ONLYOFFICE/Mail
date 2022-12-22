@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using ASC.Common.Mapping;
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
 {
@@ -68,10 +69,10 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCache<>));
+    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<MailEnginesFactory>();
     diHelper.TryAdd<ImapSyncService>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<ImapSyncService>();
 
     var redisConfiguration = hostContext.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();

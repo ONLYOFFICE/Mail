@@ -11,10 +11,10 @@ public class MailDaoFactory : IMailDaoFactory
 
     public MailDaoFactory(
         IServiceProvider serviceProvider,
-        DbContextManager<MailDbContext> dbContextManager)
+        MailDbContext dbContextManager)
     {
         _serviceProvider = serviceProvider;
-        _mailDbContext = dbContextManager.Get("mail");
+        _mailDbContext = dbContextManager;
     }
 
     public MailDbContext GetContext()

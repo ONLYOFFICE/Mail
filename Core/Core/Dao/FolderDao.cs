@@ -35,7 +35,7 @@ public class FolderDao : BaseMailDao, IFolderDao
     public FolderDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

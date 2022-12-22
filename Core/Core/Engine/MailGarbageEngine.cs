@@ -202,7 +202,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
         tenantManager.SetCurrentTenant(domain.Tenant);
-        _log.DebugMailGarbageRemoveDomainSetTenant(tenantManager.GetCurrentTenant().TenantId);
+        _log.DebugMailGarbageRemoveDomainSetTenant(tenantManager.GetCurrentTenant().Id);
 
         var daoFactory = scope.ServiceProvider.GetService<MailDaoFactory>();
         var context = daoFactory.GetContext();
@@ -257,7 +257,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
-        var tenant = tenantId != null ? tenantId.TenantId : tenantManager.GetCurrentTenant().TenantId;
+        var tenant = tenantId != null ? tenantId.Id : tenantManager.GetCurrentTenant().Id;
 
         _log.InfoMailGarbageClearUserMail(userId, tenant);
 
@@ -406,7 +406,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
 
             tenantManager.SetCurrentTenant(mailbox.TenantId);
-            _log.DebugMailGarbageRemoveMailboxDataSetTenant(tenantManager.GetCurrentTenant().TenantId);
+            _log.DebugMailGarbageRemoveMailboxDataSetTenant(tenantManager.GetCurrentTenant().Id);
 
             var mbEngine = scope.ServiceProvider.GetService<MailboxEngine>();
             var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
@@ -666,7 +666,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
         using var scope = _serviceProvider.CreateScope();
         var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
         tenantManager.SetCurrentTenant(mailbox.TenantId);
-        _log.DebugMailGarbageRemoveTLMailboxDataSetTenant(tenantManager.GetCurrentTenant().TenantId);
+        _log.DebugMailGarbageRemoveTLMailboxDataSetTenant(tenantManager.GetCurrentTenant().Id);
 
         var serverMailboxEngine = scope.ServiceProvider.GetService<ServerMailboxEngine>();
 

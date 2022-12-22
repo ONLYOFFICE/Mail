@@ -30,25 +30,28 @@ namespace ASC.Mail.Core.Engine;
 [Scope]
 public class QuotaEngine
 {
-    private int Tenant => _tenantManager.GetCurrentTenant().TenantId;
+    private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private readonly ILogger _log;
     private readonly TenantManager _tenantManager;
+    private readonly TenantQuotaController tenantQuotaController;
 
     public QuotaEngine(
         TenantManager tenantManager,
-        ILoggerProvider logProvider)
+        ILoggerProvider logProvider,
+        TenantQuotaController tenantQuotaController)
     {
 
         _log = logProvider.CreateLogger("ASC.Mail.QuotaEngine");
         _tenantManager = tenantManager;
+        this.tenantQuotaController = tenantQuotaController;
     }
 
     public void QuotaUsedAdd(long usedQuota)
     {
         try
         {
-            var quotaController = new TenantQuotaController(Tenant, _tenantManager);
-            quotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
+            tenantQuotaController.Init(Tenant);
+            tenantQuotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
         }
         catch (Exception ex)
         {
@@ -62,8 +65,8 @@ public class QuotaEngine
     {
         try
         {
-            var quotaController = new TenantQuotaController(Tenant, _tenantManager);
-            quotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
+            tenantQuotaController.Init(Tenant);
+            tenantQuotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
         }
         catch (Exception ex)
         {
