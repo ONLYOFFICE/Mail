@@ -90,7 +90,7 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
     builder.Register(context.Configuration, false, false, "search.json");
 });
 
-builder.Host.ConfigureNLogLogging();
+//builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 

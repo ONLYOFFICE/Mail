@@ -1,5 +1,8 @@
 ﻿using ASC.Common.Mapping;
 using ASC.Common.Threading;
+using ASC.Mail.Core.Dao;
+using ASC.Mail.Core.Dao.Interfaces;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -33,35 +36,31 @@ builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
     }
 });
 
-builder.Host.ConfigureAppConfiguration((hostContext, config) =>
+var path = builder.Configuration["pathToConf"];
+if (!Path.IsPathRooted(path))
 {
-    var builded = config.Build();
-    var path = builded["pathToConf"];
-    if (!Path.IsPathRooted(path))
-    {
-        path = Path.GetFullPath(CrossPlatform.PathCombine(hostContext.HostingEnvironment.ContentRootPath, path));
-    }
+    path = Path.GetFullPath(CrossPlatform.PathCombine(builder.Environment.ContentRootPath, path));
+}
 
-    config.SetBasePath(path);
-    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
+builder.Configuration.SetBasePath(path);
+var env = builder.Configuration.GetValue("ENVIRONMENT", "Production");
 
-    config
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{env}.json", true)
-        .AddJsonFile("storage.json")
-        .AddJsonFile($"storage.{env}.json", true)
-        .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json", true)
-        .AddJsonFile("elastic.json")
-        .AddJsonFile($"elastic.{env}.json", true)
-        .AddEnvironmentVariables()
-        .AddCommandLine(args)
-        .AddInMemoryCollection(new Dictionary<string, string>
-            {
+builder.Configuration
+    .AddJsonFile("appsettings.json")
+    .AddJsonFile($"appsettings.{env}.json", true)
+    .AddJsonFile("storage.json")
+    .AddJsonFile($"storage.{env}.json", true)
+    .AddJsonFile("mail.json")
+    .AddJsonFile($"mail.{env}.json", true)
+    .AddJsonFile("elastic.json")
+    .AddJsonFile($"elastic.{env}.json", true)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddInMemoryCollection(new Dictionary<string, string>
+        {
                 {"pathToConf", path }
-            }
-        );
-});
+        }
+    );
 
 builder.Host.ConfigureServices((hostContext, services) =>
 {
@@ -75,6 +74,10 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddSingleton(new ConsoleParser(args));
     diHelper.TryAdd<AggregatorServiceLauncher>();
     diHelper.TryAdd<AggregatorServiceScope>();
+
+    services.AddSingleton<ASC.Mail.Core.Dao.Context.MailDbContext>();
+    diHelper.TryAdd(typeof(IImapFlagsDao), typeof(ImapFlagsDao));
+    
     services.AddTransient<DistributedTaskQueue>();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
@@ -85,16 +88,16 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddSingleton(typeof(ILogger), logger);
 });
 
-builder.Host.ConfigureNLogLogging();
+//builder.Host.ConfigureNLogLogging();
 
 var startup = new BaseWorkerStartup(builder.Configuration);
 
 startup.ConfigureServices(builder.Services);
 
-builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
-{
-    builder.Register(context.Configuration, false, false, "search.json");
-});
+//builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
+//{
+//    builder.Register(context.Configuration, false, false);
+//});
 
 var app = builder.Build();
 

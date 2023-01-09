@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
 using CrmContact = ASC.Mail.Core.Dao.Entities.CrmContact;
 using CrmTag = ASC.Mail.Core.Dao.Entities.CrmTag;
 using MailFolder = ASC.Mail.Core.Dao.Entities.MailFolder;
