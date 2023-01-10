@@ -1,8 +1,10 @@
 ﻿using ASC.Common.Mapping;
 using ASC.Common.Threading;
+using ASC.Core.Common.EF.Context;
+using ASC.Core.Common.EF;
 using ASC.Mail.Core.Dao;
+using ASC.Mail.Core.Dao.Context;
 using ASC.Mail.Core.Dao.Interfaces;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -75,9 +77,10 @@ builder.Host.ConfigureServices((hostContext, services) =>
     diHelper.TryAdd<AggregatorServiceLauncher>();
     diHelper.TryAdd<AggregatorServiceScope>();
 
-    services.AddSingleton<ASC.Mail.Core.Dao.Context.MailDbContext>();
+    services.AddDbContext<MailDbContext>();
+    services.AddBaseDbContextPool<TenantDbContext>();
     diHelper.TryAdd(typeof(IImapFlagsDao), typeof(ImapFlagsDao));
-    
+
     services.AddTransient<DistributedTaskQueue>();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
@@ -90,7 +93,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
 
 //builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new Startup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 
@@ -101,6 +104,6 @@ startup.ConfigureServices(builder.Services);
 
 var app = builder.Build();
 
-startup.Configure(app);
+startup.Configure(app, app.Environment);
 
 await app.RunAsync();
