@@ -1,4 +1,5 @@
-﻿using ASC.Common.Mapping;
+﻿using ASC.Api.Core.Extensions;
+using ASC.Common.Mapping;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -88,11 +89,9 @@ builder.Host.ConfigureServices((hostContext, services) =>
 builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
     builder.Register(context.Configuration, false, false, "search.json");
-});
+}).ConfigureDefault();
 
-//builder.Host.ConfigureNLogLogging();
-
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 

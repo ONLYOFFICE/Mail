@@ -6,6 +6,10 @@ using ASC.Mail.Core.Dao;
 using ASC.Mail.Core.Dao.Context;
 using ASC.Mail.Core.Dao.Interfaces;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using Microsoft.Extensions.Hosting;
+using ASC.Api.Core.Extensions;
+using ASC.Webhooks.Core.EF.Context;
+using ASC.Mail;
 
 var options = new WebApplicationOptions
 {
@@ -79,6 +83,10 @@ builder.Host.ConfigureServices((hostContext, services) =>
 
     services.AddDbContext<MailDbContext>();
     services.AddBaseDbContextPool<TenantDbContext>();
+    services.AddBaseDbContextPool<UserDbContext>();
+    services.AddBaseDbContextPool<WebhooksDbContext>();
+
+    
     diHelper.TryAdd(typeof(IImapFlagsDao), typeof(ImapFlagsDao));
 
     services.AddTransient<DistributedTaskQueue>();
@@ -89,9 +97,8 @@ builder.Host.ConfigureServices((hostContext, services) =>
     var serviceProvider = services.BuildServiceProvider();
     var logger = serviceProvider.GetService<ILogger<CrmLinkEngine>>();
     services.AddSingleton(typeof(ILogger), logger);
-});
+}).ConfigureDefault();
 
-//builder.Host.ConfigureNLogLogging();
 
 var startup = new Startup(builder.Configuration, builder.Environment);
 
@@ -104,6 +111,6 @@ startup.ConfigureServices(builder.Services);
 
 var app = builder.Build();
 
-startup.Configure(app, app.Environment);
+startup.Configure(app);
 
 await app.RunAsync();

@@ -1,5 +1,6 @@
-﻿using ASC.Common.Mapping;
-
+﻿using ASC.Api.Core.Extensions;
+using ASC.Common.Mapping;
+using ASC.Mail;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 using System.Reflection;
@@ -79,9 +80,9 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
     builder.Register(context.Configuration, false, false);
 });
 
-builder.Host.ConfigureNLogLogging();
+builder.Host.ConfigureDefault();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new Startup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 
