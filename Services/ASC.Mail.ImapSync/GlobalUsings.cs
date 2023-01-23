@@ -4,7 +4,7 @@ global using ASC.Common.Caching;
 global using ASC.Common.DependencyInjection;
 global using ASC.Common.Mapping;
 global using ASC.Common.Utils;
-global using ASC.Core.Notify.Signalr;
+global using ASC.Core.Notify.Socket;
 global using ASC.Core.Users;
 global using ASC.Mail.Configuration;
 global using ASC.Mail.Core.Dao.Expressions.Mailbox;

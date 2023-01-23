@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Utils;
+
 namespace ASC.Mail.Extensions;
 
 public static class ServerDomainDnsExtensions

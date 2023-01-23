@@ -373,9 +373,9 @@ public static class MailDraftExtensions
                         {
                             new AceWrapper
                                 {
-                                    SubjectId = FileConstant.ShareLinkId,
+                                    Id = FileConstant.ShareLinkId,
                                     SubjectGroup = true,
-                                    Share = draft.FileLinksShareMode
+                                    Access = draft.FileLinksShareMode
                                 }
                         }
             };
@@ -384,7 +384,7 @@ public static class MailDraftExtensions
             log.InfoMailExtensionsSetPublicAcceesToFile(fileId);
             var sharedInfo =
                 fileStorageService.GetSharedInfoAsync(new List<string> { objectId }, new List<string> { }).Result
-                                  .Find(r => r.SubjectId == FileConstant.ShareLinkId);
+                                  .Find(r => r.Id == FileConstant.ShareLinkId);
             linkNode.SetAttributeValue("href", sharedInfo.Link);
             log.InfoMailExtensionsChangeFileLinkHref(fileId);
             setLinks.Add(new Tuple<string, string>(fileId, sharedInfo.Link));

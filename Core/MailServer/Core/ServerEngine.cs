@@ -227,7 +227,7 @@ public class ServerEngine
             return null;
 
         var client = GetApiClient();
-        var request = GetApiRequest("version", Method.GET);
+        var request = GetApiRequest("version", Method.Get);
 
         var response = client.Execute(request);
         if (response.StatusCode != HttpStatusCode.OK && response.StatusCode != HttpStatusCode.NotFound)
@@ -252,9 +252,9 @@ public class ServerEngine
 
         var client = GetApiClient();
 
-        if (client != null) _log.DebugServerEngineGetClientURL(client.BaseUrl);
+        if (client != null) _log.DebugServerEngineGetClientURL(client.Options.BaseUrl);
 
-        var request = GetApiRequest("domains/{domain_name}", Method.DELETE);
+        var request = GetApiRequest("domains/{domain_name}", Method.Delete);
 
         if (request != null) _log.DebugServerEngineGetRequest();
 
@@ -281,7 +281,7 @@ public class ServerEngine
 
 
 
-        var request = GetApiRequest("domains/{domain_name}/mailboxes/{mailbox_localpart}", Method.DELETE);
+        var request = GetApiRequest("domains/{domain_name}/mailboxes/{mailbox_localpart}", Method.Delete);
 
         request.AddUrlSegment("domain_name", domainName);
 

@@ -56,12 +56,12 @@ public class StorageManager
 
     public IDataStore GetDataStoreForCkImages(int tenant)
     {
-        return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "fckuploaders", null);
+        return _storageFactory.GetStorage(tenant, "fckuploaders");
     }
 
     public IDataStore GetDataStoreForAttachments(int tenant)
     {
-        return _storageFactory.GetStorage(null, tenant.ToString(CultureInfo.InvariantCulture), "mailaggregator", null);
+        return _storageFactory.GetStorage(tenant, "mailaggregator");
     }
 
     public static byte[] LoadLinkData(string link, ILogger log)

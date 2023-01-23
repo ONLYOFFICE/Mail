@@ -14,6 +14,8 @@
  *
 */
 
+using StackExchange.Redis.Extensions.Core.Implementations;
+
 namespace ASC.Mail.ImapSync;
 
 [Singletone]
@@ -28,25 +30,22 @@ public class ImapSyncService : IHostedService
 
     private readonly MailSettings _mailSettings;
     private readonly RedisClient _redisClient;
-    private readonly RedisFactory _redisFactory;
 
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
 
     private readonly IServiceProvider _serviceProvider;
 
     public ImapSyncService(
-        RedisFactory redisFactory,
+        RedisClient redisClient,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        IOptionsSnapshot<SignalrServiceClient> optionsSnapshot,
+        IOptionsSnapshot<SocketServiceClient> optionsSnapshot,
         ILoggerProvider loggerProvider)
     {
-        _redisFactory = redisFactory;
-        _redisClient = redisFactory.GetRedisClient();
+        _redisClient = redisClient;
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
         _signalrServiceClient = optionsSnapshot.Get("mail");
-        _signalrServiceClient.EnableSignalr = true;
         clients = new ConcurrentDictionary<string, MailImapClient>();
 
         _cancelTokenSource = new CancellationTokenSource();
@@ -191,10 +190,9 @@ public class ImapSyncService : IHostedService
     public async Task<int> ClearUserRedis(string UserName)
     {
         int result = 0;
-
         string RedisKey = "ASC.MailAction:" + UserName;
 
-        var localRedisClient = _redisFactory.GetRedisClient();
+        var localRedisClient = _redisClient;
 
         if (localRedisClient == null) return 0;
 

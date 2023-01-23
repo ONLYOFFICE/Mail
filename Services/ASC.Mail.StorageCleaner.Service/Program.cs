@@ -73,7 +73,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddHostedService<StorageCleanerLauncher>();
     diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<StorageCleanerScope>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 });
 
@@ -82,9 +82,9 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
     builder.Register(context.Configuration, false, false);
 });
 
-builder.Host.ConfigureNLogLogging();
+//builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 

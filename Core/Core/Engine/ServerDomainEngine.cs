@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Utils;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;

@@ -27,9 +27,9 @@ namespace ASC.Mail.Extensions;
 
 static class RestClientExtensions
 {
-    public static IRestResponse ExecuteSafe(this RestClient client, RestRequest request)
+    public static RestResponse ExecuteSafe(this RestClient client, RestRequest request)
     {
-        IRestResponse response;
+        RestResponse response;
         try
         {
             response = client.Execute(request);

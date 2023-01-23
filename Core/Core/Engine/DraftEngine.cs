@@ -261,7 +261,7 @@ public class DraftEngine : ComposeEngineBase
                 {
                     SaveIcsAttachment(draft, mimeMessage);
 
-                    SendMailNotification(draft);
+                    //SendMailNotification(draft);
 
                     ReleaseSendingDraftOnSuccess(draft, message);
 

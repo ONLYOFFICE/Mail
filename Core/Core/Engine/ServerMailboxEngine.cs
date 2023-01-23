@@ -217,7 +217,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var userInfo = _userManager.GetUsers(user);
 
-        if (userInfo.IsVisitor(_userManager))
+        if (userInfo != null && _userManager.IsUserInGroup(userInfo.Id, ASC.Core.Users.Constants.GroupEveryone.ID))
             throw new InvalidDataException("User is visitor.");
 
         if (localPart.Length > 64)

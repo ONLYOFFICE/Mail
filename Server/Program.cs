@@ -57,7 +57,7 @@ namespace ASC.Mail
                     {
                         {"pathToConf", path}
                     });
-                })
-            .ConfigureNLogLogging();
+                });
+            //.ConfigureNLogLogging();
     }
 }

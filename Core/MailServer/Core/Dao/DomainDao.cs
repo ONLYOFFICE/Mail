@@ -35,7 +35,7 @@ public class DomainDao : BaseServerDao, IDomainDao
 
     public int Save(Domain domain)
     {
-        var entry = MailServerDbContext.AddOrUpdate(r => r.Domain, domain);
+        var entry = MailServerDbContext.AddOrUpdate(MailServerDbContext.Domain, domain);
 
         var result = MailServerDbContext.SaveChanges();
 

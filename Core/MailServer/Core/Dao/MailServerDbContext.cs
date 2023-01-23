@@ -12,21 +12,6 @@ public partial class MailServerDbContext : DbContext
 
     public MailServerDbContext(DbContextOptions<MailServerDbContext> options) : base(options) { }
 
-    public class MySqlMailServerDbContext : MailServerDbContext { }
-    public class PostgreSqlMailServerDbContext : MailServerDbContext { }
-
-    protected override Dictionary<Provider, Func<DbContext>> ProviderContext
-    {
-        get
-        {
-            return new Dictionary<Provider, Func<DbContext>>()
-            {
-                { Provider.MySql, () => new MySqlMailServerDbContext() } ,
-                { Provider.PostgreSql, () => new PostgreSqlMailServerDbContext() } ,
-            };
-        }
-    }
-
     public virtual DbSet<Alias> Alias { get; set; }
     public virtual DbSet<ApiKeys> ApiKeys { get; set; }
     public virtual DbSet<Dkim> Dkim { get; set; }
@@ -35,7 +20,7 @@ public partial class MailServerDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        ModelBuilderWrapper.From(modelBuilder, _provider)
+        ModelBuilderWrapper.From(modelBuilder, Database)
             .AddDbTenant();
 
         modelBuilder.Entity<Alias>(entity =>
@@ -394,10 +379,3 @@ public partial class MailServerDbContext : DbContext
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
 
-public static class MailServerDbExtension
-{
-    public static DIHelper AddMailServerDbContextService(this DIHelper services)
-    {
-        return services.AddDbContextManagerService<MailServerDbContext>();
-    }
-}

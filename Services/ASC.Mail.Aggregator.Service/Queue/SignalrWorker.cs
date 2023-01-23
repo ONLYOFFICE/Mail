@@ -155,7 +155,7 @@ public class SocketIoNotifier : IDisposable
 
             var userInfo = userManager.GetUsers(Guid.Parse(userId));
 
-            if (userInfo.Id != Constants.LostUser.Id)
+            if (userInfo.Id != ASC.Core.Users.Constants.LostUser.Id)
             {
                 _log.DebugSocketIoNotifierSendStart();
 

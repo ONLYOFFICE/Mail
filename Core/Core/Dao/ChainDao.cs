@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Core.Common.EF;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -157,7 +158,7 @@ public class ChainDao : BaseMailDao, IChainDao
             Tags = chain.Tags
         };
 
-        var entry = MailDbContext.AddOrUpdate(c => c.MailChains, mailChain);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailChains, mailChain);
 
         var count = MailDbContext.SaveChanges();
 

@@ -1,5 +1,6 @@
 ﻿using ASC.Api.Core.Extensions;
-
+using ASC.Core.Common.EF;
+using ASC.Mail.Server.Core.Dao;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
@@ -68,6 +69,9 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddHttpContextAccessor();
     services.AddMemoryCache();
     services.AddHttpClient();
+
+    services.AddBaseDbContextPool<MailServerDbContext>();
+
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
@@ -76,7 +80,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     diHelper.TryAdd<AggregatorServiceLauncher>();
     diHelper.TryAdd<AggregatorServiceScope>();
     services.AddDistributedTaskQueue();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
@@ -85,9 +89,9 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddSingleton(typeof(ILogger), logger);
 });
 
-builder.Host.ConfigureNLogLogging();
+//builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 

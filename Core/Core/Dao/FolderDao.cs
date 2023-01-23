@@ -86,7 +86,7 @@ public class FolderDao : BaseMailDao, IFolderDao
             TotalConversationsCount = (uint)folder.TotalChainCount
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailFolderCounters, mailFolder);
+        MailDbContext.AddOrUpdate(MailDbContext.MailFolderCounters, mailFolder);
 
         var result = MailDbContext.SaveChanges();
 

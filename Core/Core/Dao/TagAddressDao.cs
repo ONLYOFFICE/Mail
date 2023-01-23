@@ -76,7 +76,7 @@ public class TagAddressDao : BaseMailDao, ITagAddressDao
             Tenant = Tenant
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailTagAddresses, mailTagAddress);
+        MailDbContext.AddOrUpdate(MailDbContext.MailTagAddresses, mailTagAddress);
 
         var result = MailDbContext.SaveChanges();
 

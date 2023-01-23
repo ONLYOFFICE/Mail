@@ -122,7 +122,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             IdFolder = item.FolderId
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailUserFolderXMails, newItem);
+        MailDbContext.AddOrUpdate(MailDbContext.MailUserFolderXMails, newItem);
 
         var result = MailDbContext.SaveChanges();
 

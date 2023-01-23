@@ -137,9 +137,7 @@ public class MailImapClient : IDisposable
 
         var clientScope = serviceProvider.CreateScope().ServiceProvider;
 
-        var redisFactory = clientScope.GetService<RedisFactory>();
-
-        _redisClient = redisFactory.GetRedisClient();
+        _redisClient = clientScope.GetService<RedisClient>();
 
         if (_redisClient == null)
         {

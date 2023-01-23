@@ -40,7 +40,7 @@ public class MailboxDao : BaseServerDao, IMailboxDao
     {
         mailbox.Password = PostfixPasswordEncryptor.EncryptString(HashType.Md5, mailbox.Password);
 
-        var entry = MailServerDbContext.AddOrUpdate(r => r.Mailbox, mailbox);
+        var entry = MailServerDbContext.AddOrUpdate(MailServerDbContext.Mailbox, mailbox);
 
         var result = MailServerDbContext.SaveChanges();
 

@@ -131,16 +131,16 @@ public static class MailBoxExtensions
 
         try
         {
-            var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
-            var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
-            var usedQuota = quotaController.QuotaCurrentGet();
-            quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
+            //var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
+            //var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
+            //var usedQuota = quotaController.QuotaCurrentGet();
+            //quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
 
-            var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
-            var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
+            //var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
+            //var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
 
 
-            log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
+            //log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
         }
         catch (Exception ex)
         {

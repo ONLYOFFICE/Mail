@@ -76,7 +76,7 @@ public class ServerDao : BaseMailDao, IServerDao
             IdTenant = tenant
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailServerServerXTenants, xItem);
+        MailDbContext.AddOrUpdate(MailDbContext.MailServerServerXTenants, xItem);
 
         var result = MailDbContext.SaveChanges();
 

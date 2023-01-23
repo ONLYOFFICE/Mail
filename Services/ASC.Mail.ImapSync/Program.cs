@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using ASC.Core.Common.EF.Context;
+using ASC.Core.Common.EF;
+using ASC.Mail.Server.Core.Dao;
+using Microsoft.Extensions.Hosting.WindowsServices;
 
 var options = new WebApplicationOptions
 {
@@ -65,13 +68,16 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddHttpContextAccessor();
     services.AddMemoryCache();
     services.AddHttpClient();
+
+    services.AddBaseDbContextPool<MailServerDbContext>();
+    
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();
     diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     diHelper.TryAdd<MailEnginesFactory>();
     diHelper.TryAdd<ImapSyncService>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
+    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<ImapSyncService>();
 
     var redisConfiguration = hostContext.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
@@ -89,9 +95,9 @@ builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
     builder.Register(context.Configuration, false, false, "search.json");
 });
 
-builder.Host.ConfigureNLogLogging();
+//builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 
