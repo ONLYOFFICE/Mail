@@ -33,7 +33,7 @@ public class MailGarbageDao : BaseMailDao, IMailGarbageDao
     public MailGarbageDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

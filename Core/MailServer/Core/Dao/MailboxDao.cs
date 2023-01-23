@@ -31,7 +31,7 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class MailboxDao : BaseServerDao, IMailboxDao
 {
-    public MailboxDao(DbContextManager<MailServerDbContext> dbContext)
+    public MailboxDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }

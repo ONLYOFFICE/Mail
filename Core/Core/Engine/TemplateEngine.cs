@@ -44,7 +44,7 @@ public sealed class TemplateEngine : ComposeEngineBase
         StorageManager storageManager,
         CoreSettings coreSettings,
         StorageFactory storageFactory,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)

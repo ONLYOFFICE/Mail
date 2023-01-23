@@ -53,7 +53,7 @@ public class ContactEngine
 
     public ContactEngine(
         SecurityContext securityContext,
-        DbContextManager<MailDbContext> dbContextManager,
+        MailDbContext dbContext,
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
         IndexEngine indexEngine,
@@ -67,7 +67,7 @@ public class ContactEngine
         ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
-        _mailDbContext = dbContextManager.Get("mail");
+        _mailDbContext = dbContext;
         _tenantManager = tenantManager;
         _mailDaoFactory = mailDaoFactory;
         _indexEngine = indexEngine;

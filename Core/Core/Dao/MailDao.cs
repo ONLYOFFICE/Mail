@@ -36,7 +36,7 @@ public class MailDao : BaseMailDao, IMailDao
          TenantManager tenantManager,
          SecurityContext securityContext,
          MessageEngine messageEngine,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
         _messageEngine = messageEngine;
@@ -86,11 +86,11 @@ public class MailDao : BaseMailDao, IMailDao
         if (!string.IsNullOrEmpty(mail.CalendarUid))
             mailMail.CalendarUid = mail.CalendarUid;
 
-        var entry = MailDbContext.AddOrUpdate(m => m.MailMails, mailMail);
+        var entry = MailDbContext.MailMails.Add(mailMail);
 
         MailDbContext.SaveChanges();
 
-        return entry.Id;
+        return entry.Entity.Id;
     }
 
     public Core.Entities.Mail GetMail(IMessageExp exp)

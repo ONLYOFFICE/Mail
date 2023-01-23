@@ -6,7 +6,7 @@ using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
 
 namespace ASC.Mail.Server.Core.Dao;
 
-public partial class MailServerDbContext : BaseDbContext
+public partial class MailServerDbContext : DbContext
 {
     public MailServerDbContext() { }
 
@@ -15,11 +15,11 @@ public partial class MailServerDbContext : BaseDbContext
     public class MySqlMailServerDbContext : MailServerDbContext { }
     public class PostgreSqlMailServerDbContext : MailServerDbContext { }
 
-    protected override Dictionary<Provider, Func<BaseDbContext>> ProviderContext
+    protected override Dictionary<Provider, Func<DbContext>> ProviderContext
     {
         get
         {
-            return new Dictionary<Provider, Func<BaseDbContext>>()
+            return new Dictionary<Provider, Func<DbContext>>()
             {
                 { Provider.MySql, () => new MySqlMailServerDbContext() } ,
                 { Provider.PostgreSql, () => new PostgreSqlMailServerDbContext() } ,

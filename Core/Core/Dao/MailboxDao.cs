@@ -41,7 +41,7 @@ public class MailboxDao : BaseMailDao, IMailboxDao
     public MailboxDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext,
+         MailDbContext dbContext,
          InstanceCrypto instanceCrypto,
          MailSettings mailSettings)
         : base(tenantManager, securityContext, dbContext)

@@ -1,4 +1,5 @@
-﻿using IMailboxDao = ASC.Mail.Server.Core.Dao.Interfaces.IMailboxDao;
+﻿using Microsoft.AspNetCore.Authentication;
+using IMailboxDao = ASC.Mail.Server.Core.Dao.Interfaces.IMailboxDao;
 using MailboxDao = ASC.Mail.Server.Core.Dao.MailboxDao;
 
 namespace ASC.Mail.Core.MailServer.Core.Dao;
@@ -10,11 +11,11 @@ public class MailServerDaoFactory : IMailServerDaoFactory
     private readonly MailServerDbContext _mailServerDbContext;
 
     public MailServerDaoFactory(
-        IServiceProvider serviceProvider,
-        DbContextManager<MailServerDbContext> dbContextManager)
+    IServiceProvider serviceProvider,
+        MailServerDbContext dbContextManager)
     {
         _serviceProvider = serviceProvider;
-        _mailServerDbContext = dbContextManager.Get("mailServer");
+        _mailServerDbContext = dbContextManager;
     }
 
     public IDbContextTransaction BeginTransaction(IsolationLevel? level = null)

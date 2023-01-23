@@ -41,7 +41,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
     public CrmContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext,
+         MailDbContext dbContext,
          ILoggerProvider logProvider,
          CrmSecurity crmSecurity)
         : base(tenantManager, securityContext, dbContext)

@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Dao.Entities;
 using Contact = ASC.Mail.Core.Entities.Contact;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -34,7 +35,7 @@ public class ContactDao : BaseMailDao, IContactDao
     public ContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -53,11 +54,10 @@ public class ContactDao : BaseMailDao, IContactDao
             HasPhoto = contact.HasPhoto
         };
 
-        var entity = MailDbContext.AddOrUpdate(t => t.MailContacts, mailContact);
-
+        var entity = MailDbContext.MailContacts.Add(mailContact);
         MailDbContext.SaveChanges();
 
-        return (int)entity.Id;
+        return entity.Entity.Id;
     }
 
     public int RemoveContacts(List<int> ids)

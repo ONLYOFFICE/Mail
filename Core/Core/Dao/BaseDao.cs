@@ -38,10 +38,10 @@ public abstract class BaseMailDao
     protected BaseMailDao(
         TenantManager tenantManager,
         SecurityContext securityContext,
-        DbContextManager<MailDbContext> dbContext)
+        MailDbContext dbContext)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
-        LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
+        LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext);
     }
 }

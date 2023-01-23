@@ -35,7 +35,7 @@ public class TagDao : BaseMailDao, ITagDao
     public TagDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -184,11 +184,11 @@ public class TagDao : BaseMailDao, ITagDao
             CrmId = tag.CrmId
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailTags, dbTag); //maybe memory leak here
+        var entry = MailDbContext.MailTags.Add(dbTag); //maybe memory leak here
 
         MailDbContext.SaveChanges();
 
-        return entry.Id;
+        return entry.Entity.Id;
     }
 
     public int DeleteTag(int id)

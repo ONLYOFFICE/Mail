@@ -33,7 +33,7 @@ public class TagAddressDao : BaseMailDao, ITagAddressDao
     public TagAddressDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

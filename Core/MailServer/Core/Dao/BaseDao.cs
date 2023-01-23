@@ -30,8 +30,8 @@ public abstract class BaseServerDao
     public Lazy<MailServerDbContext> LazyMailServerDbContext { get; }
     public MailServerDbContext MailServerDbContext => LazyMailServerDbContext.Value;
 
-    protected BaseServerDao(DbContextManager<MailServerDbContext> dbContext)
+    protected BaseServerDao(MailServerDbContext dbContext)
     {
-        LazyMailServerDbContext = new Lazy<MailServerDbContext>(() => dbContext.Get("mailServer"));
+        LazyMailServerDbContext = new Lazy<MailServerDbContext>(() => dbContext);
     }
 }

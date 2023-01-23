@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Dao.Entities;
 using ContactInfo = ASC.Mail.Core.Entities.ContactInfo;
 using IContactInfoDao = ASC.Mail.Core.Dao.Interfaces.IContactInfoDao;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -36,7 +37,7 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
     public ContactInfoDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -54,11 +55,10 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
             IsPrimary = contactInfo.IsPrimary
         };
 
-        var entity = MailDbContext.AddOrUpdate(t => t.MailContactInfos, mailContactInfo);
-
+        var entity = MailDbContext.MailContactInfos.Add(mailContactInfo);
         MailDbContext.SaveChanges();
 
-        return (int)entity.Id;
+        return entity.Entity.Id;
     }
 
     public int RemoveContactInfo(int id)

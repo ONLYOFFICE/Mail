@@ -38,11 +38,11 @@ public sealed class FactoryIndexerMailMail : FactoryIndexer<MailMail>
         FactoryIndexer factoryIndexer,
         BaseIndexer<MailMail> baseIndexer,
         IServiceProvider serviceProvider,
-        DbContextManager<MailDbContext> dbContext,
+        MailDbContext dbContext,
         ICache cache)
         : base(options, tenantManager, searchSettingsHelper, factoryIndexer, baseIndexer, serviceProvider, cache)
     {
-        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext.Get("mail"));
+        _lazyMailDbContext = new Lazy<MailDbContext>(() => dbContext);
     }
 }
 

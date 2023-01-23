@@ -74,7 +74,7 @@ public class DraftEngine : ComposeEngineBase
         FactoryIndexer factoryIndexerCommon,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        SignalrServiceClient optionsSnapshot,
+        SocketServiceClient optionsSnapshot,
         MailSettings mailSettings,
         ILoggerProvider logProvider,
         DeliveryFailureMessageTranslates daemonLabels = null)
@@ -297,7 +297,7 @@ public class DraftEngine : ComposeEngineBase
 
                 ReleaseSendingDraftOnFailure(draft);
 
-                SendMailErrorNotification(draft);
+                //SendMailErrorNotification(draft);
             }
             finally
             {
@@ -445,48 +445,48 @@ public class DraftEngine : ComposeEngineBase
         }
     }
 
-    private void SendMailErrorNotification(MailDraftData draft)
-    {
-        try
-        {
-            // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
-        }
-    }
+    //private void SendMailErrorNotification(MailDraftData draft)
+    //{
+    //    try
+    //    {
+    //        // send success notification
+    //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
+    //    }
+    //}
 
-    private void SendMailNotification(MailDraftData draft)
-    {
-        try
-        {
-            MailNotificationState state = MailNotificationState.SentMessageSuccess;
-            if (!string.IsNullOrEmpty(draft.CalendarIcs))
-            {
-                switch (draft.CalendarMethod)
-                {
-                    case DefineConstants.ICAL_REQUEST:
-                        state = MailNotificationState.SentIcalRequest;
-                        break;
-                    case DefineConstants.ICAL_REPLY:
-                        state = MailNotificationState.SentIcalResponse;
-                        break;
-                    case DefineConstants.ICAL_CANCEL:
-                        state = MailNotificationState.SentIcalCancel;
-                        break;
-                }
-            }
+    //private void SendMailNotification(MailDraftData draft)
+    //{
+    //    try
+    //    {
+    //        MailNotificationState state = MailNotificationState.SentMessageSuccess;
+    //        if (!string.IsNullOrEmpty(draft.CalendarIcs))
+    //        {
+    //            switch (draft.CalendarMethod)
+    //            {
+    //                case DefineConstants.ICAL_REQUEST:
+    //                    state = MailNotificationState.SentIcalRequest;
+    //                    break;
+    //                case DefineConstants.ICAL_REPLY:
+    //                    state = MailNotificationState.SentIcalResponse;
+    //                    break;
+    //                case DefineConstants.ICAL_CANCEL:
+    //                    state = MailNotificationState.SentIcalCancel;
+    //                    break;
+    //            }
+    //        }
 
-            // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
-        }
-        catch (Exception ex)
-        {
-            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
-        }
-    }
+    //        // send success notification
+    //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
+    //    }
+    //}
 
     private void SaveFrequentlyContactedAddress(int tenant, string user, MimeMessage mimeMessage)
     {

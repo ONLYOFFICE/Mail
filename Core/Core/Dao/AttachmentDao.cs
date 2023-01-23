@@ -34,7 +34,7 @@ public class AttachmentDao : BaseMailDao, IAttachmentDao
     public AttachmentDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

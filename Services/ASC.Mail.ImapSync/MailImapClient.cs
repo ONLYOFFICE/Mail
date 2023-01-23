@@ -15,6 +15,7 @@
 */
 
 using ASC.Common.Log;
+using ASC.Core.Notify.Socket;
 using ASC.Mail.ImapSync.Models;
 using System.Linq;
 
@@ -37,7 +38,7 @@ public class MailImapClient : IDisposable
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly MailSettings _mailSettings;
 
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
     private readonly RedisClient _redisClient;
 
     private readonly ILogger _log;
@@ -124,7 +125,7 @@ public class MailImapClient : IDisposable
         int tenant,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         CancellationToken cancelToken,
         ILoggerProvider logProvider)
     {
@@ -959,7 +960,7 @@ public class MailImapClient : IDisposable
         {
             var count = _mailEnginesFactory.FolderEngine.GetUserUnreadMessageCount(UserName);
 
-            _signalrServiceClient.SendUnreadUser(Tenant, UserName, count);
+            _signalrServiceClient.MakeRequest("sendUnreadUsers", count);
         }
         catch (Exception ex)
         {

@@ -28,18 +28,18 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class DkimDao : BaseServerDao, IDkimDao
 {
-    public DkimDao(DbContextManager<MailServerDbContext> dbContext)
+    public DkimDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }
 
     public int Save(Dkim dkim)
     {
-        var entry = MailServerDbContext.AddOrUpdate(r => r.Dkim, dkim);
+        var entry = MailServerDbContext.Dkim.Add(dkim);
 
         MailServerDbContext.SaveChanges();
 
-        return (int)entry.Id;
+        return (int)entry.Entity.Id;
     }
 
     public int Remove(string domain)

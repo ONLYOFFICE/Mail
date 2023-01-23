@@ -34,7 +34,7 @@ public class ChainDao : BaseMailDao, IChainDao
     public ChainDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

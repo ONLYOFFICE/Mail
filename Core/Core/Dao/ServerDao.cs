@@ -33,7 +33,7 @@ public class ServerDao : BaseMailDao, IServerDao
     public ServerDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -110,11 +110,11 @@ public class ServerDao : BaseMailDao, IServerDao
             ImapSettingsId = server.ImapSettingsId
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerServers, mailServer);
+        var entry = MailDbContext.MailServerServers.Add(mailServer);
 
         MailDbContext.SaveChanges();
 
-        return entry.Id;
+        return entry.Entity.Id;
     }
 
     public int Delete(int id)

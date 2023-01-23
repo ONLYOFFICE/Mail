@@ -56,7 +56,7 @@
 		<PackageReference Include="Autofac.Configuration" Version="6.0.0" />
 		<PackageReference Include="AutoMapper" Version="11.0.0" />
 		<PackageReference Include="Confluent.Kafka" Version="1.8.2" />
-		<PackageReference Include="Google.Protobuf" Version="3.20.1" />
+		<PackageReference Include="Google.Protobuf" Version="3.21.4.0" />
 		<PackageReference Include="JWT" Version="9.0.0" />
 		<PackageReference Include="log4net" Version="2.0.14" />
 		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="6.0.1" />

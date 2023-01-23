@@ -34,7 +34,7 @@ public class FilterDao : BaseMailDao, IFilterDao
     public FilterDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -81,11 +81,11 @@ public class FilterDao : BaseMailDao, IFilterDao
             mailFilter.DateCreated = now;
         }
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailFilters, mailFilter);
+        var entry = MailDbContext.MailFilters.Add(mailFilter);
 
         MailDbContext.SaveChanges();
 
-        return entry.Id;
+        return entry.Entity.Id;
     }
 
     public int Delete(int id)
