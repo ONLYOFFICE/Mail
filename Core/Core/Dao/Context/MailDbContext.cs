@@ -4,12 +4,10 @@ using MailFolder = ASC.Mail.Core.Dao.Entities.MailFolder;
 
 namespace ASC.Mail.Core.Dao.Context;
 
-public class MySqlMailDbContext : MailDbContext { }
-
-public class PostgreSqlMailDbContext : MailDbContext { }
-
 public class MailDbContext : DbContext
 {
+    public MailDbContext(DbContextOptions<MailDbContext> options) : base(options) { }
+
     #region DbSets
 
     public DbSet<MailAlert> MailAlerts { get; set; }

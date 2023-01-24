@@ -1,7 +1,12 @@
 ﻿using ASC.Api.Core.Extensions;
 using ASC.Core.Common.EF;
+using ASC.Mail.Core.Dao.Interfaces;
+using ASC.Mail.Core.Dao;
 using ASC.Mail.Server.Core.Dao;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using ASC.Mail.Core.Dao.Context;
+using ASC.Common;
 
 var options = new WebApplicationOptions
 {
@@ -66,32 +71,19 @@ builder.Host.ConfigureAppConfiguration((hostContext, config) =>
 
 builder.Host.ConfigureServices((hostContext, services) =>
 {
-    services.AddHttpContextAccessor();
-    services.AddMemoryCache();
-    services.AddHttpClient();
-
-    services.AddBaseDbContextPool<MailServerDbContext>();
-
-    var diHelper = new DIHelper(services);
-    diHelper.TryAdd<FactoryIndexerMailMail>();
-    diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
     services.AddSingleton(new ConsoleParser(args));
-    diHelper.TryAdd<AggregatorServiceLauncher>();
-    diHelper.TryAdd<AggregatorServiceScope>();
+    services.AddScoped<AggregatorServiceLauncher>();
+    services.AddScoped<AggregatorServiceScope>();
     services.AddDistributedTaskQueue();
     services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
     services.AddHostedService<AggregatorServiceLauncher>();
     services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
-    var serviceProvider = services.BuildServiceProvider();
-    var logger = serviceProvider.GetService<ILogger<CrmLinkEngine>>();
-    services.AddSingleton(typeof(ILogger), logger);
 });
 
 //builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
+var startup = new BaseMailStartup(builder.Configuration, builder.Environment);
 
 startup.ConfigureServices(builder.Services);
 
