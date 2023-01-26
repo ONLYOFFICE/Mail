@@ -91,8 +91,8 @@ builder.Services.AddBaseDbContextPool<CustomDbContext>();
 builder.Services.AddBaseDbContextPool<WebstudioDbContext>();
 builder.Services.AddBaseDbContextPool<MessagesContext>();
 
-builder.Services.AddDbContext<MailServerDbContext>();
-builder.Services.AddDbContext<MailDbContext>();
+builder.Services.AddBaseDbContext<MailServerDbContext>();
+builder.Services.AddBaseDbContext<MailDbContext>();
 
 builder.Services.RegisterFeature();
 builder.Services.AddAutoMapper(GetAutoMapperProfileAssemblies());
