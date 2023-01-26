@@ -1,4 +1,4 @@
-﻿using ASC.Core.Common.EF.Context;
+﻿using ASC.Common.Mapping;
 using ASC.Core.Common.EF;
 using ASC.Mail.Server.Core.Dao;
 using Microsoft.Extensions.Hosting.WindowsServices;
@@ -70,7 +70,7 @@ builder.Host.ConfigureServices((hostContext, services) =>
     services.AddHttpClient();
 
     services.AddBaseDbContextPool<MailServerDbContext>();
-    
+
     var diHelper = new DIHelper(services);
     diHelper.TryAdd<FactoryIndexerMailMail>();
     diHelper.TryAdd<FactoryIndexerMailContact>();

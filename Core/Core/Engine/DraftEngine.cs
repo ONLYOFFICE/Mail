@@ -479,14 +479,14 @@ public class DraftEngine : ComposeEngineBase
                 }
             }
 
-    //        // send success notification
-    //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
-    //    }
-    //}
+            //        // send success notification
+            //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
+        }
+    }
 
     private void SaveFrequentlyContactedAddress(int tenant, string user, MimeMessage mimeMessage)
     {

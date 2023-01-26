@@ -14,8 +14,6 @@
  *
 */
 
-using StackExchange.Redis.Extensions.Core.Implementations;
-
 namespace ASC.Mail.ImapSync;
 
 [Singletone]
@@ -46,7 +44,6 @@ public class ImapSyncService : IHostedService
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
         _signalrServiceClient = optionsSnapshot.Get("mail");
-        _signalrServiceClient.EnableSocket = true;
         clients = new ConcurrentDictionary<string, MailImapClient>();
 
         _cancelTokenSource = new CancellationTokenSource();
@@ -76,7 +73,7 @@ public class ImapSyncService : IHostedService
         }
         try
         {
-            var result= _redisClient.SubscribeQueueKey<Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
+            var result = _redisClient.SubscribeQueueKey<Models.RedisCachePubSubItem<CachedTenantUserMailBox>>(CreateNewClient);
 
             _log.InfoImapSyncService("subscrube to Redis chanel");
 

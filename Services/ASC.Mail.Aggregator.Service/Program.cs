@@ -1,6 +1,7 @@
 ﻿using ASC.Api.Core.Core;
 using ASC.Api.Core.Extensions;
 using ASC.Common.Logging;
+using ASC.Common.Mapping;
 using ASC.Core.Common.EF;
 using ASC.Core.Common.EF.Context;
 using ASC.Mail.Core.Dao;
