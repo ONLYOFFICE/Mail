@@ -7,7 +7,12 @@ using ASC.Mail.Core.Dao;
 using ASC.Mail.Core.Dao.Context;
 using ASC.Mail.Core.Dao.Interfaces;
 using ASC.Mail.Server.Core.Dao;
+using ASC.MessagingSystem.EF.Context;
 using Microsoft.Extensions.Hosting.WindowsServices;
+using NLog;
+
+string Namespace = typeof(AggregatorService).Namespace;
+string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
 
 var options = new WebApplicationOptions
 {
@@ -16,6 +21,17 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+
+var logger = LogManager.Setup()
+                            .SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(AggregatorService).Namespace);
+var path = builder.Configuration["pathToConf"];
+logger.Debug("path: " + path);
+logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
 builder.Host.UseWindowsService();
 builder.Host.UseSystemd();
@@ -40,44 +56,30 @@ builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
     }
 });
 
-builder.Host.ConfigureAppConfiguration((hostContext, config) =>
+if (!Path.IsPathRooted(path))
 {
-    var builded = config.Build();
-    var path = builded["pathToConf"];
-    if (!Path.IsPathRooted(path))
-    {
-        path = Path.GetFullPath(CrossPlatform.PathCombine(hostContext.HostingEnvironment.ContentRootPath, path));
-    }
+    path = Path.GetFullPath(CrossPlatform.PathCombine(builder.Environment.ContentRootPath, path));
+}
 
-    config.SetBasePath(path);
-    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
+builder.Configuration.SetBasePath(path);
+var env = builder.Configuration.GetValue("ENVIRONMENT", "Production");
 
-    config
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{env}.json", true)
-        .AddJsonFile("storage.json")
-        .AddJsonFile($"storage.{env}.json", true)
-        .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json", true)
-        .AddJsonFile("elastic.json")
-        .AddJsonFile($"elastic.{env}.json", true)
-        .AddEnvironmentVariables()
-        .AddCommandLine(args)
-        .AddInMemoryCollection(new Dictionary<string, string>
-            {
+builder.Configuration
+    .AddJsonFile("appsettings.json")
+    .AddJsonFile($"appsettings.{env}.json", true)
+    .AddJsonFile("storage.json")
+    .AddJsonFile($"storage.{env}.json", true)
+    .AddJsonFile("mail.json")
+    .AddJsonFile($"mail.{env}.json", true)
+    .AddJsonFile("elastic.json")
+    .AddJsonFile($"elastic.{env}.json", true)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddInMemoryCollection(new Dictionary<string, string>
+        {
                 {"pathToConf", path }
-            }
-        );
-});
-
-//builder.Host.ConfigureServices((hostContext, services) =>
-//{
-
-
-//});
-
-//builder.Host.ConfigureNLogLogging();
-
+        }
+    ).Build();
 
 builder.Services.AddHttpContextAccessor();
 //services.AddCustomHealthCheck(Configuration);
@@ -86,9 +88,11 @@ builder.Services.AddBaseDbContextPool<CoreDbContext>();
 builder.Services.AddBaseDbContextPool<TenantDbContext>();
 builder.Services.AddBaseDbContextPool<UserDbContext>();
 builder.Services.AddBaseDbContextPool<CustomDbContext>();
+builder.Services.AddBaseDbContextPool<WebstudioDbContext>();
+builder.Services.AddBaseDbContextPool<MessagesContext>();
 
-builder.Services.AddBaseDbContextPool<MailServerDbContext>();
-builder.Services.AddBaseDbContextPool<MailDbContext>();
+builder.Services.AddDbContext<MailServerDbContext>();
+builder.Services.AddDbContext<MailDbContext>();
 
 builder.Services.RegisterFeature();
 builder.Services.AddAutoMapper(GetAutoMapperProfileAssemblies());
@@ -140,26 +144,26 @@ builder.Services.AddScoped<IUserFolderDao, UserFolderDao>();
 builder.Services.AddScoped<IUserFolderTreeDao, UserFolderTreeDao>();
 builder.Services.AddScoped<IUserFolderXMailDao, UserFolderXMailDao>();
 
-
-
-var diHelper = new DIHelper(services);
-builder.Services.AddScoped<FactoryIndexerMailMail>();
-builder.Services.AddScoped<FactoryIndexerMailContact>();
-builder.Services.AddScoped(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-
-builder.Services.AddSingleton(new ConsoleParser(args));
-builder.Services.AddScoped<AggregatorServiceLauncher>();
-
-
-
-builder.Services.AddSingleton<MailQueueItemSettings>();
-builder.Services.AddSingleton<SocketIoNotifier>();
-builder.Services.AddSingleton<MailSettings>();
-builder.Services.AddSingleton<QueueManager>();
-builder.Services.AddSingleton<AggregatorService>();
-builder.Services.AddScoped<AggregatorServiceScope>();
 builder.Services.AddDistributedTaskQueue();
 builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
+
+var diHelper = new DIHelper(builder.Services);
+//diHelper.TryAdd<MailDbContext>();
+diHelper.TryAdd<FactoryIndexerMailMail>();
+diHelper.TryAdd<FactoryIndexerMailContact>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd<AggregatorServiceLauncher>();
+diHelper.TryAdd<AggregatorServiceScope>();
+
+builder.Services.AddSingleton(new ConsoleParser(args));
+
+//builder.Services.AddSingleton<MailQueueItemSettings>();
+//builder.Services.AddSingleton<SocketIoNotifier>();
+//builder.Services.AddSingleton<MailSettings>();
+//builder.Services.AddSingleton<QueueManager>();
+//builder.Services.AddSingleton<AggregatorService>();
+//builder.Services.AddScoped<AggregatorServiceScope>();
+
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 //var serviceProvider = services.BuildServiceProvider();

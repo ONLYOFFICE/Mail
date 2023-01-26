@@ -25,7 +25,7 @@
 
 
 
-using Contact = ASC.CRM.Core.Entities.Contact;
+//using Contact = ASC.CRM.Core.Entities.Contact;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
 using ShareType = ASC.Mail.Enums.ShareType;
@@ -36,18 +36,18 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
 {
     private readonly ILogger _log;
 
-    private readonly CrmSecurity _crmSecurity;
+    //private readonly CrmSecurity _crmSecurity;
 
     public CrmContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
          MailDbContext dbContext,
-         ILoggerProvider logProvider,
-         CrmSecurity crmSecurity)
+         ILoggerProvider logProvider)//,
+         //CrmSecurity crmSecurity)
         : base(tenantManager, securityContext, dbContext)
     {
         _log = logProvider.CreateLogger("ASC.Mail.CrmContactDao");
-        _crmSecurity = crmSecurity;
+        //_crmSecurity = crmSecurity;
     }
 
     public List<int> GetCrmContactIds(string email)
@@ -80,20 +80,20 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
 
             ids.AddRange(contactList.Select(c => c.Id));
 
-            foreach (var info in contactList)
-            {
-                var contact = info.Company
-                    ? new Company()
-                    : (Contact)new Person();
+            //foreach (var info in contactList)
+            //{
+            //    var contact = info.Company
+            //        ? new Company()
+            //        : (Contact)new Person();
 
-                contact.ID = info.Id;
-                contact.ShareType = (CRM.Core.Enums.ShareType)info.ShareType;
+            //    contact.ID = info.Id;
+            //    contact.ShareType = (CRM.Core.Enums.ShareType)info.ShareType;
 
-                if (_crmSecurity.CanAccessTo(contact))
-                {
-                    ids.Add(info.Id);
-                }
-            }
+            //    if (_crmSecurity.CanAccessTo(contact))
+            //    {
+            //        ids.Add(info.Id);
+            //    }
+            //}
         }
         catch (Exception e)
         {

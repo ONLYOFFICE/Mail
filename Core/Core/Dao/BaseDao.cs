@@ -24,16 +24,19 @@
 */
 
 namespace ASC.Mail.Core.Dao;
+
+using ASC.Mail.Core.Dao.Context;
 using SecurityContext = ASC.Core.SecurityContext;
 public abstract class BaseMailDao
 {
     protected int Tenant => _tenantManager.GetCurrentTenant().Id;
     protected string UserId => _securityContext.CurrentAccount.ID.ToString();
-    public Lazy<MailDbContext> LazyMailDbContext { get; }
-    public MailDbContext MailDbContext => LazyMailDbContext.Value;
+    public MailDbContext MailDbContext => _mailDbContext;
 
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
+    private readonly MailDbContext _mailDbContext;
+
 
     protected BaseMailDao(
         TenantManager tenantManager,
@@ -42,6 +45,6 @@ public abstract class BaseMailDao
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;
-        LazyMailDbContext = new Lazy<MailDbContext>(() => dbContext);
+        _mailDbContext = dbContext;
     }
 }

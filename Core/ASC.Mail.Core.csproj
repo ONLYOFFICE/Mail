@@ -101,9 +101,6 @@
 		<Reference Include="ASC.Core.Common">
 			<HintPath>..\redistributable\ASC.Core.Common.dll</HintPath>
 		</Reference>
-		<Reference Include="ASC.CRM">
-			<HintPath>..\redistributable\ASC.CRM.dll</HintPath>
-		</Reference>
 		<Reference Include="ASC.Data.Encryption">
 			<HintPath>..\redistributable\ASC.Data.Encryption.dll</HintPath>
 		</Reference>

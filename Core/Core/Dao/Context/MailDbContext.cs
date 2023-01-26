@@ -107,7 +107,7 @@ public class MailDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         ModelBuilderWrapper
-            .From(modelBuilder, Database)
+            .From(modelBuilder, Provider.MySql)
             .AddDbTenant()
             .AddMailAlert()
             .AddMailAttachment()

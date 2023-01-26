@@ -25,7 +25,7 @@
 
 
 
-using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
+//using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -43,7 +43,7 @@ public class CrmLinkEngine
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly MessageEngine _messageEngine;
     private readonly StorageFactory _storageFactory;
-    private readonly CrmSecurity _crmSecurity;
+    //private readonly CrmSecurity _crmSecurity;
     private readonly IServiceProvider _serviceProvider;
 
     public CrmLinkEngine(
@@ -54,7 +54,7 @@ public class CrmLinkEngine
         MessageEngine messageEngine,
         StorageFactory storageFactory,
         ILoggerProvider logProvider,
-        CrmSecurity crmSecurity,
+        //CrmSecurity crmSecurity,
         IServiceProvider serviceProvider)
     {
         _securityContext = securityContext;
@@ -64,7 +64,7 @@ public class CrmLinkEngine
         _messageEngine = messageEngine;
         _storageFactory = storageFactory;
 
-        _crmSecurity = crmSecurity;
+        //_crmSecurity = crmSecurity;
 
         _serviceProvider = serviceProvider;
 
@@ -80,28 +80,28 @@ public class CrmLinkEngine
 
     public void LinkChainToCrm(int messageId, List<CrmContactData> contactIds)
     {
-        using (var scope = _serviceProvider.CreateScope())
-        {
-            var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
-            foreach (var crmContactEntity in contactIds)
-            {
-                switch (crmContactEntity.Type)
-                {
-                    case CrmContactData.EntityTypes.Contact:
-                        var crmContact = factory.GetContactDao().GetByID(crmContactEntity.Id);
-                        _crmSecurity.DemandAccessTo(crmContact);
-                        break;
-                    case CrmContactData.EntityTypes.Case:
-                        var crmCase = factory.GetCasesDao().GetByID(crmContactEntity.Id);
-                        _crmSecurity.DemandAccessTo(crmCase);
-                        break;
-                    case CrmContactData.EntityTypes.Opportunity:
-                        var crmOpportunity = factory.GetDealDao().GetByID(crmContactEntity.Id);
-                        _crmSecurity.DemandAccessTo(crmOpportunity);
-                        break;
-                }
-            }
-        }
+        //using (var scope = _serviceProvider.CreateScope())
+        //{
+        //    var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
+        //    foreach (var crmContactEntity in contactIds)
+        //    {
+        //        switch (crmContactEntity.Type)
+        //        {
+        //            case CrmContactData.EntityTypes.Contact:
+        //                var crmContact = factory.GetContactDao().GetByID(crmContactEntity.Id);
+        //                _crmSecurity.DemandAccessTo(crmContact);
+        //                break;
+        //            case CrmContactData.EntityTypes.Case:
+        //                var crmCase = factory.GetCasesDao().GetByID(crmContactEntity.Id);
+        //                _crmSecurity.DemandAccessTo(crmCase);
+        //                break;
+        //            case CrmContactData.EntityTypes.Opportunity:
+        //                var crmOpportunity = factory.GetDealDao().GetByID(crmContactEntity.Id);
+        //                _crmSecurity.DemandAccessTo(crmOpportunity);
+        //                break;
+        //        }
+        //    }
+        //}
 
         var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
 
@@ -237,24 +237,24 @@ public class CrmLinkEngine
             securityContext.AuthenticateMe(new Guid(mailbox.UserId));
         }
 
-        var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
+        //var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
         foreach (var contactEntity in message.LinkedCrmEntityIds)
         {
-            switch (contactEntity.Type)
-            {
-                case CrmContactData.EntityTypes.Contact:
-                    var crmContact = factory.GetContactDao().GetByID(contactEntity.Id);
-                    _crmSecurity.DemandAccessTo(crmContact);
-                    break;
-                case CrmContactData.EntityTypes.Case:
-                    var crmCase = factory.GetCasesDao().GetByID(contactEntity.Id);
-                    _crmSecurity.DemandAccessTo(crmCase);
-                    break;
-                case CrmContactData.EntityTypes.Opportunity:
-                    var crmOpportunity = factory.GetDealDao().GetByID(contactEntity.Id);
-                    _crmSecurity.DemandAccessTo(crmOpportunity);
-                    break;
-            }
+            //switch (contactEntity.Type)
+            //{
+            //    case CrmContactData.EntityTypes.Contact:
+            //        var crmContact = factory.GetContactDao().GetByID(contactEntity.Id);
+            //        _crmSecurity.DemandAccessTo(crmContact);
+            //        break;
+            //    case CrmContactData.EntityTypes.Case:
+            //        var crmCase = factory.GetCasesDao().GetByID(contactEntity.Id);
+            //        _crmSecurity.DemandAccessTo(crmCase);
+            //        break;
+            //    case CrmContactData.EntityTypes.Opportunity:
+            //        var crmOpportunity = factory.GetDealDao().GetByID(contactEntity.Id);
+            //        _crmSecurity.DemandAccessTo(crmOpportunity);
+            //        break;
+            //}
 
             var fileIds = new List<object>();
 
