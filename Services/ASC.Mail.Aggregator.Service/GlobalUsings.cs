@@ -2,7 +2,6 @@
 global using ASC.Common;
 global using ASC.Common.Caching;
 global using ASC.Common.DependencyInjection;
-global using ASC.Common.Mapping;
 global using ASC.Common.Utils;
 global using ASC.Core;
 global using ASC.Core.Notify.Socket;
@@ -20,7 +19,6 @@ global using ASC.Mail.Core;
 global using ASC.Mail.Core.Dao.Expressions.Mailbox;
 global using ASC.Mail.Core.Engine;
 global using ASC.Mail.Core.Search;
-global using ASC.Mail.Enums;
 global using ASC.Mail.Extensions;
 global using ASC.Mail.Models;
 global using ASC.Mail.Storage;

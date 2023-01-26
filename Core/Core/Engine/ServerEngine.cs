@@ -120,21 +120,21 @@ public class ServerEngine : BaseEngine
         return list;
     }
 
-    public Entities.Server GetLinkedServer()
+    public MailServerServer GetLinkedServer()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
         return linkedServer;
     }
 
-    private List<Entities.Server> GetAllServers()
+    private List<MailServerServer> GetAllServers()
     {
         var servers = _mailDaoFactory.GetServerDao().GetList();
 
         return servers;
     }
 
-    public void Link(Entities.Server server, int tenant)
+    public void Link(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -145,7 +145,7 @@ public class ServerEngine : BaseEngine
             throw new Exception("Invalid insert operation");
     }
 
-    public void UnLink(Entities.Server server, int tenant)
+    public void UnLink(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -153,7 +153,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().UnLink(server, Tenant);
     }
 
-    public int Save(Entities.Server server)
+    public int Save(MailServerServer server)
     {
         if (server == null)
             throw new ArgumentNullException("server");
@@ -171,7 +171,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().Delete(serverId);
     }
 
-    public Entities.Server GetOrCreate()
+    public MailServerServer GetOrCreate()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
@@ -391,7 +391,7 @@ public class ServerEngine : BaseEngine
 
         engine.RemoveMailbox(deleteAddress);
 
-        var addressSettings = notificationAddressSettings.GetDefault() as ServerNotificationAddressSettings;
+        var addressSettings = notificationAddressSettings.GetDefault();
         if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
         {
             throw new Exception("Could not delete notification address setting.");

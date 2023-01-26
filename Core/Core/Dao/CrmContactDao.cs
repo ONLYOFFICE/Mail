@@ -15,11 +15,11 @@
  * The interactive user interfaces in modified source and object code versions of ONLYOFFICE must display 
  * Appropriate Legal Notices, as required under Section 5 of the GNU GPL version 3.
  *
- * Pursuant to Section 7 ยง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
+ * Pursuant to Section 7 ง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
  * relevant author attributions when distributing the software. If the display of the logo in its graphic 
  * form is not reasonably feasible for technical reasons, you must include the words "Powered by ONLYOFFICE" 
  * in every copy of the program you distribute. 
- * Pursuant to Section 7 ยง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
+ * Pursuant to Section 7 ง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
 
@@ -80,24 +80,77 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
 
             ids.AddRange(contactList.Select(c => c.Id));
 
-            //foreach (var info in contactList)
-            //{
-            //    var contact = info.Company
-            //        ? new Company()
-            //        : (Contact)new Person();
+            foreach (var info in contactList)
+            {
+                var contact = info.Company
+                    ? new CrmCompany()
+                    : (CrmContact)new CrmPerson();
 
-            //    contact.ID = info.Id;
-            //    contact.ShareType = (CRM.Core.Enums.ShareType)info.ShareType;
+                contact.CompanyId = info.Id;
+                contact.ContactTypeId = (int)info.ShareType;
 
-            //    if (_crmSecurity.CanAccessTo(contact))
-            //    {
-            //        ids.Add(info.Id);
-            //    }
-            //}
+                //if (_crmSecurity.CanAccessTo(contact))
+                //{
+                    ids.Add(info.Id);
+                //}
+            }
         }
         catch (Exception e)
         {
             _log.WarnCrmContactDaoGetCrmContacts(Tenant, UserId, email, e.ToString());
+        }
+
+        return ids;
+    }
+
+    public List<int> GetByID(int contactID)
+    {
+        var ids = new List<int>();
+
+        if (contactID<0) return ids;
+
+        try
+        {
+            var contactList = MailDbContext.CrmContacts
+                .AsNoTracking()
+                .Join(MailDbContext.CrmContactInfos, c => c.Id, ci => ci.ContactId,
+                (c, ci) => new
+                {
+                    Contact = c,
+                    Info = ci
+                })
+                .Where(o => o.Contact.TenantId == Tenant && o.Info.TenantId == Tenant && o.Contact.Id == contactID)
+                .Select(o => new
+                {
+                    o.Contact.Id,
+                    Company = o.Contact.IsCompany,
+                    ShareType = (ShareType)o.Contact.IsShared
+                })
+                .ToList();
+
+            if (!contactList.Any())
+                return ids;
+
+            ids.AddRange(contactList.Select(c => c.Id));
+
+            foreach (var info in contactList)
+            {
+                var contact = info.Company
+                    ? new CrmCompany()
+                    : (CrmContact)new CrmPerson();
+
+                contact.CompanyId = info.Id;
+                contact.ContactTypeId = (int)info.ShareType;
+
+                //if (_crmSecurity.CanAccessTo(contact))
+                //{
+                ids.Add(info.Id);
+                //}
+            }
+        }
+        catch (Exception e)
+        {
+            _log.WarnCrmContactDaoGetCrmContacts(Tenant, UserId, $"Id={contactID}", e.ToString());
         }
 
         return ids;

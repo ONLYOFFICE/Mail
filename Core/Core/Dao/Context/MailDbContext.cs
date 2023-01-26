@@ -1,4 +1,5 @@
-﻿using CrmContact = ASC.Mail.Core.Dao.Entities.CrmContact;
+﻿using Microsoft.EntityFrameworkCore.Infrastructure;
+using CrmContact = ASC.Mail.Core.Dao.Entities.CrmContact;
 using CrmTag = ASC.Mail.Core.Dao.Entities.CrmTag;
 using MailFolder = ASC.Mail.Core.Dao.Entities.MailFolder;
 
@@ -91,18 +92,6 @@ public class MailDbContext : DbContext
     public DbSet<CrmCurrencyInfo> CrmCurrencyInfos { get; set; }
 
     #endregion
-
-    //protected override Dictionary<Provider, Func<DbContext>> ProviderContext
-    //{
-    //    get
-    //    {
-    //        return new Dictionary<Provider, Func<DbContext>>()
-    //        {
-    //            { Provider.MySql, () => new MySqlMailDbContext() } ,
-    //            { Provider.PostgreSql, () => new PostgreSqlMailDbContext() } ,
-    //        };
-    //    }
-    //}
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

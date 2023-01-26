@@ -15,11 +15,11 @@
  * The interactive user interfaces in modified source and object code versions of ONLYOFFICE must display 
  * Appropriate Legal Notices, as required under Section 5 of the GNU GPL version 3.
  *
- * Pursuant to Section 7 ยง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
+ * Pursuant to Section 7 ง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
  * relevant author attributions when distributing the software. If the display of the logo in its graphic 
  * form is not reasonably feasible for technical reasons, you must include the words "Powered by ONLYOFFICE" 
  * in every copy of the program you distribute. 
- * Pursuant to Section 7 ยง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
+ * Pursuant to Section 7 ง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
 
@@ -36,6 +36,8 @@ public class CrmLinkEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
 
+    public readonly IAction _actionRead = new ASC.Common.Security.Authorizing.Action(new Guid("{6F05C382-8BCA-4469-9424-C807A98C40D7}"), "", administratorAlwaysAllow: true, conjunction: false);
+
     private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
     private readonly TenantManager _tenantManager;
@@ -45,6 +47,8 @@ public class CrmLinkEngine
     private readonly StorageFactory _storageFactory;
     //private readonly CrmSecurity _crmSecurity;
     private readonly IServiceProvider _serviceProvider;
+    private readonly PermissionContext _permissionContext;
+    private readonly WebItemSecurity _webItemSecurity;
 
     public CrmLinkEngine(
         SecurityContext securityContext,
@@ -55,6 +59,8 @@ public class CrmLinkEngine
         StorageFactory storageFactory,
         ILoggerProvider logProvider,
         //CrmSecurity crmSecurity,
+        WebItemSecurity webItemSecurity,
+        PermissionContext permissionContext,
         IServiceProvider serviceProvider)
     {
         _securityContext = securityContext;
@@ -67,7 +73,8 @@ public class CrmLinkEngine
         //_crmSecurity = crmSecurity;
 
         _serviceProvider = serviceProvider;
-
+        _permissionContext = permissionContext;
+        _webItemSecurity = webItemSecurity;
         _log = logProvider.CreateLogger("ASC.Mail.CrmLinkEngine");
     }
 
@@ -102,6 +109,12 @@ public class CrmLinkEngine
         //        }
         //    }
         //}
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            var factory = scope.ServiceProvider.GetService<CrmContactDao>();
+
+            contactIds.ForEach(x=> CheckCRMPermisions(x, factory));
+        }
 
         var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User));
 
@@ -237,7 +250,7 @@ public class CrmLinkEngine
             securityContext.AuthenticateMe(new Guid(mailbox.UserId));
         }
 
-        //var factory = scope.ServiceProvider.GetService<CrmDaoFactory>();
+        var factory = scope.ServiceProvider.GetService<CrmContactDao>();
         foreach (var contactEntity in message.LinkedCrmEntityIds)
         {
             //switch (contactEntity.Type)
@@ -255,6 +268,7 @@ public class CrmLinkEngine
             //        _crmSecurity.DemandAccessTo(crmOpportunity);
             //        break;
             //}
+            CheckCRMPermisions(contactEntity, factory);
 
             var fileIds = new List<object>();
 
@@ -292,5 +306,39 @@ public class CrmLinkEngine
 
             _log.InfoCrmLinkEngineAddRelationshipEvents(message.Id, contactEntity.Id);
         }
+    }
+
+    private void CheckCRMPermisions(CrmContactData crmContactEntity, CrmContactDao factory)
+    {
+        //switch (crmContactEntity.Type)
+        //{
+        //    case CrmContactData.EntityTypes.Contact:
+        //        var crmContact = factory.GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmContact, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
+
+        //        break;
+        //    case CrmContactData.EntityTypes.Case:
+        //        var crmCase = factory.GetCasesDao().GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmCase, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
+
+        //        break;
+        //    case CrmContactData.EntityTypes.Opportunity:
+        //        var crmOpportunity = factory.GetDealDao().GetByID(crmContactEntity.Id);
+        //        if (!(_webItemSecurity.IsProductAdministrator(WebItemManager.CRMProductID, _securityContext.CurrentAccount.ID)
+        //            || _permissionContext.CheckPermissions(crmOpportunity, new CrmSecurityObjectProvider(), _actionRead)))
+        //        {
+        //            throw new SecurityException();
+        //        }
+
+        //        break;
+        //}
     }
 }

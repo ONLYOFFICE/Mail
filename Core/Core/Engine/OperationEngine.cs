@@ -70,10 +70,10 @@ public class OperationEngine
         FactoryIndexer<MailMail> factoryIndexer,
         TempStream tempStream,
         IServiceProvider serviceProvider,
-        IDistributedTaskQueueFactory queueFactory,
         ILoggerProvider logProvider)
     {
-        _tasks = queueFactory.CreateQueue("mailOperations");
+        _tasks = _serviceProvider.GetRequiredService<DistributedTaskQueue>();
+        _tasks.Name = "mailOperations";
 
         _tenantManager = tenantManager;
         _securityContext = securityContext;

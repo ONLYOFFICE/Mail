@@ -25,7 +25,7 @@
 
 namespace ASC.Mail.Server.Core.Dao;
 
-public abstract class BaseServerDao
+public abstract class BaseServerDao:DbContext
 {
     public Lazy<MailServerDbContext> LazyMailServerDbContext { get; }
     public MailServerDbContext MailServerDbContext => LazyMailServerDbContext.Value;

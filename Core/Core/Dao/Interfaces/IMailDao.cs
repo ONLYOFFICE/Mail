@@ -28,11 +28,11 @@ namespace ASC.Mail.Core.Dao.Interfaces;
 [Scope(typeof(MailDao))]
 public interface IMailDao
 {
-    int Save(Core.Entities.Mail mail);
+    int Save(ASC.Mail.Core.Entities.Mail mail);
 
-    Core.Entities.Mail GetMail(IMessageExp exp);
+    ASC.Mail.Core.Entities.Mail GetMail(IMessageExp exp);
 
-    Core.Entities.Mail GetNextMail(IMessageExp exp);
+    ASC.Mail.Core.Entities.Mail GetNextMail(IMessageExp exp);
 
     List<string> GetExistingUidls(int mailboxId, List<string> uidlList);
 

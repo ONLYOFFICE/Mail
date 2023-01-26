@@ -46,6 +46,7 @@ public class ImapSyncService : IHostedService
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
         _signalrServiceClient = optionsSnapshot.Get("mail");
+        _signalrServiceClient.EnableSocket = true;
         clients = new ConcurrentDictionary<string, MailImapClient>();
 
         _cancelTokenSource = new CancellationTokenSource();
@@ -117,12 +118,19 @@ public class ImapSyncService : IHostedService
 
                 return;
             }
-
             MailImapClient client;
 
             try
             {
-                client = new MailImapClient(cashedTenantUserMailBox.UserName, cashedTenantUserMailBox.Tenant, _mailSettings, _serviceProvider, _signalrServiceClient, _cancelTokenSource.Token, _logProvider);
+                client = new MailImapClient(
+                    cashedTenantUserMailBox.UserName,
+                    cashedTenantUserMailBox.Tenant,
+                    _mailSettings,
+                    _serviceProvider,
+                    _signalrServiceClient,
+                    _cancelTokenSource.Token,
+                    _logProvider,
+                    _redisClient);
 
                 if (client == null)
                 {

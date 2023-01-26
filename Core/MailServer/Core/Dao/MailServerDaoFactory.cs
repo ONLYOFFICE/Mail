@@ -11,7 +11,7 @@ public class MailServerDaoFactory : IMailServerDaoFactory
     private readonly MailServerDbContext _mailServerDbContext;
 
     public MailServerDaoFactory(
-    IServiceProvider serviceProvider,
+        IServiceProvider serviceProvider,
         MailServerDbContext dbContextManager)
     {
         _serviceProvider = serviceProvider;

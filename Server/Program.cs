@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 
 using ASC.Api.Core;
-
+using ASC.Api.Core.Extensions;
 using Autofac.Extensions.DependencyInjection;
 
 using Microsoft.AspNetCore.Hosting;
@@ -57,7 +57,7 @@ namespace ASC.Mail
                     {
                         {"pathToConf", path}
                     });
-                });
-            //.ConfigureNLogLogging();
+                })
+            .ConfigureDefault();
     }
 }

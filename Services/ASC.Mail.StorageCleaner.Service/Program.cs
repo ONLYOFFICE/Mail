@@ -1,5 +1,6 @@
-﻿using ASC.Common.Mapping;
-
+﻿using ASC.Api.Core.Extensions;
+using ASC.Common.Mapping;
+using ASC.Mail;
 using Microsoft.Extensions.Hosting.WindowsServices;
 
 using System.Reflection;

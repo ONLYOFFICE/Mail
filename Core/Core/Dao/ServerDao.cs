@@ -41,7 +41,7 @@ public class ServerDao : BaseMailDao, IServerDao
     private const string SERVER_ALIAS = "ms";
     private const string SERVER_X_TENANT_ALIAS = "st";
 
-    public Core.Entities.Server Get(int tenant)
+    public MailServerServer Get(int tenant)
     {
         var server = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -58,7 +58,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return server;
     }
 
-    public List<Core.Entities.Server> GetList()
+    public List<MailServerServer> GetList()
     {
         var list = MailDbContext.MailServerServers
             .AsNoTracking()
@@ -68,7 +68,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return list;
     }
 
-    public int Link(Core.Entities.Server server, int tenant)
+    public int Link(MailServerServer server, int tenant)
     {
         var xItem = new MailServerServerXTenant
         {
@@ -83,7 +83,7 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int UnLink(Core.Entities.Server server, int tenant)
+    public int UnLink(MailServerServer server, int tenant)
     {
         var deleteItem = new MailServerServerXTenant
         {
@@ -98,14 +98,14 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    public int Save(Core.Entities.Server server)
+    public int Save(MailServerServer server)
     {
         var mailServer = new MailServerServer
         {
             Id = server.Id,
             MxRecord = server.MxRecord,
             ConnectionString = server.ConnectionString,
-            ServerType = server.Type,
+            ServerType = server.ServerType,
             SmtpSettingsId = server.SmtpSettingsId,
             ImapSettingsId = server.ImapSettingsId
         };
@@ -140,14 +140,14 @@ public class ServerDao : BaseMailDao, IServerDao
         return result;
     }
 
-    protected static Core.Entities.Server ToServer(MailServerServer r)
+    protected static MailServerServer ToServer(MailServerServer r)
     {
-        var s = new Core.Entities.Server
+        var s = new MailServerServer
         {
             Id = r.Id,
             MxRecord = r.MxRecord,
             ConnectionString = r.ConnectionString,
-            Type = r.ServerType,
+            ServerType = r.ServerType,
             SmtpSettingsId = r.SmtpSettingsId,
             ImapSettingsId = r.ImapSettingsId
         };

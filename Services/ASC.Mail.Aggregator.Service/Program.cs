@@ -174,10 +174,10 @@ builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.
 
 //startup.ConfigureServices(builder.Services);
 
-builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
-{
-    builder.Register(context.Configuration, false, false, "search.json");
-});
+//builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
+//{
+//    builder.Register(context.Configuration, false, false);
+//});
 
 var app = builder.Build();
 

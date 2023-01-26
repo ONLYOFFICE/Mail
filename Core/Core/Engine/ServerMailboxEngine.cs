@@ -23,6 +23,7 @@
  *
 */
 
+
 using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using Mailbox = ASC.Mail.Core.Entities.Mailbox;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -370,7 +371,7 @@ public class ServerMailboxEngine : BaseEngine
 
         var userInfo = _userManager.GetUsers(_securityContext.CurrentAccount.ID);
 
-        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.Id.ToString());
+        return CreateMailbox(userInfo.DisplayUserName(_displayUserSettingsHelper), name, domain.Id, userInfo.UserName.ToString());
     }
 
     public ServerMailboxData UpdateMailboxDisplayName(int mailboxId, string name)

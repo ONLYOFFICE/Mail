@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Enums;
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 using SecurityContext = ASC.Core.SecurityContext;
 using Tag = ASC.Mail.Core.Entities.Tag;

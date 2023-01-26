@@ -6,10 +6,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Compile Remove="Startup.cs" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<None Remove="appsettings.json" />
 		<None Remove="search.json" />
 	</ItemGroup>
@@ -101,6 +97,21 @@
 		</Reference>
 		<Reference Include="ASC.Webhooks.Core">
 			<HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.EventBus.Extensions.Logger</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.Feed.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.EventBus.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.EventBus.RabbitMQ.dll</HintPath>
+		</Reference>
+		<Reference Include="ASC.Webhooks.Core">
+			<HintPath>..\..\redistributable\ASC.EventBus.ActiveMQ.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 

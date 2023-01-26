@@ -23,6 +23,9 @@
  *
 */
 
+using log4net;
+using Microsoft.Extensions.Options;
+
 namespace ASC.Mail.Core.Search;
 
 [Scope(Additional = typeof(FactoryIndexerMailContactExtension))]

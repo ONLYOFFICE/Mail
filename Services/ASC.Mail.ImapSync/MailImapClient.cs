@@ -17,7 +17,6 @@
 using ASC.Common.Log;
 using ASC.Core.Notify.Socket;
 using ASC.Mail.ImapSync.Models;
-using System.Linq;
 
 namespace ASC.Mail.ImapSync;
 
@@ -81,7 +80,7 @@ public class MailImapClient : IDisposable
                     case MailUserAction.Nothing:
                         break;
                     case MailUserAction.SendDraft:
-                        simpleImapClients.FirstOrDefault(x=>x.Folder==FolderType.Draft).ExecuteUserAction(actionFromCache);
+                        simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Draft).ExecuteUserAction(actionFromCache);
                         break;
                     case MailUserAction.SetAsRead:
                     case MailUserAction.SetAsUnread:
@@ -127,7 +126,8 @@ public class MailImapClient : IDisposable
         IServiceProvider serviceProvider,
         SocketServiceClient signalrServiceClient,
         CancellationToken cancelToken,
-        ILoggerProvider logProvider)
+        ILoggerProvider logProvider,
+        RedisClient redisClient)
     {
         _mailSettings = mailSettings;
 
@@ -669,11 +669,11 @@ public class MailImapClient : IDisposable
 
                 if (sentFolderIMAPClient != null)
                 {
-                    for(int i=workFolderMails.Count-1; i>=0; i--)
+                    for (int i = workFolderMails.Count - 1; i >= 0; i--)
                     {
                         var workFolderMail = workFolderMails[i];
 
-                        if(sentFolderIMAPClient.ImapMessagesList.Any(x=>x.IMAPMessageId== workFolderMail.MimeMessageId))
+                        if (sentFolderIMAPClient.ImapMessagesList.Any(x => x.IMAPMessageId == workFolderMail.MimeMessageId))
                         {
                             workFolderMails.Remove(workFolderMail);
                         }
@@ -1163,7 +1163,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.Error($"ConvertMessageToMimeMessage: Can't get message from DB. {ex.Message}");
+            //_log.Error($"ConvertMessageToMimeMessage: Can't get message from DB. {ex.Message}");
         }
 
         if (message == null) return null;

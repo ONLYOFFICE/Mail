@@ -458,26 +458,26 @@ public class DraftEngine : ComposeEngineBase
     //    }
     //}
 
-    //private void SendMailNotification(MailDraftData draft)
-    //{
-    //    try
-    //    {
-    //        MailNotificationState state = MailNotificationState.SentMessageSuccess;
-    //        if (!string.IsNullOrEmpty(draft.CalendarIcs))
-    //        {
-    //            switch (draft.CalendarMethod)
-    //            {
-    //                case DefineConstants.ICAL_REQUEST:
-    //                    state = MailNotificationState.SentIcalRequest;
-    //                    break;
-    //                case DefineConstants.ICAL_REPLY:
-    //                    state = MailNotificationState.SentIcalResponse;
-    //                    break;
-    //                case DefineConstants.ICAL_CANCEL:
-    //                    state = MailNotificationState.SentIcalCancel;
-    //                    break;
-    //            }
-    //        }
+    private void SendMailNotification(MailDraftData draft)
+    {
+        try
+        {
+            MailNotificationState state = MailNotificationState.SentMessageSuccess;
+            if (!string.IsNullOrEmpty(draft.CalendarIcs))
+            {
+                switch (draft.CalendarMethod)
+                {
+                    case DefineConstants.ICAL_REQUEST:
+                        state = ASC.Core.Notify.Socket.MailNotificationState.SentIcalRequest;
+                        break;
+                    case DefineConstants.ICAL_REPLY:
+                        state = MailNotificationState.SentIcalResponse;
+                        break;
+                    case DefineConstants.ICAL_CANCEL:
+                        state = MailNotificationState.SentIcalCancel;
+                        break;
+                }
+            }
 
     //        // send success notification
     //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
