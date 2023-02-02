@@ -23,39 +23,7 @@ var options = new WebApplicationOptions
 
 var builder = WebApplication.CreateBuilder(options);
 
-var logger = LogManager.Setup()
-                            .SetupExtensions(s =>
-                            {
-                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
-                            })
-                            .LoadConfiguration(builder.Configuration, builder.Environment)
-                            .GetLogger(typeof(AggregatorService).Namespace);
 var path = builder.Configuration["pathToConf"];
-logger.Debug("path: " + path);
-logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
-
-builder.Host.UseWindowsService();
-builder.Host.UseSystemd();
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-
-builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
-{
-    var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
-
-    if (!kestrelConfig.Exists()) return;
-
-    var unixSocket = kestrelConfig.GetValue<string>("ListenUnixSocket");
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {
-        if (!string.IsNullOrWhiteSpace(unixSocket))
-        {
-            unixSocket = string.Format(unixSocket, hostingContext.HostingEnvironment.ApplicationName.Replace("ASC.", "").Replace(".", ""));
-
-            serverOptions.ListenUnixSocket(unixSocket);
-        }
-    }
-});
 
 if (!Path.IsPathRooted(path))
 {
@@ -81,6 +49,43 @@ builder.Configuration
                 {"pathToConf", path }
         }
     ).Build();
+
+var logger = LogManager.Setup()
+                            .SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(AggregatorService).Namespace);
+
+logger.Debug("path: " + path);
+logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
+
+
+builder.Host.UseWindowsService();
+builder.Host.UseSystemd();
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
+{
+    var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
+
+    if (!kestrelConfig.Exists()) return;
+
+    var unixSocket = kestrelConfig.GetValue<string>("ListenUnixSocket");
+
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+    {
+        if (!string.IsNullOrWhiteSpace(unixSocket))
+        {
+            unixSocket = string.Format(unixSocket, hostingContext.HostingEnvironment.ApplicationName.Replace("ASC.", "").Replace(".", ""));
+
+            serverOptions.ListenUnixSocket(unixSocket);
+        }
+    }
+});
+
+
 
 builder.Services.AddHttpContextAccessor();
 //services.AddCustomHealthCheck(Configuration);
