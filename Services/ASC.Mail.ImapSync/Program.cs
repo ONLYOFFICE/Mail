@@ -63,11 +63,6 @@ var logger = LogManager.Setup()
 logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-
-builder.Host.UseWindowsService();
-builder.Host.UseSystemd();
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
-
 builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
 {
     var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
@@ -88,6 +83,7 @@ builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
 });
 
 
+builder.Host.ConfigureDefault();
 
 builder.Services.AddHttpContextAccessor();
 //services.AddCustomHealthCheck(Configuration);
@@ -105,7 +101,6 @@ builder.Services.AddBaseDbContext<MailDbContext>();
 builder.Services.RegisterFeature();
 builder.Services.AddAutoMapper(GetAutoMapperProfileAssemblies());
 
-builder.Services.AddMemoryCache();
 //builder.Services.AddDistributedCache(Configuration);
 builder.Services.AddDistributedTaskQueue();
 //services.AddCacheNotify(Configuration);

@@ -2954,7 +2954,7 @@ public class MessageEngine : BaseEngine
                 _storageManager.StoreAttachmentWithoutQuota(attachment);
             }
 
-            _quotaEngine.QuotaUsedAdd(quotaAddSize);
+            //_quotaEngine.QuotaUsedAdd(quotaAddSize);
         }
         catch
         {

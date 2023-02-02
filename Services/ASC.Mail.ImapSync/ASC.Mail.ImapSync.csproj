@@ -20,6 +20,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.542" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="MailKit" Version="3.4.3" />
 		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.2" />
