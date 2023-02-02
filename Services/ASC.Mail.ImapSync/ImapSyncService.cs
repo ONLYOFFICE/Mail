@@ -37,13 +37,13 @@ public class ImapSyncService : IHostedService
         RedisClient redisClient,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        IOptionsSnapshot<SocketServiceClient> optionsSnapshot,
+        SocketServiceClient signalrServiceClient,
         ILoggerProvider loggerProvider)
     {
         _redisClient = redisClient;
         _mailSettings = mailSettings;
         _serviceProvider = serviceProvider;
-        _signalrServiceClient = optionsSnapshot.Get("mail");
+        _signalrServiceClient = signalrServiceClient;
         clients = new ConcurrentDictionary<string, MailImapClient>();
 
         _cancelTokenSource = new CancellationTokenSource();

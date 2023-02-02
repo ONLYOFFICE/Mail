@@ -12,6 +12,7 @@ using ASC.Mail.Server.Core.Dao;
 using ASC.MessagingSystem.EF.Context;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using NLog;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
 string Namespace = typeof(ImapSyncService).Namespace;
 string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
@@ -105,7 +106,7 @@ builder.Services.RegisterFeature();
 builder.Services.AddAutoMapper(GetAutoMapperProfileAssemblies());
 
 builder.Services.AddMemoryCache();
-//services.AddDistributedCache(Configuration);
+//builder.Services.AddDistributedCache(Configuration);
 builder.Services.AddDistributedTaskQueue();
 //services.AddCacheNotify(Configuration);
 builder.Services.AddHttpClient();
@@ -163,7 +164,7 @@ diHelper.TryAdd<ImapSyncService>();
 diHelper.TryAdd<MailEnginesFactory>();
 
 var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
-builder.Services.AddSingleton(redisConfiguration);
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
 
 //builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.AddHostedService<ImapSyncService>();
