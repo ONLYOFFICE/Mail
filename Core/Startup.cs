@@ -6,9 +6,6 @@ using ASC.Core.Common.Hosting;
 using ASC.MessagingSystem.EF.Context;
 using ASC.Webhooks.Core.EF.Context;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
 
 namespace ASC.Mail

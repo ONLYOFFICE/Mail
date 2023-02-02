@@ -1,9 +1,7 @@
-﻿using ASC.Api.Core.Extensions;
-using ASC.Common.Mapping;
-using ASC.Mail;
-using Microsoft.Extensions.Hosting.WindowsServices;
+﻿using NLog;
 
-using System.Reflection;
+string Namespace = typeof(StorageCleanerService).Namespace;
+string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
 
 var options = new WebApplicationOptions
 {
@@ -13,84 +11,59 @@ var options = new WebApplicationOptions
 
 var builder = WebApplication.CreateBuilder(options);
 
-builder.Host.UseWindowsService();
-builder.Host.UseSystemd();
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+builder.WebHost.MailConfigureKestrel();
 
-builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
+var path = builder.Configuration["pathToConf"];
+
+if (!Path.IsPathRooted(path))
 {
-    var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
+    path = Path.GetFullPath(CrossPlatform.PathCombine(builder.Environment.ContentRootPath, path));
+}
 
-    if (!kestrelConfig.Exists()) return;
+builder.Configuration.SetBasePath(path);
+var env = builder.Configuration.GetValue("ENVIRONMENT", "Production");
 
-    var unixSocket = kestrelConfig.GetValue<string>("ListenUnixSocket");
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {
-        if (!string.IsNullOrWhiteSpace(unixSocket))
+builder.Configuration
+    .AddMailJsonFiles(env)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddInMemoryCollection(new Dictionary<string, string>
         {
-            unixSocket = string.Format(unixSocket, hostingContext.HostingEnvironment.ApplicationName.Replace("ASC.", "").Replace(".", ""));
-
-            serverOptions.ListenUnixSocket(unixSocket);
+        {"pathToConf", path }
         }
-    }
-});
+    ).Build();
 
-builder.Host.ConfigureAppConfiguration((hostContext, config) =>
-{
-    var builded = config.Build();
-    var path = builded["pathToConf"];
-    if (!Path.IsPathRooted(path))
-    {
-        path = Path.GetFullPath(CrossPlatform.PathCombine(hostContext.HostingEnvironment.ContentRootPath, path));
-    }
+var logger = LogManager.Setup()
+                            .SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(StorageCleanerService).Namespace);
 
-    config.SetBasePath(path);
-    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
-    config
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{env}.json", true)
-        .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json", true)
-        .AddJsonFile("storage.json")
-        .AddJsonFile($"storage.{env}.json", true)
-        .AddEnvironmentVariables()
-        .AddCommandLine(args)
-        .AddInMemoryCollection(new Dictionary<string, string>
-            {
-                {"pathToConf", path }
-            }
-        );
-});
+logger.Debug("path: " + path);
+logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-builder.Host.ConfigureServices((hostContext, services) =>
-{
-    services.AddHttpContextAccessor();
-    services.AddMemoryCache();
-    services.AddHttpClient();
-    var diHelper = new DIHelper(services);
+builder.Host.ConfigureDefault();
 
-    diHelper.TryAdd<StorageCleanerLauncher>();
-    services.AddHostedService<StorageCleanerLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-    diHelper.TryAdd<StorageCleanerScope>();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
-    services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
-});
+builder.Services.AddMailServices();
+builder.Services.AddMailServices();
+builder.Services.AddMailServices();
+
+var diHelper = new DIHelper(builder.Services);
+
+diHelper.TryAdd<StorageCleanerLauncher>();
+builder.Services.AddHostedService<StorageCleanerLauncher>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd<StorageCleanerScope>();
+builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
+builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
 builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
     builder.Register(context.Configuration, false, false);
 });
 
-//builder.Host.ConfigureNLogLogging();
-
-var startup = new BaseWorkerStartup(builder.Configuration, builder.Environment);
-
-startup.ConfigureServices(builder.Services);
-
 var app = builder.Build();
-
-startup.Configure(app);
 
 await app.RunAsync();

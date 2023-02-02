@@ -43,7 +43,6 @@ global using ASC.Mail.Core.Engine.Operations;
 global using ASC.Mail.Core.Engine.Operations.Base;
 global using ASC.Mail.Core.Entities;
 global using ASC.Mail.Core.Exceptions;
-global using ASC.Mail.Core.Extensions;
 global using ASC.Mail.Core.Loggers;
 global using ASC.Mail.Core.MailServer.Core.Dao;
 global using ASC.Mail.Core.Resources;
@@ -93,6 +92,7 @@ global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Storage;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
 
 global using MimeKit;
