@@ -49,8 +49,6 @@ builder.Host.ConfigureDefault();
 
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddMailServices();
-
 builder.Services.AddBaseDbContext<MailServerDbContext>();
 builder.Services.AddBaseDbContext<MailDbContext>();
 
@@ -62,6 +60,8 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 
 var diHelper = new DIHelper(builder.Services);
+diHelper.RegisterProducts(builder.Configuration, path);
+
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
@@ -72,6 +72,8 @@ builder.Services.AddSingleton(new ConsoleParser(args));
 
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+builder.Services.AddMailServices();
 
 var app = builder.Build();
 

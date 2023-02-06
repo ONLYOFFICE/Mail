@@ -24,6 +24,7 @@
 */
 
 using ASC.Mail.Core.Utils;
+using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -41,7 +42,7 @@ public class ServerEngine : BaseEngine
     private readonly CoreBaseSettings _coreBaseSettings;
     private readonly WebItemSecurity _webItemSecurity;
     private readonly SettingsManager _settingsManager;
-    //private readonly UserManagerWrapper _userManagerWrapper;
+    private readonly UserManagerWrapper _userManagerWrapper;
     private readonly IServiceProvider _serviceProvider;
 
     public ServerEngine(
@@ -52,7 +53,7 @@ public class ServerEngine : BaseEngine
         CoreBaseSettings coreBaseSettings,
         WebItemSecurity webItemSecurity,
         SettingsManager settingsManager,
-        //UserManagerWrapper userManagerWrapper,
+        UserManagerWrapper userManagerWrapper,
         MailSettings mailSettings,
         IServiceProvider serviceProvider) : base(mailSettings)
     {
@@ -63,7 +64,7 @@ public class ServerEngine : BaseEngine
         _coreBaseSettings = coreBaseSettings;
         _webItemSecurity = webItemSecurity;
         _settingsManager = settingsManager;
-        //_userManagerWrapper = userManagerWrapper;
+        _userManagerWrapper = userManagerWrapper;
         _serviceProvider = serviceProvider;
     }
 
@@ -256,105 +257,105 @@ public class ServerEngine : BaseEngine
         return dnsLookup.IsDomainTxtRecordExists(domainName, dns.DomainCheckRecord.Value);
     }
 
-    //public ServerNotificationAddressData CreateNotificationAddress(string localPart, string password, int domainId)
-    //{
-    //    if (!_coreBaseSettings.Standalone)
-    //        throw new SecurityException("Only for standalone");
+    public ServerNotificationAddressData CreateNotificationAddress(string localPart, string password, int domainId)
+    {
+        if (!_coreBaseSettings.Standalone)
+            throw new SecurityException("Only for standalone");
 
-    //    if (!IsAdmin)
-    //        throw new SecurityException("Need admin privileges.");
+        if (!IsAdmin)
+            throw new SecurityException("Need admin privileges.");
 
-    //    if (string.IsNullOrEmpty(localPart))
-    //        throw new ArgumentNullException("localPart", @"Invalid address username.");
+        if (string.IsNullOrEmpty(localPart))
+            throw new ArgumentNullException("localPart", @"Invalid address username.");
 
-    //    localPart = localPart.ToLowerInvariant().Trim();
+        localPart = localPart.ToLowerInvariant().Trim();
 
-    //    if (localPart.Length > 64)
-    //        throw new ArgumentException(@"Local part of address exceed limitation of 64 characters.", "localPart");
+        if (localPart.Length > 64)
+            throw new ArgumentException(@"Local part of address exceed limitation of 64 characters.", "localPart");
 
-    //    if (!Parser.IsEmailLocalPartValid(localPart))
-    //        throw new ArgumentException(@"Incorrect address username.", "localPart");
+        if (!Parser.IsEmailLocalPartValid(localPart))
+            throw new ArgumentException(@"Incorrect address username.", "localPart");
 
-    //    var trimPwd = Parser.GetValidPassword(password, _settingsManager, _userManagerWrapper);
+        var trimPwd = Parser.GetValidPassword(password, _settingsManager, _userManagerWrapper);
 
-    //    if (domainId < 0)
-    //        throw new ArgumentException(@"Invalid domain id.", "domainId");
+        if (domainId < 0)
+            throw new ArgumentException(@"Invalid domain id.", "domainId");
 
-    //    var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
+        var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
 
-    //    if (!string.IsNullOrEmpty(notificationAddressSettings.NotificationAddress))
-    //    {
-    //        RemoveNotificationAddress(notificationAddressSettings.NotificationAddress);
-    //    }
+        if (!string.IsNullOrEmpty(notificationAddressSettings.NotificationAddress))
+        {
+            RemoveNotificationAddress(notificationAddressSettings.NotificationAddress);
+        }
 
-    //    var utcNow = DateTime.UtcNow;
+        var utcNow = DateTime.UtcNow;
 
-    //    var serverDomain = _mailDaoFactory.GetServerDomainDao().GetDomain(domainId);
+        var serverDomain = _mailDaoFactory.GetServerDomainDao().GetDomain(domainId);
 
-    //    if (localPart.Length + serverDomain.Name.Length > 318) // 318 because of @ sign
-    //        throw new ArgumentException(@"Address of mailbox exceed limitation of 319 characters.", "localPart");
+        if (localPart.Length + serverDomain.Name.Length > 318) // 318 because of @ sign
+            throw new ArgumentException(@"Address of mailbox exceed limitation of 319 characters.", "localPart");
 
-    //    var login = string.Format("{0}@{1}", localPart, serverDomain.Name);
+        var login = string.Format("{0}@{1}", localPart, serverDomain.Name);
 
-    //    var server = _mailDaoFactory.GetServerDao().Get(Tenant);
+        var server = _mailDaoFactory.GetServerDao().Get(Tenant);
 
-    //    if (server == null)
-    //        throw new ArgumentException("Server not configured");
+        if (server == null)
+            throw new ArgumentException("Server not configured");
 
-    //    var engine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
+        var engine = new Server.Core.ServerEngine(server.Id, server.ConnectionString);
 
-    //    var maildir = PostfixMaildirUtil.GenerateMaildirPath(serverDomain.Name, localPart, utcNow);
+        var maildir = PostfixMaildirUtil.GenerateMaildirPath(serverDomain.Name, localPart, utcNow);
 
-    //    var serverMailbox = new Server.Core.Entities.Mailbox
-    //    {
-    //        Name = localPart,
-    //        Password = trimPwd,
-    //        Username = login,
-    //        LocalPart = localPart,
-    //        Domain = serverDomain.Name,
-    //        Active = true,
-    //        Quota = 0,
-    //        Maildir = maildir,
-    //        Modified = utcNow,
-    //        Created = utcNow,
-    //    };
+        var serverMailbox = new Server.Core.Entities.Mailbox
+        {
+            Name = localPart,
+            Password = trimPwd,
+            Username = login,
+            LocalPart = localPart,
+            Domain = serverDomain.Name,
+            Active = true,
+            Quota = 0,
+            Maildir = maildir,
+            Modified = utcNow,
+            Created = utcNow,
+        };
 
-    //    var serverAddress = new Alias
-    //    {
-    //        Name = localPart,
-    //        Address = login,
-    //        Goto = login,
-    //        Domain = serverDomain.Name,
-    //        Active = true,
-    //        Islist = false,
-    //        Modified = utcNow,
-    //        Created = utcNow
-    //    };
+        var serverAddress = new Alias
+        {
+            Name = localPart,
+            Address = login,
+            Goto = login,
+            Domain = serverDomain.Name,
+            Active = true,
+            Islist = false,
+            Modified = utcNow,
+            Created = utcNow
+        };
 
-    //    engine.SaveMailbox(serverMailbox, serverAddress, false);
+        engine.SaveMailbox(serverMailbox, serverAddress, false);
 
-    //    notificationAddressSettings = new ServerNotificationAddressSettings { NotificationAddress = login };
+        notificationAddressSettings = new ServerNotificationAddressSettings { NotificationAddress = login };
 
-    //    _settingsManager.SaveSettings(notificationAddressSettings, Tenant);
+        _settingsManager.SaveSettings(notificationAddressSettings, Tenant);
 
-    //    var smtpSettings = _mailDaoFactory.GetMailboxServerDao()
-    //        .GetServer(server.SmtpSettingsId);
+        var smtpSettings = _mailDaoFactory.GetMailboxServerDao()
+            .GetServer(server.SmtpSettingsId);
 
-    //    var address = new MailAddress(login);
+        var address = new MailAddress(login);
 
-    //    var notifyAddress = new ServerNotificationAddressData
-    //    {
-    //        Email = address.ToString(),
-    //        SmtpPort = smtpSettings.Port,
-    //        SmtpServer = smtpSettings.Hostname,
-    //        SmtpAccount = address.ToLogin(smtpSettings.Username),
-    //        SmptEncryptionType = smtpSettings.SocketType,
-    //        SmtpAuth = true,
-    //        SmtpAuthenticationType = smtpSettings.Authentication
-    //    };
+        var notifyAddress = new ServerNotificationAddressData
+        {
+            Email = address.ToString(),
+            SmtpPort = smtpSettings.Port,
+            SmtpServer = smtpSettings.Hostname,
+            SmtpAccount = address.ToLogin(smtpSettings.Username),
+            SmptEncryptionType = smtpSettings.SocketType,
+            SmtpAuth = true,
+            SmtpAuthenticationType = smtpSettings.Authentication
+        };
 
-    //    return notifyAddress;
-    //}
+        return notifyAddress;
+    }
 
     public void RemoveNotificationAddress(string address)
     {
