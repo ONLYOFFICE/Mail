@@ -60,7 +60,6 @@ builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient();
 
 var diHelper = new DIHelper(builder.Services);
-diHelper.RegisterProducts(builder.Configuration, path);
 
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
