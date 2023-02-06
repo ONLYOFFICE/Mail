@@ -3,6 +3,7 @@ using ASC.Core.Common.EF.Context;
 using ASC.MessagingSystem.EF.Context;
 using Microsoft.AspNetCore.Hosting;
 using System.Runtime.InteropServices;
+using IMailboxDao = ASC.Mail.Core.Dao.Interfaces.IMailboxDao;
 
 namespace ASC.Mail.Core.Extensions
 {
@@ -39,6 +40,8 @@ namespace ASC.Mail.Core.Extensions
             services.AddBaseDbContextPool<MessagesContext>();
 
             services.AddAutoMapper(GetAutoMapperProfileAssemblies());
+
+            services.AddMailScoppedServices();
         }
 
         public static void MailConfigureKestrel(this IWebHostBuilder builder)
@@ -68,6 +71,47 @@ namespace ASC.Mail.Core.Extensions
             return from x in AppDomain.CurrentDomain.GetAssemblies()
                    where x.GetName().Name!.StartsWith("ASC.")
                    select x;
+        }
+
+
+        public static void AddMailScoppedServices(this IServiceCollection services)
+        {
+            services.AddScoped<IAccountDao, AccountDao>();
+            services.AddScoped<IAlertDao, AlertDao>();
+            services.AddScoped<IAttachmentDao, AttachmentDao>();
+            services.AddScoped<IChainDao, ChainDao>();
+            services.AddScoped<IContactCardDao, ContactCardDao>();
+            services.AddScoped<IContactDao, ContactDao>();
+            services.AddScoped<IContactInfoDao, ContactInfoDao>();
+            services.AddScoped<ICrmContactDao, CrmContactDao>();
+            services.AddScoped<ICrmLinkDao, CrmLinkDao>();
+            services.AddScoped<IDisplayImagesAddressDao, DisplayImagesAddressDao>();
+            services.AddScoped<IFilterDao, FilterDao>();
+            services.AddScoped<IFolderDao, FolderDao>();
+            services.AddScoped<IImapFlagsDao, ImapFlagsDao>();
+            services.AddScoped<IImapSpecialMailboxDao, ImapSpecialMailboxDao>();
+            services.AddScoped<IMailboxAutoreplyDao, MailboxAutoreplyDao>();
+            services.AddScoped<IMailboxAutoreplyHistoryDao, MailboxAutoreplyHistoryDao>();
+            services.AddScoped<IMailboxDao, ASC.Mail.Core.Dao.MailboxDao>();
+            services.AddScoped<IMailDaoFactory, MailDaoFactory>();
+            services.AddScoped<IMailboxDomainDao, MailboxDomainDao>();
+            services.AddScoped<IMailboxProviderDao, MailboxProviderDao>();
+            services.AddScoped<IMailboxServerDao, MailboxServerDao>();
+            services.AddScoped<IMailboxSignatureDao, MailboxSignatureDao>();
+            services.AddScoped<IMailDao, MailDao>();
+            services.AddScoped<IMailGarbageDao, MailGarbageDao>();
+            services.AddScoped<IMailInfoDao, MailInfoDao>();
+            services.AddScoped<IServerAddressDao, ServerAddressDao>();
+            services.AddScoped<IServerDao, ServerDao>();
+            services.AddScoped<IServerDnsDao, ServerDnsDao>();
+            services.AddScoped<IServerDomainDao, ServerDomainDao>();
+            services.AddScoped<IServerGroupDao, ServerGroupDao>();
+            services.AddScoped<ITagAddressDao, TagAddressDao>();
+            services.AddScoped<ITagDao, TagDao>();
+            services.AddScoped<ITagMailDao, TagMailDao>();
+            services.AddScoped<IUserFolderDao, UserFolderDao>();
+            services.AddScoped<IUserFolderTreeDao, UserFolderTreeDao>();
+            services.AddScoped<IUserFolderXMailDao, UserFolderXMailDao>();
         }
     }
 
