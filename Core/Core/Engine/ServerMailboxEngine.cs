@@ -88,7 +88,7 @@ public class ServerMailboxEngine : BaseEngine
     public List<ServerMailboxData> GetMailboxes()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var mailboxes = _mailDaoFactory.GetMailboxDao().GetMailBoxes(new TenantServerMailboxesExp(Tenant));
 
@@ -120,7 +120,7 @@ public class ServerMailboxEngine : BaseEngine
         var isSharedDomain = serverDomain.Tenant == DefineConstants.SHARED_TENANT_ID;
 
         if (!IsAdmin && !isSharedDomain)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var tenantQuota = _tenantManager.GetTenantQuota(Tenant);
 
@@ -128,7 +128,7 @@ public class ServerMailboxEngine : BaseEngine
             && (tenantQuota.Trial
                 || tenantQuota.Free))
         {
-            throw new SecurityException("Not available in unpaid version");
+            throw new System.Security.SecurityException("Not available in unpaid version");
         }
 
         if (string.IsNullOrEmpty(localPart))
@@ -149,7 +149,7 @@ public class ServerMailboxEngine : BaseEngine
         var isSharedDomain = serverDomain.Tenant == DefineConstants.SHARED_TENANT_ID;
 
         if (!IsAdmin && !isSharedDomain)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var tenantQuota = _tenantManager.GetTenantQuota(Tenant);
 
@@ -157,7 +157,7 @@ public class ServerMailboxEngine : BaseEngine
             && (tenantQuota.Trial
                 || tenantQuota.Free))
         {
-            throw new SecurityException("Not available in unpaid version");
+            throw new System.Security.SecurityException("Not available in unpaid version");
         }
 
         if (string.IsNullOrEmpty(localPart))
@@ -184,7 +184,7 @@ public class ServerMailboxEngine : BaseEngine
         var isSharedDomain = serverDomain.Tenant == DefineConstants.SHARED_TENANT_ID;
 
         if (!IsAdmin && !isSharedDomain)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var tenantQuota = _tenantManager.GetTenantQuota(Tenant);
 
@@ -192,7 +192,7 @@ public class ServerMailboxEngine : BaseEngine
             && (tenantQuota.Trial
                 || tenantQuota.Free))
         {
-            throw new SecurityException("Not available in unpaid version");
+            throw new System.Security.SecurityException("Not available in unpaid version");
         }
 
         if (string.IsNullOrEmpty(localPart))
@@ -208,7 +208,7 @@ public class ServerMailboxEngine : BaseEngine
             throw new ArgumentException(@"Invalid user id.", "userId");
 
         if (isSharedDomain && !IsAdmin && user != _securityContext.CurrentAccount.ID)
-            throw new SecurityException(
+            throw new System.Security.SecurityException(
                 "Creation of a shared mailbox is allowed only for the current account if user is not admin.");
 
         var teamlabAccount = _authManager.GetAccountByID(Tenant, user);
@@ -367,7 +367,7 @@ public class ServerMailboxEngine : BaseEngine
         var domain = _serverDomainEngine.GetCommonDomain();
 
         if (domain == null)
-            throw new SecurityException("Domain not found.");
+            throw new System.Security.SecurityException("Domain not found.");
 
         var userInfo = _userManager.GetUsers(_securityContext.CurrentAccount.ID);
 
@@ -393,7 +393,7 @@ public class ServerMailboxEngine : BaseEngine
         var isSharedDomain = serverDomain.Tenant == DefineConstants.SHARED_TENANT_ID;
 
         if (!IsAdmin && !isSharedDomain)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var tenantQuota = _tenantManager.GetTenantQuota(Tenant);
 
@@ -401,7 +401,7 @@ public class ServerMailboxEngine : BaseEngine
             && (tenantQuota.Trial
                 || tenantQuota.Free))
         {
-            throw new SecurityException("Not available in unpaid version");
+            throw new System.Security.SecurityException("Not available in unpaid version");
         }
 
         if (name.Length > 255)
@@ -428,7 +428,7 @@ public class ServerMailboxEngine : BaseEngine
     public ServerDomainAddressData AddAlias(int mailboxId, string aliasName)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(aliasName))
             throw new ArgumentException(@"Invalid alias name.", "aliasName");
@@ -526,7 +526,7 @@ public class ServerMailboxEngine : BaseEngine
     public void RemoveAlias(int mailboxId, int addressId)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (mailboxId < 0)
             throw new ArgumentException(@"Invalid address id.", "mailboxId");
@@ -670,13 +670,13 @@ public class ServerMailboxEngine : BaseEngine
         var isSharedDomain = mailbox.TenantId == DefineConstants.SHARED_TENANT_ID;
 
         if (!IsAdmin && !isSharedDomain)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (isSharedDomain && !IsAdmin &&
             !mailbox.UserId.Equals(_securityContext.CurrentAccount.ID.ToString(),
                 StringComparison.InvariantCultureIgnoreCase))
         {
-            throw new SecurityException(
+            throw new System.Security.SecurityException(
                 "Removing of a shared mailbox is allowed only for the current account if user is not admin.");
         }
 
@@ -688,7 +688,7 @@ public class ServerMailboxEngine : BaseEngine
     public void ChangePassword(int mailboxId, string password)
     {
         if (!_coreBaseSettings.Standalone)
-            throw new SecurityException("Not allowed in this version");
+            throw new System.Security.SecurityException("Not allowed in this version");
 
         if (mailboxId < 0)
             throw new ArgumentException(@"Invalid mailbox id.", "mailboxId");

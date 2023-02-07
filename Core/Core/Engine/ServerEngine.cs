@@ -203,7 +203,7 @@ public class ServerEngine : BaseEngine
     public ServerData GetMailServer()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var linkedServer = GetOrCreate();
 
@@ -228,7 +228,7 @@ public class ServerEngine : BaseEngine
     public ServerDomainDnsData GetOrCreateUnusedDnsData()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var server = GetOrCreate();
         return _serverDomainEngine.GetOrCreateUnusedDnsData(server);
@@ -237,7 +237,7 @@ public class ServerEngine : BaseEngine
     public bool CheckDomainOwnership(string domain)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(domain))
             throw new ArgumentException(@"Invalid domain name.", "domain");
@@ -260,10 +260,10 @@ public class ServerEngine : BaseEngine
     public ServerNotificationAddressData CreateNotificationAddress(string localPart, string password, int domainId)
     {
         if (!_coreBaseSettings.Standalone)
-            throw new SecurityException("Only for standalone");
+            throw new System.Security.SecurityException("Only for standalone");
 
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(localPart))
             throw new ArgumentNullException("localPart", @"Invalid address username.");
@@ -360,10 +360,10 @@ public class ServerEngine : BaseEngine
     public void RemoveNotificationAddress(string address)
     {
         if (!_coreBaseSettings.Standalone)
-            throw new SecurityException("Only for standalone");
+            throw new System.Security.SecurityException("Only for standalone");
 
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(address))
             throw new ArgumentNullException("address");
@@ -402,7 +402,7 @@ public class ServerEngine : BaseEngine
     public ServerFullData GetMailServerFullInfo()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var fullServerInfo = new ServerFullData();
         var mailboxDataList = new List<ServerMailboxData>();

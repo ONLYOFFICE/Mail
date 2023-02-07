@@ -115,7 +115,7 @@ public abstract class MailOperation
         catch (AuthorizingException authError)
         {
             Error = "ErrorAccessDenied";
-            var logError = new SecurityException(Error, authError).ToString();
+            var logError = new System.Security.SecurityException(Error, authError).ToString();
             Log.ErrorMailOperationAuthorizing(logError);
         }
         catch (AggregateException ae)

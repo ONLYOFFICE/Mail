@@ -11,6 +11,14 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
+
+diHelper.TryAdd<FactoryIndexerMailMail>();
+diHelper.TryAdd<FactoryIndexerMailContact>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd<AggregatorServiceLauncher>();
+diHelper.TryAdd<AggregatorServiceScope>();
+diHelper.AddMailScoppedServices();
 
 var path = builder.Configuration["pathToConf"];
 
@@ -44,35 +52,17 @@ logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
 builder.WebHost.MailConfigureKestrel();
-
 builder.Host.ConfigureDefault();
 
-builder.Services.AddHttpContextAccessor();
-
+builder.Services.AddMailServices();
 builder.Services.AddBaseDbContext<MailServerDbContext>();
 builder.Services.AddBaseDbContext<MailDbContext>();
-
-builder.Services.AddMemoryCache();
 builder.Services.AddDistributedTaskQueue();
 builder.Services.AddHttpClient();
-
 builder.Services.AddMemoryCache();
-builder.Services.AddHttpClient();
-
-var diHelper = new DIHelper(builder.Services);
-
-diHelper.TryAdd<FactoryIndexerMailMail>();
-diHelper.TryAdd<FactoryIndexerMailContact>();
-diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-diHelper.TryAdd<AggregatorServiceLauncher>();
-diHelper.TryAdd<AggregatorServiceScope>();
-
 builder.Services.AddSingleton(new ConsoleParser(args));
-
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
-
-builder.Services.AddMailServices();
 
 var app = builder.Build();
 

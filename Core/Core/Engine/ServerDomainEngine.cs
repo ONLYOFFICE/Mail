@@ -73,7 +73,7 @@ public class ServerDomainEngine : BaseEngine
     public List<ServerDomainData> GetDomains()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var listDomains = _mailDaoFactory.GetServerDomainDao().GetDomains();
 
@@ -117,7 +117,7 @@ public class ServerDomainEngine : BaseEngine
     public ServerDomainDnsData GetDnsData(int domainId)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (domainId < 0)
             throw new ArgumentException(@"Invalid domain id.", "domainId");
@@ -135,7 +135,7 @@ public class ServerDomainEngine : BaseEngine
     public bool IsDomainExists(string name)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException(@"Invalid domain name.", "name");
@@ -227,7 +227,7 @@ public class ServerDomainEngine : BaseEngine
     public ServerDomainData AddDomain(string domain, int dnsId)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(domain))
             throw new ArgumentException(@"Invalid domain name.", "domain");
@@ -318,7 +318,7 @@ public class ServerDomainEngine : BaseEngine
     public MailOperationStatus RemoveDomain(int id)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (id < 0)
             throw new ArgumentException(@"Invalid domain id.", "id");
@@ -326,7 +326,7 @@ public class ServerDomainEngine : BaseEngine
         var domain = GetDomain(id);
 
         if (domain.IsSharedDomain)
-            throw new SecurityException("Can not remove shared domain.");
+            throw new System.Security.SecurityException("Can not remove shared domain.");
 
         //TODO: Fix return OperationEngine.RemoveServerDomain(domain);
 
