@@ -87,7 +87,7 @@
 		<PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
 		<PackageReference Include="openstack.net" Version="1.7.9" />
 		<PackageReference Include="DotNetOpenAuth.Ultimate" Version="4.3.4.13329" />
-		<PackageReference Include="Elasticsearch.Net" Version="7.17.5" />
+		<PackageReference Include="Elasticsearch.Net" Version="7.10.0" />
 		<PackageReference Include="NEST" Version="7.17.5" />
 		<PackageReference Include="NLog" Version="5.1.1" />
 	</ItemGroup>
