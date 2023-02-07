@@ -19,6 +19,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Amazon.Extensions.S3.Encryption" Version="2.0.3" />
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.542" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 		<PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
