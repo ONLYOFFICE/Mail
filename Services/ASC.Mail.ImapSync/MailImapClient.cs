@@ -14,8 +14,6 @@
  *
 */
 
-using ASC.Common.Log;
-using ASC.Core.Notify.Socket;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
