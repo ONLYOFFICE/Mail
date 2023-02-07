@@ -10,6 +10,7 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
 
 var path = builder.Configuration["pathToConf"];
 
@@ -47,13 +48,15 @@ builder.WebHost.MailConfigureKestrel();
 builder.Host.ConfigureDefault();
 
 builder.Services.AddMailServices();
+builder.Services.AddDistributedTaskQueue();
+builder.Services.AddDistributedCache(builder.Configuration);
+diHelper.AddMailScoppedServices();
 builder.Services.AddBaseDbContext<MailServerDbContext>();
 builder.Services.AddBaseDbContext<MailDbContext>();
 
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
-var diHelper = new DIHelper(builder.Services);
 diHelper.TryAdd<WatchdogLauncher>();
 builder.Services.AddHostedService<WatchdogLauncher>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));

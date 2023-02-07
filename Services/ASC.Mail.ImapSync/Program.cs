@@ -10,6 +10,7 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
 
 var path = builder.Configuration["pathToConf"];
 
@@ -43,22 +44,22 @@ logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
 builder.WebHost.MailConfigureKestrel();
-
 builder.Host.ConfigureDefault();
 
 builder.Services.AddMailServices();
 builder.Services.AddBaseDbContext<MailServerDbContext>();
 builder.Services.AddBaseDbContext<MailDbContext>();
-
+builder.Services.AddDistributedTaskQueue();
+builder.Services.AddDistributedCache(builder.Configuration);
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 
-var diHelper = new DIHelper(builder.Services);
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
 diHelper.TryAdd<ImapSyncService>();
 diHelper.TryAdd<MailEnginesFactory>();
+diHelper.AddMailScoppedServices();
 
 var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
 builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);

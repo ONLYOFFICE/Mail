@@ -13,12 +13,6 @@ var options = new WebApplicationOptions
 var builder = WebApplication.CreateBuilder(options);
 var diHelper = new DIHelper(builder.Services);
 
-diHelper.TryAddSingleton<UserManagerConstants>(_ =>
-{
-    return new UserManagerConstants(
-        new ASC.Core.Users.Constants(builder.Configuration));
-});
-
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));

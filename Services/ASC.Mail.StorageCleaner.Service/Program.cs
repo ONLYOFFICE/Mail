@@ -47,17 +47,21 @@ logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 builder.Host.ConfigureDefault();
 
 builder.Services.AddMailServices();
-builder.Services.AddMailServices();
-builder.Services.AddMailServices();
+builder.Services.AddDistributedTaskQueue();
 
 var diHelper = new DIHelper(builder.Services);
 
+builder.Services.AddMailServices();
+builder.Services.AddDistributedTaskQueue();
+builder.Services.AddDistributedCache(builder.Configuration);
+diHelper.AddMailScoppedServices();
 diHelper.TryAdd<StorageCleanerLauncher>();
 builder.Services.AddHostedService<StorageCleanerLauncher>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
 diHelper.TryAdd<StorageCleanerScope>();
 builder.Services.AddAutoMapper(Assembly.GetAssembly(typeof(DefaultMappingProfile)));
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
 
 builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
 {
