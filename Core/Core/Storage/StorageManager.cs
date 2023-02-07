@@ -25,6 +25,7 @@
 
 
 
+using ASC.Mail.Core.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Storage;
@@ -56,12 +57,12 @@ public class StorageManager
 
     public IDataStore GetDataStoreForCkImages(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "fckuploaders");
+        return _storageFactory.GetStorage(tenant, "fckuploaders", new EmptyQuotaController());
     }
 
     public IDataStore GetDataStoreForAttachments(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "mailaggregator");
+        return _storageFactory.GetStorage(tenant, "mailaggregator", new EmptyQuotaController());
     }
 
     public static byte[] LoadLinkData(string link, ILogger log)
