@@ -1415,7 +1415,7 @@ public class MessageEngine : BaseEngine
         {
             _log.ErrorMessageEngineStoreMailBody(messageItem.MimeMessageId, ex.ToString());
 
-            Storage.DeleteAsync(string.Empty, savePath).Wait();
+            //Storage.DeleteAsync(string.Empty, savePath).Wait();
             throw;
         }
     }
