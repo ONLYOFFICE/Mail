@@ -56,7 +56,7 @@ builder.Services.AddMemoryCache();
 
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
-diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
 diHelper.TryAdd<ImapSyncService>();
 diHelper.TryAdd<MailEnginesFactory>();
 diHelper.AddMailScoppedServices();

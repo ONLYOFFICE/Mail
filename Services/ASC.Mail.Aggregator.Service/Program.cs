@@ -11,14 +11,6 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
-var diHelper = new DIHelper(builder.Services);
-
-diHelper.TryAdd<FactoryIndexerMailMail>();
-diHelper.TryAdd<FactoryIndexerMailContact>();
-diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-diHelper.TryAdd<AggregatorServiceLauncher>();
-diHelper.TryAdd<AggregatorServiceScope>();
-diHelper.AddMailScoppedServices();
 
 var path = builder.Configuration["pathToConf"];
 
@@ -50,6 +42,15 @@ var logger = LogManager.Setup()
 
 logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
+
+var diHelper = new DIHelper(builder.Services);
+
+diHelper.TryAdd<FactoryIndexerMailMail>();
+diHelper.TryAdd<FactoryIndexerMailContact>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
+diHelper.TryAdd<AggregatorServiceLauncher>();
+diHelper.TryAdd<AggregatorServiceScope>();
+diHelper.AddMailScoppedServices();
 
 builder.WebHost.MailConfigureKestrel();
 builder.Host.ConfigureDefault();
