@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Core.Common.EF;
 using ASC.Mail.Core.Enums;
 using CrmTag = ASC.Mail.Core.Entities.CrmTag;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -185,11 +186,11 @@ public class TagDao : BaseMailDao, ITagDao
             CrmId = tag.CrmId
         };
 
-        var entry = MailDbContext.MailTags.Add(dbTag); //maybe memory leak here
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailTags, dbTag); //maybe memory leak here
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int DeleteTag(int id)
