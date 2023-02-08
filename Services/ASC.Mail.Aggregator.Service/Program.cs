@@ -1,5 +1,7 @@
 ﻿using ASC.Mail.Core.Extensions;
 using NLog;
+using StackExchange.Redis.Extensions.Core.Configuration;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
 string Namespace = typeof(AggregatorService).Namespace;
 string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
@@ -65,6 +67,9 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
 
 var app = builder.Build();
 

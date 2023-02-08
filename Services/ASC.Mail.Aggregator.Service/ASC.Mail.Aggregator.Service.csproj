@@ -34,7 +34,10 @@
 		<PackageReference Include="NLog" Version="5.1.1" />
 		<PackageReference Include="NLog.Web.AspNetCore" Version="5.2.1" />
 		<PackageReference Include="SelectelSharp" Version="0.8.0" />
+		<PackageReference Include="StackExchange.Redis" Version="2.6.90" />
+		<PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="8.0.5" />
 		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="8.0.5" />
+		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="8.0.5" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
 		<PackageReference Include="Confluent.Kafka" Version="2.0.2" />
