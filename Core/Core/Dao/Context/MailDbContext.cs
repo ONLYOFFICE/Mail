@@ -91,6 +91,11 @@ public class MailDbContext : DbContext
 
     public DbSet<CrmCurrencyInfo> CrmCurrencyInfos { get; set; }
 
+    public DbSet<DbMailTariff> MailTariffs { get; set; }
+    public DbSet<DbMailTariffRow> MailTariffRows { get; set; }
+    public DbSet<DbMailQuota> MailQuotas { get; set; }
+    public DbSet<DbMailQuotaRow> MailQuotaRows { get; set; }
+
     #endregion
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -137,6 +142,10 @@ public class MailDbContext : DbContext
             .AddMailUserFolderXMail()
             .AddCrmContactMail()
             .AddCrmContactInfo()
-            .AddCrmCurrencyInfo();
+            .AddCrmCurrencyInfo()
+            .AddDbMailQuotaRow()
+            .AddDbMailQuota()
+            .AddDbMailTariff()
+            .AddDbMailTariffRow();
     }
 }
