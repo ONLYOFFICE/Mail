@@ -49,6 +49,7 @@ diHelper.AddMailScoppedServices();
 diHelper.TryAdd<WatchdogLauncher>();
 builder.Services.AddHostedService<WatchdogLauncher>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+builder.Services.AddDistributedCache(builder.Configuration);
 builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 builder.Services.AddMailServices();

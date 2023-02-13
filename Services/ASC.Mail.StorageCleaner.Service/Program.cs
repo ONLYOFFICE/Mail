@@ -50,8 +50,7 @@ builder.Host.ConfigureDefault();
 builder.WebHost.MailConfigureKestrel();
 
 diHelper.AddMailScoppedServices();
-builder.Services.AddBaseDbContext<MailServerDbContext>();
-builder.Services.AddBaseDbContext<MailDbContext>();
+builder.Services.AddDistributedCache(builder.Configuration);
 
 diHelper.TryAdd<StorageCleanerLauncher>();
 builder.Services.AddHostedService<StorageCleanerLauncher>();
