@@ -1,7 +1,7 @@
 ﻿using NLog;
 
 string Namespace = typeof(WatchdogService).Namespace;
-string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
+string AppName = Namespace.Substring("ASC.Mail".Length + 1);
 
 var options = new WebApplicationOptions
 {
@@ -32,8 +32,7 @@ builder.Configuration
         }
     ).Build();
 
-var logger = LogManager.Setup()
-                            .SetupExtensions(s =>
+var logger = LogManager.Setup().SetupExtensions(s =>
                             {
                                 s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
                             })
@@ -43,26 +42,16 @@ var logger = LogManager.Setup()
 logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
+builder.Host.ConfigureDefault();
 builder.WebHost.MailConfigureKestrel();
 
-builder.Host.ConfigureDefault();
-
-builder.Services.AddMailServices();
-builder.Services.AddDistributedTaskQueue();
-builder.Services.AddDistributedCache(builder.Configuration);
 diHelper.AddMailScoppedServices();
-builder.Services.AddBaseDbContext<MailServerDbContext>();
-builder.Services.AddBaseDbContext<MailDbContext>();
-
-builder.Services.AddHttpClient();
-builder.Services.AddMemoryCache();
-
 diHelper.TryAdd<WatchdogLauncher>();
 builder.Services.AddHostedService<WatchdogLauncher>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
 builder.Services.AddSingleton(new ConsoleParser(args));
-builder.Services.AddAutoMapper(BaseStartup.GetAutoMapperProfileAssemblies());
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+builder.Services.AddMailServices();
 
 var app = builder.Build();
 

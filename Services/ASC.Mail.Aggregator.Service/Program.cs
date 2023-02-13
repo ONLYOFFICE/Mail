@@ -4,7 +4,7 @@ using StackExchange.Redis.Extensions.Core.Configuration;
 using StackExchange.Redis.Extensions.Newtonsoft;
 
 string Namespace = typeof(AggregatorService).Namespace;
-string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
+string AppName = Namespace.Substring("ASC.Mail".Length + 1);
 
 var options = new WebApplicationOptions
 {
@@ -13,6 +13,7 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
 
 var path = builder.Configuration["pathToConf"];
 
@@ -45,7 +46,6 @@ var logger = LogManager.Setup()
 logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-var diHelper = new DIHelper(builder.Services);
 
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
@@ -57,19 +57,17 @@ diHelper.AddMailScoppedServices();
 builder.WebHost.MailConfigureKestrel();
 builder.Host.ConfigureDefault();
 
-builder.Services.AddMailServices();
 builder.Services.AddBaseDbContext<MailServerDbContext>();
 builder.Services.AddBaseDbContext<MailDbContext>();
 builder.Services.AddDistributedTaskQueue();
 builder.Services.AddDistributedCache(builder.Configuration);
-builder.Services.AddHttpClient();
-builder.Services.AddMemoryCache();
 builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 
 var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
 builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
+builder.Services.AddMailServices();
 
 var app = builder.Build();
 

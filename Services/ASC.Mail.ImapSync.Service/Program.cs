@@ -1,7 +1,7 @@
 ﻿using NLog;
 
 string Namespace = typeof(ImapSyncService).Namespace;
-string AppName = Namespace.Substring(Namespace.LastIndexOf('.') + 1);
+string AppName = Namespace.Substring("ASC.Mail".Length + 1);
 
 var options = new WebApplicationOptions
 {
@@ -43,29 +43,24 @@ var logger = LogManager.Setup()
 logger.Debug("path: " + path);
 logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-builder.WebHost.MailConfigureKestrel();
 builder.Host.ConfigureDefault();
+builder.WebHost.MailConfigureKestrel();
 
-builder.Services.AddMailServices();
-builder.Services.AddBaseDbContext<MailServerDbContext>();
-builder.Services.AddBaseDbContext<MailDbContext>();
-builder.Services.AddDistributedTaskQueue();
 builder.Services.AddDistributedCache(builder.Configuration);
-builder.Services.AddHttpClient();
-builder.Services.AddMemoryCache();
 
+diHelper.AddMailScoppedServices();
 diHelper.TryAdd<FactoryIndexerMailMail>();
 diHelper.TryAdd<FactoryIndexerMailContact>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
 diHelper.TryAdd<ImapSyncService>();
 diHelper.TryAdd<MailEnginesFactory>();
-diHelper.AddMailScoppedServices();
 
 var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
 builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
 
 builder.Services.AddHostedService<ImapSyncService>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+builder.Services.AddMailServices();
 
 var app = builder.Build();
 
