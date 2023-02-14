@@ -104,21 +104,6 @@
 		<Reference Include="ASC.Webhooks.Core">
 			<HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
 		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.Extensions.Logger</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.Feed.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.RabbitMQ.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.ActiveMQ.dll</HintPath>
-		</Reference>
 	</ItemGroup>
 
 </Project>

@@ -21,7 +21,7 @@ public partial class MailServerDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        ModelBuilderWrapper.From(modelBuilder, Database)
+        ModelBuilderWrapper.From(modelBuilder, Provider.MySql)
             .AddDbTenant();
 
         modelBuilder.Entity<Alias>(entity =>

@@ -110,11 +110,11 @@ public class ServerDao : BaseMailDao, IServerDao
             ImapSettingsId = server.ImapSettingsId
         };
 
-        var entry = MailDbContext.MailServerServers.Add(mailServer);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerServers, mailServer);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int Delete(int id)

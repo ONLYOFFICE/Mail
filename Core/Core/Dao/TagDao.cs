@@ -72,7 +72,7 @@ public class TagDao : BaseMailDao, ITagDao
 
         var crmTag = MailDbContext.CrmTags
             .AsNoTracking()
-            .Where(r => r.IdTenant == Tenant && /*r.EntityType == (int)EntityType.Contact &&*/ r.Id == crmTagId)
+            .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact && r.Id == crmTagId)
             .Select(r => new Tag
             {
                 Id = -r.Id,
@@ -133,7 +133,7 @@ public class TagDao : BaseMailDao, ITagDao
     {
         var crmTags = MailDbContext.CrmTags
             .AsNoTracking()
- //           .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact)
+            .Where(r => r.IdTenant == Tenant && r.EntityType == (int)EntityType.Contact)
             .Select(r => new Tag
             {
                 Id = -r.Id,
@@ -165,8 +165,8 @@ public class TagDao : BaseMailDao, ITagDao
                     EntityType = cet.EntityType
                 })
             .Where(r =>
-            /*r.EntityType == (int)EntityType.Contact
-            && */contactIds.Contains(r.EntityId)
+            r.EntityType == (int)EntityType.Contact
+            && contactIds.Contains(r.EntityId)
             && r.TenantId == Tenant)
             .ToList();
 

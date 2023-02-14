@@ -24,8 +24,6 @@
 */
 
 
-
-//using Contact = ASC.CRM.Core.Entities.Contact;
 using ASC.Mail.Core.Core.Entities;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;

@@ -1,6 +1,3 @@
-using ASC.Common.Logging;
-using Microsoft.Extensions.Options;
-
 namespace ASC.Mail.Core.Search;
 
 [Scope(Additional = typeof(FactoryIndexerMailMailExtension))]

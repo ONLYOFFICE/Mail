@@ -86,11 +86,11 @@ public class MailDao : BaseMailDao, IMailDao
         if (!string.IsNullOrEmpty(mail.CalendarUid))
             mailMail.CalendarUid = mail.CalendarUid;
 
-        var entry = MailDbContext.MailMails.Add(mailMail);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailMails, mailMail);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public ASC.Mail.Core.Entities.Mail GetMail(IMessageExp exp)
