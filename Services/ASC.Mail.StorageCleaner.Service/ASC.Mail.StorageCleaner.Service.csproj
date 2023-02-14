@@ -36,6 +36,7 @@
 		<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
 		<PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="8.0.5" />
 		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="8.0.5" />
+		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="8.0.5" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 	</ItemGroup>
 

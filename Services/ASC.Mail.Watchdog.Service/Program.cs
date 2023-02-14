@@ -1,4 +1,6 @@
 ﻿using NLog;
+using StackExchange.Redis.Extensions.Core.Configuration;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
 string Namespace = typeof(WatchdogService).Namespace;
 string AppName = Namespace.Substring("ASC.Mail".Length + 1);
@@ -48,7 +50,9 @@ builder.WebHost.MailConfigureKestrel();
 diHelper.AddMailScoppedServices();
 diHelper.TryAdd<WatchdogLauncher>();
 builder.Services.AddHostedService<WatchdogLauncher>();
-diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
+var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
 builder.Services.AddDistributedCache(builder.Configuration);
 builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));

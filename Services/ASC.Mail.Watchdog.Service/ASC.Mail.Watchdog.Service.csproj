@@ -26,6 +26,7 @@
 		<PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
 		<PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="8.0.5" />
 		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="8.0.5" />
+		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="8.0.5" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
 		<PackageReference Include="Ubiety.Dns.Core" Version="4.2.2" />
 		<PackageReference Include="Confluent.Kafka" Version="2.0.2" />

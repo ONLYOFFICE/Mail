@@ -9,6 +9,7 @@ public class WatchdogService
     private readonly MailboxEngine _mailboxEngine;
     private readonly TimeSpan _interval;
     private readonly TimeSpan _tasksTimeoutInterval;
+    private CancellationToken _token;
 
     private Timer WorkTimer;
 
@@ -29,6 +30,8 @@ public class WatchdogService
 
     internal Task StarService(CancellationToken token)
     {
+        _token=token;
+
         if (WorkTimer == null)
             WorkTimer = new Timer(WorkTimerElapsed, token, 0, Timeout.Infinite);
 
@@ -48,10 +51,18 @@ public class WatchdogService
         WorkTimer = null;
     }
 
-    private void WorkTimerElapsed(object state)
+    private void WorkTimerElapsed(object? state)
     {
         try
         {
+            if (WorkTimer == null)
+            {
+                _log.InfoWatchdogMessage("WorkTimer is desposed.");
+
+                WorkTimer= new Timer(WorkTimerElapsed, _token, 0, Timeout.Infinite);
+
+                return;
+            }
             WorkTimer.Change(Timeout.Infinite, Timeout.Infinite);
 
             _log.InfoWatchdogServiceReleaseLockedMailboxes(_tasksTimeoutInterval.TotalMinutes);

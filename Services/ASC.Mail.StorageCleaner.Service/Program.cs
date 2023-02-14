@@ -2,6 +2,8 @@
 using ASC.Mail.Core.Dao.Context;
 using ASC.Mail.Server.Core.Dao;
 using NLog;
+using StackExchange.Redis.Extensions.Core.Configuration;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
 string Namespace = typeof(StorageCleanerService).Namespace;
 string AppName = Namespace.Substring("ASC.Mail".Length + 1);
@@ -54,7 +56,9 @@ builder.Services.AddDistributedCache(builder.Configuration);
 
 diHelper.TryAdd<StorageCleanerLauncher>();
 builder.Services.AddHostedService<StorageCleanerLauncher>();
-diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
+var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
 diHelper.TryAdd<StorageCleanerScope>();
 builder.Services.AddSingleton(new ConsoleParser(args));
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
