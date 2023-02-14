@@ -25,6 +25,8 @@
 
 
 
+using ASC.Mail.Core.Core.Storage;
+
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
@@ -35,20 +37,22 @@ public class EmailInEngine
     private readonly AlertEngine _alertEngine;
     private readonly StorageFactory _storageFactory;
     private readonly ApiHelper _apiHelper;
+    private readonly MailTenantQuotaController _mailTenantQuotaController;
 
     public EmailInEngine(
         AccountEngine accountEngine,
         AlertEngine alertEngine,
         StorageFactory storageFactory,
         ApiHelper apiHelper,
-        ILoggerProvider logProvider
+        ILoggerProvider logProvider,
+        MailTenantQuotaController mailTenantQuotaController
         )
     {
         _accountEngine = accountEngine;
         _alertEngine = alertEngine;
         _storageFactory = storageFactory;
         _apiHelper = apiHelper;
-
+        _mailTenantQuotaController = mailTenantQuotaController;
         _log = logProvider.CreateLogger("ASC.Mail.EmailInEngine");
     }
 
@@ -71,7 +75,7 @@ public class EmailInEngine
                 }
                 else
                 {
-                    var storage = _storageFactory.GetMailStorage(mailbox.TenantId);
+                    var storage = _storageFactory.GetMailStorage(mailbox.TenantId, _mailTenantQuotaController);
 
                     using (var file = attachment.ToAttachmentStream(storage))
                     {

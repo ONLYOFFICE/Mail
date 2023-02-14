@@ -29,6 +29,7 @@
 
 
 using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Storage;
 using Attachment = ASC.Mail.Core.Entities.Attachment;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -51,6 +52,7 @@ public class MessageEngine : BaseEngine
     private readonly FactoryIndexer<MailMail> _factoryIndexer;
     private readonly FactoryIndexer _factoryIndexerCommon;
     private readonly IServiceProvider _serviceProvider;
+    private readonly MailTenantQuotaController _mailTenantQuotaController;
     private readonly StorageFactory _storageFactory;
     private readonly StorageManager _storageManager;
     //private readonly IFilesDaoFactory _filesDaoFactory;
@@ -60,7 +62,7 @@ public class MessageEngine : BaseEngine
 
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
     private string User => _securityContext.CurrentAccount.ID.ToString();
-    private IDataStore Storage => _storageFactory.GetMailStorage(Tenant);
+    private IDataStore Storage => _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
 
     private const int CHUNK_SIZE = 3;
 
@@ -84,7 +86,8 @@ public class MessageEngine : BaseEngine
         IMailDaoFactory mailDaoFactory,
         IServiceProvider serviceProvider,
         ILoggerProvider logProvider,
-        MailSettings mailSettings) : base(mailSettings)
+        MailSettings mailSettings,
+        MailTenantQuotaController mailTenantQuotaController) : base(mailSettings)
     {
         _mailDaoFactory = mailDaoFactory;
         _tenantManager = tenantManager;
@@ -99,6 +102,7 @@ public class MessageEngine : BaseEngine
         _factoryIndexer = factoryIndexer;
         _factoryIndexerCommon = factoryIndexerCommon;
         _serviceProvider = serviceProvider;
+        _mailTenantQuotaController = mailTenantQuotaController;
         _storageFactory = storageFactory;
         _storageManager = storageManager;
         //_filesDaoFactory = filesDaoFactory;
@@ -128,11 +132,11 @@ public class MessageEngine : BaseEngine
         if (mail == null)
             throw new ArgumentException("Message not found with id=" + id);
 
-        var dataStore = _storageFactory.GetMailStorage(Tenant);
+        var dataStore = _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
 
         var key = MailStoragePathCombiner.GetBodyKey(User, mail.Stream);
 
-        return dataStore.GetReadStreamAsync(string.Empty, key).Result;
+        return Storage.GetReadStreamAsync(string.Empty, key).Result;
     }
 
     public Tuple<int, int> GetRangeMessages(IMessagesExp exp)
@@ -1384,7 +1388,7 @@ public class MessageEngine : BaseEngine
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetBodyKey(mailBoxData.UserId, messageItem.StreamId);
 
-        Storage.QuotaController = new EmptyQuotaController();
+        Storage.QuotaController = _mailTenantQuotaController;
 
         try
         {
@@ -2840,7 +2844,7 @@ public class MessageEngine : BaseEngine
 
             string s3Key;
 
-            var dataClient = _storageFactory.GetMailStorage(tenant);
+            var dataClient = _storageFactory.GetMailStorage(tenant, _mailTenantQuotaController);
 
             if (attachment.needSaveToTemp || attachment.isTemp)
             {
@@ -2955,7 +2959,7 @@ public class MessageEngine : BaseEngine
                 _storageManager.StoreAttachmentWithoutQuota(attachment);
             }
 
-            //_quotaEngine.QuotaUsedAdd(quotaAddSize);
+            _quotaEngine.QuotaUsedAdd(quotaAddSize);
         }
         catch
         {
@@ -2966,7 +2970,7 @@ public class MessageEngine : BaseEngine
 
             if (storedAttachmentsKeys.Any())
             {
-                var storage = _storageFactory.GetMailStorage(mailBoxData.TenantId);
+                var storage = _storageFactory.GetMailStorage(mailBoxData.TenantId, _mailTenantQuotaController);
 
                 storedAttachmentsKeys.ForEach(key => storage.DeleteAsync(string.Empty, key).Wait());
             }
@@ -3073,7 +3077,7 @@ public class MessageEngine : BaseEngine
                 double swtSanitazeilliseconds = 0;
 #endif
 
-                var dataStore = _storageFactory.GetMailStorage(Tenant);
+                var dataStore = _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
                 var key = MailStoragePathCombiner.GetBodyKey(User, item.StreamId);
 
                 try

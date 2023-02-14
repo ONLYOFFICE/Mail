@@ -25,6 +25,7 @@
 
 
 
+using ASC.Data.Storage;
 using ASC.Mail.Core.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -42,27 +43,30 @@ public class StorageManager
     private readonly SecurityContext _securityContext;
     private readonly StorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
+    private readonly MailTenantQuotaController _mailTenantQuotaController;
 
     public StorageManager(
         SecurityContext securityContext,
         StorageFactory storageFactory,
         TenantManager tenantManager,
+        MailTenantQuotaController quotaController,
         ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _storageFactory = storageFactory;
         _tenantManager = tenantManager;
+        _mailTenantQuotaController = quotaController;
         _log = logProvider.CreateLogger("ASC.Mail.StorageManager");
     }
 
     public IDataStore GetDataStoreForCkImages(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "fckuploaders", new EmptyQuotaController());
+        return _storageFactory.GetStorage(tenant, "fckuploaders", _mailTenantQuotaController);
     }
 
     public IDataStore GetDataStoreForAttachments(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "mailaggregator", new EmptyQuotaController());
+        return _storageFactory.GetStorage(tenant, "mailaggregator", _mailTenantQuotaController);
     }
 
     public static byte[] LoadLinkData(string link, ILogger log)
@@ -189,7 +193,7 @@ public class StorageManager
             if (string.IsNullOrEmpty(mailAttachmentData.fileName))
                 mailAttachmentData.fileName = "attachment.ext";
 
-            var storage = _storageFactory.GetMailStorage(Tenant);
+            var storage = _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
 
             storage.QuotaController = null;
 

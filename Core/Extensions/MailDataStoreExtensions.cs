@@ -30,8 +30,8 @@ namespace ASC.Mail.Storage;
 
 public static class MailDataStoreExtensions
 {
-    public static IDataStore GetMailStorage(this StorageFactory storageFactory, int tenant)
+    public static IDataStore GetMailStorage(this StorageFactory storageFactory, int tenant, MailTenantQuotaController mailTenantQuotaController)
     {
-        return storageFactory.GetStorage(tenant, DefineConstants.MODULE_NAME, new EmptyQuotaController());
+        return storageFactory.GetStorage(tenant, DefineConstants.MODULE_NAME, mailTenantQuotaController);
     }
 }

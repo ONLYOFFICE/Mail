@@ -14,6 +14,7 @@
  *
 */
 
+using ASC.Mail.Core.Core.Storage;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
@@ -29,6 +30,7 @@ public class MailImapClient : IDisposable
     private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
     private readonly ConcurrentQueue<NewMessageFromIMAPData> NewMessageQueue;
     private readonly List<SimpleImapClient> simpleImapClients;
+    private readonly IServiceProvider clientScope;
 
     private readonly SemaphoreSlim _enginesFactorySemaphore;
 
@@ -124,8 +126,7 @@ public class MailImapClient : IDisposable
         IServiceProvider serviceProvider,
         SocketServiceClient signalrServiceClient,
         CancellationToken cancelToken,
-        ILoggerProvider logProvider,
-        RedisClient redisClient)
+        ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
 
@@ -133,7 +134,7 @@ public class MailImapClient : IDisposable
         Tenant = tenant;
         RedisKey = "ASC.MailAction:" + userName;
 
-        var clientScope = serviceProvider.CreateScope().ServiceProvider;
+        clientScope = serviceProvider.CreateScope().ServiceProvider;
 
         _redisClient = clientScope.GetService<RedisClient>();
 
@@ -1089,7 +1090,9 @@ public class MailImapClient : IDisposable
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetEmlKey(userId, streamId);
 
-        var storage = _mailEnginesFactory.StorageFactory.GetMailStorage(tenant);
+        var mailTenantQuotaController = clientScope.GetRequiredService<MailTenantQuotaController>();
+
+        var storage = _mailEnginesFactory.StorageFactory.GetMailStorage(tenant, mailTenantQuotaController);
 
         try
         {

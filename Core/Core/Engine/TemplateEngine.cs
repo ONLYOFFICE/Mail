@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -48,6 +49,7 @@ public sealed class TemplateEngine : ComposeEngineBase
         ILoggerProvider logProvider,
         SocketServiceClient socketServiceClient,
         MailSettings mailSettings,
+        MailTenantQuotaController mailTenantQuotaController,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -64,6 +66,7 @@ public sealed class TemplateEngine : ComposeEngineBase
         socketServiceClient,
         logProvider,
         mailSettings,
+        mailTenantQuotaController,
         daemonLabels)
     {
     }

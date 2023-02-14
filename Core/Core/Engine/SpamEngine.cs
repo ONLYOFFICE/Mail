@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Core.Engine;
@@ -33,6 +34,7 @@ public class SpamEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
 
     private readonly StorageFactory _storageFactory;
+    private readonly MailTenantQuotaController _mailTenantQuotaController;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly ApiHelper _apiHelper;
@@ -43,7 +45,8 @@ public class SpamEngine
         IMailDaoFactory mailDaoFactory,
         ApiHelper apiHelper,
         StorageFactory storageFactory,
-        ILoggerProvider logProvider)
+        ILoggerProvider logProvider,
+        MailTenantQuotaController mailTenantQuotaController)
     {
 
         _log = logProvider.CreateLogger("ASC.Mail.SpamEngine");
@@ -52,6 +55,7 @@ public class SpamEngine
         _mailDaoFactory = mailDaoFactory;
         _apiHelper = apiHelper;
         _storageFactory = storageFactory;
+        _mailTenantQuotaController = mailTenantQuotaController;
     }
 
     public void SendConversationsToSpamTrainer(int tenant, string user, List<int> ids, bool isSpam, string httpContextScheme)
@@ -160,7 +164,7 @@ public class SpamEngine
     {
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var emlPath = MailStoragePathCombiner.GetEmlKey(user, streamId);
-        var dataStore = _storageFactory.GetMailStorage(tenant);
+        var dataStore = _storageFactory.GetMailStorage(tenant, _mailTenantQuotaController);
 
         try
         {

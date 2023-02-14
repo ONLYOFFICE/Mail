@@ -25,6 +25,7 @@
 
 
 
+using ASC.Mail.Core.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -54,6 +55,7 @@ public class ComposeEngineBase
     private protected readonly CoreSettings _coreSettings;
     private protected readonly StorageFactory _storageFactory;
     private protected readonly MailSettings _mailSettings;
+    private readonly MailTenantQuotaController _mailTenantQuotaController;
 
     public class DeliveryFailureMessageTranslates
     {
@@ -127,6 +129,7 @@ public class ComposeEngineBase
         SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         MailSettings mailSettings,
+        MailTenantQuotaController mailTenantQuotaController,
         DeliveryFailureMessageTranslates daemonLabels = null)
     {
         _accountEngine = accountEngine;
@@ -142,7 +145,7 @@ public class ComposeEngineBase
         _storageFactory = storageFactory;
 
         _mailSettings = mailSettings;
-
+        _mailTenantQuotaController = mailTenantQuotaController;
         _log = logProvider.CreateLogger("ASC.Mail.ComposeEngineBase");
 
         DaemonLabels = daemonLabels ?? DeliveryFailureMessageTranslates.Defauilt;
@@ -354,7 +357,7 @@ public class ComposeEngineBase
 
         try
         {
-            var tempStorage = _storageFactory.GetMailStorage(compose.Mailbox.TenantId);
+            var tempStorage = _storageFactory.GetMailStorage(compose.Mailbox.TenantId, _mailTenantQuotaController);
 
             tempStorage.DeleteDirectoryAsync("attachments_temp", compose.Mailbox.UserId + "/" + compose.StreamId + "/").Wait();
         }

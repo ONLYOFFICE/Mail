@@ -93,7 +93,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var damagedAttachments = 0;
 
-            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.Id);
+            var mailStorage = StorageFactory.GetMailStorage(CurrentTenant.Id, null);
 
             using (var stream = _tempStream.Create())
             {

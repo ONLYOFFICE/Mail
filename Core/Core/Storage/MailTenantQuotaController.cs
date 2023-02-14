@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Core.Core
+﻿using ASC.Mail.Core.Core.Entities;
+
+namespace ASC.Mail.Core.Core.Storage
 {
     [Scope]
     public class MailTenantQuotaController : IQuotaController
@@ -6,16 +8,19 @@
         private TenantManager _tenantManager;
         private SecurityContext _securityContext;
         private readonly CoreBaseSettings _coreBaseSettings;
+        private readonly IServiceProvider _serviceProvider;
         private long _currentSize;
 
         public MailTenantQuotaController(
-            TenantManager tenantManager, 
+            TenantManager tenantManager,
             SecurityContext securityContext,
-            CoreBaseSettings coreBaseSettings)
+            CoreBaseSettings coreBaseSettings,
+            IServiceProvider serviceProvider)
         {
             _tenantManager = tenantManager;
             _securityContext = securityContext;
             _coreBaseSettings = coreBaseSettings;
+            _serviceProvider = serviceProvider;
             _currentSize = tenantManager.FindTenantQuotaRows(_tenantManager.GetCurrentTenant().Id)
                                       .Where(r => UsedInQuota(r.Tag))
                                       .Sum(r => r.Counter);
@@ -80,6 +85,8 @@
         public void QuotaUsedCheck(long size, bool quotaCheckFileSize, Guid ownedId)
         {
             var quota = _tenantManager.GetTenantQuota(_tenantManager.GetCurrentTenant().Id);
+
+            SettingsManager settingsManager=_serviceProvider.GetRequiredService<SettingsManager>();
             if (quota != null)
             {
                 if (quotaCheckFileSize && quota.MaxFileSize != 0 && quota.MaxFileSize < size)
@@ -89,7 +96,7 @@
 
                 if (_coreBaseSettings.Standalone)
                 {
-                    var tenantQuotaSettings = TenantQuotaSettings.Load();
+                    var tenantQuotaSettings = settingsManager.Load<TenantQuotaSettings>();
                     if (!tenantQuotaSettings.DisableQuota)
                     {
                         if (quota.MaxTotalSize != 0 && quota.MaxTotalSize < _currentSize + size)
@@ -106,16 +113,22 @@
                     }
                 }
             }
-            var quotaSettings = TenantUserQuotaSettings.Load();
+            var quotaSettings = settingsManager.Load<TenantUserQuotaSettings>();
 
             if (quotaSettings.EnableUserQuota)
             {
-                var userQuotaSettings = UserQuotaSettings.LoadForUser(ownedId);
+                var userQuotaSettings = settingsManager.LoadForUser<UserQuotaSettings>(ownedId);
                 var quotaLimit = userQuotaSettings.UserQuota;
 
                 if (quotaLimit != -1)
                 {
-                    var userUsedSpace = Math.Max(0, CoreContext.TenantManager.FindUserQuotaRows(_tenant, ownedId).Where(r => !string.IsNullOrEmpty(r.Tag)).Sum(r => r.Counter));
+                    var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+
+                    var usedSpace = quotaservice.FindUserQuotaRows(_tenantManager.GetCurrentTenant().Id, ownedId)
+                        .Where(r => !string.IsNullOrEmpty(r.Tag))
+                        .Sum(r => r.Counter);
+
+                    var userUsedSpace = Math.Max(0, usedSpace);
 
                     if (quotaLimit - userUsedSpace < size)
                     {
@@ -134,8 +147,17 @@
 
         private void SetTenantQuotaRow(string module, string domain, long size, string dataTag, bool exchange, Guid userId)
         {
-            CoreContext.TenantManager.SetTenantQuotaRow(
-                new TenantQuotaRow { Tenant = _tenant, Path = string.Format("/{0}/{1}", module, domain), Counter = size, Tag = dataTag, UserId = userId },
+            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+
+            quotaservice.SetTenantQuotaRow(
+                new TenantQuotaRow
+                {
+                    Tenant = _tenantManager.GetCurrentTenant().Id,
+                    Path = string.Format("/{0}/{1}", module, domain),
+                    Counter = size,
+                    Tag = dataTag,
+                    UserId = userId
+                },
                 exchange);
         }
 

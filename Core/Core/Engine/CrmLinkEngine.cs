@@ -26,6 +26,7 @@
 
 
 //using CrmDaoFactory = ASC.CRM.Core.Dao.DaoFactory;
+using ASC.Mail.Core.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -251,6 +252,9 @@ public class CrmLinkEngine
         }
 
         var factory = scope.ServiceProvider.GetService<CrmContactDao>();
+
+        var mailTenantQuotaController = scope.ServiceProvider.GetService<MailTenantQuotaController>();
+
         foreach (var contactEntity in message.LinkedCrmEntityIds)
         {
             //switch (contactEntity.Type)
@@ -288,7 +292,7 @@ public class CrmLinkEngine
                 }
                 else
                 {
-                    var dataStore = _storageFactory.GetMailStorage(Tenant);
+                    var dataStore = _storageFactory.GetMailStorage(Tenant, mailTenantQuotaController);
 
                     using var file = attachment.ToAttachmentStream(dataStore);
 
