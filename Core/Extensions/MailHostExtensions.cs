@@ -1,4 +1,5 @@
 ﻿using ASC.Api.Core.Core;
+using ASC.Api.Core.Extensions;
 using ASC.Common.Logging;
 using ASC.Core.Common.EF.Context;
 using ASC.MessagingSystem.EF.Context;
@@ -40,6 +41,12 @@ namespace ASC.Mail.Core.Extensions
             services.AddBaseDbContextPool<WebstudioDbContext>();
             services.AddBaseDbContextPool<MessagesContext>();
             services.RegisterFeature();
+
+            services.AddBaseDbContext<MailServerDbContext>();
+            services.AddBaseDbContext<MailDbContext>();
+            services.AddHttpClient();
+            services.AddMemoryCache();
+            services.AddDistributedTaskQueue();
 
             services.AddAutoMapper(GetAutoMapperProfileAssemblies());
         }
