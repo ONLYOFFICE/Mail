@@ -1416,7 +1416,7 @@ public class MessageEngine : BaseEngine
         {
             _log.ErrorMessageEngineStoreMailBody(messageItem.MimeMessageId, ex.ToString());
 
-            //Storage.DeleteAsync(string.Empty, savePath).Wait();
+            Storage.DeleteAsync(string.Empty, savePath).Wait();
             throw;
         }
     }
@@ -2955,7 +2955,7 @@ public class MessageEngine : BaseEngine
                 _storageManager.StoreAttachmentWithoutQuota(attachment);
             }
 
-            //_quotaEngine.QuotaUsedAdd(quotaAddSize);
+            _quotaEngine.QuotaUsedAdd(quotaAddSize);
         }
         catch
         {

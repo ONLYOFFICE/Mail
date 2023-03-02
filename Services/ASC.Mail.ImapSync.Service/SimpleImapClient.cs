@@ -126,7 +126,11 @@ public class SimpleImapClient : IDisposable
             {
                 IMailFolder imapDestinationFolder= foldersDictionary.FirstOrDefault(x => x.Value.Folder== FolderType.Sent).Key;
 
-                AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
+                //AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
+
+                var messages=ImapMessagesList.Where(x => cachedMailUserAction.Uds.Any(y => x.MessageIdInDB == y)).ToList();
+
+                AddTask(new Task<bool>(() => SetFlagsInImap(messages, MailUserAction.SetAsDeleted).Result));
 
                 return;
             }
@@ -591,6 +595,16 @@ public class SimpleImapClient : IDisposable
                     await ImapWorkFolder.RemoveFlagsAsync(uniqueIds, MessageFlags.Flagged, true);
 
                     messageDescriptors.ForEach(x => x.Flags = x.Flags.Value.HasFlag(MessageFlags.Flagged) ? x.Flags.Value ^ MessageFlags.Flagged : x.Flags.Value);
+
+                    break;
+
+                case MailUserAction.SetAsDeleted:
+
+                    await ImapWorkFolder.AddFlagsAsync(uniqueIds, MessageFlags.Deleted, true);
+
+                    await ImapWorkFolder.ExpungeAsync();
+
+                    ImapMessagesList.RemoveAll(x=>messageDescriptors.Any(y=>x.MessageIdInDB==y.MessageIdInDB));
 
                     break;
             }

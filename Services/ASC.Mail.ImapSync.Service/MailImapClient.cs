@@ -103,6 +103,7 @@ public class MailImapClient : IDisposable
                         ExecutActionUpdateDrafts(actionFromCache);
                         break;
                     case MailUserAction.DeleteUserFolder:
+                        ExecutActionDeleteUserFolder(actionFromCache);
                         break;
                     case MailUserAction.UpdateUserFolder:
                         break;
@@ -1261,6 +1262,40 @@ public class MailImapClient : IDisposable
                     if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolder.Name);
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionCreateUserFolder", ex.Message);
+        }
+        finally
+        {
+            if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
+        }
+    }
+
+    private void ExecutActionDeleteUserFolder(CashedMailUserAction action)
+    {
+        _enginesFactorySemaphore.Wait();
+
+        try
+        {
+            //_mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
+
+            //var accounts = simpleImapClients.GroupBy(x => x.Account.MailBoxId).Select(x => x.Key).ToList();
+
+            //if (accounts.Count == 1)
+            //{
+            //    var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Inbox);
+
+            //    var newFolders = _mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
+
+            //    foreach (var folder in newFolders)
+            //    {
+            //        var perentFolder = _mailEnginesFactory.UserFolderEngine.Get(folder.ParentId);
+
+            //        if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolder.Name);
+            //    }
+            //}
         }
         catch (Exception ex)
         {
