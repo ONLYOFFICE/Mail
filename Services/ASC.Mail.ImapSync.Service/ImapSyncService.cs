@@ -126,8 +126,7 @@ public class ImapSyncService : IHostedService
                     _serviceProvider,
                     _signalrServiceClient,
                     _cancelTokenSource.Token,
-                    _logProvider,
-                    _redisClient);
+                    _logProvider);
 
                 if (client == null)
                 {

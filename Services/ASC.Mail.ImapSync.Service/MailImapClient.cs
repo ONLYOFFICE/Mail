@@ -35,7 +35,7 @@ public class MailImapClient : IDisposable
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly MailSettings _mailSettings;
 
-    private readonly SocketServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _socketServiceClient;
     private readonly RedisClient _redisClient;
 
     private readonly ILogger _log;
@@ -123,10 +123,9 @@ public class MailImapClient : IDisposable
         int tenant,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        SocketServiceClient signalrServiceClient,
+        SocketServiceClient socketServiceClient,
         CancellationToken cancelToken,
-        ILoggerProvider logProvider,
-        RedisClient redisClient)
+        ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
 
@@ -146,7 +145,7 @@ public class MailImapClient : IDisposable
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _mailEnginesFactory.SetTenantAndUser(tenant, UserName);
 
-        _signalrServiceClient = signalrServiceClient;
+        _socketServiceClient = socketServiceClient;
 
         _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
         _logStat = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
@@ -957,7 +956,14 @@ public class MailImapClient : IDisposable
         {
             var count = _mailEnginesFactory.FolderEngine.GetUserUnreadMessageCount(UserName);
 
-            _signalrServiceClient.MakeRequest("sendUnreadUsers", count);
+            _socketServiceClient.MakeRequest("sendMailNotification",
+                new
+                {
+                    Tenant,
+                    UserName,
+                    count
+                });
+
         }
         catch (Exception ex)
         {
