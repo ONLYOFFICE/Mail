@@ -418,7 +418,7 @@ namespace ASC.Mail.Controllers
             //need refactoring
             var notifyAddress = new ServerNotificationAddressData();
 
-            _serverEngine.CreateNotificationAddress(name, password, domain_id);
+            //_serverEngine.CreateNotificationAddress(name, password, domain_id);
             return notifyAddress;
         }
 
