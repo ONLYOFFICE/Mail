@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Aggregator.Service.Queue;
+﻿using ASC.Core.Notify.Socket;
+
+namespace ASC.Mail.Aggregator.Service.Queue;
 
 [Singletone]
 public class SocketIoNotifier : IDisposable
@@ -12,13 +14,13 @@ public class SocketIoNotifier : IDisposable
     private readonly EventWaitHandle _waitHandle;
     private readonly TimeSpan _timeSpan;
     private readonly ILogger _log;
-    private readonly SignalrServiceClient _signalrServiceClient;
+    private readonly SocketServiceClient _signalrServiceClient;
     private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     public SocketIoNotifier(
         ILoggerProvider logProvider,
-        SignalrServiceClient signalrServiceClient,
+        SocketServiceClient signalrServiceClient,
         IServiceProvider serviceProvider)
     {
         _log = logProvider.CreateLogger("ASC.Mail.SignalrWorker");
@@ -153,13 +155,13 @@ public class SocketIoNotifier : IDisposable
 
             var userInfo = userManager.GetUsers(Guid.Parse(userId));
 
-            if (userInfo.Id != Constants.LostUser.Id)
+            if (userInfo.Id != ASC.Core.Users.Constants.LostUser.Id)
             {
                 _log.DebugSocketIoNotifierSendStart();
 
                 var count = folderEngine.GetUserUnreadMessageCount(userId);
 
-                _signalrServiceClient.SendUnreadUser(tenant, userId, count);
+                _signalrServiceClient.MakeRequest("sendUnreadUsers", count);
             }
             else
             {

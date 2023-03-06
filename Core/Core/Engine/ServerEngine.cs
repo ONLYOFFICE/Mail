@@ -23,6 +23,8 @@
  *
 */
 
+using ASC.Mail.Core.Utils;
+using Alias = ASC.Mail.Server.Core.Entities.Alias;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -119,21 +121,21 @@ public class ServerEngine : BaseEngine
         return list;
     }
 
-    public Entities.Server GetLinkedServer()
+    public MailServerServer GetLinkedServer()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
         return linkedServer;
     }
 
-    private List<Entities.Server> GetAllServers()
+    private List<MailServerServer> GetAllServers()
     {
         var servers = _mailDaoFactory.GetServerDao().GetList();
 
         return servers;
     }
 
-    public void Link(Entities.Server server, int tenant)
+    public void Link(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -144,7 +146,7 @@ public class ServerEngine : BaseEngine
             throw new Exception("Invalid insert operation");
     }
 
-    public void UnLink(Entities.Server server, int tenant)
+    public void UnLink(MailServerServer server, int tenant)
     {
         if (server == null)
             return;
@@ -152,7 +154,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().UnLink(server, Tenant);
     }
 
-    public int Save(Entities.Server server)
+    public int Save(MailServerServer server)
     {
         if (server == null)
             throw new ArgumentNullException("server");
@@ -170,7 +172,7 @@ public class ServerEngine : BaseEngine
         _mailDaoFactory.GetServerDao().Delete(serverId);
     }
 
-    public Entities.Server GetOrCreate()
+    public MailServerServer GetOrCreate()
     {
         var linkedServer = _mailDaoFactory.GetServerDao().Get(Tenant);
 
@@ -201,7 +203,7 @@ public class ServerEngine : BaseEngine
     public ServerData GetMailServer()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var linkedServer = GetOrCreate();
 
@@ -226,7 +228,7 @@ public class ServerEngine : BaseEngine
     public ServerDomainDnsData GetOrCreateUnusedDnsData()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var server = GetOrCreate();
         return _serverDomainEngine.GetOrCreateUnusedDnsData(server);
@@ -235,7 +237,7 @@ public class ServerEngine : BaseEngine
     public bool CheckDomainOwnership(string domain)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(domain))
             throw new ArgumentException(@"Invalid domain name.", "domain");
@@ -258,10 +260,10 @@ public class ServerEngine : BaseEngine
     //public ServerNotificationAddressData CreateNotificationAddress(string localPart, string password, int domainId)
     //{
     //    if (!_coreBaseSettings.Standalone)
-    //        throw new SecurityException("Only for standalone");
+    //        throw new System.Security.SecurityException("Only for standalone");
 
     //    if (!IsAdmin)
-    //        throw new SecurityException("Need admin privileges.");
+    //        throw new System.Security.SecurityException("Need admin privileges.");
 
     //    if (string.IsNullOrEmpty(localPart))
     //        throw new ArgumentNullException("localPart", @"Invalid address username.");
@@ -358,10 +360,10 @@ public class ServerEngine : BaseEngine
     public void RemoveNotificationAddress(string address)
     {
         if (!_coreBaseSettings.Standalone)
-            throw new SecurityException("Only for standalone");
+            throw new System.Security.SecurityException("Only for standalone");
 
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(address))
             throw new ArgumentNullException("address");
@@ -390,7 +392,7 @@ public class ServerEngine : BaseEngine
 
         engine.RemoveMailbox(deleteAddress);
 
-        var addressSettings = notificationAddressSettings.GetDefault() as ServerNotificationAddressSettings;
+        var addressSettings = notificationAddressSettings.GetDefault();
         if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
         {
             throw new Exception("Could not delete notification address setting.");
@@ -400,7 +402,7 @@ public class ServerEngine : BaseEngine
     public ServerFullData GetMailServerFullInfo()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var fullServerInfo = new ServerFullData();
         var mailboxDataList = new List<ServerMailboxData>();

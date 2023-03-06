@@ -33,7 +33,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
     public UserFolderXMailDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -122,7 +122,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
             IdFolder = item.FolderId
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailUserFolderXMails, newItem);
+        MailDbContext.AddOrUpdate(MailDbContext.MailUserFolderXMails, newItem);
 
         var result = MailDbContext.SaveChanges();
 

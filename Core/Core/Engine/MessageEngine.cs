@@ -28,6 +28,7 @@
 
 
 
+using ASC.Mail.Core.Core.Storage;
 using Attachment = ASC.Mail.Core.Entities.Attachment;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -1383,7 +1384,7 @@ public class MessageEngine : BaseEngine
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetBodyKey(mailBoxData.UserId, messageItem.StreamId);
 
-        Storage.QuotaController = null;
+        Storage.QuotaController = new EmptyQuotaController();
 
         try
         {

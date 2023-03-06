@@ -163,7 +163,7 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
 
             var source = string.Format("{0}?{1}=bulk",
                 "/products/files/httphandlers/filehandler.ashx",
-                FilesLinkUtility.Action);
+                "action");
 
             if (damagedAttachments > 1)
                 Error = string.Format(MailCoreResource.FilesNotFound, damagedAttachments);

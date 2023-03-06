@@ -8,6 +8,9 @@ internal static partial class WatchdogLauncherLogger
     [LoggerMessage(Level = LogLevel.Information, Message = "Service starts...")]
     public static partial void InfoWatchdogLauncherStart(this ILogger logger);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Info message: {message}")]
+    public static partial void InfoWatchdogMessage(this ILogger logger, string message);
+
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to terminate the service correctly. The details:\r\n{error}\r\n")]
     public static partial void ErrorWatchdogLauncherStop(this ILogger logger, string error);
 

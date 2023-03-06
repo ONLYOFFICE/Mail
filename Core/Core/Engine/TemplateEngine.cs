@@ -44,8 +44,8 @@ public sealed class TemplateEngine : ComposeEngineBase
         StorageManager storageManager,
         CoreSettings coreSettings,
         StorageFactory storageFactory,
-        SignalrServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
+        SocketServiceClient socketServiceClient,
         MailSettings mailSettings,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
@@ -60,7 +60,7 @@ public sealed class TemplateEngine : ComposeEngineBase
         tenantManager,
         coreSettings,
         storageFactory,
-        signalrServiceClient,
+        socketServiceClient,
         logProvider,
         mailSettings,
         daemonLabels)

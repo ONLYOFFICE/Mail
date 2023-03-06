@@ -37,6 +37,7 @@ class WatchdogLauncher : IHostedService
 
         if (_consoleParameters.IsConsole)
         {
+            _log.InfoWatchdogMessage("Console mode.");
             _watchdogTask = _watchdogService.StarService(Cts.Token);
 
             _mreStop = new ManualResetEvent(false);

@@ -1,6 +1,10 @@
-﻿using ASC.Api.Core.Extensions;
+﻿using ASC.Mail.Core.Extensions;
+using NLog;
+using StackExchange.Redis.Extensions.Core.Configuration;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
-using Microsoft.Extensions.Hosting.WindowsServices;
+string Namespace = typeof(AggregatorService).Namespace;
+string AppName = Namespace.Substring("ASC.Mail".Length + 1);
 
 var options = new WebApplicationOptions
 {
@@ -9,95 +13,62 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
 
-builder.Host.UseWindowsService();
-builder.Host.UseSystemd();
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+var path = builder.Configuration["pathToConf"];
 
-builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
+if (!Path.IsPathRooted(path))
 {
-    var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
+    path = Path.GetFullPath(CrossPlatform.PathCombine(builder.Environment.ContentRootPath, path));
+}
 
-    if (!kestrelConfig.Exists()) return;
+builder.Configuration.SetBasePath(path);
+var env = builder.Configuration.GetValue("ENVIRONMENT", "Production");
 
-    var unixSocket = kestrelConfig.GetValue<string>("ListenUnixSocket");
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {
-        if (!string.IsNullOrWhiteSpace(unixSocket))
+builder.Configuration
+    .AddMailJsonFiles(env)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddInMemoryCollection(new Dictionary<string, string>
         {
-            unixSocket = string.Format(unixSocket, hostingContext.HostingEnvironment.ApplicationName.Replace("ASC.", "").Replace(".", ""));
-
-            serverOptions.ListenUnixSocket(unixSocket);
-        }
-    }
-});
-
-builder.Host.ConfigureAppConfiguration((hostContext, config) =>
-{
-    var builded = config.Build();
-    var path = builded["pathToConf"];
-    if (!Path.IsPathRooted(path))
-    {
-        path = Path.GetFullPath(CrossPlatform.PathCombine(hostContext.HostingEnvironment.ContentRootPath, path));
-    }
-
-    config.SetBasePath(path);
-    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
-
-    config
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{env}.json", true)
-        .AddJsonFile("storage.json")
-        .AddJsonFile($"storage.{env}.json", true)
-        .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json", true)
-        .AddJsonFile("elastic.json")
-        .AddJsonFile($"elastic.{env}.json", true)
-        .AddEnvironmentVariables()
-        .AddCommandLine(args)
-        .AddInMemoryCollection(new Dictionary<string, string>
-            {
                 {"pathToConf", path }
-            }
-        );
-});
+        }
+    ).Build();
 
-builder.Host.ConfigureServices((hostContext, services) =>
-{
-    services.AddHttpContextAccessor();
-    services.AddMemoryCache();
-    services.AddHttpClient();
-    var diHelper = new DIHelper(services);
-    diHelper.TryAdd<FactoryIndexerMailMail>();
-    diHelper.TryAdd<FactoryIndexerMailContact>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-    services.AddSingleton(new ConsoleParser(args));
-    diHelper.TryAdd<AggregatorServiceLauncher>();
-    diHelper.TryAdd<AggregatorServiceScope>();
-    services.AddDistributedTaskQueue();
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
-    services.AddHostedService<AggregatorServiceLauncher>();
-    services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+var logger = LogManager.Setup()
+                            .SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(AggregatorService).Namespace);
 
-    var serviceProvider = services.BuildServiceProvider();
-    var logger = serviceProvider.GetService<ILogger<CrmLinkEngine>>();
-    services.AddSingleton(typeof(ILogger), logger);
-});
+logger.Debug("path: " + path);
+logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-builder.Host.ConfigureNLogLogging();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
+diHelper.TryAdd<FactoryIndexerMailMail>();
+diHelper.TryAdd<FactoryIndexerMailContact>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
+diHelper.TryAdd<AggregatorServiceLauncher>();
+diHelper.TryAdd<AggregatorServiceScope>();
+diHelper.AddMailScoppedServices();
 
-startup.ConfigureServices(builder.Services);
+builder.WebHost.MailConfigureKestrel();
+builder.Host.ConfigureDefault();
 
-builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
-{
-    builder.Register(context.Configuration, false, false, "search.json");
-});
+builder.Services.AddBaseDbContext<MailServerDbContext>();
+builder.Services.AddBaseDbContext<MailDbContext>();
+builder.Services.AddDistributedTaskQueue();
+builder.Services.AddDistributedCache(builder.Configuration);
+builder.Services.AddSingleton(new ConsoleParser(args));
+builder.Services.AddHostedService<AggregatorServiceLauncher>();
+builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
+builder.Services.AddMailServices();
 
 var app = builder.Build();
-
-startup.Configure(app);
 
 await app.RunAsync();

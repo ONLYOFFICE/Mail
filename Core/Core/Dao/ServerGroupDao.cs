@@ -33,7 +33,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
     public ServerGroupDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -88,7 +88,7 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
             DateCreated = group.DateCreated
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerMailGroups, mailServerGroup);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerMailGroups, mailServerGroup);
 
         MailDbContext.SaveChanges();
 

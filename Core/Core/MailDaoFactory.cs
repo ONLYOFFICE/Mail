@@ -11,10 +11,10 @@ public class MailDaoFactory : IMailDaoFactory
 
     public MailDaoFactory(
         IServiceProvider serviceProvider,
-        DbContextManager<MailDbContext> dbContextManager)
+        MailDbContext dbContext)
     {
         _serviceProvider = serviceProvider;
-        _mailDbContext = dbContextManager.Get("mail");
+        _mailDbContext = dbContext;
     }
 
     public MailDbContext GetContext()
@@ -200,46 +200,5 @@ public class MailDaoFactory : IMailDaoFactory
     public IDbContextTransaction BeginTransaction(System.Data.IsolationLevel? level = null)
     {
         return level.HasValue ? _mailDbContext.Database.BeginTransaction(level.Value) : _mailDbContext.Database.BeginTransaction();
-    }
-}
-public class MailDaoFactoryExtension
-{
-    public static void Register(DIHelper services)
-    {
-        services.TryAdd<IAccountDao, AccountDao>();
-        services.TryAdd<IAlertDao, AlertDao>();
-        services.TryAdd<IAttachmentDao, AttachmentDao>();
-        services.TryAdd<IChainDao, ChainDao>();
-        services.TryAdd<IContactCardDao, ContactCardDao>();
-        services.TryAdd<IContactDao, ContactDao>();
-        services.TryAdd<IContactInfoDao, ContactInfoDao>();
-        services.TryAdd<ICrmContactDao, CrmContactDao>();
-        services.TryAdd<ICrmLinkDao, CrmLinkDao>();
-        services.TryAdd<IDisplayImagesAddressDao, DisplayImagesAddressDao>();
-        services.TryAdd<IFilterDao, FilterDao>();
-        services.TryAdd<IFolderDao, FolderDao>();
-        services.TryAdd<IImapFlagsDao, ImapFlagsDao>();
-        services.TryAdd<IImapSpecialMailboxDao, ImapSpecialMailboxDao>();
-        services.TryAdd<IMailboxAutoreplyDao, MailboxAutoreplyDao>();
-        services.TryAdd<IMailboxAutoreplyHistoryDao, MailboxAutoreplyHistoryDao>();
-        services.TryAdd<IMailboxDao, MailboxDao>();
-        services.TryAdd<IMailboxDomainDao, MailboxDomainDao>();
-        services.TryAdd<IMailboxProviderDao, MailboxProviderDao>();
-        services.TryAdd<IMailboxServerDao, MailboxServerDao>();
-        services.TryAdd<IMailboxSignatureDao, MailboxSignatureDao>();
-        services.TryAdd<IMailDao, MailDao>();
-        services.TryAdd<IMailGarbageDao, MailGarbageDao>();
-        services.TryAdd<IMailInfoDao, MailInfoDao>();
-        services.TryAdd<IServerAddressDao, ServerAddressDao>();
-        services.TryAdd<IServerDao, ServerDao>();
-        services.TryAdd<IServerDnsDao, ServerDnsDao>();
-        services.TryAdd<IServerDomainDao, ServerDomainDao>();
-        services.TryAdd<IServerGroupDao, ServerGroupDao>();
-        services.TryAdd<ITagAddressDao, TagAddressDao>();
-        services.TryAdd<ITagDao, TagDao>();
-        services.TryAdd<ITagMailDao, TagMailDao>();
-        services.TryAdd<IUserFolderDao, UserFolderDao>();
-        services.TryAdd<IUserFolderTreeDao, UserFolderTreeDao>();
-        services.TryAdd<IUserFolderXMailDao, UserFolderXMailDao>();
     }
 }

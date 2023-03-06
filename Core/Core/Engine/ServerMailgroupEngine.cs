@@ -58,7 +58,7 @@ public class ServerMailgroupEngine
     public List<ServerDomainGroupData> GetMailGroups()
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         var domains = _mailDaoFactory.GetServerDomainDao().GetDomains();
 
@@ -81,7 +81,7 @@ public class ServerMailgroupEngine
     public ServerDomainGroupData CreateMailGroup(string name, int domainId, List<int> addressIds)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException(@"Invalid mailgroup name.", "name");
@@ -192,7 +192,7 @@ public class ServerMailgroupEngine
     public ServerDomainGroupData AddMailGroupMember(int mailgroupId, int addressId)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (addressId < 0)
             throw new ArgumentException(@"Invalid address id.", "addressId");
@@ -276,7 +276,7 @@ public class ServerMailgroupEngine
     public void RemoveMailGroupMember(int mailgroupId, int addressId)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (addressId < 0)
             throw new ArgumentException(@"Invalid address id.", "addressId");
@@ -347,7 +347,7 @@ public class ServerMailgroupEngine
     public void RemoveMailGroup(int id)
     {
         if (!IsAdmin)
-            throw new SecurityException("Need admin privileges.");
+            throw new System.Security.SecurityException("Need admin privileges.");
 
         if (id < 0)
             throw new ArgumentException(@"Invalid mailgroup id.", "id");

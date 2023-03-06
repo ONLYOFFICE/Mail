@@ -33,7 +33,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
     public ServerDnsDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -99,7 +99,7 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
             TimeModified = dns.TimeModified
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerDnses, mailDns);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerDnses, mailDns);
 
         MailDbContext.SaveChanges();
 

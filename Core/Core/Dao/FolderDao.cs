@@ -35,7 +35,7 @@ public class FolderDao : BaseMailDao, IFolderDao
     public FolderDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -86,7 +86,7 @@ public class FolderDao : BaseMailDao, IFolderDao
             TotalConversationsCount = (uint)folder.TotalChainCount
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailFolderCounters, mailFolder);
+        MailDbContext.AddOrUpdate(MailDbContext.MailFolderCounters, mailFolder);
 
         var result = MailDbContext.SaveChanges();
 

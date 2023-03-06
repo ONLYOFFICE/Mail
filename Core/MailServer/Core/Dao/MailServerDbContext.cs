@@ -6,26 +6,11 @@ using Mailbox = ASC.Mail.Server.Core.Entities.Mailbox;
 
 namespace ASC.Mail.Server.Core.Dao;
 
-public partial class MailServerDbContext : BaseDbContext
+public partial class MailServerDbContext : DbContext
 {
     public MailServerDbContext() { }
 
     public MailServerDbContext(DbContextOptions<MailServerDbContext> options) : base(options) { }
-
-    public class MySqlMailServerDbContext : MailServerDbContext { }
-    public class PostgreSqlMailServerDbContext : MailServerDbContext { }
-
-    protected override Dictionary<Provider, Func<BaseDbContext>> ProviderContext
-    {
-        get
-        {
-            return new Dictionary<Provider, Func<BaseDbContext>>()
-            {
-                { Provider.MySql, () => new MySqlMailServerDbContext() } ,
-                { Provider.PostgreSql, () => new PostgreSqlMailServerDbContext() } ,
-            };
-        }
-    }
 
     public virtual DbSet<Alias> Alias { get; set; }
     public virtual DbSet<ApiKeys> ApiKeys { get; set; }
@@ -35,7 +20,7 @@ public partial class MailServerDbContext : BaseDbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        ModelBuilderWrapper.From(modelBuilder, _provider)
+        ModelBuilderWrapper.From(modelBuilder, Provider.MySql)
             .AddDbTenant();
 
         modelBuilder.Entity<Alias>(entity =>
@@ -394,10 +379,3 @@ public partial class MailServerDbContext : BaseDbContext
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
 
-public static class MailServerDbExtension
-{
-    public static DIHelper AddMailServerDbContextService(this DIHelper services)
-    {
-        return services.AddDbContextManagerService<MailServerDbContext>();
-    }
-}

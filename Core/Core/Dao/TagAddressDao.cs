@@ -33,7 +33,7 @@ public class TagAddressDao : BaseMailDao, ITagAddressDao
     public TagAddressDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -76,7 +76,7 @@ public class TagAddressDao : BaseMailDao, ITagAddressDao
             Tenant = Tenant
         };
 
-        MailDbContext.AddOrUpdate(t => t.MailTagAddresses, mailTagAddress);
+        MailDbContext.AddOrUpdate(MailDbContext.MailTagAddresses, mailTagAddress);
 
         var result = MailDbContext.SaveChanges();
 

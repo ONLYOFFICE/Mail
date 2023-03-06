@@ -33,7 +33,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
     public UserFolderDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -191,7 +191,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             ModifiedOn = folder.TimeModified
         };
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailUserFolders, mailUserFolder);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailUserFolders, mailUserFolder);
 
         MailDbContext.SaveChanges();
 

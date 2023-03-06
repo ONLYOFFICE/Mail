@@ -33,7 +33,7 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
     public MailboxSignatureDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

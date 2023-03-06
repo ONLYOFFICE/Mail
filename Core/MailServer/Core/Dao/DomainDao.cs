@@ -28,14 +28,14 @@ namespace ASC.Mail.Server.Core.Dao;
 [Scope]
 public class DomainDao : BaseServerDao, IDomainDao
 {
-    public DomainDao(DbContextManager<MailServerDbContext> dbContext)
+    public DomainDao(MailServerDbContext dbContext)
         : base(dbContext)
     {
     }
 
     public int Save(Domain domain)
     {
-        var entry = MailServerDbContext.AddOrUpdate(r => r.Domain, domain);
+        var entry = MailServerDbContext.AddOrUpdate(MailServerDbContext.Domain, domain);
 
         var result = MailServerDbContext.SaveChanges();
 

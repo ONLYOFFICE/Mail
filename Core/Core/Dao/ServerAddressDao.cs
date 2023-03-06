@@ -33,7 +33,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
     public ServerAddressDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }
@@ -173,7 +173,7 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
             mailServerAddress.DateCreated = DateTime.UtcNow;
         }
 
-        var entry = MailDbContext.AddOrUpdate(t => t.MailServerAddresses, mailServerAddress);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerAddresses, mailServerAddress);
 
         MailDbContext.SaveChanges();
 

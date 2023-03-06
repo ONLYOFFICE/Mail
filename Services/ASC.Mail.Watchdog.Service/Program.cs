@@ -1,8 +1,9 @@
-﻿using ASC.Common.Mapping;
+﻿using NLog;
+using StackExchange.Redis.Extensions.Core.Configuration;
+using StackExchange.Redis.Extensions.Newtonsoft;
 
-using Microsoft.Extensions.Hosting.WindowsServices;
-
-using System.Reflection;
+string Namespace = typeof(WatchdogService).Namespace;
+string AppName = Namespace.Substring("ASC.Mail".Length + 1);
 
 var options = new WebApplicationOptions
 {
@@ -11,82 +12,52 @@ var options = new WebApplicationOptions
 };
 
 var builder = WebApplication.CreateBuilder(options);
+var diHelper = new DIHelper(builder.Services);
 
-builder.Host.UseWindowsService();
-builder.Host.UseSystemd();
-builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+var path = builder.Configuration["pathToConf"];
 
-builder.WebHost.ConfigureKestrel((hostingContext, serverOptions) =>
+if (!Path.IsPathRooted(path))
 {
-    var kestrelConfig = hostingContext.Configuration.GetSection("Kestrel");
+    path = Path.GetFullPath(CrossPlatform.PathCombine(builder.Environment.ContentRootPath, path));
+}
 
-    if (!kestrelConfig.Exists()) return;
+builder.Configuration.SetBasePath(path);
+var env = builder.Configuration.GetValue("ENVIRONMENT", "Production");
 
-    var unixSocket = kestrelConfig.GetValue<string>("ListenUnixSocket");
-
-    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-    {
-        if (!string.IsNullOrWhiteSpace(unixSocket))
+builder.Configuration
+    .AddMailJsonFiles(env)
+    .AddEnvironmentVariables()
+    .AddCommandLine(args)
+    .AddInMemoryCollection(new Dictionary<string, string>
         {
-            unixSocket = string.Format(unixSocket, hostingContext.HostingEnvironment.ApplicationName.Replace("ASC.", "").Replace(".", ""));
-
-            serverOptions.ListenUnixSocket(unixSocket);
-        }
-    }
-});
-
-builder.Host.ConfigureAppConfiguration((hostContext, config) =>
-{
-    var buided = config.Build();
-    var path = buided["pathToConf"];
-    if (!Path.IsPathRooted(path))
-    {
-        path = Path.GetFullPath(CrossPlatform.PathCombine(hostContext.HostingEnvironment.ContentRootPath, path));
-    }
-
-    config.SetBasePath(path);
-    var env = hostContext.Configuration.GetValue("ENVIRONMENT", "Production");
-    config
-        .AddJsonFile("appsettings.json")
-        .AddJsonFile($"appsettings.{env}.json", true)
-        .AddJsonFile("mail.json")
-        .AddJsonFile($"mail.{env}.json", true)
-        .AddEnvironmentVariables()
-        .AddCommandLine(args)
-        .AddInMemoryCollection(new Dictionary<string, string>
-            {
                 {"pathToConf", path }
-            }
-        );
-});
+        }
+    ).Build();
 
-builder.Host.ConfigureServices((hostContext, services) =>
-{
-    services.AddHttpContextAccessor();
-    services.AddMemoryCache();
-    services.AddHttpClient();
-    var diHelper = new DIHelper(services);
-    diHelper.TryAdd<WatchdogLauncher>();
-    services.AddHostedService<WatchdogLauncher>();
-    diHelper.TryAdd(typeof(ICacheNotify<>), typeof(KafkaCacheNotify<>));
-    services.AddSingleton(new ConsoleParser(args));
-    services.AddAutoMapper(Assembly.GetAssembly(typeof(MappingProfile)));
-    services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
-});
+var logger = LogManager.Setup().SetupExtensions(s =>
+                            {
+                                s.RegisterLayoutRenderer("application-context", (logevent) => AppName);
+                            })
+                            .LoadConfiguration(builder.Configuration, builder.Environment)
+                            .GetLogger(typeof(WatchdogService).Namespace);
 
-builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
-{
-    builder.Register(context.Configuration, false, false);
-});
+logger.Debug("path: " + path);
+logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
-builder.Host.ConfigureNLogLogging();
+builder.Host.ConfigureDefault();
+builder.WebHost.MailConfigureKestrel();
 
-var startup = new BaseWorkerStartup(builder.Configuration);
-
-startup.ConfigureServices(builder.Services);
+diHelper.AddMailScoppedServices();
+diHelper.TryAdd<WatchdogLauncher>();
+builder.Services.AddHostedService<WatchdogLauncher>();
+diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
+var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
+builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
+builder.Services.AddDistributedCache(builder.Configuration);
+builder.Services.AddSingleton(new ConsoleParser(args));
+builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+builder.Services.AddMailServices();
 
 var app = builder.Build();
-
-startup.Configure(app);
 
 await app.RunAsync();

@@ -33,7 +33,7 @@ public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
     public DisplayImagesAddressDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

@@ -74,7 +74,7 @@ public class DraftEngine : ComposeEngineBase
         FactoryIndexer factoryIndexerCommon,
         IHttpContextAccessor httpContextAccessor,
         IServiceProvider serviceProvider,
-        SignalrServiceClient optionsSnapshot,
+        SocketServiceClient optionsSnapshot,
         MailSettings mailSettings,
         ILoggerProvider logProvider,
         DeliveryFailureMessageTranslates daemonLabels = null)
@@ -261,7 +261,7 @@ public class DraftEngine : ComposeEngineBase
                 {
                     SaveIcsAttachment(draft, mimeMessage);
 
-                    SendMailNotification(draft);
+                    //SendMailNotification(draft);
 
                     ReleaseSendingDraftOnSuccess(draft, message);
 
@@ -450,7 +450,13 @@ public class DraftEngine : ComposeEngineBase
         try
         {
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
+            _socketServiceClient.MakeRequest("sendMailNotification",
+                new
+                {
+                    draft.Mailbox.TenantId,
+                    draft.Mailbox.UserId,
+                    MailNotificationState.SendMessageError
+                });
         }
         catch (Exception ex)
         {
@@ -480,7 +486,13 @@ public class DraftEngine : ComposeEngineBase
             }
 
             // send success notification
-            _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+            _socketServiceClient.MakeRequest("sendMailNotification",
+                new
+                {
+                    draft.Mailbox.TenantId,
+                    draft.Mailbox.UserId,
+                    state
+                });
         }
         catch (Exception ex)
         {

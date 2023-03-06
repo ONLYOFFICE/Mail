@@ -25,12 +25,9 @@
 
 
 
+using Ical.Net.CalendarComponents;
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
-
-using Ical.Net.CalendarComponents;
-
-using MimeKit;
 
 namespace ASC.Mail.Utils;
 
@@ -139,13 +136,13 @@ public class ApiHelper
         _token = _securityContext.AuthenticateMe(_securityContext.CurrentAccount.ID);
     }
 
-    public IRestResponse Execute(RestRequest request)
+    public RestResponse Execute(RestRequest request)
     {
         Setup();
 
         _log.DebugApiHelperExecuteRequest(_baseUrl.Uri, request.Resource);
 
-        var client = new RestClient { BaseUrl = _baseUrl.Uri };
+        var client = new RestClient(_baseUrl.Uri);
 
         request.AddHeader("Authorization", _token);
 
@@ -165,7 +162,7 @@ public class ApiHelper
     public DefineConstants.TariffType GetTenantTariff(int tenantOverdueDays)
     {
         _log.DebugApiHelperCreateTariffRequest();
-        var request = new RestRequest("portal/tariff.json", Method.GET);
+        var request = new RestRequest("portal/tariff.json", Method.Get);
 
         request.AddHeader("Payment-Info", "false");
 
@@ -222,7 +219,7 @@ public class ApiHelper
 
     public void RemoveTeamlabMailbox(int mailboxId)
     {
-        var request = new RestRequest("mailserver/mailboxes/remove/{id}", Method.DELETE);
+        var request = new RestRequest("mailserver/mailboxes/remove/{id}", Method.Delete);
 
         request.AddUrlSegment("id", mailboxId.ToString(CultureInfo.InvariantCulture));
 
@@ -238,7 +235,7 @@ public class ApiHelper
 
     public void SendMessage(MailMessageData message, bool isAutoreply = false)
     {
-        var request = new RestRequest("mail/messages/send.json", Method.PUT);
+        var request = new RestRequest("mail/messages/send.json", Method.Put);
 
         var jObject = new JObject { { "id", message.Id } };
 
@@ -288,7 +285,7 @@ public class ApiHelper
 
     public List<string> SearchEmails(string term)
     {
-        var request = new RestRequest("mail/emails/search.json", Method.GET);
+        var request = new RestRequest("mail/emails/search.json", Method.Get);
 
         request.AddParameter("term", term);
 
@@ -313,7 +310,7 @@ public class ApiHelper
 
     public List<string> SearchCrmEmails(string term, int maxCount)
     {
-        var request = new RestRequest("crm/contact/simple/byEmail.json", Method.GET);
+        var request = new RestRequest("crm/contact/simple/byEmail.json", Method.Get);
 
         request.AddParameter("term", term)
             .AddParameter("maxCount", maxCount.ToString());
@@ -360,7 +357,7 @@ public class ApiHelper
 
     public List<string> SearchPeopleEmails(string term, int startIndex, int count)
     {
-        var request = new RestRequest("people/filter.json?filterValue={FilterValue}&StartIndex={StartIndex}&Count={Count}", Method.GET);
+        var request = new RestRequest("people/filter.json?filterValue={FilterValue}&StartIndex={StartIndex}&Count={Count}", Method.Get);
 
         request.AddParameter("FilterValue", term, ParameterType.UrlSegment)
             .AddParameter("StartIndex", startIndex.ToString(), ParameterType.UrlSegment)
@@ -412,13 +409,13 @@ public class ApiHelper
 
     public void AddToCrmHistory(MailMessageData message, CrmContactData entity, IEnumerable<object> fileIds)
     {
-        var request = new RestRequest("crm/history.json", Method.POST);
+        var request = new RestRequest("crm/history.json", Method.Post);
 
         var contentJson = string.Format("{{ message_id : {0} }}", message.Id);
 
         request.AddParameter("content", contentJson)
                .AddParameter("categoryId", MAIL_CRM_HISTORY_CATEGORY)
-               .AddParameter("created", _apiDateTimeHelper.Get(message.Date));
+               .AddParameter("created", _apiDateTimeHelper.Get(message.Date).ToString());
 
         var crmEntityType = entity.EntityTypeName;
 
@@ -441,7 +438,7 @@ public class ApiHelper
         if (fileIds != null)
         {
             fileIds.ToList().ForEach(
-                id => request.AddParameter("fileId[]", id));
+                id => request.AddParameter("fileId[]", id.ToString()));
         }
 
         var response = Execute(request);
@@ -462,13 +459,13 @@ public class ApiHelper
         if (entity == null)
             throw new ArgumentNullException("entity");
 
-        var request = new RestRequest("crm/{entityType}/{entityId}/files/upload.json", Method.POST);
+        var request = new RestRequest("crm/{entityType}/{entityId}/files/upload.json", Method.Post);
 
         request.AddUrlSegment("entityType", entity.EntityTypeName)
             .AddUrlSegment("entityId", entity.Id.ToString())
             .AddParameter("storeOriginalFileFlag", false);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         var response = Execute(request);
 
@@ -488,12 +485,12 @@ public class ApiHelper
 
     public object UploadToDocuments(Stream fileStream, string filename, string contentType, string folderId, bool createNewIfExist)
     {
-        var request = new RestRequest("files/{folderId}/upload.json", Method.POST);
+        var request = new RestRequest("files/{folderId}/upload.json", Method.Post);
 
         request.AddUrlSegment("folderId", folderId)
                .AddParameter("createNewIfExist", createNewIfExist);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         var response = Execute(request);
 
@@ -526,7 +523,7 @@ public class ApiHelper
         var saLearnRequest =
             new RestRequest(
                 string.Format("/api/{0}/spam/training.json?auth_token={1}", serverApiVersion,
-                              serverApiToken), Method.POST);
+                              serverApiToken), Method.Post);
 
         saLearnRequest.AddParameter("url", urlEml)
                       .AddParameter("is_spam", isSpam ? 1 : 0);
@@ -546,11 +543,11 @@ public class ApiHelper
         IEnumerable<MimeEntity> mimeAttachments,
         List<MailAttachmentData> mailAttachments)
     {
-        var request = new RestRequest("calendar/import.json", Method.POST);
+        var request = new RestRequest("calendar/import.json", Method.Post);
 
         request.AddParameter("calendarId", calendarId);
 
-        request.AddFile(filename, fileStream.CopyTo, filename, fileStream.Length, contentType);
+        request.AddFile(filename, () => fileStream, filename, contentType);
 
         foreach (var attachment in eventObj.Attachments)
         {
@@ -566,7 +563,7 @@ public class ApiHelper
                     if (file != null)
                     {
                         file.dataStream.Position = 0;
-                        request.AddFile(contentId, file.dataStream.CopyTo, string.Format("{0}/{1}", contentId, file.fileName), file.dataStream.Length, file.contentType);
+                        request.AddFile(contentId, () => file.dataStream, string.Format("{0}/{1}", contentId, file.fileName), file.contentType);
                     }
                 }
             }
@@ -593,7 +590,7 @@ public class ApiHelper
 
     public UserInfo CreateEmployee(bool isVisitor, string email, string firstname, string lastname, string password)
     {
-        var request = new RestRequest("people.json", Method.POST);
+        var request = new RestRequest("people.json", Method.Post);
 
         request.AddParameter("isVisitor", isVisitor)
             .AddParameter("email", email)
@@ -628,7 +625,7 @@ public class ApiHelper
 
     public JObject GetPortalSettings()
     {
-        var request = new RestRequest("settings/security.json", Method.GET);
+        var request = new RestRequest("settings/security.json", Method.Get);
 
         var response = Execute(request);
 

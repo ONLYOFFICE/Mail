@@ -2,7 +2,7 @@
 
 namespace ASC.Mail.Core;
 
-[Scope(typeof(MailDaoFactory), Additional = typeof(MailDaoFactoryExtension))]
+[Scope(typeof(MailDaoFactory))]
 public interface IMailDaoFactory
 {
     MailDbContext GetContext();

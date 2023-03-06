@@ -34,7 +34,7 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
     public MailboxAutoreplyDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

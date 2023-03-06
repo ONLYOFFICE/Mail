@@ -15,17 +15,15 @@
  * The interactive user interfaces in modified source and object code versions of ONLYOFFICE must display 
  * Appropriate Legal Notices, as required under Section 5 of the GNU GPL version 3.
  *
- * Pursuant to Section 7 ยง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
+ * Pursuant to Section 7 ง 3(b) of the GNU GPL you must retain the original ONLYOFFICE logo which contains 
  * relevant author attributions when distributing the software. If the display of the logo in its graphic 
  * form is not reasonably feasible for technical reasons, you must include the words "Powered by ONLYOFFICE" 
  * in every copy of the program you distribute. 
- * Pursuant to Section 7 ยง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
+ * Pursuant to Section 7 ง 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
 
 
-
-using Contact = ASC.CRM.Core.Entities.Contact;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using SecurityContext = ASC.Core.SecurityContext;
 using ShareType = ASC.Mail.Enums.ShareType;
@@ -36,18 +34,14 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
 {
     private readonly ILogger _log;
 
-    private readonly CrmSecurity _crmSecurity;
-
     public CrmContactDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext,
-         ILoggerProvider logProvider,
-         CrmSecurity crmSecurity)
+         MailDbContext dbContext,
+         ILoggerProvider logProvider)
         : base(tenantManager, securityContext, dbContext)
     {
         _log = logProvider.CreateLogger("ASC.Mail.CrmContactDao");
-        _crmSecurity = crmSecurity;
     }
 
     public List<int> GetCrmContactIds(string email)
@@ -79,21 +73,6 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
                 return ids;
 
             ids.AddRange(contactList.Select(c => c.Id));
-
-            foreach (var info in contactList)
-            {
-                var contact = info.Company
-                    ? new Company()
-                    : (Contact)new Person();
-
-                contact.ID = info.Id;
-                contact.ShareType = (CRM.Core.Enums.ShareType)info.ShareType;
-
-                if (_crmSecurity.CanAccessTo(contact))
-                {
-                    ids.Add(info.Id);
-                }
-            }
         }
         catch (Exception e)
         {

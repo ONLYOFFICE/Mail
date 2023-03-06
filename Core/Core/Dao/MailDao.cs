@@ -36,13 +36,13 @@ public class MailDao : BaseMailDao, IMailDao
          TenantManager tenantManager,
          SecurityContext securityContext,
          MessageEngine messageEngine,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
         _messageEngine = messageEngine;
     }
 
-    public int Save(Core.Entities.Mail mail)
+    public int Save(ASC.Mail.Core.Entities.Mail mail)
     {
         var mailMail = new MailMail
         {
@@ -86,14 +86,14 @@ public class MailDao : BaseMailDao, IMailDao
         if (!string.IsNullOrEmpty(mail.CalendarUid))
             mailMail.CalendarUid = mail.CalendarUid;
 
-        var entry = MailDbContext.AddOrUpdate(m => m.MailMails, mailMail);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailMails, mailMail);
 
         MailDbContext.SaveChanges();
 
         return entry.Id;
     }
 
-    public Core.Entities.Mail GetMail(IMessageExp exp)
+    public ASC.Mail.Core.Entities.Mail GetMail(IMessageExp exp)
     {
         var mail = MailDbContext.MailMails
             .AsNoTracking()
@@ -104,7 +104,7 @@ public class MailDao : BaseMailDao, IMailDao
         return mail;
     }
 
-    public Core.Entities.Mail GetNextMail(IMessageExp exp)
+    public ASC.Mail.Core.Entities.Mail GetNextMail(IMessageExp exp)
     {
         var mail = MailDbContext.MailMails
             .AsNoTracking()
@@ -144,9 +144,9 @@ public class MailDao : BaseMailDao, IMailDao
         return result;
     }
 
-    protected Core.Entities.Mail ToMail(MailMail r)
+    protected ASC.Mail.Core.Entities.Mail ToMail(MailMail r)
     {
-        var mail = new Core.Entities.Mail
+        var mail = new ASC.Mail.Core.Entities.Mail
         {
             Id = r.Id,
             MailboxId = r.MailboxId,

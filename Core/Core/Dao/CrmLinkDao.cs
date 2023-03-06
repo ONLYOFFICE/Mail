@@ -33,7 +33,7 @@ public class CrmLinkDao : BaseMailDao, ICrmLinkDao
     public CrmLinkDao(
          TenantManager tenantManager,
          SecurityContext securityContext,
-         DbContextManager<MailDbContext> dbContext)
+         MailDbContext dbContext)
         : base(tenantManager, securityContext, dbContext)
     {
     }

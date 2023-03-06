@@ -23,14 +23,15 @@
  *
 */
 
-namespace ASC.Mail.Core.Entities;
 
-public class Server
+
+
+namespace ASC.Mail.Core.Enums
 {
-    public int Id { get; set; }
-    public string ConnectionString { get; set; }
-    public string MxRecord { get; set; }
-    public int Type { get; set; }
-    public int SmtpSettingsId { get; set; }
-    public int ImapSettingsId { get; set; }
+    public enum ShareType
+    {
+        None,
+        ReadWrite,
+        Read
+    }
 }
