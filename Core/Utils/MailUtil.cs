@@ -611,7 +611,7 @@ public static class MailUtil
         return newFilename;
     }
 
-    public static string ImproveFilename(string filename, ContentType contentType)
+    public static string ImproveFilename(string filename, MimeKit.ContentType contentType)
     {
         try
         {

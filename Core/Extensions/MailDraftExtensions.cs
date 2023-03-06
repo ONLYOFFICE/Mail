@@ -145,7 +145,7 @@ public static class MailDraftExtensions
 
     private static MimePart ConvertToMimePart(MailAttachmentData mailAttachmentData, StorageManager storageManager, string contentId = null)
     {
-        var contentType = ContentType.Parse(
+        var contentType = MimeKit.ContentType.Parse(
             !string.IsNullOrEmpty(mailAttachmentData.contentType)
                 ? mailAttachmentData.contentType
                 : MimeMapping.GetMimeMapping(mailAttachmentData.fileName));
@@ -309,7 +309,7 @@ public static class MailDraftExtensions
                         break;
                 }
 
-                var contentType = new ContentType("application", "ics");
+                var contentType = new MimeKit.ContentType("application", "ics");
                 contentType.Parameters.Add("method", draft.CalendarMethod);
                 contentType.Parameters.Add("name", filename);
 
