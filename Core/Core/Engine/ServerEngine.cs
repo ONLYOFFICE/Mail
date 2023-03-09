@@ -369,10 +369,10 @@ public class ServerEngine : BaseEngine
             throw new ArgumentNullException("address");
 
         var deleteAddress = address.ToLowerInvariant().Trim();
-        var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
+        //var notificationAddressSettings = _settingsManager.LoadSettings<ServerNotificationAddressSettings>(Tenant);
 
-        if (notificationAddressSettings.NotificationAddress != deleteAddress)
-            throw new ArgumentException("Mailbox not exists");
+        //if (notificationAddressSettings.NotificationAddress != deleteAddress)
+        //    throw new ArgumentException("Mailbox not exists");
 
         var mailAddress = new MailAddress(deleteAddress);
 
@@ -392,11 +392,11 @@ public class ServerEngine : BaseEngine
 
         engine.RemoveMailbox(deleteAddress);
 
-        var addressSettings = notificationAddressSettings.GetDefault();
-        if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
-        {
-            throw new Exception("Could not delete notification address setting.");
-        }
+        //var addressSettings = notificationAddressSettings.GetDefault();
+        //if (addressSettings != null && !_settingsManager.SaveSettings(addressSettings, Tenant))
+        //{
+        //    throw new Exception("Could not delete notification address setting.");
+        //}
     }
 
     public ServerFullData GetMailServerFullInfo()
