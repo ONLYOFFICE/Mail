@@ -53,7 +53,7 @@ public sealed class MailRemoveMailboxOperation : MailOperation
         IndexEngine indexEngine,
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
         MailBoxData mailBoxData)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)

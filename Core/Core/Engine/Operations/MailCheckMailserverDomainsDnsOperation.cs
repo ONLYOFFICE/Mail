@@ -44,7 +44,7 @@ public sealed class MailCheckMailserverDomainsDnsOperation : MailOperation
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
         string domainName,
         ServerDns dns)

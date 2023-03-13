@@ -25,7 +25,7 @@
 
 
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 
 namespace ASC.Mail.Core.Engine;
 

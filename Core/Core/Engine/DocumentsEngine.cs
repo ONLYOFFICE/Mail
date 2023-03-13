@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -40,23 +40,20 @@ public class DocumentsEngine
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
     private readonly MessageEngine _messageEngine;
-    private readonly StorageFactory _storageFactory;
-    private readonly MailTenantQuotaController _mailTenantQuotaController;
+    private readonly MailStorageFactory _storageFactory;
 
     public DocumentsEngine(
         SecurityContext securityContext,
         TenantManager tenantManager,
         ApiHelper apiHelper,
         MessageEngine messageEngine,
-        StorageFactory storageFactory,
-        MailTenantQuotaController mailTenantQuotaController)
+        MailStorageFactory storageFactory)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;
         _apiHelper = apiHelper;
         _messageEngine = messageEngine;
         _storageFactory = storageFactory;
-        _mailTenantQuotaController = mailTenantQuotaController;
     }
 
     public List<object> StoreAttachmentsToMyDocuments(int messageId)
@@ -96,7 +93,7 @@ public class DocumentsEngine
         if (mailAttachmentData == null)
             return -1;
 
-        var dataStore = _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
+        var dataStore = _storageFactory.GetMailStorage(Tenant);
 
         using var file = mailAttachmentData.ToAttachmentStream(dataStore);
 

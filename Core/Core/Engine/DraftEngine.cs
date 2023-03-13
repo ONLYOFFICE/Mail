@@ -25,7 +25,7 @@
 
 
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using ConfigurationManager = System.Configuration.ConfigurationManager;
 using ContactInfoType = ASC.Mail.Enums.ContactInfoType;
 using FolderType = ASC.Mail.Enums.FolderType;
@@ -67,9 +67,9 @@ public class DraftEngine : ComposeEngineBase
         AutoreplyEngine autoreplyEngine,
         AlertEngine alertEngine,
         ContactEngine contactEngine,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         CoreSettings coreSettings,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,  
         FileStorageService<string> fileStorageService,
         FactoryIndexer<MailContact> factoryIndexer,
         FactoryIndexer factoryIndexerCommon,

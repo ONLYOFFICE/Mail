@@ -51,7 +51,7 @@ public sealed class MailRemoveMailserverMailboxOperation : MailOperation
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
         MailBoxData mailBox)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)

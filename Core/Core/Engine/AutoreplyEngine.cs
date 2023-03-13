@@ -42,7 +42,7 @@ public class AutoreplyEngine
     private readonly ServerEngine _serverEngine;
     private readonly CacheEngine _cacheEngine;
     private readonly ApiHelper _apiHelper;
-    private readonly StorageManager _storageManager;
+    private readonly MailStorageManager _storageManager;
     private readonly MailSettings _mailSettings;
     private readonly int _autoreplyDaysInterval;
     private readonly ILogger _log;
@@ -54,7 +54,7 @@ public class AutoreplyEngine
         ServerEngine serverEngine,
         CacheEngine cacheEngine,
         ApiHelper apiHelper,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         MailSettings mailSettings,
         ILoggerProvider logProvider)
     {

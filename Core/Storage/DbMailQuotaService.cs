@@ -1,9 +1,7 @@
-﻿using ASC.Mail.Core.Dao.Context;
-using AutoMapper;
+﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
-namespace ASC.Mail.Core.Core
+namespace ASC.Mail.Core.Storage
 {
     public class DbMailQuotaService : IQuotaService
     {

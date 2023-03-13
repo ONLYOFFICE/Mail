@@ -25,7 +25,7 @@
 
 
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -49,11 +49,11 @@ public class ComposeEngineBase
     private protected readonly QuotaEngine _quotaEngine;
     private protected readonly IndexEngine _indexEngine;
     private protected readonly IMailDaoFactory _mailDaoFactory;
-    private protected readonly StorageManager _storageManager;
+    private protected readonly MailStorageManager _storageManager;
     private protected readonly SecurityContext _securityContext;
     private protected readonly TenantManager _tenantManager;
     private protected readonly CoreSettings _coreSettings;
-    private protected readonly StorageFactory _storageFactory;
+    private protected readonly MailStorageFactory _storageFactory;
     private protected readonly MailSettings _mailSettings;
     private readonly MailTenantQuotaController _mailTenantQuotaController;
 
@@ -121,11 +121,11 @@ public class ComposeEngineBase
         QuotaEngine quotaEngine,
         IndexEngine indexEngine,
         IMailDaoFactory mailDaoFactory,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         SecurityContext securityContext,
         TenantManager tenantManager,
         CoreSettings coreSettings,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         MailSettings mailSettings,
@@ -143,9 +143,7 @@ public class ComposeEngineBase
         _tenantManager = tenantManager;
         _coreSettings = coreSettings;
         _storageFactory = storageFactory;
-
         _mailSettings = mailSettings;
-        _mailTenantQuotaController = mailTenantQuotaController;
         _log = logProvider.CreateLogger("ASC.Mail.ComposeEngineBase");
 
         DaemonLabels = daemonLabels ?? DeliveryFailureMessageTranslates.Defauilt;
@@ -357,7 +355,7 @@ public class ComposeEngineBase
 
         try
         {
-            var tempStorage = _storageFactory.GetMailStorage(compose.Mailbox.TenantId, _mailTenantQuotaController);
+            var tempStorage = _storageFactory.GetMailStorage(compose.Mailbox.TenantId);
 
             tempStorage.DeleteDirectoryAsync("attachments_temp", compose.Mailbox.UserId + "/" + compose.StreamId + "/").Wait();
         }
@@ -404,7 +402,7 @@ public class ComposeEngineBase
 
         var fckStorage = _storageManager.GetDataStoreForCkImages(compose.Mailbox.TenantId);
         var attachmentStorage = _storageManager.GetDataStoreForAttachments(compose.Mailbox.TenantId);
-        var currentMailFckeditorUrl = fckStorage.GetUriAsync(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
+        var currentMailFckeditorUrl = fckStorage.GetUriAsync(MailStorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
         var currentUserStorageUrl = MailStoragePathCombiner.GetUserMailsDirectory(compose.Mailbox.UserId);
 
         foreach (var embeddedLink in embeddedLinks)
@@ -438,11 +436,11 @@ public class ComposeEngineBase
 
                 var attachmentWasSaved = savedAttachmentId != 0;
                 var currentImgStorage = isFckImage ? fckStorage : attachmentStorage;
-                var domain = isFckImage ? StorageManager.CKEDITOR_IMAGES_DOMAIN : compose.Mailbox.UserId;
+                var domain = isFckImage ? MailStorageManager.CKEDITOR_IMAGES_DOMAIN : compose.Mailbox.UserId;
 
                 if (compose.Id == 0 || !attachmentWasSaved)
                 {
-                    attach.data = StorageManager.LoadDataStoreItemData(domain, fileLink, currentImgStorage);
+                    attach.data = MailStorageManager.LoadDataStoreItemData(domain, fileLink, currentImgStorage);
 
                     _storageManager.StoreAttachmentWithoutQuota(attach);
 

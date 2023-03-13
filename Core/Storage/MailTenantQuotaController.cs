@@ -1,6 +1,6 @@
 ﻿using ASC.Mail.Core.Core.Entities;
 
-namespace ASC.Mail.Core.Core.Storage
+namespace ASC.Mail.Core.Storage
 {
     [Scope]
     public class MailTenantQuotaController : IQuotaController
@@ -86,7 +86,7 @@ namespace ASC.Mail.Core.Core.Storage
         {
             var quota = _tenantManager.GetTenantQuota(_tenantManager.GetCurrentTenant().Id);
 
-            SettingsManager settingsManager=_serviceProvider.GetRequiredService<SettingsManager>();
+            SettingsManager settingsManager = _serviceProvider.GetRequiredService<SettingsManager>();
             if (quota != null)
             {
                 if (quotaCheckFileSize && quota.MaxFileSize != 0 && quota.MaxFileSize < size)

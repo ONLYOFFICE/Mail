@@ -1,4 +1,4 @@
-﻿using ASC.Mail.Core.Core.Storage;
+﻿using ASC.Mail.Core.Storage;
 using AuthenticationException = MailKit.Security.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -517,11 +517,9 @@ public class MailboxHandler : IDisposable
 
         var savePath = MailStoragePathCombiner.GetEmlKey(mailBox.UserId, streamId);
 
-        var storageFactory = _scope.ServiceProvider.GetService<StorageFactory>();
+        var storageFactory = _scope.ServiceProvider.GetService<MailStorageFactory>();
 
-        var mailTenantQuotaController=_scope.ServiceProvider.GetService<MailTenantQuotaController>();
-
-        var storage = storageFactory.GetMailStorage(mailBox.TenantId, mailTenantQuotaController);
+        var storage = storageFactory.GetMailStorage(mailBox.TenantId);
 
         try
         {

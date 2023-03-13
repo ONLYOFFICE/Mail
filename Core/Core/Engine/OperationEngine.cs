@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -44,8 +45,8 @@ public class OperationEngine
     private readonly MessageEngine _messageEngine;
     private readonly ServerMailboxEngine _serverMailboxEngine;
     private readonly CoreSettings _coreSettings;
-    private readonly StorageManager _storageManager;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageManager _storageManager;
+    private readonly MailStorageFactory _storageFactory;
     private readonly FactoryIndexer<MailMail> _factoryIndexer;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerProvider _logProvider;
@@ -65,8 +66,8 @@ public class OperationEngine
         MessageEngine messageEngine,
         ServerMailboxEngine serverMailboxEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
-        StorageFactory storageFactory,
+        MailStorageManager storageManager,
+        MailStorageFactory storageFactory,
         FactoryIndexer<MailMail> factoryIndexer,
         TempStream tempStream,
         IServiceProvider serviceProvider,

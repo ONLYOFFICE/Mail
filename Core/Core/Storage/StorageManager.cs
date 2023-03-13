@@ -25,14 +25,13 @@
 
 
 
-using ASC.Data.Storage;
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Storage;
 
 [Scope]
-public class StorageManager
+public class MailStorageManager
 {
     public const string CKEDITOR_IMAGES_DOMAIN = "mail";
 
@@ -41,32 +40,29 @@ public class StorageManager
 
     private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
-    private readonly MailTenantQuotaController _mailTenantQuotaController;
 
-    public StorageManager(
+    public MailStorageManager(
         SecurityContext securityContext,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         TenantManager tenantManager,
-        MailTenantQuotaController quotaController,
         ILoggerProvider logProvider)
     {
         _securityContext = securityContext;
         _storageFactory = storageFactory;
         _tenantManager = tenantManager;
-        _mailTenantQuotaController = quotaController;
         _log = logProvider.CreateLogger("ASC.Mail.StorageManager");
     }
 
     public IDataStore GetDataStoreForCkImages(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "fckuploaders", _mailTenantQuotaController);
+        return _storageFactory.GetStorage(tenant, "fckuploaders");
     }
 
     public IDataStore GetDataStoreForAttachments(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "mailaggregator", _mailTenantQuotaController);
+        return _storageFactory.GetStorage(tenant, "mailaggregator");
     }
 
     public static byte[] LoadLinkData(string link, ILogger log)
@@ -193,7 +189,7 @@ public class StorageManager
             if (string.IsNullOrEmpty(mailAttachmentData.fileName))
                 mailAttachmentData.fileName = "attachment.ext";
 
-            var storage = _storageFactory.GetMailStorage(Tenant, _mailTenantQuotaController);
+            var storage = _storageFactory.GetMailStorage(Tenant);
 
             storage.QuotaController = null;
 

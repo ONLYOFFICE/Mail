@@ -14,7 +14,7 @@
  *
 */
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
@@ -1090,9 +1090,7 @@ public class MailImapClient : IDisposable
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetEmlKey(userId, streamId);
 
-        var mailTenantQuotaController = clientScope.GetRequiredService<MailTenantQuotaController>();
-
-        var storage = _mailEnginesFactory.StorageFactory.GetMailStorage(tenant, mailTenantQuotaController);
+        var storage = _mailEnginesFactory.StorageFactory.GetMailStorage(tenant);
 
         try
         {

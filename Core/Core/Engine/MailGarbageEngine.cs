@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using Action = System.Action;
 using SecurityContext = ASC.Core.SecurityContext;
 using Task = System.Threading.Tasks.Task;
@@ -438,11 +438,9 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
             _log.DebugMailGarbageGetDataStore(mailbox.TenantId);
 
-            var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
+            var storageFactory = scope.ServiceProvider.GetService<MailStorageFactory>();
 
-            var mailTenantQuotaController = scope.ServiceProvider.GetService<MailTenantQuotaController>();
-
-            var dataStorage = storageFactory.GetMailStorage(mailbox.TenantId, mailTenantQuotaController);
+            var dataStorage = storageFactory.GetMailStorage(mailbox.TenantId);
 
             dataStorage.QuotaController = null;
 
@@ -631,11 +629,9 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         using var scope = _serviceProvider.CreateScope();
 
-        var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
+        var storageFactory = scope.ServiceProvider.GetService<MailStorageFactory>();
 
-        var mailTenantQuotaController = scope.ServiceProvider.GetService<MailTenantQuotaController>();
-
-        var dataStorage = storageFactory.GetMailStorage(tenant, mailTenantQuotaController);
+        var dataStorage = storageFactory.GetMailStorage(tenant);
 
         var userMailDir = MailStoragePathCombiner.GetUserMailsDirectory(userId);
 

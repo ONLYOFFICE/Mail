@@ -90,7 +90,7 @@ public static class MailDraftExtensions
         return messageItem;
     }
 
-    public static MimeMessage ToMimeMessage(this MailDraftData draft, StorageManager storageManager)
+    public static MimeMessage ToMimeMessage(this MailDraftData draft, MailStorageManager storageManager)
     {
         var mimeMessage = new MimeMessage
         {
@@ -143,7 +143,7 @@ public static class MailDraftExtensions
         return mimeMessage;
     }
 
-    private static MimePart ConvertToMimePart(MailAttachmentData mailAttachmentData, StorageManager storageManager, string contentId = null)
+    private static MimePart ConvertToMimePart(MailAttachmentData mailAttachmentData, MailStorageManager storageManager, string contentId = null)
     {
         var contentType = ContentType.Parse(
             !string.IsNullOrEmpty(mailAttachmentData.contentType)
@@ -200,7 +200,7 @@ public static class MailDraftExtensions
         return mimePart;
     }
 
-    private static MimeEntity ToMimeMessageBody(MailDraftData draft, StorageManager storageManager)
+    private static MimeEntity ToMimeMessageBody(MailDraftData draft, MailStorageManager storageManager)
     {
         string textBody;
         MailUtil.TryExtractTextFromHtml(draft.HtmlBody, out textBody);
@@ -399,17 +399,17 @@ public static class MailDraftExtensions
         draft.HtmlBody = doc.DocumentNode.OuterHtml;
     }
 
-    public static List<string> GetEmbeddedAttachmentLinks(this MailComposeBase draft, StorageManager storageManager)
+    public static List<string> GetEmbeddedAttachmentLinks(this MailComposeBase draft, MailStorageManager storageManager)
     {
         var links = new List<string>();
 
         var fckStorage = storageManager.GetDataStoreForCkImages(draft.Mailbox.TenantId);
         //todo: replace selector
-        var currentMailFckeditorUrl = fckStorage.GetUriAsync(StorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
+        var currentMailFckeditorUrl = fckStorage.GetUriAsync(MailStorageManager.CKEDITOR_IMAGES_DOMAIN, "").Result.ToString();
         var currentMailAttachmentFolderUrl = MailStoragePathCombiner.GetMessageDirectory(draft.Mailbox.UserId,
             draft.StreamId);
         var currentUserStorageUrl = MailStoragePathCombiner.GetUserMailsDirectory(draft.Mailbox.UserId);
-        var xpathQuery = StorageManager.GetXpathQueryForAttachmentsToResaving(currentMailFckeditorUrl,
+        var xpathQuery = MailStorageManager.GetXpathQueryForAttachmentsToResaving(currentMailFckeditorUrl,
             currentMailAttachmentFolderUrl,
             currentUserStorageUrl);
 
@@ -467,7 +467,7 @@ public static class MailDraftExtensions
 
             var fileName = Path.GetFileName(link);
 
-            var data = StorageManager.LoadLinkData(link, log);
+            var data = MailStorageManager.LoadLinkData(link, log);
 
             if (!data.Any())
                 continue;
@@ -520,7 +520,7 @@ public static class MailDraftExtensions
 
             var fileName = Path.GetFileName(link);
 
-            var data = StorageManager.LoadLinkData(link, log);
+            var data = MailStorageManager.LoadLinkData(link, log);
 
             if (!data.Any())
                 continue;
@@ -561,7 +561,7 @@ public static class MailDraftExtensions
 
                 var fileName = Path.GetFileName(link);
 
-                var data = StorageManager.LoadLinkData(link, log);
+                var data = MailStorageManager.LoadLinkData(link, log);
 
                 if (!data.Any())
                     continue;

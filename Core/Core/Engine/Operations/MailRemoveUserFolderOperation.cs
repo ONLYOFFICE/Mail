@@ -50,7 +50,7 @@ public sealed class MailRemoveUserFolderOperation : MailOperation
         MessageEngine messageEngine,
         IndexEngine indexEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         FactoryIndexer<MailMail> factoryIndexer,
         IServiceProvider serviceProvider,
         ILoggerProvider logProvider,

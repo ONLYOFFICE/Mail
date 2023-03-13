@@ -23,7 +23,7 @@
  *
 */
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Mail.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailMessage = ASC.Mail.Models.MailMessageData;
 using SecurityContext = ASC.Core.SecurityContext;
@@ -42,9 +42,9 @@ public sealed class TemplateEngine : ComposeEngineBase
         MessageEngine messageEngine,
         QuotaEngine quotaEngine,
         IndexEngine indexEngine,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         CoreSettings coreSettings,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         SocketServiceClient socketServiceClient,
