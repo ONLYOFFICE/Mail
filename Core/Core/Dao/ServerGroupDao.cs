@@ -88,11 +88,11 @@ public class ServerGroupDao : BaseMailDao, IServerGroupDao
             DateCreated = group.DateCreated
         };
 
-        var entry = MailDbContext.MailServerMailGroups.Add(mailServerGroup);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerMailGroups, mailServerGroup);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int Delete(int id)

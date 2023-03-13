@@ -1,7 +1,4 @@
-﻿using ASC.Core.Common.EF;
-using ASC.Mail.Core.Dao.Context;
-using ASC.Mail.Server.Core.Dao;
-using NLog;
+﻿using NLog;
 using StackExchange.Redis.Extensions.Core.Configuration;
 using StackExchange.Redis.Extensions.Newtonsoft;
 

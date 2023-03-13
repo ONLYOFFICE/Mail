@@ -60,7 +60,7 @@ public class CalendarEngine
     {
         try
         {
-            if (string.IsNullOrEmpty(calendarEventUid) ||
+          if (string.IsNullOrEmpty(calendarEventUid) ||
                 string.IsNullOrEmpty(calendarIcs) ||
                 calendarContentType != "text/calendar")
                 return;

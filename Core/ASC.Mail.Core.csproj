@@ -48,7 +48,7 @@
 		<PackageReference Include="Microsoft.Graph.Core" Version="2.0.14" />
 		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="7.0.3" />
 		<PackageReference Include="MimeKit" Version="3.4.3" />
-		<PackageReference Include="RestSharp" Version="108.0.3" />
+		<PackageReference Include="RestSharp" Version="109.0.0-preview.2" />
 		<PackageReference Include="SharpZipLib" Version="1.4.1" />
 		<PackageReference Include="Ude.NetStandard" Version="1.2.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="7.0.0" />

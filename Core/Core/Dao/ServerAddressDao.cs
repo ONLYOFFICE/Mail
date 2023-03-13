@@ -173,11 +173,11 @@ public class ServerAddressDao : BaseMailDao, IServerAddressDao
             mailServerAddress.DateCreated = DateTime.UtcNow;
         }
 
-        var entry = MailDbContext.MailServerAddresses.Add(mailServerAddress);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerAddresses, mailServerAddress);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int Delete(int id)

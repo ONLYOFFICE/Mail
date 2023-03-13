@@ -81,11 +81,11 @@ public class FilterDao : BaseMailDao, IFilterDao
             mailFilter.DateCreated = now;
         }
 
-        var entry = MailDbContext.MailFilters.Add(mailFilter);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailFilters, mailFilter);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int Delete(int id)

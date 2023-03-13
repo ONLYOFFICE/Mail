@@ -55,10 +55,10 @@ public class ContactInfoDao : BaseMailDao, IContactInfoDao
             IsPrimary = contactInfo.IsPrimary
         };
 
-        var entity = MailDbContext.MailContactInfos.Add(mailContactInfo);
+        var entity = MailDbContext.AddOrUpdate(MailDbContext.MailContactInfos, mailContactInfo);
         MailDbContext.SaveChanges();
 
-        return entity.Entity.Id;
+        return entity.Id;
     }
 
     public int RemoveContactInfo(int id)

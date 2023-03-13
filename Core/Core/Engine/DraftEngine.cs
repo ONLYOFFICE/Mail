@@ -300,7 +300,7 @@ public class DraftEngine : ComposeEngineBase
 
                 ReleaseSendingDraftOnFailure(draft);
 
-                //SendMailErrorNotification(draft);
+                SendMailErrorNotification(draft);
             }
             finally
             {
@@ -448,18 +448,24 @@ public class DraftEngine : ComposeEngineBase
         }
     }
 
-    //private void SendMailErrorNotification(MailDraftData draft)
-    //{
-    //    try
-    //    {
-    //        // send success notification
-    //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, MailNotificationState.SendMessageError);
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
-    //    }
-    //}
+    private void SendMailErrorNotification(MailDraftData draft)
+    {
+        try
+        {
+            // send success notification
+            _socketServiceClient.MakeRequest("sendMailNotification",
+                new
+                {
+                    draft.Mailbox.TenantId,
+                    draft.Mailbox.UserId,
+                    MailNotificationState.SendMessageError
+                });
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorDraftEngineWcfSignalr(ex.Message, ex.StackTrace);
+        }
+    }
 
     private void SendMailNotification(MailDraftData draft)
     {
@@ -471,7 +477,7 @@ public class DraftEngine : ComposeEngineBase
                 switch (draft.CalendarMethod)
                 {
                     case DefineConstants.ICAL_REQUEST:
-                        state = ASC.Core.Notify.Socket.MailNotificationState.SentIcalRequest;
+                        state = MailNotificationState.SentIcalRequest;
                         break;
                     case DefineConstants.ICAL_REPLY:
                         state = MailNotificationState.SentIcalResponse;
@@ -482,8 +488,14 @@ public class DraftEngine : ComposeEngineBase
                 }
             }
 
-            //        // send success notification
-            //        _signalrServiceClient.SendMailNotification(draft.Mailbox.TenantId, draft.Mailbox.UserId, state);
+            // send success notification
+            _socketServiceClient.MakeRequest("sendMailNotification",
+                new
+                {
+                    draft.Mailbox.TenantId,
+                    draft.Mailbox.UserId,
+                    state
+                });
         }
         catch (Exception ex)
         {

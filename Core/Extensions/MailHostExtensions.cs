@@ -75,9 +75,7 @@ namespace ASC.Mail.Core.Extensions
 
         public static IEnumerable<Assembly> GetAutoMapperProfileAssemblies()
         {
-            return from x in AppDomain.CurrentDomain.GetAssemblies()
-                   where x.GetName().Name!.StartsWith("ASC.")
-                   select x;
+            return AppDomain.CurrentDomain.GetAssemblies().Where(x => x.GetName().Name.StartsWith("ASC."));
         }
 
 
@@ -85,7 +83,7 @@ namespace ASC.Mail.Core.Extensions
         {
             helper.TryAdd<AuthManager>();
             helper.TryAdd<BaseCommonLinkUtility>();
-            helper.TryAdd<ASC.Core.SecurityContext>();
+            helper.TryAdd<SecurityContext>();
             helper.TryAdd<TenantManager>();
             helper.TryAdd<UserManager>();
             helper.TryAdd<IAccountDao, AccountDao>();
@@ -104,7 +102,7 @@ namespace ASC.Mail.Core.Extensions
             helper.TryAdd<IImapSpecialMailboxDao, ImapSpecialMailboxDao>();
             helper.TryAdd<IMailboxAutoreplyDao, MailboxAutoreplyDao>();
             helper.TryAdd<IMailboxAutoreplyHistoryDao, MailboxAutoreplyHistoryDao>();
-            helper.TryAdd<IMailboxDao, ASC.Mail.Core.Dao.MailboxDao>();
+            helper.TryAdd<IMailboxDao, Dao.MailboxDao>();
             helper.TryAdd<IMailDaoFactory, MailDaoFactory>();
             helper.TryAdd<IMailboxDomainDao, MailboxDomainDao>();
             helper.TryAdd<IMailboxProviderDao, MailboxProviderDao>();
@@ -124,8 +122,8 @@ namespace ASC.Mail.Core.Extensions
             helper.TryAdd<IUserFolderDao, UserFolderDao>();
             helper.TryAdd<IUserFolderTreeDao, UserFolderTreeDao>();
             helper.TryAdd<IUserFolderXMailDao, UserFolderXMailDao>();
+
+            helper.TryAdd<StorageFactory>();
         }
     }
-
-
 }

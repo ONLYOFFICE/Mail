@@ -54,10 +54,10 @@ public class ContactDao : BaseMailDao, IContactDao
             HasPhoto = contact.HasPhoto
         };
 
-        var entity = MailDbContext.MailContacts.Add(mailContact);
+        var entity = MailDbContext.AddOrUpdate(MailDbContext.MailContacts, mailContact);
         MailDbContext.SaveChanges();
 
-        return entity.Entity.Id;
+        return entity.Id;
     }
 
     public int RemoveContacts(List<int> ids)

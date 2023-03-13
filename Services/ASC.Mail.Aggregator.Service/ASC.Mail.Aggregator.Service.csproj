@@ -51,7 +51,7 @@
 		<PackageReference Include="Google.Protobuf" Version="3.21.12" />
 		<PackageReference Include="protobuf-net" Version="3.1.26" />
 		<PackageReference Include="JWT" Version="10.0.1" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="2.1.3" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -103,21 +103,6 @@
 		</Reference>
 		<Reference Include="ASC.Webhooks.Core">
 			<HintPath>..\..\redistributable\ASC.Webhooks.Core.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.Extensions.Logger</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.Feed.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.RabbitMQ.dll</HintPath>
-		</Reference>
-		<Reference Include="ASC.Webhooks.Core">
-			<HintPath>..\..\redistributable\ASC.EventBus.ActiveMQ.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 

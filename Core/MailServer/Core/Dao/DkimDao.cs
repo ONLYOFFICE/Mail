@@ -35,11 +35,11 @@ public class DkimDao : BaseServerDao, IDkimDao
 
     public int Save(Dkim dkim)
     {
-        var entry = MailServerDbContext.Dkim.Add(dkim);
+        var entry = MailServerDbContext.AddOrUpdate(MailServerDbContext.Dkim, dkim);
 
         MailServerDbContext.SaveChanges();
 
-        return (int)entry.Entity.Id;
+        return (int)entry.Id;
     }
 
     public int Remove(string domain)

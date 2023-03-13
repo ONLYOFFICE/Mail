@@ -48,6 +48,7 @@ logger.Debug("EnvironmentName: " + builder.Environment.EnvironmentName);
 
 
 diHelper.TryAdd<FactoryIndexerMailMail>();
+
 diHelper.TryAdd<FactoryIndexerMailContact>();
 diHelper.TryAdd(typeof(ICacheNotify<>), typeof(RedisCacheNotify<>));
 diHelper.TryAdd<AggregatorServiceLauncher>();

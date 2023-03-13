@@ -191,11 +191,11 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             ModifiedOn = folder.TimeModified
         };
 
-        var entry = MailDbContext.MailUserFolders.Add(mailUserFolder);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailUserFolders, mailUserFolder);
 
         MailDbContext.SaveChanges();
 
-        return entry.Entity.Id;
+        return entry.Id;
     }
 
     public int Remove(int id)

@@ -99,11 +99,11 @@ public class ServerDnsDao : BaseMailDao, IServerDnsDao
             TimeModified = dns.TimeModified
         };
 
-        var entry = MailDbContext.MailServerDnses.Add(mailDns);
+        var entry = MailDbContext.AddOrUpdate(MailDbContext.MailServerDnses, mailDns);
 
         MailDbContext.SaveChanges();
 
-        return (int)entry.Entity.Id;
+        return (int)entry.Id;
     }
 
     public int Delete(int id)
