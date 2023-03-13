@@ -52,6 +52,8 @@ public class QuotaEngine
     {
         try
         {
+            _tenantQuotaController.Init(_tenantManager.GetCurrentTenant().Id);
+
             _tenantQuotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
         }
         catch (Exception ex)
@@ -66,6 +68,8 @@ public class QuotaEngine
     {
         try
         {
+            _tenantQuotaController.Init(_tenantManager.GetCurrentTenant().Id);
+
             _tenantQuotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME, string.Empty, DefineConstants.MAIL_QUOTA_TAG, usedQuota);
         }
         catch (Exception ex)

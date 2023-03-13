@@ -34,7 +34,6 @@ public class SpamEngine
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
 
     private readonly MailStorageFactory _storageFactory;
-    private readonly MailTenantQuotaController _mailTenantQuotaController;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly ApiHelper _apiHelper;

@@ -55,7 +55,6 @@ public class ComposeEngineBase
     private protected readonly CoreSettings _coreSettings;
     private protected readonly MailStorageFactory _storageFactory;
     private protected readonly MailSettings _mailSettings;
-    private readonly MailTenantQuotaController _mailTenantQuotaController;
 
     public class DeliveryFailureMessageTranslates
     {
@@ -129,7 +128,6 @@ public class ComposeEngineBase
         SocketServiceClient signalrServiceClient,
         ILoggerProvider logProvider,
         MailSettings mailSettings,
-        MailTenantQuotaController mailTenantQuotaController,
         DeliveryFailureMessageTranslates daemonLabels = null)
     {
         _accountEngine = accountEngine;

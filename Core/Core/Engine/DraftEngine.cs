@@ -78,7 +78,6 @@ public class DraftEngine : ComposeEngineBase
         SocketServiceClient optionsSnapshot,
         MailSettings mailSettings,
         ILoggerProvider logProvider,
-        MailTenantQuotaController mailTenantQuotaController,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -95,7 +94,6 @@ public class DraftEngine : ComposeEngineBase
         optionsSnapshot,
         logProvider,
         mailSettings,
-        mailTenantQuotaController,
         daemonLabels)
     {
         _crmLinkEngine = crmLinkEngine;

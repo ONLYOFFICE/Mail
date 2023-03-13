@@ -14,6 +14,7 @@ namespace ASC.Mail.Core.Storage
             services.TryAdd<RackspaceCloudStorage>();
             services.TryAdd<S3Storage>();
             services.TryAdd<MailTenantQuotaController>();
+            services.TryAdd<DbMailQuotaService>();
         }
     }
 }

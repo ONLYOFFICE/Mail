@@ -1,29 +1,34 @@
-﻿using ASC.Mail.Core.Core.Entities;
+﻿using ASC.Core;
+using ASC.Mail.Core.Core.Entities;
 
 namespace ASC.Mail.Core.Storage
 {
     [Scope]
     public class MailTenantQuotaController : IQuotaController
     {
-        private TenantManager _tenantManager;
+        private int _tenant;
         private SecurityContext _securityContext;
         private readonly CoreBaseSettings _coreBaseSettings;
         private readonly IServiceProvider _serviceProvider;
         private long _currentSize;
 
         public MailTenantQuotaController(
-            TenantManager tenantManager,
             SecurityContext securityContext,
             CoreBaseSettings coreBaseSettings,
             IServiceProvider serviceProvider)
         {
-            _tenantManager = tenantManager;
             _securityContext = securityContext;
             _coreBaseSettings = coreBaseSettings;
             _serviceProvider = serviceProvider;
-            _currentSize = tenantManager.FindTenantQuotaRows(_tenantManager.GetCurrentTenant().Id)
-                                      .Where(r => UsedInQuota(r.Tag))
-                                      .Sum(r => r.Counter);
+        }
+
+        public void Init(int tenant)
+        {
+            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+
+            _currentSize = quotaservice.FindTenantQuotaRows(tenant)
+                          .Where(r => UsedInQuota(r.Tag))
+                          .Sum(r => r.Counter);
         }
 
         #region IQuotaController Members
@@ -84,7 +89,9 @@ namespace ASC.Mail.Core.Storage
 
         public void QuotaUsedCheck(long size, bool quotaCheckFileSize, Guid ownedId)
         {
-            var quota = _tenantManager.GetTenantQuota(_tenantManager.GetCurrentTenant().Id);
+            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+
+            var quota = quotaservice.GetTenantQuota(_tenant);
 
             SettingsManager settingsManager = _serviceProvider.GetRequiredService<SettingsManager>();
             if (quota != null)
@@ -117,14 +124,12 @@ namespace ASC.Mail.Core.Storage
 
             if (quotaSettings.EnableUserQuota)
             {
-                var userQuotaSettings = settingsManager.LoadForUser<UserQuotaSettings>(ownedId);
+                var userQuotaSettings = settingsManager.Load<UserQuotaSettings>(ownedId);
                 var quotaLimit = userQuotaSettings.UserQuota;
 
                 if (quotaLimit != -1)
                 {
-                    var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
-
-                    var usedSpace = quotaservice.FindUserQuotaRows(_tenantManager.GetCurrentTenant().Id, ownedId)
+                    var usedSpace = quotaservice.FindUserQuotaRows(_tenant, ownedId)
                         .Where(r => !string.IsNullOrEmpty(r.Tag))
                         .Sum(r => r.Counter);
 
@@ -152,7 +157,7 @@ namespace ASC.Mail.Core.Storage
             quotaservice.SetTenantQuotaRow(
                 new TenantQuotaRow
                 {
-                    Tenant = _tenantManager.GetCurrentTenant().Id,
+                    Tenant = _tenant,
                     Path = string.Format("/{0}/{1}", module, domain),
                     Counter = size,
                     Tag = dataTag,

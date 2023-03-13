@@ -28,16 +28,18 @@ namespace ASC.Mail.Core.Storage
             _coreBaseSettings = coreBaseSettings;
         }
 
-        public IDataStore GetStorage(int? tenant, string module, string region = "current")
+        public IDataStore GetStorage(int tenant, string module, string region = "current")
         {
             MailTenantQuotaController service = _serviceProvider.GetService<MailTenantQuotaController>();
+            service.Init(tenant);
+
             return GetStorage(tenant, module, service, region);
         }
 
         public IDataStore GetStorage(int? tenant, string module, IQuotaController controller, string region = "current")
         {
             string tenantPath = (tenant.HasValue ? TenantPath.CreatePath(tenant.Value) : TenantPath.CreatePath("default"));
-            tenant = tenant ?? (-2);
+            
             ASC.Data.Storage.Configuration.Storage storage = _storageFactoryConfig.GetStorage(region);
             if (storage == null)
             {
@@ -49,9 +51,9 @@ namespace ASC.Mail.Core.Storage
             return GetDataStore(tenantPath, module, _storageSettingsHelper.DataStoreConsumer(baseStorageSettings), controller, region);
         }
 
-        public IDataStore GetStorageFromConsumer(int? tenant, string module, DataStoreConsumer consumer, string region = "current")
+        public IDataStore GetStorageFromConsumer(int tenant, string module, DataStoreConsumer consumer, string region = "current")
         {
-            string tenantPath = (tenant.HasValue ? TenantPath.CreatePath(tenant.Value) : TenantPath.CreatePath("default"));
+            string tenantPath = TenantPath.CreatePath(tenant); //: TenantPath.CreatePath("default"));
             ASC.Data.Storage.Configuration.Storage storage = _storageFactoryConfig.GetStorage(region);
             if (storage == null)
             {
@@ -59,6 +61,8 @@ namespace ASC.Mail.Core.Storage
             }
 
             MailTenantQuotaController service = _serviceProvider.GetService<MailTenantQuotaController>();
+            service.Init(tenant);
+
             return GetDataStore(tenantPath, module, consumer, service);
         }
 
@@ -91,6 +95,7 @@ namespace ASC.Mail.Core.Storage
         public IDataStore GetMailStorage(int tenant)
         {
             var mailTenantQuotaController = _serviceProvider.GetRequiredService<MailTenantQuotaController>();
+            mailTenantQuotaController.Init(tenant);
 
             return GetStorage(tenant, DefineConstants.MODULE_NAME, mailTenantQuotaController);
         }

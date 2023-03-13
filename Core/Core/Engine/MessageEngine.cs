@@ -90,8 +90,7 @@ public class MessageEngine : BaseEngine
         IMailDaoFactory mailDaoFactory,
         IServiceProvider serviceProvider,
         ILoggerProvider logProvider,
-        MailSettings mailSettings,
-        MailTenantQuotaController mailTenantQuotaController) : base(mailSettings)
+        MailSettings mailSettings) : base(mailSettings)
     {
         _mailDaoFactory = mailDaoFactory;
         _tenantManager = tenantManager;

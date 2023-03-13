@@ -43,9 +43,7 @@ public class EmailInEngine
         AlertEngine alertEngine,
         MailStorageFactory storageFactory,
         ApiHelper apiHelper,
-        ILoggerProvider logProvider,
-        MailTenantQuotaController mailTenantQuotaController
-        )
+        ILoggerProvider logProvider)
     {
         _accountEngine = accountEngine;
         _alertEngine = alertEngine;

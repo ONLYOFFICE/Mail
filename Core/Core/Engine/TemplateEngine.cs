@@ -49,7 +49,6 @@ public sealed class TemplateEngine : ComposeEngineBase
         ILoggerProvider logProvider,
         SocketServiceClient socketServiceClient,
         MailSettings mailSettings,
-        MailTenantQuotaController mailTenantQuotaController,
         DeliveryFailureMessageTranslates daemonLabels = null)
         : base(
         accountEngine,
@@ -66,7 +65,6 @@ public sealed class TemplateEngine : ComposeEngineBase
         socketServiceClient,
         logProvider,
         mailSettings,
-        mailTenantQuotaController,
         daemonLabels)
     {
     }

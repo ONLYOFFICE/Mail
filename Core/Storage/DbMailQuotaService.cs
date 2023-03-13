@@ -3,6 +3,7 @@ using AutoMapper.QueryableExtensions;
 
 namespace ASC.Mail.Core.Storage
 {
+    [Scope]
     public class DbMailQuotaService : IQuotaService
     {
         private const string tenants_quota = "tenants_quota";
