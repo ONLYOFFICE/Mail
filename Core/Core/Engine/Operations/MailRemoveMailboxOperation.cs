@@ -38,7 +38,6 @@ public sealed class MailRemoveMailboxOperation : MailOperation
 
     private readonly MailBoxData _mailBoxData;
     private readonly MailboxEngine _mailboxEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly FolderEngine _folderEngine;
     private readonly CacheEngine _cacheEngine;
     private readonly IndexEngine _indexEngine;
@@ -47,7 +46,6 @@ public sealed class MailRemoveMailboxOperation : MailOperation
         TenantManager tenantManager,
         SecurityContext securityContext,
         MailboxEngine mailboxEngine,
-        QuotaEngine quotaEngine,
         FolderEngine folderEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
@@ -59,7 +57,6 @@ public sealed class MailRemoveMailboxOperation : MailOperation
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {
         _mailboxEngine = mailboxEngine;
-        _quotaEngine = quotaEngine;
         _folderEngine = folderEngine;
         _cacheEngine = cacheEngine;
         _indexEngine = indexEngine;
@@ -84,7 +81,7 @@ public sealed class MailRemoveMailboxOperation : MailOperation
 
             SetProgress((int?)MailOperationRemoveMailboxProgress.FreeQuota, "Decrease newly freed quota space");
 
-            _quotaEngine.QuotaUsedDelete(freedQuotaSize);
+            StorageManager.MailQuotaUsedDelete(freedQuotaSize);
 
             SetProgress((int?)MailOperationRemoveMailboxProgress.RecalculateFolder, "Recalculate folders counters");
 

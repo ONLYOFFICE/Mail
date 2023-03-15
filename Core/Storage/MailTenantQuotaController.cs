@@ -1,5 +1,4 @@
-﻿using ASC.Core;
-using ASC.Mail.Core.Core.Entities;
+﻿using ASC.Mail.Core.Core.Entities;
 
 namespace ASC.Mail.Core.Storage
 {

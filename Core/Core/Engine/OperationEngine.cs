@@ -36,7 +36,6 @@ public class OperationEngine
     private readonly SecurityContext _securityContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly MailboxEngine _mailboxEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly FolderEngine _folderEngine;
     private readonly CacheEngine _cacheEngine;
     private readonly IndexEngine _indexEngine;
@@ -57,7 +56,6 @@ public class OperationEngine
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         MailboxEngine mailboxEngine,
-        QuotaEngine quotaEngine,
         FolderEngine folderEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
@@ -80,7 +78,6 @@ public class OperationEngine
         _securityContext = securityContext;
         _mailDaoFactory = mailDaoFactory;
         _mailboxEngine = mailboxEngine;
-        _quotaEngine = quotaEngine;
         _folderEngine = folderEngine;
         _cacheEngine = cacheEngine;
         _indexEngine = indexEngine;
@@ -135,7 +132,6 @@ public class OperationEngine
             _tenantManager,
             _securityContext,
             _mailboxEngine,
-            _quotaEngine,
             _folderEngine,
             _cacheEngine,
             _indexEngine,

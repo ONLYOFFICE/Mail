@@ -46,7 +46,6 @@ public class ComposeEngineBase
     private protected readonly AccountEngine _accountEngine;
     private protected readonly MailboxEngine _mailboxEngine;
     private protected readonly MessageEngine _messageEngine;
-    private protected readonly QuotaEngine _quotaEngine;
     private protected readonly IndexEngine _indexEngine;
     private protected readonly IMailDaoFactory _mailDaoFactory;
     private protected readonly MailStorageManager _storageManager;
@@ -117,7 +116,6 @@ public class ComposeEngineBase
         AccountEngine accountEngine,
         MailboxEngine mailboxEngine,
         MessageEngine messageEngine,
-        QuotaEngine quotaEngine,
         IndexEngine indexEngine,
         IMailDaoFactory mailDaoFactory,
         MailStorageManager storageManager,
@@ -133,7 +131,6 @@ public class ComposeEngineBase
         _accountEngine = accountEngine;
         _mailboxEngine = mailboxEngine;
         _messageEngine = messageEngine;
-        _quotaEngine = quotaEngine;
         _indexEngine = indexEngine;
         _mailDaoFactory = mailDaoFactory;
         _storageManager = storageManager;
@@ -335,7 +332,7 @@ public class ComposeEngineBase
 
         if (usedQuota > 0)
         {
-            _quotaEngine.QuotaUsedDelete(usedQuota);
+            _storageManager.MailQuotaUsedDelete(usedQuota);
         }
 
         if (addIndex)

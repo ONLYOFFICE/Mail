@@ -25,6 +25,7 @@
 
 
 
+using ASC.Common.Log;
 using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -238,6 +239,47 @@ public class MailStorageManager
         catch (Exception e)
         {
             _log.ErrorStorageManagerStoreAttachment(mailAttachmentData.fileName, mailAttachmentData.contentType, e.ToString());
+
+            throw;
+        }
+    }
+
+    public void MailQuotaUsedAdd(long usedQuota)
+    {
+        var quotaController = _storageFactory.GetMailQuotaContriller(Tenant);
+
+        try
+        {
+            quotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME,
+                string.Empty,
+                DefineConstants.MAIL_QUOTA_TAG,
+                usedQuota,
+                _securityContext.CurrentAccount.ID,
+                true);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"MailQuotaUsedAdd: {_securityContext.CurrentAccount.ID}, size={usedQuota}, ex={ex}");
+
+            throw;
+        }
+    }
+
+    public void MailQuotaUsedDelete(long usedQuota)
+    {
+        var quotaController = _storageFactory.GetMailQuotaContriller(Tenant);
+
+        try
+        {
+            quotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME,
+                string.Empty,
+                DefineConstants.MAIL_QUOTA_TAG,
+                usedQuota,
+                _securityContext.CurrentAccount.ID);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"MailQuotaUsedDelete: {_securityContext.CurrentAccount.ID}, size={usedQuota}, ex={ex}");
 
             throw;
         }

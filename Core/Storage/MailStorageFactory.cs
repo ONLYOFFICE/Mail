@@ -28,10 +28,18 @@ namespace ASC.Mail.Core.Storage
             _coreBaseSettings = coreBaseSettings;
         }
 
-        public IDataStore GetStorage(int tenant, string module, string region = "current")
+        public MailTenantQuotaController GetMailQuotaContriller(int tenant)
         {
             MailTenantQuotaController service = _serviceProvider.GetService<MailTenantQuotaController>();
             service.Init(tenant);
+
+            return service;
+        }
+
+
+        public IDataStore GetStorage(int tenant, string module, string region = "current")
+        {
+            MailTenantQuotaController service = GetMailQuotaContriller(tenant);
 
             return GetStorage(tenant, module, service, region);
         }

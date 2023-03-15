@@ -49,7 +49,6 @@ public class MessageEngine : BaseEngine
     private readonly UserFolderEngine _userFolderEngine;
     private readonly FolderEngine _folderEngine;
     private readonly IndexEngine _indexEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly TagEngine _tagEngine;
     private readonly TenantUtil _tenantUtil;
     private readonly CoreSettings _coreSettings;
@@ -76,7 +75,6 @@ public class MessageEngine : BaseEngine
         UserFolderEngine userFolderEngine,
         FolderEngine folderEngine,
         IndexEngine indexEngine,
-        QuotaEngine quotaEngine,
         TagEngine tagEngine,
         TenantUtil tenantUtil,
         CoreSettings coreSettings,
@@ -98,7 +96,6 @@ public class MessageEngine : BaseEngine
         _userFolderEngine = userFolderEngine;
         _folderEngine = folderEngine;
         _indexEngine = indexEngine;
-        _quotaEngine = quotaEngine;
         _tagEngine = tagEngine;
         _tenantUtil = tenantUtil;
         _coreSettings = coreSettings;
@@ -848,7 +845,7 @@ public class MessageEngine : BaseEngine
             result = usedQuota > 0;
         });
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -999,7 +996,7 @@ public class MessageEngine : BaseEngine
         if (usedQuota <= 0)
             return;
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
     }
 
     public int MailSave(MailBoxData mailbox, MailMessageData message,
@@ -2102,7 +2099,7 @@ public class MessageEngine : BaseEngine
             tx.Commit();
         });
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -2762,7 +2759,7 @@ public class MessageEngine : BaseEngine
             mailboxId = message.MailboxId
         };
 
-        _quotaEngine.QuotaUsedAdd(contentLength);
+        _storageManager.MailQuotaUsedAdd(contentLength);
 
         try
         {
@@ -2770,7 +2767,7 @@ public class MessageEngine : BaseEngine
         }
         catch
         {
-            _quotaEngine.QuotaUsedDelete(contentLength);
+            _storageManager.MailQuotaUsedDelete(contentLength);
             throw;
         }
 
@@ -2931,7 +2928,7 @@ public class MessageEngine : BaseEngine
         if (usedQuota <= 0)
             return;
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
     }
 
     public void StoreAttachments(MailBoxData mailBoxData, List<MailAttachmentData> attachments, string streamId)
@@ -2961,7 +2958,7 @@ public class MessageEngine : BaseEngine
                 _storageManager.StoreAttachmentWithoutQuota(attachment);
             }
 
-            _quotaEngine.QuotaUsedAdd(quotaAddSize);
+            _storageManager.MailQuotaUsedAdd(quotaAddSize);
         }
         catch
         {
