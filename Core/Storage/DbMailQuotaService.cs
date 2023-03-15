@@ -6,15 +6,19 @@ namespace ASC.Mail.Core.Storage
     [Scope]
     public class DbMailQuotaService : IQuotaService
     {
-        private const string tenants_quota = "tenants_quota";
-        public const string tenants_quotarow = "tenants_quotarow";
         private readonly MailDbContext mailDbContext;
         private readonly IMapper mapper;
 
-        public DbMailQuotaService(MailDbContext mailDbContext, IMapper mapper)
+        public DbMailQuotaService(MailDbContext mailDbContext)
         {
             this.mailDbContext = mailDbContext;
-            this.mapper = mapper;
+
+            var config = new MapperConfiguration(cfg =>
+            {
+                cfg.CreateMap<TenantQuota, DbMailQuota>().ReverseMap();
+                cfg.CreateMap<TenantQuotaRow, DbMailQuotaRow>().ReverseMap();
+            });
+            mapper = new Mapper(config);
         }
 
         public IEnumerable<TenantQuota> GetTenantQuotas()

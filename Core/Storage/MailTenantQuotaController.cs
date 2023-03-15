@@ -81,6 +81,13 @@ namespace ASC.Mail.Core.Storage
             SetTenantQuotaRow(module, domain, size, dataTag, false, Guid.Empty);
         }
 
+        public void QuotaUsedCheck(long size)
+        {
+            var ownedId = _securityContext.CurrentAccount.ID;
+
+            QuotaUsedCheck(size, ownedId);
+        }
+
         public void QuotaUsedCheck(long size, Guid ownedId)
         {
             QuotaUsedCheck(size, true, ownedId);
@@ -173,11 +180,6 @@ namespace ASC.Mail.Core.Storage
         private static double BytesToMegabytes(long bytes)
         {
             return Math.Round(bytes / 1024d / 1024d, 1);
-        }
-
-        public void QuotaUsedCheck(long size)
-        {
-            throw new NotImplementedException();
         }
     }
 }
