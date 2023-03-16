@@ -9,7 +9,7 @@ public class DbMailQuota : BaseEntity, IMapFrom<TenantQuota>
     public string Description { get; set; }
     public string Features { get; set; }
     public decimal Price { get; set; }
-    public string ProductId { get; set; }
+    //public string ProductId { get; set; }
     public bool Visible { get; set; }
 
     public override object[] GetKeys()
@@ -27,39 +27,39 @@ public static class DbMailQuotaExtension
     public static ModelBuilderWrapper AddDbMailQuota(this ModelBuilderWrapper modelBuilder)
     {
         modelBuilder
-            .Add(MySqlAddDbMailQuota, Provider.MySql)
-            .HasData(
-                new DbMailQuota
-                {
-                    Tenant = -1,
-                    Name = "trial",
-                    Description = null,
-                    Features = "trial,audit,ldap,sso,whitelabel,thirdparty,restore,total_size:107374182400,file_size:100,manager:1",
-                    Price = 0,
-                    ProductId = null,
-                    Visible = false
-                },
-                new DbMailQuota
-                {
-                    Tenant = -2,
-                    Name = "admin",
-                    Description = null,
-                    Features = "audit,ldap,sso,whitelabel,thirdparty,restore,total_size:107374182400,file_size:1024,manager:1",
-                    Price = 30,
-                    ProductId = "1002",
-                    Visible = true
-                },
-                new DbMailQuota
-                {
-                    Tenant = -3,
-                    Name = "startup",
-                    Description = null,
-                    Features = "free,thirdparty,audit,total_size:2147483648,manager:1,room:12,usersInRoom:3",
-                    Price = 0,
-                    ProductId = null,
-                    Visible = false
-                }
-                );
+            .Add(MySqlAddDbMailQuota, Provider.MySql);
+            //.HasData(
+            //    new DbMailQuota
+            //    {
+            //        Tenant = -1,
+            //        Name = "trial",
+            //        Description = null,
+            //        Features = "trial,audit,ldap,sso,whitelabel,thirdparty,restore,total_size:107374182400,file_size:100,manager:1",
+            //        Price = 0,
+            //        //ProductId = null,
+            //        Visible = false
+            //    },
+            //    new DbMailQuota
+            //    {
+            //        Tenant = -2,
+            //        Name = "admin",
+            //        Description = null,
+            //        Features = "audit,ldap,sso,whitelabel,thirdparty,restore,total_size:107374182400,file_size:1024,manager:1",
+            //        Price = 30,
+            //        //ProductId = "1002",
+            //        Visible = true
+            //    },
+            //    new DbMailQuota
+            //    {
+            //        Tenant = -3,
+            //        Name = "startup",
+            //        Description = null,
+            //        Features = "free,thirdparty,audit,total_size:2147483648,manager:1,room:12,usersInRoom:3",
+            //        Price = 0,
+            //        //ProductId = null,
+            //        Visible = false
+            //    }
+            //    );
 
         return modelBuilder;
     }
@@ -78,11 +78,11 @@ public static class DbMailQuotaExtension
                 .HasColumnName("tenant")
                 .ValueGeneratedNever();
 
-            entity.Property(e => e.ProductId)
-                .HasColumnName("product_id")
-                .HasColumnType("varchar(128)")
-                .HasCharSet("utf8")
-                .UseCollation("utf8_general_ci");
+            //entity.Property(e => e.ProductId)
+            //    .HasColumnName("product_id")
+            //    .HasColumnType("varchar(128)")
+            //    .HasCharSet("utf8")
+            //    .UseCollation("utf8_general_ci");
 
             entity.Property(e => e.Description)
                 .HasColumnName("description")
