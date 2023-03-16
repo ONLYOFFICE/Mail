@@ -112,6 +112,7 @@ namespace ASC.Mail.Core.Storage
                     .FirstOrDefault();
 
                     dbTenantQuotaRow.Counter = counter + row.Counter;
+                    dbTenantQuotaRow.LastModified = DateTime.UtcNow;
                 }
 
                 mailDbContext.AddOrUpdate(mailDbContext.MailQuotaRows, dbTenantQuotaRow);

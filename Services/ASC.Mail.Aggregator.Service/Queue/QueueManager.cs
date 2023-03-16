@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.Aggregator.Service.Queue;
+﻿using ASC.Mail.Core.Storage;
+
+namespace ASC.Mail.Aggregator.Service.Queue;
 
 [Singletone]
 public class QueueManager : IDisposable
@@ -488,6 +490,7 @@ public class QueueManager : IDisposable
             var mailboxEngine = scope.ServiceProvider.GetService<MailboxEngine>();
             var alertEngine = scope.ServiceProvider.GetService<AlertEngine>();
             var userManager = scope.ServiceProvider.GetService<UserManager>();
+            var storageFactory = scope.ServiceProvider.GetService<MailStorageFactory>();
 
             if (!contains)
             {
@@ -588,7 +591,9 @@ public class QueueManager : IDisposable
                 return false;
             }
 
-            if (mailbox.IsTenantQuotaEnded(tenantManager, (int)_mailSettings.Aggregator.TenantMinQuotaBalance, _log))
+
+
+            if (mailbox.IsTenantQuotaEnded(storageFactory, (int)_mailSettings.Aggregator.TenantMinQuotaBalance, _log))
             {
                 _log.InfoQueueManagerQuotaIsEnded(mailbox.TenantId, mailbox.UserId);
 

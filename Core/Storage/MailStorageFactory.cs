@@ -1,4 +1,5 @@
 ﻿using ASC.Data.Storage.Configuration;
+using ASC.Mail.Core.Core.Storage;
 using Module = ASC.Data.Storage.Configuration.Module;
 using Properties = ASC.Data.Storage.Configuration.Properties;
 
@@ -54,6 +55,7 @@ namespace ASC.Mail.Core.Storage
                 throw new InvalidOperationException("config section not found");
             }
 
+            //Change serializer to newtonsoft.json
             StorageSettings baseStorageSettings = _settingsManager.Load<StorageSettings>();
 
             return GetDataStore(tenantPath, module, _storageSettingsHelper.DataStoreConsumer(baseStorageSettings), controller, region);
@@ -104,6 +106,8 @@ namespace ASC.Mail.Core.Storage
         {
             var mailTenantQuotaController = _serviceProvider.GetRequiredService<MailTenantQuotaController>();
             mailTenantQuotaController.Init(tenant);
+
+            //var mailTenantQuotaController = new EmptyQuotaController();
 
             return GetStorage(tenant, DefineConstants.MODULE_NAME, mailTenantQuotaController);
         }

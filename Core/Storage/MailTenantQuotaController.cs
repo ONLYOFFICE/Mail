@@ -1,4 +1,5 @@
-﻿using ASC.Mail.Core.Core.Entities;
+﻿using ASC.Core;
+using ASC.Mail.Core.Core.Entities;
 
 namespace ASC.Mail.Core.Storage
 {
@@ -9,20 +10,25 @@ namespace ASC.Mail.Core.Storage
         private SecurityContext _securityContext;
         private readonly CoreBaseSettings _coreBaseSettings;
         private readonly IServiceProvider _serviceProvider;
+        private readonly TariffService _tariffService;
         private long _currentSize;
 
         public MailTenantQuotaController(
             SecurityContext securityContext,
             CoreBaseSettings coreBaseSettings,
-            IServiceProvider serviceProvider)
+            IServiceProvider serviceProvider,
+            TariffService tariffService)
         {
             _securityContext = securityContext;
             _coreBaseSettings = coreBaseSettings;
             _serviceProvider = serviceProvider;
+            _tariffService = tariffService;
         }
 
         public void Init(int tenant)
         {
+            _tenant=tenant;
+
             var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
 
             _currentSize = quotaservice.FindTenantQuotaRows(tenant)
@@ -33,7 +39,9 @@ namespace ASC.Mail.Core.Storage
         #region IQuotaController Members
         public void QuotaUsedAdd(string module, string domain, string dataTag, long size, bool quotaCheckFileSize = true)
         {
-            QuotaUsedAdd(module, domain, dataTag, size, Guid.Empty, quotaCheckFileSize);
+            var ownerId=_securityContext.CurrentAccount.ID;
+
+            QuotaUsedAdd(module, domain, dataTag, size, ownerId, quotaCheckFileSize);
         }
         public void QuotaUsedAdd(string module, string domain, string dataTag, long size, Guid ownerId, bool quotaCheckFileSize)
         {
@@ -44,12 +52,11 @@ namespace ASC.Mail.Core.Storage
                 Interlocked.Add(ref _currentSize, size);
             }
 
-            SetTenantQuotaRow(module, domain, size, dataTag, true, Guid.Empty);
+            SetTenantQuotaRow(module, domain, size, dataTag, true, ownerId);
             if (ownerId != ASC.Core.Configuration.Constants.CoreSystem.ID)
             {
                 SetTenantQuotaRow(module, domain, size, dataTag, true, ownerId != Guid.Empty ? ownerId : _securityContext.CurrentAccount.ID);
             }
-
         }
 
         public void QuotaUsedDelete(string module, string domain, string dataTag, long size)
@@ -170,6 +177,29 @@ namespace ASC.Mail.Core.Storage
                     UserId = userId
                 },
                 exchange);
+        }
+
+        public TenantQuota GetTenantQuota(int tenant)
+        {
+            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+
+            TenantQuota tenantQuota = quotaservice.GetTenantQuota(tenant) ?? quotaservice.GetTenantQuota(-1) ?? TenantQuota.Default;
+            if (tenantQuota.Tenant != tenant && _tariffService != null)
+            {
+                Tariff tariff = _tariffService.GetTariff(tenant);
+                TenantQuota result = null;
+                foreach (Quota quota in tariff.Quotas)
+                {
+                    int quantity = quota.Quantity;
+                    TenantQuota tenantQuota2 = quotaservice.GetTenantQuota(quota.Id);
+                    tenantQuota2 *= quantity;
+                    result += tenantQuota2;
+                }
+
+                return result;
+            }
+
+            return tenantQuota;
         }
 
         private static bool UsedInQuota(string tag)
