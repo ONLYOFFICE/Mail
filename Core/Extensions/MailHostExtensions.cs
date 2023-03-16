@@ -49,6 +49,8 @@ namespace ASC.Mail.Core.Extensions
             services.AddMemoryCache();
             services.AddDistributedTaskQueue();
 
+            services.AddSingleton<TariffService>();
+
             services.AddAutoMapper(GetAutoMapperProfileAssemblies());
         }
 

@@ -64,7 +64,6 @@ builder.Services.AddBaseDbContext<MailDbContext>();
 builder.Services.AddDistributedTaskQueue();
 builder.Services.AddDistributedCache(builder.Configuration);
 builder.Services.AddSingleton(new ConsoleParser(args));
-builder.Services.AddSingleton<TariffService>();
 
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
