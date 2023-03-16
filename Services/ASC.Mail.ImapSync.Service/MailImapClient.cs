@@ -958,7 +958,7 @@ public class MailImapClient : IDisposable
         {
             var count = _mailEnginesFactory.FolderEngine.GetUserUnreadMessageCount(UserName);
 
-            _socketServiceClient.MakeRequest("sendMailNotification",
+            _socketServiceClient.MakeRequest("updateFolders",
                 new
                 {
                     Tenant,

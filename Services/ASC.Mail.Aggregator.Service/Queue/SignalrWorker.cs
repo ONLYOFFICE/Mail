@@ -161,7 +161,7 @@ public class SocketIoNotifier : IDisposable
 
                 var count = folderEngine.GetUserUnreadMessageCount(userId);
 
-                _signalrServiceClient.MakeRequest("sendUnreadUsers", count);
+                _signalrServiceClient.MakeRequest("updateFolders", new { tenant, userId, count });
             }
             else
             {
