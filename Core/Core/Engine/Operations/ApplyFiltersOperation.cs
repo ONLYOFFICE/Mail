@@ -51,7 +51,7 @@ public sealed class ApplyFiltersOperation : MailOperation
         MessageEngine messageEngine,
         MailboxEngine mailboxEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
         List<int> ids)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)

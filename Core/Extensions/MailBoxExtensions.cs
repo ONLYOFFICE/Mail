@@ -22,6 +22,7 @@
  * Pursuant to Section 7 § 3(e) we decline to grant you any rights under trademark law for use of our trademarks.
  *
 */
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Extensions;
@@ -125,20 +126,22 @@ public static class MailBoxExtensions
         return type;
     }
 
-    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, TenantManager tenantManager, long minBalance, ILogger log)
+    public static bool IsTenantQuotaEnded(this MailBoxData mailbox, MailStorageFactory _mailStorageFactory, long minBalance, ILogger log)
     {
         var quotaEnded = false;
 
         try
         {
-            //var quotaController = new TenantQuotaController(mailbox.TenantId, tenantManager);
-            //var quota = tenantManager.GetTenantQuota(mailbox.TenantId);
+            //var quotaController = _mailStorageFactory.GetMailQuotaContriller(mailbox.TenantId);
+            //var quota = quotaController.GetTenantQuota(mailbox.TenantId);
             //var usedQuota = quotaController.QuotaCurrentGet();
+            ////TODO fix quota
+            //if (quota==null) return quotaEnded;
+
             //quotaEnded = quota.MaxTotalSize - usedQuota < minBalance;
 
             //var maxSize = MailUtil.BytesToMegabytes(quota.MaxTotalSize);
             //var usedQuotaSize = MailUtil.BytesToMegabytes(usedQuota);
-
 
             //log.DebugMailExtensionsIsTenantQuotaEnded(quotaEnded, mailbox.TenantId, maxSize, usedQuotaSize);
         }

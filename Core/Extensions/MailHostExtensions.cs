@@ -2,6 +2,7 @@
 using ASC.Api.Core.Extensions;
 using ASC.Common.Logging;
 using ASC.Core.Common.EF.Context;
+using ASC.Mail.Core.Storage;
 using ASC.MessagingSystem.EF.Context;
 using Microsoft.AspNetCore.Hosting;
 using System.Runtime.InteropServices;
@@ -47,6 +48,8 @@ namespace ASC.Mail.Core.Extensions
             services.AddHttpClient();
             services.AddMemoryCache();
             services.AddDistributedTaskQueue();
+
+            services.AddSingleton<TariffService>();
 
             services.AddAutoMapper(GetAutoMapperProfileAssemblies());
         }
@@ -122,8 +125,12 @@ namespace ASC.Mail.Core.Extensions
             helper.TryAdd<IUserFolderDao, UserFolderDao>();
             helper.TryAdd<IUserFolderTreeDao, UserFolderTreeDao>();
             helper.TryAdd<IUserFolderXMailDao, UserFolderXMailDao>();
-
             helper.TryAdd<StorageFactory>();
+
+            //helper.TryAddSingleton<TariffService>();
+            
+
+            MailStorageFactoryExtension.Register(helper);
         }
     }
 }

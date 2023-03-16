@@ -28,10 +28,15 @@
 
 
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Data.Storage.Configuration;
+using ASC.Mail.Storage;
 using Attachment = ASC.Mail.Core.Entities.Attachment;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
+
+using System.Text.Json;
+using ASC.Mail.Core.Storage;
+using ASC.Mail.Core.Core.Storage;
 
 namespace ASC.Mail.Core.Engine;
 
@@ -44,15 +49,15 @@ public class MessageEngine : BaseEngine
     private readonly UserFolderEngine _userFolderEngine;
     private readonly FolderEngine _folderEngine;
     private readonly IndexEngine _indexEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly TagEngine _tagEngine;
     private readonly TenantUtil _tenantUtil;
     private readonly CoreSettings _coreSettings;
     private readonly FactoryIndexer<MailMail> _factoryIndexer;
     private readonly FactoryIndexer _factoryIndexerCommon;
     private readonly IServiceProvider _serviceProvider;
-    private readonly StorageFactory _storageFactory;
-    private readonly StorageManager _storageManager;
+    private readonly MailStorageFactory _storageFactory;
+    private readonly MailStorageManager _storageManager;
+    private readonly SettingsManager _sManager;
     //private readonly IFilesDaoFactory _filesDaoFactory;
     //private readonly FileSecurity _filesSeurity;
     //private readonly FileConverter _fileConverter;
@@ -70,12 +75,11 @@ public class MessageEngine : BaseEngine
         UserFolderEngine userFolderEngine,
         FolderEngine folderEngine,
         IndexEngine indexEngine,
-        QuotaEngine quotaEngine,
         TagEngine tagEngine,
         TenantUtil tenantUtil,
         CoreSettings coreSettings,
-        StorageFactory storageFactory,
-        StorageManager storageManager,
+        MailStorageFactory storageFactory,
+        MailStorageManager storageManager,
         //FileSecurity filesSeurity,
         //FileConverter fileConverter,
         FactoryIndexer<MailMail> factoryIndexer,
@@ -92,7 +96,6 @@ public class MessageEngine : BaseEngine
         _userFolderEngine = userFolderEngine;
         _folderEngine = folderEngine;
         _indexEngine = indexEngine;
-        _quotaEngine = quotaEngine;
         _tagEngine = tagEngine;
         _tenantUtil = tenantUtil;
         _coreSettings = coreSettings;
@@ -132,7 +135,7 @@ public class MessageEngine : BaseEngine
 
         var key = MailStoragePathCombiner.GetBodyKey(User, mail.Stream);
 
-        return dataStore.GetReadStreamAsync(string.Empty, key).Result;
+        return Storage.GetReadStreamAsync(string.Empty, key).Result;
     }
 
     public Tuple<int, int> GetRangeMessages(IMessagesExp exp)
@@ -842,7 +845,7 @@ public class MessageEngine : BaseEngine
             result = usedQuota > 0;
         });
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -993,7 +996,7 @@ public class MessageEngine : BaseEngine
         if (usedQuota <= 0)
             return;
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
     }
 
     public int MailSave(MailBoxData mailbox, MailMessageData message,
@@ -2096,7 +2099,7 @@ public class MessageEngine : BaseEngine
             tx.Commit();
         });
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
 
         var t = _serviceProvider.GetService<MailMail>();
         if (!_factoryIndexer.Support(t))
@@ -2756,7 +2759,7 @@ public class MessageEngine : BaseEngine
             mailboxId = message.MailboxId
         };
 
-        _quotaEngine.QuotaUsedAdd(contentLength);
+        _storageManager.MailQuotaUsedAdd(contentLength);
 
         try
         {
@@ -2764,7 +2767,7 @@ public class MessageEngine : BaseEngine
         }
         catch
         {
-            _quotaEngine.QuotaUsedDelete(contentLength);
+            _storageManager.MailQuotaUsedDelete(contentLength);
             throw;
         }
 
@@ -2925,7 +2928,7 @@ public class MessageEngine : BaseEngine
         if (usedQuota <= 0)
             return;
 
-        _quotaEngine.QuotaUsedDelete(usedQuota);
+        _storageManager.MailQuotaUsedDelete(usedQuota);
     }
 
     public void StoreAttachments(MailBoxData mailBoxData, List<MailAttachmentData> attachments, string streamId)
@@ -2955,7 +2958,7 @@ public class MessageEngine : BaseEngine
                 _storageManager.StoreAttachmentWithoutQuota(attachment);
             }
 
-            _quotaEngine.QuotaUsedAdd(quotaAddSize);
+            _storageManager.MailQuotaUsedAdd(quotaAddSize);
         }
         catch
         {

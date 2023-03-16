@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using Action = System.Action;
 using SecurityContext = ASC.Core.SecurityContext;
 using Task = System.Threading.Tasks.Task;
@@ -437,7 +438,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
             _log.DebugMailGarbageGetDataStore(mailbox.TenantId);
 
-            var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
+            var storageFactory = scope.ServiceProvider.GetService<MailStorageFactory>();
 
             var dataStorage = storageFactory.GetMailStorage(mailbox.TenantId);
 
@@ -628,7 +629,7 @@ public class MailGarbageEngine : BaseEngine, IDisposable
 
         using var scope = _serviceProvider.CreateScope();
 
-        var storageFactory = scope.ServiceProvider.GetService<StorageFactory>();
+        var storageFactory = scope.ServiceProvider.GetService<MailStorageFactory>();
 
         var dataStorage = storageFactory.GetMailStorage(tenant);
 

@@ -25,6 +25,7 @@
 
 
 
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations;
@@ -46,8 +47,8 @@ public sealed class MailDownloadAllAttachmentsOperation : MailOperation
         IMailDaoFactory mailDaoFactory,
         MessageEngine messageEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
-        StorageFactory storageFactory,
+        MailStorageManager storageManager,
+        MailStorageFactory storageFactory,
         ILoggerProvider logProvider,
         TempStream tempStream,
         int messageId)

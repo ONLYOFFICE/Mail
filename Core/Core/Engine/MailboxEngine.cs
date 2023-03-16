@@ -45,7 +45,6 @@ public class MailboxEngine : BaseEngine
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly AlertEngine _alertEngine;
     private readonly MailBoxSettingEngine _mailBoxSettingEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly CacheEngine _cacheEngine;
     private readonly IndexEngine _indexEngine;
     private readonly IServiceProvider _serviceProvider;
@@ -57,7 +56,6 @@ public class MailboxEngine : BaseEngine
         IMailDaoFactory mailDaoFactory,
         AlertEngine alertEngine,
         MailBoxSettingEngine mailBoxSettingEngine,
-        QuotaEngine quotaEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
         ILoggerProvider logProvider,
@@ -73,7 +71,6 @@ public class MailboxEngine : BaseEngine
 
         _alertEngine = alertEngine;
         _mailBoxSettingEngine = mailBoxSettingEngine;
-        _quotaEngine = quotaEngine;
         _cacheEngine = cacheEngine;
         _indexEngine = indexEngine;
 
@@ -631,6 +628,8 @@ public class MailboxEngine : BaseEngine
 
         var factory = scope.ServiceProvider.GetService<MailDaoFactory>();
 
+        var storageManager = scope.ServiceProvider.GetService<MailStorageManager>();
+
         var strategy = _mailDbContext.Database.CreateExecutionStrategy();
 
         strategy.Execute(() =>
@@ -644,7 +643,7 @@ public class MailboxEngine : BaseEngine
 
             _log.DebugMailboxEngineFreeQuota(freedQuotaSize);
 
-            _quotaEngine.QuotaUsedDelete(freedQuotaSize);
+            storageManager.MailQuotaUsedDelete(freedQuotaSize);
 
             if (!needRecalculateFolders)
                 return;
@@ -654,7 +653,7 @@ public class MailboxEngine : BaseEngine
             tx.Commit();
         });
 
-        _quotaEngine.QuotaUsedDelete(freedQuotaSize);
+        storageManager.MailQuotaUsedDelete(freedQuotaSize);
 
         _cacheEngine.Clear(mailbox.UserId);
 

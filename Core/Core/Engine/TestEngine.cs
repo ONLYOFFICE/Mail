@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 using MailFolder = ASC.Mail.Models.MailFolder;
 using MailMessage = ASC.Mail.Models.MailMessageData;
@@ -44,8 +45,7 @@ public class TestEngine
     private readonly MailboxEngine _mailboxEngine;
     private readonly MessageEngine _messageEngine;
     private readonly IndexEngine _indexEngine;
-    private readonly StorageFactory _storageFactory;
-
+    private readonly MailStorageFactory _storageFactory;
     private const string SAMPLE_UIDL = "api sample";
     private const string SAMPLE_REPLY_UIDL = "api sample reply";
     private const string LOREM_IPSUM_SUBJECT = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
@@ -69,7 +69,7 @@ public class TestEngine
         MailboxEngine mailboxEngine,
         MessageEngine messageEngine,
         IndexEngine indexEngine,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         ILoggerProvider loggerProvider)
     {
         _securityContext = securityContext;
@@ -80,7 +80,6 @@ public class TestEngine
         _messageEngine = messageEngine;
         _indexEngine = indexEngine;
         _storageFactory = storageFactory;
-
         _log = loggerProvider.CreateLogger("ASC.Mail.TestEngine");
     }
 

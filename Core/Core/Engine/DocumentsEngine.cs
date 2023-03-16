@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -39,14 +40,14 @@ public class DocumentsEngine
     private readonly TenantManager _tenantManager;
     private readonly ApiHelper _apiHelper;
     private readonly MessageEngine _messageEngine;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
 
     public DocumentsEngine(
         SecurityContext securityContext,
         TenantManager tenantManager,
         ApiHelper apiHelper,
         MessageEngine messageEngine,
-        StorageFactory storageFactory)
+        MailStorageFactory storageFactory)
     {
         _securityContext = securityContext;
         _tenantManager = tenantManager;

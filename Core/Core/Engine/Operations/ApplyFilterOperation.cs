@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using ActionType = ASC.Mail.Enums.Filter.ActionType;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -46,8 +47,8 @@ public sealed class ApplyFilterOperation : MailOperation
         FilterEngine filterEngine,
         MessageEngine messageEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
-        StorageFactory storageFactory,
+        MailStorageManager storageManager,
+        MailStorageFactory storageFactory,
         ILoggerProvider logProvider,
         int filterId)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider, storageFactory)

@@ -14,6 +14,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
@@ -29,6 +30,7 @@ public class MailImapClient : IDisposable
     private readonly ConcurrentQueue<ImapAction> imapActionsQueue;
     private readonly ConcurrentQueue<NewMessageFromIMAPData> NewMessageQueue;
     private readonly List<SimpleImapClient> simpleImapClients;
+    private readonly IServiceProvider clientScope;
 
     private readonly SemaphoreSlim _enginesFactorySemaphore;
 
@@ -133,7 +135,7 @@ public class MailImapClient : IDisposable
         Tenant = tenant;
         RedisKey = "ASC.MailAction:" + userName;
 
-        var clientScope = serviceProvider.CreateScope().ServiceProvider;
+        clientScope = serviceProvider.CreateScope().ServiceProvider;
 
         _redisClient = clientScope.GetService<RedisClient>();
 

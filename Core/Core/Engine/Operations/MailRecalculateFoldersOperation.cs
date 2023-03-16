@@ -43,7 +43,7 @@ public sealed class MailRecalculateFoldersOperation : MailOperation
         IMailDaoFactory mailDaoFactory,
         FolderEngine folderEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)
     {

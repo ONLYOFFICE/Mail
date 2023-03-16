@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine.Operations.Base;
@@ -64,17 +65,17 @@ public abstract class MailOperation
     public SecurityContext SecurityContext { get; }
     public IMailDaoFactory MailDaoFactory { get; }
     public CoreSettings CoreSettings { get; }
-    public StorageManager StorageManager { get; }
-    public StorageFactory StorageFactory { get; }
+    public MailStorageManager StorageManager { get; }
+    public MailStorageFactory StorageFactory { get; }
 
     protected MailOperation(
         TenantManager tenantManager,
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
-        StorageFactory storageFactory = null)
+        MailStorageFactory storageFactory = null)
     {
         CurrentTenant = tenantManager.GetCurrentTenant();
         CurrentUser = securityContext.CurrentAccount;

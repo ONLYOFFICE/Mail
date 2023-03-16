@@ -1,4 +1,5 @@
-﻿using ASC.Mail.Core.Extensions;
+﻿using ASC.Core.Billing;
+using ASC.Mail.Core.Extensions;
 using NLog;
 using StackExchange.Redis.Extensions.Core.Configuration;
 using StackExchange.Redis.Extensions.Newtonsoft;
@@ -63,6 +64,7 @@ builder.Services.AddBaseDbContext<MailDbContext>();
 builder.Services.AddDistributedTaskQueue();
 builder.Services.AddDistributedCache(builder.Configuration);
 builder.Services.AddSingleton(new ConsoleParser(args));
+
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
 

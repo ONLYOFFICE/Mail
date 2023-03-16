@@ -1,4 +1,5 @@
 ﻿using ASC.Data.Storage;
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -21,8 +22,8 @@ public class MailEnginesFactory
     private FilterEngine _filterEngine;
     private MailboxEngine _mailboxEngine;
     private MessageEngine _messageEngine;
-    private StorageFactory _storageFactory;
-    private StorageManager _storageManager;
+    private MailStorageFactory _storageFactory;
+    private MailStorageManager _storageManager;
     private FolderEngine _folderEngine;
     private UserFolderEngine _userFolderEngine;
     private ApiHelper _apiHelper;
@@ -37,8 +38,8 @@ public class MailEnginesFactory
     public FilterEngine FilterEngine => _filterEngine;
     public MailboxEngine MailboxEngine => _mailboxEngine;
     public MessageEngine MessageEngine => _messageEngine;
-    public StorageFactory StorageFactory => _storageFactory;
-    public StorageManager StorageManager => _storageManager;
+    public MailStorageFactory StorageFactory => _storageFactory;
+    public MailStorageManager StorageManager => _storageManager;
     public FolderEngine FolderEngine => _folderEngine;
     public UserFolderEngine UserFolderEngine => _userFolderEngine;
     public ApiHelper ApiHelper => _apiHelper;
@@ -56,8 +57,8 @@ public class MailEnginesFactory
         MessageEngine messageEngine,
         TenantManager tenantManager,
         SecurityContext securityContext,
-        StorageFactory storageFactory,
-        StorageManager storageManager,
+        MailStorageFactory storageFactory,
+        MailStorageManager storageManager,
         FolderEngine folderEngine,
         UserFolderEngine userFolderEngine,
         ApiHelper apiHelper,

@@ -37,14 +37,14 @@ public class SignatureEngine
     private readonly SecurityContext _securityContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly CacheEngine _cacheEngine;
-    private readonly StorageManager _storageManager;
+    private readonly MailStorageManager _storageManager;
 
     public SignatureEngine(
         TenantManager tenantManager,
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         CacheEngine cacheEngine,
-        StorageManager storageManager)
+        MailStorageManager storageManager)
     {
         _tenantManager = tenantManager;
         _securityContext = securityContext;

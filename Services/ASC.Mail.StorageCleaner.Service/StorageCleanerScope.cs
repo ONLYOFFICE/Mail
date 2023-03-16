@@ -1,4 +1,6 @@
-﻿namespace ASC.Mail.StorageCleaner.Service;
+﻿using ASC.Mail.Core.Storage;
+
+namespace ASC.Mail.StorageCleaner.Service;
 
 [Scope]
 public class StorageCleanerScope
@@ -14,7 +16,7 @@ public class StorageCleanerScope
     private readonly ServerDomainEngine _serverDomainEngine;
     private readonly UserFolderEngine _userFolderEngine;
     private readonly OperationEngine _operationEngine;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
 
     public StorageCleanerScope(
         Server.Core.ServerEngine serverEngine,
@@ -28,7 +30,7 @@ public class StorageCleanerScope
         ServerDomainEngine serverDomainEngine,
         UserFolderEngine userFolderEngine,
         OperationEngine operationEngine,
-        StorageFactory storageFactory)
+        MailStorageFactory storageFactory)
     {
         _serverEngine = serverEngine;
         _securityContext = securityContext;

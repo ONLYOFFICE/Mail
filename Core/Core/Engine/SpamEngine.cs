@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using FolderType = ASC.Mail.Enums.FolderType;
 
 namespace ASC.Mail.Core.Engine;
@@ -32,7 +33,7 @@ public class SpamEngine
 {
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
 
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly ApiHelper _apiHelper;
@@ -42,7 +43,7 @@ public class SpamEngine
         TenantManager tenantManager,
         IMailDaoFactory mailDaoFactory,
         ApiHelper apiHelper,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         ILoggerProvider logProvider)
     {
 

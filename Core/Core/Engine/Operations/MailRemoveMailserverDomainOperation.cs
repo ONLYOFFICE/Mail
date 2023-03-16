@@ -49,7 +49,7 @@ public sealed class MailRemoveMailserverDomainOperation : MailOperation
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
+        MailStorageManager storageManager,
         ILoggerProvider logProvider,
         ServerDomainData domain)
         : base(tenantManager, securityContext, mailDaoFactory, coreSettings, storageManager, logProvider)

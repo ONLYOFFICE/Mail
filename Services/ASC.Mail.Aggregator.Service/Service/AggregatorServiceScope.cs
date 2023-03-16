@@ -1,5 +1,7 @@
 ﻿
 
+using ASC.Mail.Core.Storage;
+
 namespace ASC.Mail.Aggregator.Service.Service;
 
 [Scope]
@@ -10,7 +12,7 @@ public class AggregatorServiceScope
     private readonly TenantManager _tenantManager;
     private readonly CoreBaseSettings _coreBaseSettings;
     private readonly MailQueueItemSettings _mailQueueItemSettings;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly SecurityContext _securityContext;
     private readonly ApiHelper _apiHelper;
@@ -39,7 +41,7 @@ public class AggregatorServiceScope
         TenantManager tenantManager,
         CoreBaseSettings coreBaseSettings,
         MailQueueItemSettings mailQueueItemSettings,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         MailEnginesFactory mailEnginesFactory,
         SecurityContext securityContext,
         ApiHelper apiHelper,

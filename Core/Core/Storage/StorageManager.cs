@@ -25,13 +25,14 @@
 
 
 
-using ASC.Mail.Core.Core.Storage;
+using ASC.Common.Log;
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Storage;
 
 [Scope]
-public class StorageManager
+public class MailStorageManager
 {
     public const string CKEDITOR_IMAGES_DOMAIN = "mail";
 
@@ -40,12 +41,12 @@ public class StorageManager
 
     private readonly ILogger _log;
     private readonly SecurityContext _securityContext;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
     private readonly TenantManager _tenantManager;
 
-    public StorageManager(
+    public MailStorageManager(
         SecurityContext securityContext,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         TenantManager tenantManager,
         ILoggerProvider logProvider)
     {
@@ -57,12 +58,12 @@ public class StorageManager
 
     public IDataStore GetDataStoreForCkImages(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "fckuploaders", new EmptyQuotaController());
+        return _storageFactory.GetStorage(tenant, "fckuploaders");
     }
 
     public IDataStore GetDataStoreForAttachments(int tenant)
     {
-        return _storageFactory.GetStorage(tenant, "mailaggregator", new EmptyQuotaController());
+        return _storageFactory.GetStorage(tenant, "mailaggregator");
     }
 
     public static byte[] LoadLinkData(string link, ILogger log)
@@ -238,6 +239,47 @@ public class StorageManager
         catch (Exception e)
         {
             _log.ErrorStorageManagerStoreAttachment(mailAttachmentData.fileName, mailAttachmentData.contentType, e.ToString());
+
+            throw;
+        }
+    }
+
+    public void MailQuotaUsedAdd(long usedQuota)
+    {
+        var quotaController = _storageFactory.GetMailQuotaContriller(Tenant);
+
+        try
+        {
+            quotaController.QuotaUsedAdd(DefineConstants.MODULE_NAME,
+                string.Empty,
+                DefineConstants.MAIL_QUOTA_TAG,
+                usedQuota,
+                _securityContext.CurrentAccount.ID,
+                true);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"MailQuotaUsedAdd: {_securityContext.CurrentAccount.ID}, size={usedQuota}, ex={ex}");
+
+            throw;
+        }
+    }
+
+    public void MailQuotaUsedDelete(long usedQuota)
+    {
+        var quotaController = _storageFactory.GetMailQuotaContriller(Tenant);
+
+        try
+        {
+            quotaController.QuotaUsedDelete(DefineConstants.MODULE_NAME,
+                string.Empty,
+                DefineConstants.MAIL_QUOTA_TAG,
+                usedQuota,
+                _securityContext.CurrentAccount.ID);
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"MailQuotaUsedDelete: {_securityContext.CurrentAccount.ID}, size={usedQuota}, ex={ex}");
 
             throw;
         }

@@ -23,6 +23,7 @@
  *
 */
 
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -35,7 +36,6 @@ public class OperationEngine
     private readonly SecurityContext _securityContext;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly MailboxEngine _mailboxEngine;
-    private readonly QuotaEngine _quotaEngine;
     private readonly FolderEngine _folderEngine;
     private readonly CacheEngine _cacheEngine;
     private readonly IndexEngine _indexEngine;
@@ -44,8 +44,8 @@ public class OperationEngine
     private readonly MessageEngine _messageEngine;
     private readonly ServerMailboxEngine _serverMailboxEngine;
     private readonly CoreSettings _coreSettings;
-    private readonly StorageManager _storageManager;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageManager _storageManager;
+    private readonly MailStorageFactory _storageFactory;
     private readonly FactoryIndexer<MailMail> _factoryIndexer;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILoggerProvider _logProvider;
@@ -56,7 +56,6 @@ public class OperationEngine
         SecurityContext securityContext,
         IMailDaoFactory mailDaoFactory,
         MailboxEngine mailboxEngine,
-        QuotaEngine quotaEngine,
         FolderEngine folderEngine,
         CacheEngine cacheEngine,
         IndexEngine indexEngine,
@@ -65,8 +64,8 @@ public class OperationEngine
         MessageEngine messageEngine,
         ServerMailboxEngine serverMailboxEngine,
         CoreSettings coreSettings,
-        StorageManager storageManager,
-        StorageFactory storageFactory,
+        MailStorageManager storageManager,
+        MailStorageFactory storageFactory,
         FactoryIndexer<MailMail> factoryIndexer,
         TempStream tempStream,
         IServiceProvider serviceProvider,
@@ -79,7 +78,6 @@ public class OperationEngine
         _securityContext = securityContext;
         _mailDaoFactory = mailDaoFactory;
         _mailboxEngine = mailboxEngine;
-        _quotaEngine = quotaEngine;
         _folderEngine = folderEngine;
         _cacheEngine = cacheEngine;
         _indexEngine = indexEngine;
@@ -134,7 +132,6 @@ public class OperationEngine
             _tenantManager,
             _securityContext,
             _mailboxEngine,
-            _quotaEngine,
             _folderEngine,
             _cacheEngine,
             _indexEngine,

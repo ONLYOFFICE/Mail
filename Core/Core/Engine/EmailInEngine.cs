@@ -25,6 +25,8 @@
 
 
 
+using ASC.Mail.Core.Storage;
+
 namespace ASC.Mail.Core.Engine;
 
 [Scope]
@@ -33,22 +35,20 @@ public class EmailInEngine
     private readonly ILogger _log;
     private readonly AccountEngine _accountEngine;
     private readonly AlertEngine _alertEngine;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
     private readonly ApiHelper _apiHelper;
 
     public EmailInEngine(
         AccountEngine accountEngine,
         AlertEngine alertEngine,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         ApiHelper apiHelper,
-        ILoggerProvider logProvider
-        )
+        ILoggerProvider logProvider)
     {
         _accountEngine = accountEngine;
         _alertEngine = alertEngine;
         _storageFactory = storageFactory;
         _apiHelper = apiHelper;
-
         _log = logProvider.CreateLogger("ASC.Mail.EmailInEngine");
     }
 

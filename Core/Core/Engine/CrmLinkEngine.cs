@@ -25,6 +25,8 @@
 
 
 using System.Security;
+
+using ASC.Mail.Core.Storage;
 using SecurityContext = ASC.Core.SecurityContext;
 
 namespace ASC.Mail.Core.Engine;
@@ -43,7 +45,8 @@ public class CrmLinkEngine
     private readonly ApiHelper _apiHelper;
     private readonly IMailDaoFactory _mailDaoFactory;
     private readonly MessageEngine _messageEngine;
-    private readonly StorageFactory _storageFactory;
+    private readonly MailStorageFactory _storageFactory;
+    //private readonly CrmSecurity _crmSecurity;
     private readonly IServiceProvider _serviceProvider;
     private readonly PermissionContext _permissionContext;
     private readonly WebItemSecurity _webItemSecurity;
@@ -54,7 +57,7 @@ public class CrmLinkEngine
         ApiHelper apiHelper,
         IMailDaoFactory mailDaoFactory,
         MessageEngine messageEngine,
-        StorageFactory storageFactory,
+        MailStorageFactory storageFactory,
         ILoggerProvider logProvider,
         WebItemSecurity webItemSecurity,
         PermissionContext permissionContext,
@@ -223,6 +226,7 @@ public class CrmLinkEngine
         }
 
         var factory = scope.ServiceProvider.GetService<CrmContactDao>();
+
         foreach (var contactEntity in message.LinkedCrmEntityIds)
         {
             CheckCRMPermisions(contactEntity, factory);
