@@ -1,5 +1,5 @@
-﻿using ASC.Data.Storage.Configuration;
-using ASC.Mail.Core.Core.Storage;
+﻿using ASC.Core.Common.EF.Context;
+using ASC.Data.Storage.Configuration;
 using Module = ASC.Data.Storage.Configuration.Module;
 using Properties = ASC.Data.Storage.Configuration.Properties;
 
@@ -48,7 +48,7 @@ namespace ASC.Mail.Core.Storage
         public IDataStore GetStorage(int? tenant, string module, IQuotaController controller, string region = "current")
         {
             string tenantPath = (tenant.HasValue ? TenantPath.CreatePath(tenant.Value) : TenantPath.CreatePath("default"));
-            
+
             ASC.Data.Storage.Configuration.Storage storage = _storageFactoryConfig.GetStorage(region);
             if (storage == null)
             {
@@ -56,7 +56,19 @@ namespace ASC.Mail.Core.Storage
             }
 
             //Change serializer to newtonsoft.json
-            StorageSettings baseStorageSettings = _settingsManager.Load<StorageSettings>();
+
+            var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
+
+            using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
+            string text = (from r in webstudioDbContext.WebstudioSettings
+                           where r.Id == new Guid("f13eaf2d-fa53-44f1-a6d6-a5aeda46fa2b")
+                           where r.TenantId == tenant
+                           where r.UserId == new Guid("00000000-0000-0000-0000-000000000000")
+                           select r.Data).FirstOrDefault();
+
+            text= text.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{",",");
+
+            StorageSettings baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
 
             return GetDataStore(tenantPath, module, _storageSettingsHelper.DataStoreConsumer(baseStorageSettings), controller, region);
         }
