@@ -142,7 +142,12 @@ public class ApiHelper
 
         _log.DebugApiHelperExecuteRequest(_baseUrl.Uri, request.Resource);
 
-        var client = new RestClient(_baseUrl.Uri);
+        var options = new RestClientOptions(_baseUrl.Uri)
+        {
+            RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => true
+        };
+
+        var client = new RestClient(options);
 
         request.AddHeader("Authorization", _token);
 
