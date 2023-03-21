@@ -111,7 +111,7 @@ namespace ASC.Mail.Core.Storage
             {
                 if (quotaCheckFileSize && quota.MaxFileSize != 0 && quota.MaxFileSize < size)
                 {
-                    throw new TenantQuotaException(string.Format("Exceeds the maximum file size ({0}MB)", BytesToMegabytes(quota.MaxFileSize)));
+                    throw new TenantQuotaException($"Exceeds the maximum file size ({BytesToMegabytes(quota.MaxFileSize)}MB)");
                 }
 
                 if (_coreBaseSettings.Standalone)
