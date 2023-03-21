@@ -55,20 +55,32 @@ namespace ASC.Mail.Core.Storage
                 throw new InvalidOperationException("config section not found");
             }
 
+            StorageSettings baseStorageSettings = new StorageSettings();
+
             //Change serializer to newtonsoft.json
+            try
+            {
 
-            var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
+                var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
 
-            using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
-            string text = (from r in webstudioDbContext.WebstudioSettings
-                           where r.Id == new Guid("f13eaf2d-fa53-44f1-a6d6-a5aeda46fa2b")
-                           where r.TenantId == tenant
-                           where r.UserId == new Guid("00000000-0000-0000-0000-000000000000")
-                           select r.Data).FirstOrDefault();
+                using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
+                string text = (from r in webstudioDbContext.WebstudioSettings
+                               where r.Id == new Guid("f13eaf2d-fa53-44f1-a6d6-a5aeda46fa2b")
+                               where r.TenantId == tenant
+                               where r.UserId == new Guid("00000000-0000-0000-0000-000000000000")
+                               select r.Data).FirstOrDefault();
 
-            text= text.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{",",");
+                text = text.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{", ",");
 
-            StorageSettings baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
+                if(!string.IsNullOrEmpty(text))
+                {
+                    baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
 
             return GetDataStore(tenantPath, module, _storageSettingsHelper.DataStoreConsumer(baseStorageSettings), controller, region);
         }
