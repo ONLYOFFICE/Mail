@@ -14,7 +14,6 @@
  *
 */
 
-using ASC.Mail.Core.Storage;
 using ASC.Mail.ImapSync.Models;
 
 namespace ASC.Mail.ImapSync;
@@ -1056,12 +1055,25 @@ public class MailImapClient : IDisposable
             foreach (var filterAppliedSuccessfull in filtersAppliedSuccessfull)
             {
                 int destination = -1;
+                uint userFolderIdParsed;
+                uint? userFolderId=null;
 
                 if (filterAppliedSuccessfull.Action == Enums.Filter.ActionType.MoveTo)
                 {
-                    string destinationString = new(filterAppliedSuccessfull.Data.Where(x => Char.IsDigit(x)).ToArray());
+                    string[] dataStrings = filterAppliedSuccessfull.Data.Split(',');
+
+                    string destinationString = new(dataStrings[0].Where(x => Char.IsDigit(x)).ToArray());
+                    string userFolderIdString = new(dataStrings[1].Where(x => Char.IsDigit(x)).ToArray());
 
                     int.TryParse(destinationString, out destination);
+
+                    if (destination == 6)
+                    {
+                        if(uint.TryParse(userFolderIdString, out userFolderIdParsed))
+                        {
+                            userFolderId = userFolderIdParsed;
+                        }
+                    }
                 }
 
                 CashedMailUserAction action = new()
@@ -1076,7 +1088,8 @@ public class MailImapClient : IDisposable
                         Enums.Filter.ActionType.MarkTag => MailUserAction.Nothing,
                         _ => MailUserAction.Nothing
                     },
-                    Destination = destination
+                    Destination = destination,
+                    UserFolderId = userFolderId
                 };
 
                 simpleImapClient.ExecuteUserAction(action);
