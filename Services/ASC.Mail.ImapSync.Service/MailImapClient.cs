@@ -392,12 +392,12 @@ public class MailImapClient : IDisposable
 
     private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
     {
+        if (_enginesFactorySemaphore.CurrentCount == 0) return;
+
         if (IsReady && needUserMailBoxUpdate)
         {
             if (!UpdateSimplImapClients()) return;
         }
-
-        if (_enginesFactorySemaphore.CurrentCount == 0) return;
 
         _enginesFactorySemaphore.Wait();
 
