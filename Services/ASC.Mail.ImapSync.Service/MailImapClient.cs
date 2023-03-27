@@ -397,6 +397,8 @@ public class MailImapClient : IDisposable
             if (!UpdateSimplImapClients()) return;
         }
 
+        if (_enginesFactorySemaphore.CurrentCount == 0) return;
+
         _enginesFactorySemaphore.Wait();
 
         try
