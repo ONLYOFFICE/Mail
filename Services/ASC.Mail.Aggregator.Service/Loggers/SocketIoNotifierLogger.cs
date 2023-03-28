@@ -8,8 +8,8 @@ internal static partial class SocketIoNotifierLogger
     [LoggerMessage(Level = LogLevel.Debug, Message = "Waking up...")]
     public static partial void DebugSocketIoNotifierWakingUp(this ILogger logger);
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "SignalrWorker -> SendUnreadUser(UserId = {userId} TenantId = {tenantId})")]
-    public static partial void DebugSocketIoNotifierSendUnreadUser(this ILogger logger, string userId, int tenantId);
+    [LoggerMessage(Level = LogLevel.Debug, Message = "SignalrWorker -> SendUnreadUser(UserId = {userId} TenantId = {tenantId}) Result={result}")]
+    public static partial void DebugSocketIoNotifierSendUnreadUser(this ILogger logger, string userId, int tenantId, bool result);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "SignalrWorker -> SendUnreadUser(UserId = {userId} TenantId = {tenantId})\r\nException: \r\n{error}")]
     public static partial void ErrorSocketIoNotifierSendUnreadUser(this ILogger logger, string userId, int tenantId, string error);
