@@ -1,4 +1,5 @@
-﻿using ASC.Core.Notify.Socket;
+﻿using ASC.Common.Log;
+using ASC.Core.Notify.Socket;
 
 namespace ASC.Mail.Aggregator.Service.Queue;
 
@@ -161,7 +162,10 @@ public class SocketIoNotifier : IDisposable
 
                 var count = folderEngine.GetUserUnreadMessageCount(userId);
 
-                _signalrServiceClient.MakeRequest("updateFolders", new { tenant, userId, count });
+                var responce=_signalrServiceClient.MakeRequest("updateFolders", new { tenant, userId, count });
+
+                _log.Debug($"SendUnreadUser responce {responce}");
+
             }
             else
             {
