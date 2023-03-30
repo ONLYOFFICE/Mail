@@ -135,7 +135,6 @@ public class MailImapClient : IDisposable
 
         clientScope = serviceProvider.CreateScope().ServiceProvider;
 
-
         socketIoNotifier = clientScope.GetService<SocketIoNotifier>();
         _redisClient = clientScope.GetService<RedisClient>();
 
