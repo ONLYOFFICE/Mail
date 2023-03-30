@@ -14,7 +14,9 @@
  *
 */
 
+using ASC.Mail.Core;
 using ASC.Mail.ImapSync.Models;
+using System.Linq;
 
 namespace ASC.Mail.ImapSync;
 
@@ -35,8 +37,7 @@ public class MailImapClient : IDisposable
 
     private readonly MailEnginesFactory _mailEnginesFactory;
     private readonly MailSettings _mailSettings;
-
-    private readonly SocketServiceClient _socketServiceClient;
+    private readonly SocketIoNotifier socketIoNotifier;
     private readonly RedisClient _redisClient;
 
     private readonly ILogger _log;
@@ -124,18 +125,18 @@ public class MailImapClient : IDisposable
         int tenant,
         MailSettings mailSettings,
         IServiceProvider serviceProvider,
-        SocketServiceClient socketServiceClient,
         CancellationToken cancelToken,
         ILoggerProvider logProvider)
     {
         _mailSettings = mailSettings;
-
         UserName = userName;
         Tenant = tenant;
         RedisKey = "ASC.MailAction:" + userName;
 
         clientScope = serviceProvider.CreateScope().ServiceProvider;
 
+
+        socketIoNotifier = clientScope.GetService<SocketIoNotifier>();
         _redisClient = clientScope.GetService<RedisClient>();
 
         if (_redisClient == null)
@@ -145,8 +146,6 @@ public class MailImapClient : IDisposable
 
         _mailEnginesFactory = clientScope.GetService<MailEnginesFactory>();
         _mailEnginesFactory.SetTenantAndUser(tenant, UserName);
-
-        _socketServiceClient = socketServiceClient;
 
         _log = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
         _logStat = logProvider.CreateLogger($"ASC.Mail.User_{userName}");
@@ -446,6 +445,12 @@ public class MailImapClient : IDisposable
                 if (newMessageFromIMAPData.SimpleImapClient.Folder == FolderType.Draft) CreateDraftMessageInDB(newMessageFromIMAPData);
                 else CreateMessageInDB(newMessageFromIMAPData);
             }
+
+            if (needUserUpdate)
+            {
+                socketIoNotifier.AddMailbox(simpleImapClients[0]?.Account);
+                needUserUpdate = false;
+            }
         }
         catch (Exception ex)
         {
@@ -453,8 +458,6 @@ public class MailImapClient : IDisposable
         }
         finally
         {
-            if (needUserUpdate) needUserUpdate = !SendUnreadUser();
-
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
     }
@@ -951,33 +954,6 @@ public class MailImapClient : IDisposable
         _logStat.DebugStatistic(duration.TotalMilliseconds, method, failed, simpleImapClient.Account.MailBoxId, simpleImapClient.Account.EMail.ToString());
     }
 
-    private bool SendUnreadUser()
-    {
-        if (UserName == Constants.LostUser.Id.ToString()) return true;
-
-        try
-        {
-            var count = _mailEnginesFactory.FolderEngine.GetUserUnreadMessageCount(UserName);
-
-            _socketServiceClient.MakeRequest("updateFolders",
-                new
-                {
-                    Tenant,
-                    UserName,
-                    count
-                });
-
-        }
-        catch (Exception ex)
-        {
-            var innerError = ex.InnerException == null ? "No" : ex.InnerException.Message;
-            _log.ErrorMailImapClientSendUnreadUser(ex.Message, innerError);
-
-            return false;
-        }
-        return true;
-    }
-
     private void DoOptionalOperations(MailMessageData message, MimeMessage mimeMessage, SimpleImapClient simpleImapClient)
     {
         try
@@ -1058,7 +1034,7 @@ public class MailImapClient : IDisposable
             {
                 int destination = -1;
                 uint userFolderIdParsed;
-                uint? userFolderId=null;
+                uint? userFolderId = null;
 
                 if (filterAppliedSuccessfull.Action == Enums.Filter.ActionType.MoveTo)
                 {
@@ -1071,7 +1047,7 @@ public class MailImapClient : IDisposable
 
                     if (destination == 6)
                     {
-                        if(uint.TryParse(userFolderIdString, out userFolderIdParsed))
+                        if (uint.TryParse(userFolderIdString, out userFolderIdParsed))
                         {
                             userFolderId = userFolderIdParsed;
                         }

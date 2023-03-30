@@ -1,4 +1,4 @@
-﻿namespace ASC.Mail.Aggregator.Loggers;
+﻿namespace ASC.Mail.Core.Loggers;
 
 internal static partial class SocketIoNotifierLogger
 {

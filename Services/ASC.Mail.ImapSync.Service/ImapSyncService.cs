@@ -124,7 +124,6 @@ public class ImapSyncService : IHostedService
                     cashedTenantUserMailBox.Tenant,
                     _mailSettings,
                     _serviceProvider,
-                    _signalrServiceClient,
                     _cancelTokenSource.Token,
                     _logProvider);
 
