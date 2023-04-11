@@ -127,6 +127,7 @@ namespace ASC.Mail.Core.Extensions
             helper.TryAdd<IUserFolderXMailDao, UserFolderXMailDao>();
             helper.TryAdd<StorageFactory>();
             helper.TryAdd<SocketIoNotifier>();
+            helper.TryAdd<SocketServiceClient>();
 
             MailStorageFactoryExtension.Register(helper);
         }
