@@ -16,7 +16,6 @@
 
 using ASC.Mail.Core;
 using ASC.Mail.ImapSync.Models;
-using System.Linq;
 
 namespace ASC.Mail.ImapSync;
 
@@ -105,7 +104,7 @@ public class MailImapClient : IDisposable
                         ExecutActionUpdateDrafts(actionFromCache);
                         break;
                     case MailUserAction.DeleteUserFolder:
-                        ExecutActionDeleteUserFolder(actionFromCache);
+                        await ExecutActionDeleteUserFolder(actionFromCache);
                         break;
                     case MailUserAction.UpdateUserFolder:
                         break;
@@ -390,6 +389,8 @@ public class MailImapClient : IDisposable
 
     private void ProcessActionFromImapTimer_Elapsed(object sender, System.Timers.ElapsedEventArgs e)
     {
+        if (imapActionsQueue.IsEmpty && NewMessageQueue.IsEmpty) return;
+
         if (_enginesFactorySemaphore.CurrentCount == 0) return;
 
         if (IsReady && needUserMailBoxUpdate)
@@ -1271,37 +1272,53 @@ public class MailImapClient : IDisposable
         }
     }
 
-    private void ExecutActionDeleteUserFolder(CashedMailUserAction action)
+    private async Task<bool> ExecutActionDeleteUserFolder(CashedMailUserAction action)
     {
+        uint? userFolderId = action.UserFolderId;
+        if (!userFolderId.HasValue)
+        {
+            _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionDeleteUserFolder: ", "userFolderId is null");
+            return false;
+        }
+
         _enginesFactorySemaphore.Wait();
 
         try
         {
-            //_mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
+            _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
 
-            //var accounts = simpleImapClients.GroupBy(x => x.Account.MailBoxId).Select(x => x.Key).ToList();
+            var deletedFolderClient = simpleImapClients.FirstOrDefault(x => x.UserFolderID.HasValue && x.UserFolderID.Value == userFolderId);
 
-            //if (accounts.Count == 1)
-            //{
-            //    var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Inbox);
+            if (deletedFolderClient != null)
+            {
+                _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionDeleteUserFolder: ", $"Didn't find folder Client with id: {userFolderId.Value}");
+                return false;
+            }
 
-            //    var newFolders = _mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
+            var result = await deletedFolderClient.TryMoveAllMessagesToTrash();
 
-            //    foreach (var folder in newFolders)
-            //    {
-            //        var perentFolder = _mailEnginesFactory.UserFolderEngine.Get(folder.ParentId);
+            if (result)
+            {
+                string deletedFolderFullName = deletedFolderClient.ImapWorkFolderFullName;
 
-            //        if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolder.Name);
-            //    }
-            //}
+                DeleteSimpleImapClient(deletedFolderClient);
+
+                var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Inbox);
+
+                simpleImapClient.TryDeleteFolderInIMAP(deletedFolderFullName);
+            }
         }
         catch (Exception ex)
         {
             _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionCreateUserFolder", ex.Message);
+
+            return false;
         }
         finally
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
+
+        return true;
     }
 }
