@@ -1,6 +1,6 @@
-﻿using ASC.Core.Notify.Socket;
+﻿using ASC.Common.Log;
 
-namespace ASC.Mail.Aggregator.Service.Queue;
+namespace ASC.Mail.Core;
 
 [Singletone]
 public class SocketIoNotifier : IDisposable
@@ -14,17 +14,14 @@ public class SocketIoNotifier : IDisposable
     private readonly EventWaitHandle _waitHandle;
     private readonly TimeSpan _timeSpan;
     private readonly ILogger _log;
-    private readonly SocketServiceClient _signalrServiceClient;
     private readonly IServiceProvider _serviceProvider;
     private readonly CancellationTokenSource _cancellationTokenSource;
 
     public SocketIoNotifier(
         ILoggerProvider logProvider,
-        SocketServiceClient signalrServiceClient,
         IServiceProvider serviceProvider)
     {
         _log = logProvider.CreateLogger("ASC.Mail.SignalrWorker");
-        _signalrServiceClient = signalrServiceClient;
         _serviceProvider = serviceProvider;
         _cancellationTokenSource = new CancellationTokenSource();
 
@@ -39,7 +36,7 @@ public class SocketIoNotifier : IDisposable
             _workerTask.Start();
     }
 
-    private void ProcessQueue()
+    private async void ProcessQueue()
     {
         while (!_workerTerminateSignal)
         {
@@ -56,9 +53,9 @@ public class SocketIoNotifier : IDisposable
 
             try
             {
-                _log.DebugSocketIoNotifierSendUnreadUser(mailbox.UserId, mailbox.TenantId);
+                var result = await SendUnreadUser(mailbox.TenantId, mailbox.UserId);
 
-                SendUnreadUser(mailbox.TenantId, mailbox.UserId);
+                _log.DebugSocketIoNotifierSendUnreadUser(mailbox.UserId, mailbox.TenantId, result);
             }
             catch (Exception ex)
             {
@@ -123,7 +120,7 @@ public class SocketIoNotifier : IDisposable
         _workerTerminateSignal = true;
         _waitHandle.Set();
 
-        if (_workerTask.Status == TaskStatus.Running)
+        if (_workerTask.Status == System.Threading.Tasks.TaskStatus.Running)
         {
             _log.InfoSocketIoNotifierStop();
 
@@ -137,7 +134,7 @@ public class SocketIoNotifier : IDisposable
         _workerTask = null;
     }
 
-    private void SendUnreadUser(int tenant, string userId)
+    private async Task<bool> SendUnreadUser(int tenant, string userId)
     {
         try
         {
@@ -146,6 +143,7 @@ public class SocketIoNotifier : IDisposable
             var tenantManager = scope.ServiceProvider.GetService<TenantManager>();
             var folderEngine = scope.ServiceProvider.GetService<FolderEngine>();
             var userManager = scope.ServiceProvider.GetService<UserManager>();
+            var socketServiceClient = scope.ServiceProvider.GetService<SocketServiceClient>();
 
             _log.DebugSocketIoNotifierTrySetTenant(tenant, userId);
 
@@ -161,7 +159,12 @@ public class SocketIoNotifier : IDisposable
 
                 var count = folderEngine.GetUserUnreadMessageCount(userId);
 
-                _signalrServiceClient.MakeRequest("updateFolders", new { tenant, userId, count });
+                var responce = await socketServiceClient.MakeRequest("updateFolders", new { tenant, userId, count });
+
+                _log.Debug($"SendUnreadUser responce {responce}");
+
+                return true;
+
             }
             else
             {
@@ -172,5 +175,7 @@ public class SocketIoNotifier : IDisposable
         {
             _log.ErrorSocketIoNotifier(e.ToString(), e.InnerException != null ? e.InnerException.Message : string.Empty);
         }
+
+        return false;
     }
 }

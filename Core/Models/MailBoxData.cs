@@ -256,8 +256,8 @@ public sealed class MailBoxData : IEquatable<MailBoxData>
             switch ((AuthorizationServiceType)OAuthType)
             {
                 case AuthorizationServiceType.Google:
-                //_token = OAuth20TokenHelper.RefreshToken<GoogleLoginProvider>(_token);
-                //break;
+                    _token = _oAuth20TokenHelper.RefreshToken("https://www.googleapis.com/oauth2/v4/token", _token);
+                    break;
                 case AuthorizationServiceType.None:
                     _token = _oAuth20TokenHelper.RefreshToken("", _token);
                     break;

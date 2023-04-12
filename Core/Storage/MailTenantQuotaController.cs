@@ -29,7 +29,7 @@ namespace ASC.Mail.Core.Storage
         {
             _tenant=tenant;
 
-            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+            var quotaservice = _serviceProvider.GetRequiredService<IQuotaService>();
 
             _currentSize = quotaservice.FindTenantQuotaRows(tenant)
                           .Where(r => UsedInQuota(r.Tag))
@@ -102,7 +102,7 @@ namespace ASC.Mail.Core.Storage
 
         public void QuotaUsedCheck(long size, bool quotaCheckFileSize, Guid ownedId)
         {
-            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+            var quotaservice = _serviceProvider.GetRequiredService<IQuotaService>();
 
             var quota = quotaservice.GetTenantQuota(_tenant);
 
@@ -165,7 +165,7 @@ namespace ASC.Mail.Core.Storage
 
         private void SetTenantQuotaRow(string module, string domain, long size, string dataTag, bool exchange, Guid userId)
         {
-            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+            var quotaservice = _serviceProvider.GetRequiredService<IQuotaService>();
 
             quotaservice.SetTenantQuotaRow(
                 new TenantQuotaRow
@@ -181,7 +181,7 @@ namespace ASC.Mail.Core.Storage
 
         public TenantQuota GetTenantQuota(int tenant)
         {
-            var quotaservice = _serviceProvider.GetRequiredService<DbMailQuotaService>();
+            var quotaservice = _serviceProvider.GetRequiredService<IQuotaService>();
 
             TenantQuota tenantQuota = quotaservice.GetTenantQuota(tenant) ?? quotaservice.GetTenantQuota(-1) ?? TenantQuota.Default;
             if (tenantQuota.Tenant != tenant && _tariffService != null)

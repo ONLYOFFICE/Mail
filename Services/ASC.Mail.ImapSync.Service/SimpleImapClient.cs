@@ -1,4 +1,6 @@
-﻿using ASC.Mail.ImapSync.Models;
+﻿using ASC.Mail.ImapSync.Loggers;
+using ASC.Mail.ImapSync.Models;
+using Google.Protobuf.Reflection;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -628,7 +630,7 @@ public class SimpleImapClient : IDisposable
 
         if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags)
         {
-            _log.DebugSimpleImapCompareImapFlagsEqual();
+            //_log.DebugSimpleImapCompareImapFlagsEqual();
 
             return;
         }
@@ -916,9 +918,17 @@ public class SimpleImapClient : IDisposable
     }
 
     public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => CreateFolderInIMAP(name, parentName).Result));
-    public void TryDeleteFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => DeleteFolderInIMAP(name).Result));
+    public void TryDeleteFolderInIMAP(string name) => AddTask(new Task<bool>(() => DeleteFolderInIMAP(name).Result));
     public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task<bool>(() => CreateMessageInIMAP(message, flags, messageId).Result));
     public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task<bool>(() => GetNewMessage(messageDescriptors).Result));
+
+    public Task<bool> TryMoveAllMessagesToTrash()
+    {
+        Task<bool> result = new Task<bool>(() => MoveAllMessagesToTrash().Result);
+
+        return result;
+    }
+    
 
     private async Task<bool> CreateFolderInIMAP(string name, string parentName)
     {
@@ -933,9 +943,9 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
-    private async Task<bool> DeleteFolderInIMAP(string name)
+    private async Task<bool> DeleteFolderInIMAP(string fullName)
     {
-        var folder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == name);
+        var folder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == fullName);
 
         await folder.DeleteAsync();
 
@@ -1003,5 +1013,28 @@ public class SimpleImapClient : IDisposable
 
             return false;
         }
+    }
+
+    private async Task<bool> MoveAllMessagesToTrash()
+    {
+
+        var uniqueIds = ImapMessagesList.Select(x => x.UniqueId).ToList();
+
+        _log.DebugSimpleImapMoveMessageInImap(ImapWorkFolder.FullName, _trashFolder.FullName, uniqueIds.Count);
+
+        try
+        {
+            var returnedUidl = await ImapWorkFolder.MoveToAsync(uniqueIds, _trashFolder);
+
+            ImapMessagesList.Clear();
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorSimpleImapMoveMessageInImap(ex.Message);
+
+            return false;
+        }
+
+        return true;
     }
 }
