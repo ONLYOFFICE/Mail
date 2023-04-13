@@ -33,6 +33,8 @@ namespace ASC.Mail.Core.Extensions
 
         public static void AddMailServices(this IServiceCollection services)
         {
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
             services.AddHttpContextAccessor();
             services.AddScoped<EFLoggerFactory>();
             services.AddBaseDbContextPool<CoreDbContext>();
