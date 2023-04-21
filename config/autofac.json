@@ -1,6 +1,45 @@
 {
   "components": [
     {
+      "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common",
+      "services": [
+        {
+          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+        },
+        {
+          "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
+        },
+        {
+          "key": "s3",
+          "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
+        },
+        {
+          "key": "s3",
+          "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
+        }
+      ],
+      "instanceScope": "perlifetimescope",
+      "parameters": {
+        "name": "s3",
+        "order": "20",
+        "props": {
+          "acesskey": "",
+          "secretaccesskey": ""
+        },
+        "additional": {
+          "handlerType": "ASC.Data.Storage.S3.S3Storage, ASC.Data.Storage",
+          "bucket": "",
+          "region": "",
+          "serviceurl": "",
+          "forcepathstyle": "",
+          "usehttp": "",
+          "sse": "",
+          "ssekey": "",
+          "cdn": "S3Cdn"
+        }
+      }
+    },
+    {
       "type": "ASC.Data.Encryption.Crypt, ASC.Data.Encryption",
       "services": [
         {
