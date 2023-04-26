@@ -1246,19 +1246,21 @@ public class MailImapClient : IDisposable
         {
             _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
 
-            var accounts = simpleImapClients.GroupBy(x => x.Account.MailBoxId).Select(x => x.Key).ToList();
+            var simpleImapClientsForCleateFolder = simpleImapClients
+                .Where(x => x.Folder == FolderType.Inbox && x.ImapWorkFolder.ParentFolder.Name == "")
+                .ToList();
 
-            if (accounts.Count == 1)
+            var newFolders = _mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
+
+            foreach (var simpleImapClient in simpleImapClientsForCleateFolder)
             {
-                var simpleImapClient = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Inbox);
-
-                var newFolders = _mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
-
                 foreach (var folder in newFolders)
                 {
                     var perentFolder = _mailEnginesFactory.UserFolderEngine.Get(folder.ParentId);
 
-                    if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolder.Name);
+                    string perentFolderName = perentFolder == null ? "" : perentFolder.Name;
+
+                    if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolderName);
                 }
             }
         }

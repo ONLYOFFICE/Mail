@@ -1,6 +1,5 @@
-﻿using ASC.Mail.ImapSync.Loggers;
+﻿using ASC.Common.Log;
 using ASC.Mail.ImapSync.Models;
-using Google.Protobuf.Reflection;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
@@ -126,11 +125,11 @@ public class SimpleImapClient : IDisposable
 
             if (Folder == FolderType.Draft && cachedMailUserAction.Action == MailUserAction.SendDraft)
             {
-                IMailFolder imapDestinationFolder= foldersDictionary.FirstOrDefault(x => x.Value.Folder== FolderType.Sent).Key;
+                IMailFolder imapDestinationFolder = foldersDictionary.FirstOrDefault(x => x.Value.Folder == FolderType.Sent).Key;
 
                 //AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, imapDestinationFolder).Result));
 
-                var messages=ImapMessagesList.Where(x => cachedMailUserAction.Uds.Any(y => x.MessageIdInDB == y)).ToList();
+                var messages = ImapMessagesList.Where(x => cachedMailUserAction.Uds.Any(y => x.MessageIdInDB == y)).ToList();
 
                 AddTask(new Task<bool>(() => SetFlagsInImap(messages, MailUserAction.SetAsDeleted).Result));
 
@@ -606,7 +605,7 @@ public class SimpleImapClient : IDisposable
 
                     await ImapWorkFolder.ExpungeAsync();
 
-                    ImapMessagesList.RemoveAll(x=>messageDescriptors.Any(y=>x.MessageIdInDB==y.MessageIdInDB));
+                    ImapMessagesList.RemoveAll(x => messageDescriptors.Any(y => x.MessageIdInDB == y.MessageIdInDB));
 
                     break;
             }
@@ -670,11 +669,18 @@ public class SimpleImapClient : IDisposable
 
         while (asyncTasks.TryDequeue(out var task))
         {
-            task.Start();
+            try
+            {
+                task.Start();
 
-            var result = await task.WaitAsync(CancelToken.Token);
+                var result = await task.WaitAsync(CancelToken.Token);
 
-            if (!result) _log.WarnSimpleImapAddTask($"Task {task.Id} fault.");
+                if (!result) _log.WarnSimpleImapAddTask($"Task {task.Id} fault.");
+            }
+            catch (Exception ex)
+            {
+                _log.Error($"TaskManager error: {ex.Message}");
+            }
         }
 
         if (CancelToken.IsCancellationRequested || (ImapWorkFolder == null) || (!imap.IsAuthenticated) || (!IsReady))
@@ -686,7 +692,7 @@ public class SimpleImapClient : IDisposable
         }
         else
         {
-            SetIdle().ContinueWith(TaskManager);
+            await SetIdle().ContinueWith(TaskManager);
         }
     }
 
@@ -928,11 +934,15 @@ public class SimpleImapClient : IDisposable
 
         return result;
     }
-    
+
 
     private async Task<bool> CreateFolderInIMAP(string name, string parentName)
     {
-        var parentFolder = foldersDictionary.Keys.FirstOrDefault(x => x.Name == parentName);
+        var parentFolder = string.IsNullOrEmpty(parentName) ?
+            imap.GetFolder(imap.PersonalNamespaces[0]) :
+            foldersDictionary.Keys.FirstOrDefault(x => x.Name == parentName);
+
+        if (parentFolder == null) return false;
 
         var newFolder = await parentFolder.CreateAsync(name, true);
 
