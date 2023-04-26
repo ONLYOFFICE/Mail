@@ -194,7 +194,7 @@ public class MailClient : IDisposable
 
     bool CertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
     {
-        Log.DebugMailClientCertificateCallback(certificate.Subject);
+        Log.DebugMailClientCertificateCallback(certificate?.Subject);
 
         if (sslPolicyErrors == SslPolicyErrors.None)
         {

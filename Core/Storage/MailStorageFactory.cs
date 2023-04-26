@@ -8,11 +8,7 @@ namespace ASC.Mail.Core.Storage
     [Scope(Additional = typeof(StorageFactoryExtension))]
     public class MailStorageFactory
     {
-        private const string DefaultTenantName = "default";
-
         private readonly StorageFactoryConfig _storageFactoryConfig;
-
-        private readonly SettingsManager _settingsManager;
 
         private readonly StorageSettingsHelper _storageSettingsHelper;
 
@@ -20,11 +16,10 @@ namespace ASC.Mail.Core.Storage
 
         private readonly IServiceProvider _serviceProvider;
 
-        public MailStorageFactory(IServiceProvider serviceProvider, StorageFactoryConfig storageFactoryConfig, SettingsManager settingsManager, StorageSettingsHelper storageSettingsHelper, CoreBaseSettings coreBaseSettings)
+        public MailStorageFactory(IServiceProvider serviceProvider, StorageFactoryConfig storageFactoryConfig, StorageSettingsHelper storageSettingsHelper, CoreBaseSettings coreBaseSettings)
         {
             _serviceProvider = serviceProvider;
             _storageFactoryConfig = storageFactoryConfig;
-            _settingsManager = settingsManager;
             _storageSettingsHelper = storageSettingsHelper;
             _coreBaseSettings = coreBaseSettings;
         }
@@ -38,24 +33,18 @@ namespace ASC.Mail.Core.Storage
         }
 
 
-        public IDataStore GetStorage(int tenant, string module, string region = "current")
+        public IDataStore GetStorage(int tenant, string module)
         {
             MailTenantQuotaController service = GetMailQuotaContriller(tenant);
 
-            return GetStorage(tenant, module, service, region);
+            return GetStorage(tenant, module, service);
         }
 
-        public IDataStore GetStorage(int? tenant, string module, IQuotaController controller, string region = "current")
+        public IDataStore GetStorage(int? tenant, string module, IQuotaController controller)
         {
             string tenantPath = (tenant.HasValue ? TenantPath.CreatePath(tenant.Value) : TenantPath.CreatePath("default"));
 
-            ASC.Data.Storage.Configuration.Storage storage = _storageFactoryConfig.GetStorage(region);
-            if (storage == null)
-            {
-                throw new InvalidOperationException("config section not found");
-            }
-
-            StorageSettings baseStorageSettings = new StorageSettings();
+            DataStoreConsumer dataStoreConsumer = new();
 
             //Change serializer to newtonsoft.json
             try
@@ -72,9 +61,27 @@ namespace ASC.Mail.Core.Storage
 
                 text = text.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{", ",");
 
-                if(!string.IsNullOrEmpty(text))
+                if (!string.IsNullOrEmpty(text))
                 {
-                    baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
+                    var baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
+
+                    if (baseStorageSettings != null && baseStorageSettings.Module.ToLower() == "s3")
+                    {
+                        var coreSettings = _serviceProvider.GetRequiredService<CoreSettings>();
+
+                        string AuthKey_S3acesskey = "AuthKey_S3acesskey";
+                        string AuthKey_S3secretaccesskey = "AuthKey_S3secretaccesskey";
+
+
+                        string AuthKey_S3acesskey_Value = coreSettings.GetSetting(AuthKey_S3acesskey);
+                        string AuthKey_S3secretaccesskey_Value = coreSettings.GetSetting(AuthKey_S3secretaccesskey);
+
+
+                        baseStorageSettings.Props.Add(AuthKey_S3acesskey, AuthKey_S3acesskey_Value);
+                        baseStorageSettings.Props.Add(AuthKey_S3secretaccesskey, AuthKey_S3secretaccesskey_Value);
+
+                        dataStoreConsumer = _storageSettingsHelper.DataStoreConsumer(baseStorageSettings);
+                    }
                 }
             }
             catch (Exception ex)
@@ -82,7 +89,7 @@ namespace ASC.Mail.Core.Storage
 
             }
 
-            return GetDataStore(tenantPath, module, _storageSettingsHelper.DataStoreConsumer(baseStorageSettings), controller, region);
+            return GetDataStore(tenantPath, module, dataStoreConsumer, controller);
         }
 
         public IDataStore GetStorageFromConsumer(int tenant, string module, DataStoreConsumer consumer, string region = "current")

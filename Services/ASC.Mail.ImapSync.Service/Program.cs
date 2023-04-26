@@ -1,4 +1,5 @@
-﻿using NLog;
+﻿using ASC.Common.DependencyInjection;
+using NLog;
 
 string Namespace = typeof(ImapSyncService).Namespace;
 string AppName = Namespace.Substring("ASC.Mail".Length + 1);
@@ -60,6 +61,12 @@ builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConf
 
 builder.Services.AddHostedService<ImapSyncService>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
+{
+    builder.Register(context.Configuration, false, true);
+});
+
 builder.Services.AddMailServices();
 
 var app = builder.Build();

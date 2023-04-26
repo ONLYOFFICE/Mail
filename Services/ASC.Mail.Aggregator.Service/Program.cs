@@ -1,4 +1,4 @@
-﻿using ASC.Core.Billing;
+﻿using ASC.Common.DependencyInjection;
 using ASC.Mail.Core.Extensions;
 using NLog;
 using StackExchange.Redis.Extensions.Core.Configuration;
@@ -67,6 +67,11 @@ builder.Services.AddSingleton(new ConsoleParser(args));
 
 builder.Services.AddHostedService<AggregatorServiceLauncher>();
 builder.Services.Configure<HostOptions>(opts => opts.ShutdownTimeout = TimeSpan.FromSeconds(15));
+
+builder.Host.ConfigureContainer<ContainerBuilder>((context, builder) =>
+{
+    builder.Register(context.Configuration, false, true);
+});
 
 var redisConfiguration = builder.Configuration.GetSection("mail:ImapSync:Redis").Get<RedisConfiguration>();
 builder.Services.AddStackExchangeRedisExtensions<NewtonsoftSerializer>(redisConfiguration);
