@@ -1387,8 +1387,6 @@ public class MessageEngine : BaseEngine
         // Using id_user as domain in S3 Storage - allows not to add quota to tenant.
         var savePath = MailStoragePathCombiner.GetBodyKey(mailBoxData.UserId, messageItem.StreamId);
 
-        Storage.QuotaController = new EmptyQuotaController();
-
         try
         {
             string response;

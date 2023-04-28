@@ -605,10 +605,10 @@
 	  "parameters": {
 		  "name": "s3",
 		  "order": "20",
-		  "props": {
+			"props": {
 			"acesskey": "",
 			"secretaccesskey": ""
-		  },
+			},
 		  "additional": {
 			"handlerType" : "ASC.Data.Storage.S3.S3Storage, ASC.Data.Storage",
 			"bucket" : "",

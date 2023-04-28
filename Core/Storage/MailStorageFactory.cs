@@ -49,7 +49,6 @@ namespace ASC.Mail.Core.Storage
             //Change serializer to newtonsoft.json
             try
             {
-
                 var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
 
                 using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
@@ -67,19 +66,6 @@ namespace ASC.Mail.Core.Storage
 
                     if (baseStorageSettings != null && baseStorageSettings.Module.ToLower() == "s3")
                     {
-                        var coreSettings = _serviceProvider.GetRequiredService<CoreSettings>();
-
-                        string AuthKey_S3acesskey = "AuthKey_S3acesskey";
-                        string AuthKey_S3secretaccesskey = "AuthKey_S3secretaccesskey";
-
-
-                        string AuthKey_S3acesskey_Value = coreSettings.GetSetting(AuthKey_S3acesskey);
-                        string AuthKey_S3secretaccesskey_Value = coreSettings.GetSetting(AuthKey_S3secretaccesskey);
-
-
-                        baseStorageSettings.Props.Add(AuthKey_S3acesskey, AuthKey_S3acesskey_Value);
-                        baseStorageSettings.Props.Add(AuthKey_S3secretaccesskey, AuthKey_S3secretaccesskey_Value);
-
                         dataStoreConsumer = _storageSettingsHelper.DataStoreConsumer(baseStorageSettings);
                     }
                 }
@@ -137,8 +123,6 @@ namespace ASC.Mail.Core.Storage
         {
             var mailTenantQuotaController = _serviceProvider.GetRequiredService<MailTenantQuotaController>();
             mailTenantQuotaController.Init(tenant);
-
-            //var mailTenantQuotaController = new EmptyQuotaController();
 
             return GetStorage(tenant, DefineConstants.MODULE_NAME, mailTenantQuotaController);
         }
