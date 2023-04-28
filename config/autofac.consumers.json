@@ -593,17 +593,17 @@
 		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
 		}, 
 		{
-		  "key": "s3",
+		  "key": "S3",
 		  "type": "ASC.Core.Common.Configuration.Consumer, ASC.Core.Common"
 		}, 
 		{
-		  "key": "s3",
+		  "key": "S3",
 		  "type": "ASC.Core.Common.Configuration.DataStoreConsumer, ASC.Core.Common"
 		}
       ],
 	  "instanceScope": "perlifetimescope",
 	  "parameters": {
-		  "name": "s3",
+		  "name": "S3",
 		  "order": "20",
 			"props": {
 			"acesskey": "",

@@ -16,12 +16,19 @@ namespace ASC.Mail.Core.Storage
 
         private readonly IServiceProvider _serviceProvider;
 
-        public MailStorageFactory(IServiceProvider serviceProvider, StorageFactoryConfig storageFactoryConfig, StorageSettingsHelper storageSettingsHelper, CoreBaseSettings coreBaseSettings)
+        private readonly ILogger _log;
+
+        public MailStorageFactory(IServiceProvider serviceProvider,
+            StorageFactoryConfig storageFactoryConfig,
+            StorageSettingsHelper storageSettingsHelper,
+            CoreBaseSettings coreBaseSettings,
+            ILoggerProvider logProvider)
         {
             _serviceProvider = serviceProvider;
             _storageFactoryConfig = storageFactoryConfig;
             _storageSettingsHelper = storageSettingsHelper;
             _coreBaseSettings = coreBaseSettings;
+            _log = logProvider.CreateLogger("ASC.Mail.Core.Storage.MailStorageFactory");
         }
 
         public MailTenantQuotaController GetMailQuotaContriller(int tenant)
@@ -32,7 +39,6 @@ namespace ASC.Mail.Core.Storage
             return service;
         }
 
-
         public IDataStore GetStorage(int tenant, string module)
         {
             MailTenantQuotaController service = GetMailQuotaContriller(tenant);
@@ -40,40 +46,13 @@ namespace ASC.Mail.Core.Storage
             return GetStorage(tenant, module, service);
         }
 
-        public IDataStore GetStorage(int? tenant, string module, IQuotaController controller)
+        public IDataStore GetStorage(int tenant, string module, IQuotaController controller)
         {
-            string tenantPath = (tenant.HasValue ? TenantPath.CreatePath(tenant.Value) : TenantPath.CreatePath("default"));
+            string tenantPath = TenantPath.CreatePath(tenant);
 
-            DataStoreConsumer dataStoreConsumer = new();
+            DataStoreConsumer dataStoreConsumer = _coreBaseSettings.Standalone ? GetBaseStorageSettings(tenant) : new();
 
-            //Change serializer to newtonsoft.json
-            try
-            {
-                var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
-
-                using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
-                string text = (from r in webstudioDbContext.WebstudioSettings
-                               where r.Id == new Guid("f13eaf2d-fa53-44f1-a6d6-a5aeda46fa2b")
-                               where r.TenantId == tenant
-                               where r.UserId == new Guid("00000000-0000-0000-0000-000000000000")
-                               select r.Data).FirstOrDefault();
-
-                text = text.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{", ",");
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    var baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
-
-                    if (baseStorageSettings != null && baseStorageSettings.Module.ToLower() == "s3")
-                    {
-                        dataStoreConsumer = _storageSettingsHelper.DataStoreConsumer(baseStorageSettings);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
+            _log.LogDebug($"GetStorage for tenant {tenant}, standalone={_coreBaseSettings.Standalone}, {dataStoreConsumer.Name}");
 
             return GetDataStore(tenantPath, module, dataStoreConsumer, controller);
         }
@@ -105,6 +84,9 @@ namespace ASC.Mail.Core.Storage
             Handler handler = storage.GetHandler(moduleElement.Type);
             Type instanceType;
             IDictionary<string, string> props;
+
+            _log.LogDebug($"GetDataStore consumer.IsSet={consumer.IsSet}");
+
             if (_coreBaseSettings.Standalone && !moduleElement.DisableMigrate && consumer.IsSet)
             {
                 instanceType = consumer.HandlerType;
@@ -116,15 +98,53 @@ namespace ASC.Mail.Core.Storage
                 props = handler.Property.ToDictionary((Properties r) => r.Name, (Properties r) => r.Value);
             }
 
+            _log.LogDebug($"GetDataStore instanceType={instanceType}");
+
             return ((IDataStore)ActivatorUtilities.CreateInstance(_serviceProvider, instanceType)).Configure(tenantPath, handler, moduleElement, props).SetQuotaController(moduleElement.Count ? controller : null);
         }
 
         public IDataStore GetMailStorage(int tenant)
         {
-            var mailTenantQuotaController = _serviceProvider.GetRequiredService<MailTenantQuotaController>();
-            mailTenantQuotaController.Init(tenant);
+            var mailTenantQuotaController = GetMailQuotaContriller(tenant);
 
             return GetStorage(tenant, DefineConstants.MODULE_NAME, mailTenantQuotaController);
+        }
+
+        private DataStoreConsumer GetBaseStorageSettings(int tenant)
+        {
+            try
+            {
+                var _dbContextFactory = _serviceProvider.GetRequiredService<IDbContextFactory<WebstudioDbContext>>();
+
+                using WebstudioDbContext webstudioDbContext = _dbContextFactory.CreateDbContext();
+                string text = (from r in webstudioDbContext.WebstudioSettings
+                               where r.Id == new Guid("f13eaf2d-fa53-44f1-a6d6-a5aeda46fa2b")
+                               where r.TenantId == tenant
+                               where r.UserId == new Guid("00000000-0000-0000-0000-000000000000")
+                               select r.Data).FirstOrDefault();
+
+                text = text?.Replace("\"Key\":", "").Replace(",\"Value\"", "").Replace("[", "").Replace("]", "").Replace("},{", ",");
+
+                if (!string.IsNullOrEmpty(text))
+                {
+                    var baseStorageSettings = System.Text.Json.JsonSerializer.Deserialize<StorageSettings>(text); //settingsManager.Load<StorageSettings>();
+
+                    if (baseStorageSettings != null && baseStorageSettings.Module.ToLower() == "s3")
+                    {
+                        _log.LogDebug($"GetBaseStorageSettings from string: {text}");
+
+                        return _storageSettingsHelper.DataStoreConsumer(baseStorageSettings);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.LogError($"GetBaseStorageSettings for tenant {tenant} from string: {ex.Message}");
+            }
+
+            _log.LogDebug($"GetBaseStorageSettings -> Default");
+
+            return new();
         }
     }
 }
