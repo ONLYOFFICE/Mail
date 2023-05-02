@@ -1,0 +1,269 @@
+println("Job name: ${JOB_NAME}")
+
+switch(JOB_NAME) {
+  case "STAGE.SAAS/stage.saas.build.mailagg":
+    region="STAGE"
+    reg_name="sg"
+    number_agg="1"
+    name_agg="sg_stage.com"
+    break
+  case "production.onlyoffice.mailaggregator.saas.sg.pl":
+    region="SG"
+    reg_name="sg"
+    number_agg="1"
+    name_agg="sg.com"
+    break
+  case "production.onlyoffice.mailaggregator.saas.com.pl":
+    region="COM"
+    reg_name="com"
+    number_agg="3"
+    name_agg="com"
+    break
+  case "production.onlyoffice.mailaggregator.saas.centraleu.pl":
+    region="EU"
+    reg_name="eu"
+    number_agg="4"
+    name_agg="centraleu.com"
+    break
+  case "production.onlyoffice.mailaggregator.saas.info.pl":
+    region="INFO"
+    reg_name="info"
+    number_agg="1"
+    name_agg="info"
+    break
+  case "production.onlyoffice.mailaggregator.saas.guru.pl":
+    region="GURU"
+    reg_name="guru"
+    number_agg="1"
+    name_agg="guru.info"
+    break
+  default:
+    println("JOB: ${JOB_NAME} not known.")
+    System.exit(1)
+}
+
+println("region: ${region}")
+println("region name: ${reg_name}")
+println("number of aggregators: ${number_agg}")
+println("name of aggregators: ${name_agg}")
+
+
+AggBuildNumbers = []
+
+node('ubuntu') {
+  script {
+    withCredentials([usernamePassword(credentialsId: 'jenkins_user_api', 
+                    passwordVariable: 'token', 
+                    usernameVariable: 'jenkins_user')]) {
+      
+      sh '''
+        curl -k -s -u ${jenkins_user}:${token} "https://buildserver.onlyoffice.com/job/release.mail.precompiled/api/xml" > out.xml
+        xmlstarlet sel -T -t -m "freeStyleProject/build" -n -v number out.xml > builds_list
+        sed -i -z -e 's^\\n^LastBuild\\n^' builds_list
+      '''
+    }
+    
+    AggBuildNumbers = readFile(file: 'builds_list').readLines()
+  }
+}
+
+pipeline {
+  agent {label 'ubuntu'}
+  environment {
+    region = "${region}"
+    reg_name = "${reg_name}"
+    number_agg = "${number_agg}"
+    name_agg = "${name_agg}"
+  }
+  options {
+    disableConcurrentBuilds()
+    buildDiscarder (logRotator(numToKeepStr: '5', artifactNumToKeepStr: '5'))
+  }  
+  parameters {
+    gitParameter  name: 'PIPELINE_BRANCH', 
+      type: 'PT_BRANCH',
+      branchFilter: '.*',
+      listSize: '5',
+      defaultValue: '*/master',
+      selectedValue: 'DEFAULT',
+      sortMode: 'ASCENDING_SMART',
+      description: 'Select branch name to pipeline'
+      
+    gitParameter  name: 'BRANCH_CONF', 
+      type: 'PT_BRANCH',
+      useRepository: 'https://github.com/ONLYOFFICE/AppServer_Private.git',
+      branchFilter: '.*',
+      listSize: '5',
+      defaultValue: '*/master',
+      selectedValue: 'DEFAULT',
+      sortMode: 'ASCENDING_SMART',
+      description: 'Select branch name to build'
+      
+//    choice(name: 'REGION', choices: ['sg','com','eu'],description: 'CHOISE REGION')
+    choice(name: 'MAIL_AGG_BUILD', choices: AggBuildNumbers, description: 'Project release.mail.precompiled')
+    choice(name: 'DEPLOY', choices: ['False','True'],description: 'Run deploy? Set "True" to run, "False" to update job')
+  }
+  
+  stages {
+    stage ('Clone repos') {
+      steps {
+        checkout([$class: 'GitSCM', 
+          branches: [[name: "${BRANCH_CONF}"]], 
+          doGenerateSubmoduleConfigurations: false, 
+          extensions: [[$class: 'CleanBeforeCheckout'], 
+                      [$class: 'SubmoduleOption', 
+                                disableSubmodules: false, 
+                                parentCredentials: false, 
+                                recursiveSubmodules: true, 
+                                reference: '', trackingSubmodules: false], 
+                      [$class: 'RelativeTargetDirectory', 
+                                relativeTargetDir: 'mailagg_config']], 
+          gitTool: 'Default', submoduleCfg: [], 
+          userRemoteConfigs: [[credentialsId: 'JenkinsRobo.onlyoffice.com', 
+            url: 'https://github.com/ONLYOFFICE/AppServer_Private.git']]])
+      }
+    }
+    
+    stage ('Prepair stage config') {
+      when {
+        allOf { expression { return env.DEPLOY == "True" }; expression { return env.JOB_NAME == "STAGE.SAAS/stage.saas.build.mailagg" } }
+      }
+      steps {
+        script {
+          try {
+            copyArtifacts filter: 'env.txt', fingerprintArtifacts: true, projectName: 'stage.saas', selector: upstream();
+          } catch(Exception e) {
+            copyArtifacts filter: 'env.txt', fingerprintArtifacts: true, projectName: 'stage.saas', selector: lastWithArtifacts();
+          }
+        }
+        
+        load "env.txt"
+        
+        sh '''
+          cd mailagg_config/config/STAGE/
+          
+          grep -rl "{{ EP_RDS }}"     | xargs sed -i "s^{{ EP_RDS }}^$STAGE_RDS^"
+          grep -rl "{{ EP_ELASTIC }}" | xargs sed -i "s^{{ EP_ELASTIC }}^$STAGE_ELK^"
+        '''
+      }
+    }
+
+    stage ('Build mailaggregator') {
+      when { expression { return env.DEPLOY == "True" } }
+      steps {
+        script {
+          if (env.MAIL_AGG_BUILD == 'LastBuild') {
+            copyArtifacts filter: 'PrecompiledMail-Linux64.tar.gz', fingerprintArtifacts: true, projectName: 'release.mail.precompiled'
+          } else {
+            copyArtifacts filter: 'PrecompiledMail-Linux64.tar.gz', fingerprintArtifacts: true, projectName: 'release.mail.precompiled', selector: specific(env.MAIL_AGG_BUILD)
+          }
+        }
+
+        sh '''
+          echo "${region}"
+          echo "${reg_name}"
+          echo "${number_agg}"
+          echo "${name_agg}"
+          
+          rm -rf build/
+          mkdir -p build/
+          
+          tar -zxvf PrecompiledMail-Linux64.tar.gz -C build
+          mv build/mail-config/ build/config/
+          cp mailagg_config/config/${region}/*.${reg_name}.json build/config/
+          rm -f build/config/*.production.json
+          
+          tar -C build/ -cvzf mailagg.tar.gz Services config
+        '''
+      }
+    }
+    
+    stage('Deploy mailaggregators') {
+      when { expression { return env.DEPLOY == "True" } }
+      parallel {
+        stage('Deploy 1 mailaggregator') {
+          when { 
+            anyOf { expression { return env.number_agg == "1" }; 
+                    expression { return env.number_agg == "2" }; 
+                    expression { return env.number_agg == "3" }; 
+                    expression { return env.number_agg == "4" } 
+                  }
+          }
+          steps {
+            DeployMailagg(name_agg, 1)
+          }
+        }
+
+        stage('Deploy 2 mailaggregator') {
+          when { 
+            anyOf { expression { return env.number_agg == "2" }; 
+                    expression { return env.number_agg == "3" }; 
+                    expression { return env.number_agg == "4" } 
+                  }
+          }
+          steps {
+            DeployMailagg(name_agg, 2)
+          }
+        }
+
+        stage('Deploy 3 mailaggregator') {
+          when { 
+            anyOf { expression { return env.number_agg == "3" }; 
+                    expression { return env.number_agg == "4" } 
+                  }
+          }
+          steps {
+            DeployMailagg(name_agg, 3)
+          }
+        }
+
+        stage('Deploy 4 mailaggregator') {
+          when { expression { return env.number_agg == "4" } }
+          steps {
+            DeployMailagg(name_agg, 4)
+          }
+        }
+      }
+    }
+  }
+}
+
+def DeployMailagg(NameAgg, NumAgg) {
+  sshPublisher(publishers: [sshPublisherDesc(configName: "aggregator@${NameAgg}${NumAgg}", 
+              transfers: [sshTransfer(cleanRemote: false, 
+              excludes: '', 
+              execCommand: '''
+                sudo systemctl stop MailAgg
+                sudo systemctl stop MailAgg2      || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl stop MailCleaner   || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl stop MailWatchdog  || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl stop MailImap      || echo "SERVICE NOT EXIST, BUT ITS OK"
+                
+                datestamp=$(date +"%Y%m%d_%H%M%S")
+                
+                sudo rm -rf /app/backup*
+                sudo mv /app/appserver /app/backup_$datestamp
+                sudo mkdir -p /app/appserver
+                sudo tar -xzf /home/ubuntu/deploy/mailagg.tar.gz -C /app/appserver/
+                sudo find /app/appserver/ -type d -exec chmod 755 {} \\;
+                sudo find /app/appserver/ -type f -exec chmod 644 {} \\;
+                
+                sudo systemctl start MailAgg
+                sudo systemctl start MailAgg2     || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl start MailCleaner  || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl start MailWatchdog || echo "SERVICE NOT EXIST, BUT ITS OK"
+                sudo systemctl start MailImap     || echo "SERVICE NOT EXIST, BUT ITS OK"
+              ''', 
+              execTimeout: 180000, 
+              flatten: false, 
+              makeEmptyDirs: false, 
+              noDefaultExcludes: false, 
+              patternSeparator: '[, ]+', 
+              remoteDirectory: '', 
+              remoteDirectorySDF: false, 
+              removePrefix: '', 
+              sourceFiles: 'mailagg.tar.gz')], 
+              usePromotionTimestamp: false, 
+              useWorkspaceInPromotion: false, 
+              verbose: false)])
+}
