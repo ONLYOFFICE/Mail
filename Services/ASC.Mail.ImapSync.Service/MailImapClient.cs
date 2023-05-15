@@ -89,16 +89,32 @@ public class MailImapClient : IDisposable
                     case MailUserAction.MoveTo:
                         if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
                         {
-                            actionFromCache.Data = simpleImapClients.FirstOrDefault(x => x.UserFolderID == (int?)actionFromCache.UserFolderId)?.ImapWorkFolderFullName;
+                            if(actionFromCache.UserFolderId.HasValue)
+                            {
+                                var userFolderId = (int)actionFromCache.UserFolderId.Value;
+
+                                var simpleImapClient = simpleImapClients
+                                    .FirstOrDefault(x => x.UserFolderID.HasValue
+                                    && x.UserFolderID.Value== userFolderId);
+                                if (simpleImapClient != null)
+                                {
+                                    actionFromCache.Data = simpleImapClient.ImapWorkFolderFullName;
+
+                                    simpleImapClient.ExecuteUserAction(actionFromCache);
+                                }
+                            } 
                         }
-                        simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache));
+                        else
+                        {
+                            simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache));
+                        }
                         break;
                     case MailUserAction.ReceiptStatusChanged:
                         break;
                     case MailUserAction.Restore:
                         break;
                     case MailUserAction.CreateFolder:
-                        ExecutActionCreateUserFolder(actionFromCache);
+                        //ExecutActionCreateUserFolder(actionFromCache);
                         break;
                     case MailUserAction.UpdateDrafts:
                         ExecutActionUpdateDrafts(actionFromCache);
