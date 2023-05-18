@@ -1003,11 +1003,24 @@ public class SimpleImapClient : IDisposable
 
         if (parentFolder == null) return null;
 
-        var newFolder = await parentFolder.CreateAsync(name, true);
+        try
+        {
+            var newFolder = await parentFolder.CreateAsync(name, true);
 
-        AddImapFolderToDictionary(newFolder);
+            await newFolder.SubscribeAsync();
 
-        return newFolder;
+            await newFolder.CheckAsync();
+
+            AddImapFolderToDictionary(newFolder);
+
+            return newFolder;
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"CreateFolderInIMAP: {ex.Message}");
+        }
+
+        return null;
     }
 
     private async Task<bool> DeleteFolderInIMAP(string fullName)
