@@ -1009,8 +1009,6 @@ public class SimpleImapClient : IDisposable
 
             await newFolder.SubscribeAsync();
 
-            await newFolder.CheckAsync();
-
             AddImapFolderToDictionary(newFolder);
 
             return newFolder;
