@@ -89,25 +89,22 @@ public class MailImapClient : IDisposable
                     case MailUserAction.MoveTo:
                         if (actionFromCache.Action == MailUserAction.MoveTo && actionFromCache.Destination == (int)FolderType.UserFolder)
                         {
-                            if(actionFromCache.UserFolderId.HasValue)
+                            if (actionFromCache.UserFolderId.HasValue)
                             {
                                 var userFolderId = (int)actionFromCache.UserFolderId.Value;
 
                                 var simpleImapClient = simpleImapClients
                                     .FirstOrDefault(x => x.UserFolderID.HasValue
-                                    && x.UserFolderID.Value== userFolderId);
-                                if (simpleImapClient != null)
-                                {
-                                    actionFromCache.Data = simpleImapClient.ImapWorkFolderFullName;
+                                    && x.UserFolderID.Value == userFolderId);
 
-                                    simpleImapClient.ExecuteUserAction(actionFromCache);
-                                }
-                            } 
+                                actionFromCache.Data = simpleImapClient != null ?
+                                    actionFromCache.Data = simpleImapClient.ImapWorkFolderFullName :
+                                    GetFullPathUserFolder(userFolderId);
+                            }
                         }
-                        else
-                        {
-                            simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache));
-                        }
+
+                        simpleImapClients.ForEach(x => x.ExecuteUserAction(actionFromCache));
+
                         break;
                     case MailUserAction.ReceiptStatusChanged:
                         break;
@@ -1254,40 +1251,45 @@ public class MailImapClient : IDisposable
         }
     }
 
-    private void ExecutActionCreateUserFolder(CashedMailUserAction action)
+    private string GetFullPathUserFolder(int userFolderId)
     {
         _enginesFactorySemaphore.Wait();
 
+        List<string> result = new List<string>();
+
         try
         {
+
+
             _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
 
-            var simpleImapClientsForCleateFolder = simpleImapClients
-                .Where(x => x.Folder == FolderType.Inbox && x.ImapWorkFolder.ParentFolder.Name == "")
-                .ToList();
+            var newFolder = _mailEnginesFactory.UserFolderEngine.Get(userFolderId);
 
-            var newFolders = _mailEnginesFactory.UserFolderEngine.GetList(action.Uds);
+            result.Add(newFolder.Name);
 
-            foreach (var simpleImapClient in simpleImapClientsForCleateFolder)
+            var parentFolder = _mailEnginesFactory.UserFolderEngine.Get(newFolder.ParentId);
+
+            while (parentFolder != null)
             {
-                foreach (var folder in newFolders)
-                {
-                    var perentFolder = _mailEnginesFactory.UserFolderEngine.Get(folder.ParentId);
+                result.Add(parentFolder.Name);
 
-                    string perentFolderName = perentFolder == null ? "" : perentFolder.Name;
-
-                    if (simpleImapClient != null) simpleImapClient.TryCreateFolderInIMAP(folder.Name, perentFolderName);
-                }
+                parentFolder = _mailEnginesFactory.UserFolderEngine.Get(parentFolder.ParentId);
             }
+
+            char separator = simpleImapClients[0].ImapWorkFolder.DirectorySeparator;
+
+            return String.Join(separator, Enumerable.Reverse(result).ToList());
         }
         catch (Exception ex)
         {
-            _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionCreateUserFolder", ex.Message);
+            _log.ErrorMailImapClientFromRedisPipeline($"ExecutActionCreateUserFolderAndMoveMessages", ex.Message);
         }
         finally
         {
             if (_enginesFactorySemaphore.CurrentCount == 0) _enginesFactorySemaphore.Release();
         }
+
+        return "";
     }
 
     private async Task<bool> ExecutActionDeleteUserFolder(CashedMailUserAction action)

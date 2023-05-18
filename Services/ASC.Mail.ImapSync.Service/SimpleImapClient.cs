@@ -983,9 +983,13 @@ public class SimpleImapClient : IDisposable
 
         if (path.Length == 1) return await CreateFolderInIMAP(fullName, "");
 
+        string parentsPath = path[0];
+
         for (int i = 1; i < path.Length; i++)
         {
             result = await CreateFolderInIMAP(path[i], path[i - 1]);
+
+            parentsPath = parentsPath + ImapWorkFolder.DirectorySeparator + path[i];
         }
 
         return result;
