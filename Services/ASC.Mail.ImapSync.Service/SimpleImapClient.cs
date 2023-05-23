@@ -13,7 +13,7 @@ public class SimpleImapClient : IDisposable
     public int CheckServerAliveMitutes { get; set; } = 0;
     public List<MessageDescriptor> ImapMessagesList { get; set; }
     public IMailFolder ImapWorkFolder { get; private set; }
-    public string ImapWorkFolderFullName => ImapWorkFolder.FullName;
+    public string ImapWorkFolderFullName => ImapWorkFolder == null ? "" : ImapWorkFolder.FullName;
     public ASC.Mail.Models.MailFolder MailWorkFolder => foldersDictionary[ImapWorkFolder];
     public FolderType Folder => MailWorkFolder.Folder;
     public IMailFolder GetImapFolderByType(int folderType) => foldersDictionary.FirstOrDefault(x => x.Value.Folder == (FolderType)folderType).Key;
@@ -115,7 +115,6 @@ public class SimpleImapClient : IDisposable
 
         try
         {
-
             if ((FolderType)cachedMailUserAction.Destination == FolderType.Trash)
             {
                 AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, _trashFolder).Result));
@@ -143,6 +142,13 @@ public class SimpleImapClient : IDisposable
                 if ((FolderType)cachedMailUserAction.Destination == FolderType.UserFolder)
                 {
                     imapDestinationFolder = foldersDictionary.Keys.FirstOrDefault(x => x.FullName == cachedMailUserAction.Data);
+
+                    if (imapDestinationFolder == null)
+                    {
+                        AddTask(new Task<bool>(() => MoveMessageInImap(ImapWorkFolder, messagesOfThisClient, cachedMailUserAction.Data).Result));
+
+                        return;
+                    }
                 }
                 else
                 {
@@ -555,6 +561,40 @@ public class SimpleImapClient : IDisposable
         return true;
     }
 
+    private async Task<bool> MoveMessageInImap(IMailFolder sourceFolder, List<MessageDescriptor> messageDescriptors, string destinationFolderName)
+    {
+        var sFolder = sourceFolder == null ? "" : sourceFolder.Name;
+        var dFolder = destinationFolderName;
+
+        if (sourceFolder == null || string.IsNullOrEmpty(destinationFolderName) || messageDescriptors.Count == 0)
+        {
+            _log.DebugSimpleImapBadParametrs(sFolder, dFolder);
+
+            return false;
+        }
+
+        var uniqueIds = messageDescriptors.Select(x => x.UniqueId).ToList();
+
+        _log.DebugSimpleImapMoveMessageInImap(sFolder, dFolder, uniqueIds.Count);
+
+        var destinationFolder = await CreateFolderInIMAP(destinationFolderName);
+
+        try
+        {
+            var returnedUidl = await sourceFolder.MoveToAsync(uniqueIds, destinationFolder);
+
+            messageDescriptors.ForEach(messageDescriptor => ImapMessagesList.Remove(messageDescriptor));
+        }
+        catch (Exception ex)
+        {
+            _log.ErrorSimpleImapMoveMessageInImap(ex.Message);
+
+            return false;
+        }
+
+        return true;
+    }
+
     private async Task<bool> SetFlagsInImap(List<MessageDescriptor> messageDescriptors, MailUserAction action)
     {
         if (messageDescriptors.Count == 0) return false;
@@ -923,7 +963,7 @@ public class SimpleImapClient : IDisposable
         }
     }
 
-    public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => CreateFolderInIMAP(name, parentName).Result));
+    public void TryCreateFolderInIMAP(string name, string parentName) => AddTask(new Task<bool>(() => CreateFolderInIMAP(name, parentName).Result != null));
     public void TryDeleteFolderInIMAP(string name) => AddTask(new Task<bool>(() => DeleteFolderInIMAP(name).Result));
     public void TryCreateMessageInIMAP(MimeMessage message, MessageFlags flags, int messageId) => AddTask(new Task<bool>(() => CreateMessageInIMAP(message, flags, messageId).Result));
     public void TryGetNewMessage(MessageDescriptor messageDescriptors) => AddTask(new Task<bool>(() => GetNewMessage(messageDescriptors).Result));
@@ -935,22 +975,50 @@ public class SimpleImapClient : IDisposable
         return result;
     }
 
+    private async Task<IMailFolder> CreateFolderInIMAP(string fullName)
+    {
+        IMailFolder result = imap.GetFolder(imap.PersonalNamespaces[0].Path);
 
-    private async Task<bool> CreateFolderInIMAP(string name, string parentName)
+        string[] path = fullName.Split(ImapWorkFolder.DirectorySeparator);
+
+        if (path.Length == 1) return await CreateFolderInIMAP(fullName, "");
+
+        string parentsPath = path[0];
+
+        for (int i = 1; i < path.Length; i++)
+        {
+            result = await CreateFolderInIMAP(path[i], path[i - 1]);
+
+            parentsPath = parentsPath + ImapWorkFolder.DirectorySeparator + path[i];
+        }
+
+        return result;
+    }
+
+    private async Task<IMailFolder> CreateFolderInIMAP(string name, string parentName)
     {
         var parentFolder = string.IsNullOrEmpty(parentName) ?
-            imap.GetFolder(imap.PersonalNamespaces[0]) :
+            imap.GetFolder(imap.PersonalNamespaces[0].Path) :
             foldersDictionary.Keys.FirstOrDefault(x => x.Name == parentName);
 
-        if (parentFolder == null) return false;
+        if (parentFolder == null) return null;
 
-        var newFolder = await parentFolder.CreateAsync(name, true);
+        try
+        {
+            var newFolder = await parentFolder.CreateAsync(name, true);
 
-        if (newFolder == null) return false;
+            await newFolder.SubscribeAsync();
 
-        AddImapFolderToDictionary(newFolder);
+            AddImapFolderToDictionary(newFolder);
 
-        return true;
+            return newFolder;
+        }
+        catch (Exception ex)
+        {
+            _log.Error($"CreateFolderInIMAP: {ex.Message}");
+        }
+
+        return null;
     }
 
     private async Task<bool> DeleteFolderInIMAP(string fullName)
