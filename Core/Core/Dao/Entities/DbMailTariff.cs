@@ -52,7 +52,6 @@ public static class DbMailTariffExtension
                 .HasColumnType("datetime");
 
             entity.Property(e => e.CustomerId)
-                .IsRequired()
                 .HasColumnName("customer_id")
                 .HasColumnType("varchar(255)")
                 .HasCharSet("utf8")
