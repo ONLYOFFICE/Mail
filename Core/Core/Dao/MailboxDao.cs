@@ -430,13 +430,12 @@ public class MailboxDao : BaseMailDao, IMailboxDao
 
     public bool CanAccessTo(IMailboxExp exp)
     {
-        var foundIds = MailDbContext.MailMailboxes
+        var result = MailDbContext.MailMailboxes
             .AsNoTracking()
             .Where(exp.GetExpression())
-            .Select(mb => mb.Id)
-            .ToList();
+            .Any();
 
-        return foundIds.Any();
+        return result;
     }
 
     public MailboxStatus GetMailBoxStatus(IMailboxExp exp)

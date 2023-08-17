@@ -57,38 +57,9 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
                 Subject = string.Empty,
                 Html = string.Empty
             })
-            .Single();
+            .First();
 
         return autoreply;
-    }
-
-    public List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds)
-    {
-        var autoreplies = MailDbContext.MailMailboxAutoreplies
-            .AsNoTracking()
-            .Where(a => a.Tenant == Tenant && mailboxIds.Contains(a.IdMailbox))
-            .Select(ToAutoreply)
-            .ToList();
-
-        var notFoundIds = mailboxIds.Where(id => autoreplies.FirstOrDefault(a => a.MailboxId == id) == null).ToList();
-
-        foreach (var id in notFoundIds)
-        {
-            autoreplies.Add(new MailboxAutoreply
-            {
-                MailboxId = id,
-                Tenant = Tenant,
-                TurnOn = false,
-                OnlyContacts = false,
-                TurnOnToDate = false,
-                FromDate = DateTime.MinValue,
-                ToDate = DateTime.MinValue,
-                Subject = string.Empty,
-                Html = string.Empty
-            });
-        }
-
-        return autoreplies;
     }
 
     public int SaveAutoreply(MailboxAutoreply autoreply)

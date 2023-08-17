@@ -178,7 +178,6 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         }
 
         var dictionary = query
-            .ToList()
             .GroupBy(t => t.UFxMail.IdFolder)
             .ToDictionary(g => g.Key, g => g.Count());
 
@@ -203,28 +202,10 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
         }
 
         var dictionary = query
-            .ToList()
             .GroupBy(t => t.UFxMail.IdFolder)
             .ToDictionary(g => g.Key, g => g.Count());
 
         return dictionary;
-    }
-
-    public Tuple<int, int> GetRangeMails(IMessagesExp exp)
-    {
-        //TODO: fix: make one query
-
-        var max = MailDbContext.MailMails
-            .AsNoTracking()
-            .Where(exp.GetExpression())
-            .Max(m => m.Id);
-
-        var min = MailDbContext.MailMails
-            .AsNoTracking()
-            .Where(exp.GetExpression())
-            .Min(m => m.Id);
-
-        return new Tuple<int, int>(min, max);
     }
 
     public T GetFieldMaxValue<T>(IMessagesExp exp, string field)

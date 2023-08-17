@@ -108,7 +108,7 @@ public class UserFolderXMailDao : BaseMailDao, IUserFolderXMailDao
 
             MailDbContext.SaveChanges();
 
-            items = new List<MailUserFolderXMail>();
+            items.Clear();
         }
     }
 

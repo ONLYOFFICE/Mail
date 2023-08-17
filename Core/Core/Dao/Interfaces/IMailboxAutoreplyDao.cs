@@ -38,13 +38,6 @@ public interface IMailboxAutoreplyDao
     MailboxAutoreply GetAutoreply(Mailbox mailbox);
 
     /// <summary>
-    ///     Get a list of autoreply.
-    /// </summary>
-    /// <param name="mailboxIds"></param>
-    /// <returns>list of autoreply</returns>
-    List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds);
-
-    /// <summary>
     ///     Save or update autoreply
     /// </summary>
     /// <param name="autoreply"></param>

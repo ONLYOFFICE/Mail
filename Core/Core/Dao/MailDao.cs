@@ -104,19 +104,6 @@ public class MailDao : BaseMailDao, IMailDao
         return mail;
     }
 
-    public ASC.Mail.Core.Entities.Mail GetNextMail(IMessageExp exp)
-    {
-        var mail = MailDbContext.MailMails
-            .AsNoTracking()
-            .Where(exp.GetExpression())
-            .OrderBy(m => m.Id)
-            .Take(1)
-            .Select(ToMail)
-            .SingleOrDefault();
-
-        return mail;
-    }
-
     public List<string> GetExistingUidls(int mailboxId, List<string> uidlList)
     {
         var existingUidls = MailDbContext.MailMails

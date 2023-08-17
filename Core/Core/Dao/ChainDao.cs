@@ -42,12 +42,11 @@ public class ChainDao : BaseMailDao, IChainDao
 
     public List<Chain> GetChains(IConversationsExp exp)
     {
-        var dbChains = MailDbContext.MailChains
+        var chains = MailDbContext.MailChains
             .AsNoTracking()
             .Where(exp.GetExpression())
+            .Select(ToChain)
             .ToList();
-
-        var chains = dbChains.Select(ToChain).ToList();
 
         return chains;
     }
@@ -135,7 +134,6 @@ public class ChainDao : BaseMailDao, IChainDao
         var dictionary = query
              .GroupBy(t => new { t.UFxMail.IdFolder, t.Chain.Id })
              .Select(g => new { g.Key.IdFolder, g.Key.Id })
-             .ToList()
              .GroupBy(g => g.IdFolder)
              .ToDictionary(g => g.Key, g => g.Count());
 

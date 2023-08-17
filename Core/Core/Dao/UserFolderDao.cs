@@ -127,8 +127,7 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             .Where(t => t.FolderId == folderId)
             .OrderByDescending(t => t.Level)
             .Select(t => t.ParentId)
-            .Take(1)
-            .SingleOrDefault();
+            .FirstOrDefault();
 
         if (parentId == 0)
             return null;
@@ -139,39 +138,6 @@ public class UserFolderDao : BaseMailDao, IUserFolderDao
             .SingleOrDefault();
 
         return userFolder;
-    }
-
-    public UserFolder GetRootFolderByMailId(int mailId)
-    {
-        var folderId = MailDbContext.MailUserFolderXMails
-            .AsNoTracking()
-            .Where(ufxm => ufxm.IdMail == mailId)
-            .Select(ufxm => ufxm.IdFolder)
-            .Distinct()
-            .SingleOrDefault();
-
-        if (folderId == 0)
-            return null;
-
-        return GetRootFolder(folderId);
-    }
-
-    public List<UserFolder> GetParentFolders(int folderId)
-    {
-        var list = MailDbContext.MailUserFolders
-            .AsNoTracking()
-            .Join(MailDbContext.MailUserFolderTrees, uf => uf.Id, t => t.ParentId,
-            (uf, t) => new
-            {
-                UserFolder = uf,
-                UserFolderTree = t
-            })
-            .Where(o => o.UserFolderTree.FolderId == folderId)
-            .OrderByDescending(o => o.UserFolderTree.Level)
-            .Select(o => ToUserFolder(o.UserFolder))
-            .ToList();
-
-        return list;
     }
 
     public int Save(UserFolder folder)

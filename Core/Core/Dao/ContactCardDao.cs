@@ -45,16 +45,14 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
         var contacts = MailDbContext.MailContacts
             .AsNoTracking()
             .Where(c => c.TenantId == Tenant && c.IdUser == UserId && c.Id == id)
-            .Select(ToContact)
-            .ToList();
+            .Select(ToContact);
 
         var contactInfos = MailDbContext.MailContactInfos
             .AsNoTracking()
             .Where(c => c.IdContact == id)
-            .Select(ToContactInfo)
-            .ToList();
+            .Select(ToContactInfo);
 
-        var result = ToContactCardList(contacts, contactInfos)
+        var result = contacts.Select(contact => new ContactCard(contact, contactInfos.Where(ci => ci.ContactId == contact.Id).ToList()))
             .SingleOrDefault();
 
         return result;
@@ -89,18 +87,18 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
         }
 
         var contacts = query
-            .Select(ToContact)
-            .ToList();
+            .Select(ToContact);
 
         var ids = contacts.Select(c => c.Id).ToList();
 
         var contactInfos = MailDbContext.MailContactInfos
             .AsNoTracking()
             .Where(c => ids.Contains(c.IdContact))
-            .Select(ToContactInfo)
-            .ToList();
+            .Select(ToContactInfo);
 
-        return ToContactCardList(contacts, contactInfos);
+        return contacts.Select(
+                contact => new ContactCard(contact, contactInfos.Where(ci => ci.ContactId == contact.Id).ToList()))
+                .ToList();
     }
 
     public int GetContactCardsCount(IContactsExp exp)
@@ -119,14 +117,6 @@ public class ContactCardDao : BaseMailDao, IContactCardDao
             .Count();
 
         return count;
-    }
-
-    protected List<ContactCard> ToContactCardList(List<Contact> contacts, List<ContactInfo> contactInfos)
-    {
-        return
-            contacts.Select(
-                contact => new ContactCard(contact, contactInfos.Where(ci => ci.ContactId == contact.Id).ToList()))
-                .ToList();
     }
 
     protected Contact ToContact(MailContact r)

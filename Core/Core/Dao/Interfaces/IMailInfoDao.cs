@@ -38,8 +38,6 @@ public interface IMailInfoDao
 
     Dictionary<int, int> GetMailUserFolderCount(bool? unread = null);
 
-    Tuple<int, int> GetRangeMails(IMessagesExp exp);
-
     T GetFieldMaxValue<T>(IMessagesExp exp, string field);
 
     int SetFieldValue<T>(IMessagesExp exp, string field, T value);
