@@ -153,11 +153,7 @@ public class ApiHelper
 
         request.AddHeader("Authorization", _token);
 
-        _log.LogDebug(request.ToString());
-
         var response = client.ExecuteSafe(request);
-
-        _log.LogDebug(response.ToString());
 
         _log.DebugApiHelperResponseCode(response.StatusCode);
 
@@ -248,40 +244,36 @@ public class ApiHelper
     {
         var request = new RestRequest("mail/messages/send.json", Method.Put);
 
-        var jObject = new JObject { { "id", message.Id } };
+        request.AddParameter("id", message.Id);
 
-        if (!string.IsNullOrEmpty(message.From))
-            jObject.Add("from", message.From);
+        request.AddParameter("from", message.From);
 
-        jObject.Add("to", message.To);
+        request.AddParameter("to", message.To);
 
-        if (!string.IsNullOrEmpty(message.Cc))
-            jObject.Add("cc", message.Cc);
+        if (!string.IsNullOrEmpty(message.Cc)) request.AddParameter("cc", message.Cc);
 
-        if (!string.IsNullOrEmpty(message.Bcc))
-            jObject.Add("bcc", message.Bcc);
+        if (!string.IsNullOrEmpty(message.Bcc)) request.AddParameter("bcc", message.Bcc);
 
-        jObject.Add("subject", message.Subject);
+        request.AddParameter("subject", message.Subject);
 
-        jObject.Add("body", message.HtmlBody);
+        request.AddParameter("body", message.HtmlBody);
 
-        jObject.Add("mimeReplyToId", message.MimeReplyToId);
+        request.AddParameter("mimeReplyToId", message.MimeReplyToId);
 
-        jObject.Add("importance", message.Important);
+        request.AddParameter("importance", message.Important);
 
         if (message.TagIds != null && message.TagIds.Count != 0)
-            jObject.Add("tags", JsonConvert.SerializeObject(message.TagIds));
+            request.AddParameter("tags", JsonConvert.SerializeObject(message.TagIds));
 
         if (message.Attachments != null && message.Attachments.Count != 0)
-            jObject.Add("attachments", JsonConvert.SerializeObject(message.Attachments));
+            request.AddParameter("attachments", JsonConvert.SerializeObject(message.Attachments));
 
         if (!string.IsNullOrEmpty(message.CalendarEventIcs))
-            jObject.Add("calendarIcs", message.CalendarEventIcs);
+            request.AddParameter("calendarIcs", message.CalendarEventIcs);
 
-        jObject.Add("isAutoreply", isAutoreply);
+        request.AddParameter("isAutoreply", isAutoreply);
 
-        request.AddHeader("Accept", "application/json");
-        request.AddParameter("application/json", jObject, ParameterType.RequestBody);
+        request.AddHeader("Accept", "application/json; CHARSET=UTF-8");
 
         var response = Execute(request);
 
