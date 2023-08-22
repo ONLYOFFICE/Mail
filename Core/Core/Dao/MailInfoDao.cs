@@ -224,7 +224,6 @@ public class MailInfoDao : BaseMailDao, IMailInfoDao
             .AsNoTracking()
             .Where(exp.GetExpression())
             .Select(lambda.Compile())
-            .DefaultIfEmpty<T>()
             .Max();
 
         return max;

@@ -273,9 +273,9 @@ public class MessageEngine : BaseEngine
                 if (!ids.Any())
                     return -1;
 
-                return ids.Where(id => id != messageId)
-                    .DefaultIfEmpty(-1)
-                    .First();
+                return ids
+                    .Where(id => id != messageId)
+                    .FirstOrDefault(-1);
             }
         }
 
@@ -285,8 +285,7 @@ public class MessageEngine : BaseEngine
 
         return list.Where(m => m.Id != messageId)
             .Select(m => m.Id)
-            .DefaultIfEmpty(-1)
-            .First();
+            .FirstOrDefault(-1);
     }
 
     //TODO: Simplify

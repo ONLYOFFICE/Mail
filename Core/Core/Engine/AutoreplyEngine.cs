@@ -108,10 +108,7 @@ public class AutoreplyEngine
             throw new AccessViolationException("Mailbox is not owned by user.");
         }
 
-        var result = _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
-
-        if (result <= 0)
-            throw new InvalidOperationException();
+        _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
 
         _cacheEngine.Clear(UserId);
 

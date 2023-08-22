@@ -54,16 +54,15 @@ public class MailboxSignatureDao : BaseMailDao, IMailboxSignatureDao
 
                 })
             .Where(r => r.MailboxId == mailboxId)
-            .DefaultIfEmpty(new MailboxSignature
-            {
-                MailboxId = mailboxId,
-                Tenant = Tenant,
-                Html = "",
-                IsActive = false
-            })
             .FirstOrDefault();
 
-        return query;
+        return query ?? new MailboxSignature
+        {
+            MailboxId = mailboxId,
+            Tenant = Tenant,
+            Html = "",
+            IsActive = false
+        };
     }
 
     public List<MailboxSignature> GetSignatures(List<int> mailboxIds)
