@@ -26,6 +26,7 @@
 
 
 using Ical.Net.CalendarComponents;
+using RestSharp;
 using AuthenticationException = System.Security.Authentication.AuthenticationException;
 using SecurityContext = ASC.Core.SecurityContext;
 
@@ -274,7 +275,7 @@ public class ApiHelper
 
         jObject.Add("isAutoreply", isAutoreply);
 
-        request.AddParameter("application/json; charset=utf-8", jObject, ParameterType.RequestBody);
+        request.AddJsonBody(jObject);
 
         var response = Execute(request);
 
