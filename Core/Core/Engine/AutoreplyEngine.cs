@@ -259,7 +259,7 @@ public class AutoreplyEngine
         mailMessage.Subject = stringBuilder.AppendFormat("Re: {0}", messageItem.Subject).ToString();
         mailMessage.HtmlBody = account.MailAutoreply.Html;
         mailMessage.MimeReplyToId = messageItem.MimeMessageId;
-        mailMessage.To = messageItem.From;
+        mailMessage.To = messageItem.FromEmail;
         mailMessage.From = autoreplyEmail ?? account.EMail.ToString();
 
         if (account.MailSignature == null)
