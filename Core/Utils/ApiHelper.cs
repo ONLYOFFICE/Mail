@@ -242,7 +242,7 @@ public class ApiHelper
 
     public void SendMessage(MailMessageData message, bool isAutoreply = false)
     {
-        var request = new RestRequest("mail/messages/send.json", Method.Put);
+        var request = new RestRequest("mail/messages/simpleSend.json", Method.Put);
 
         request.AddParameter("id", message.Id);
 
@@ -273,7 +273,7 @@ public class ApiHelper
 
         request.AddParameter("isAutoreply", isAutoreply);
 
-        request.AddHeader("Accept", "application/json; CHARSET=UTF-8");
+        request.AddHeader("Accept", "application/json");
 
         var response = Execute(request);
 
