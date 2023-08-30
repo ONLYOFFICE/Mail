@@ -40,12 +40,11 @@ public class DisplayImagesAddressDao : BaseMailDao, IDisplayImagesAddressDao
 
     public List<string> GetDisplayImagesAddresses()
     {
-        var query = MailDbContext.MailDisplayImages
+        var addresses = MailDbContext.MailDisplayImages
             .AsNoTracking()
             .Where(r => r.Tenant == Tenant && r.IdUser == UserId)
-            .Select(r => r.Address);
-
-        List<string> addresses = query.ToList();
+            .Select(r => r.Address)
+            .ToList();
 
         return addresses;
     }

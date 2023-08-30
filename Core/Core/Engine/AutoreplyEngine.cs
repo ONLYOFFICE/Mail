@@ -108,10 +108,7 @@ public class AutoreplyEngine
             throw new AccessViolationException("Mailbox is not owned by user.");
         }
 
-        var result = _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
-
-        if (result <= 0)
-            throw new InvalidOperationException();
+        _mailDaoFactory.GetMailboxAutoreplyDao().SaveAutoreply(autoreply);
 
         _cacheEngine.Clear(UserId);
 
@@ -262,7 +259,7 @@ public class AutoreplyEngine
         mailMessage.Subject = stringBuilder.AppendFormat("Re: {0}", messageItem.Subject).ToString();
         mailMessage.HtmlBody = account.MailAutoreply.Html;
         mailMessage.MimeReplyToId = messageItem.MimeMessageId;
-        mailMessage.To = messageItem.From;
+        mailMessage.To = messageItem.FromEmail;
         mailMessage.From = autoreplyEmail ?? account.EMail.ToString();
 
         if (account.MailSignature == null)

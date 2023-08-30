@@ -28,15 +28,10 @@
 
 
 
-using ASC.Data.Storage.Configuration;
-using ASC.Mail.Storage;
+using ASC.Mail.Core.Storage;
 using Attachment = ASC.Mail.Core.Entities.Attachment;
 using FolderType = ASC.Mail.Enums.FolderType;
 using SecurityContext = ASC.Core.SecurityContext;
-
-using System.Text.Json;
-using ASC.Mail.Core.Storage;
-using ASC.Mail.Core.Core.Storage;
 
 namespace ASC.Mail.Core.Engine;
 
@@ -57,10 +52,6 @@ public class MessageEngine : BaseEngine
     private readonly IServiceProvider _serviceProvider;
     private readonly MailStorageFactory _storageFactory;
     private readonly MailStorageManager _storageManager;
-    private readonly SettingsManager _sManager;
-    //private readonly IFilesDaoFactory _filesDaoFactory;
-    //private readonly FileSecurity _filesSeurity;
-    //private readonly FileConverter _fileConverter;
     private readonly ILogger _log;
 
     private int Tenant => _tenantManager.GetCurrentTenant().Id;
@@ -80,11 +71,8 @@ public class MessageEngine : BaseEngine
         CoreSettings coreSettings,
         MailStorageFactory storageFactory,
         MailStorageManager storageManager,
-        //FileSecurity filesSeurity,
-        //FileConverter fileConverter,
         FactoryIndexer<MailMail> factoryIndexer,
         FactoryIndexer factoryIndexerCommon,
-        //IFilesDaoFactory filesDaoFactory,
         IMailDaoFactory mailDaoFactory,
         IServiceProvider serviceProvider,
         ILoggerProvider logProvider,
@@ -104,22 +92,12 @@ public class MessageEngine : BaseEngine
         _serviceProvider = serviceProvider;
         _storageFactory = storageFactory;
         _storageManager = storageManager;
-        //_filesDaoFactory = filesDaoFactory;
-        //_filesSeurity = filesSeurity;
-        //_fileConverter = fileConverter;
         _log = logProvider.CreateLogger("ASC.Mail.MessageEngine");
     }
 
     public MailMessageData GetMessage(int messageId, MailMessageData.Options options)
     {
         var mail = _mailDaoFactory.GetMailDao().GetMail(new ConcreteUserMessageExp(messageId, Tenant, User, !options.OnlyUnremoved));
-
-        return GetMessage(mail, options);
-    }
-
-    public MailMessageData GetNextMessage(int messageId, MailMessageData.Options options)
-    {
-        var mail = _mailDaoFactory.GetMailDao().GetNextMail(new ConcreteNextUserMessageExp(messageId, Tenant, User, !options.OnlyUnremoved));
 
         return GetMessage(mail, options);
     }
@@ -136,11 +114,6 @@ public class MessageEngine : BaseEngine
         var key = MailStoragePathCombiner.GetBodyKey(User, mail.Stream);
 
         return Storage.GetReadStreamAsync(string.Empty, key).Result;
-    }
-
-    public Tuple<int, int> GetRangeMessages(IMessagesExp exp)
-    {
-        return _mailDaoFactory.GetMailInfoDao().GetRangeMails(exp);
     }
 
     private MailMessageData GetMessage(Entities.Mail mail, MailMessageData.Options options)
@@ -300,9 +273,9 @@ public class MessageEngine : BaseEngine
                 if (!ids.Any())
                     return -1;
 
-                return ids.Where(id => id != messageId)
-                    .DefaultIfEmpty(-1)
-                    .First();
+                return ids
+                    .Where(id => id != messageId)
+                    .FirstOrDefault(-1);
             }
         }
 
@@ -312,8 +285,7 @@ public class MessageEngine : BaseEngine
 
         return list.Where(m => m.Id != messageId)
             .Select(m => m.Id)
-            .DefaultIfEmpty(-1)
-            .First();
+            .FirstOrDefault(-1);
     }
 
     //TODO: Simplify
@@ -816,7 +788,7 @@ public class MessageEngine : BaseEngine
         _userFolderEngine.RecalculateCounters(MailDaoFactory, userFolderIds);
     }
 
-    public bool SetRemoved(List<int> ids, int? userFolderId=null)
+    public bool SetRemoved(List<int> ids, int? userFolderId = null)
     {
         bool result = false;
         if (!ids.Any())

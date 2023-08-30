@@ -32,8 +32,6 @@ public interface IMailDao
 
     ASC.Mail.Core.Entities.Mail GetMail(IMessageExp exp);
 
-    ASC.Mail.Core.Entities.Mail GetNextMail(IMessageExp exp);
-
     List<string> GetExistingUidls(int mailboxId, List<string> uidlList);
 
     int SetMessagesChanged(List<int> ids);

@@ -45,55 +45,25 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
             .AsNoTracking()
             .Where(a => a.Tenant == mailbox.Tenant && a.IdMailbox == mailbox.Id)
             .Select(ToAutoreply)
-            .DefaultIfEmpty(new MailboxAutoreply
-            {
-                MailboxId = mailbox.Id,
-                Tenant = mailbox.Tenant,
-                TurnOn = false,
-                OnlyContacts = false,
-                TurnOnToDate = false,
-                FromDate = DateTime.MinValue,
-                ToDate = DateTime.MinValue,
-                Subject = string.Empty,
-                Html = string.Empty
-            })
-            .Single();
+            .FirstOrDefault();
 
-        return autoreply;
-    }
-
-    public List<MailboxAutoreply> GetAutoreplies(List<int> mailboxIds)
-    {
-        var autoreplies = MailDbContext.MailMailboxAutoreplies
-            .AsNoTracking()
-            .Where(a => a.Tenant == Tenant && mailboxIds.Contains(a.IdMailbox))
-            .Select(ToAutoreply)
-            .ToList();
-
-        var notFoundIds = mailboxIds.Where(id => autoreplies.FirstOrDefault(a => a.MailboxId == id) == null).ToList();
-
-        foreach (var id in notFoundIds)
+        return autoreply ?? new MailboxAutoreply
         {
-            autoreplies.Add(new MailboxAutoreply
-            {
-                MailboxId = id,
-                Tenant = Tenant,
-                TurnOn = false,
-                OnlyContacts = false,
-                TurnOnToDate = false,
-                FromDate = DateTime.MinValue,
-                ToDate = DateTime.MinValue,
-                Subject = string.Empty,
-                Html = string.Empty
-            });
-        }
-
-        return autoreplies;
+            MailboxId = mailbox.Id,
+            Tenant = mailbox.Tenant,
+            TurnOn = false,
+            OnlyContacts = false,
+            TurnOnToDate = false,
+            FromDate = DateTime.MinValue,
+            ToDate = DateTime.MinValue,
+            Subject = string.Empty,
+            Html = string.Empty
+        };
     }
 
     public int SaveAutoreply(MailboxAutoreply autoreply)
     {
-        MailDbContext.MailMailboxAutoreplies.Add(new MailMailboxAutoreply
+        var newValue = new MailMailboxAutoreply
         {
             IdMailbox = autoreply.MailboxId,
             Tenant = autoreply.Tenant,
@@ -104,11 +74,11 @@ public class MailboxAutoreplyDao : BaseMailDao, IMailboxAutoreplyDao
             ToDate = autoreply.ToDate,
             Subject = autoreply.Subject,
             Html = autoreply.Html
-        });
+        };
 
-        var count = MailDbContext.SaveChanges();
+        MailDbContext.AddOrUpdate(MailDbContext.MailMailboxAutoreplies, newValue);
 
-        return count;
+        return 1;
     }
 
     public int DeleteAutoreply(int mailboxId)

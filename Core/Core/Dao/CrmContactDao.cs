@@ -66,8 +66,7 @@ public class CrmContactDao : BaseMailDao, ICrmContactDao
                     o.Contact.Id,
                     Company = o.Contact.IsCompany,
                     ShareType = (ShareType)o.Contact.IsShared
-                })
-                .ToList();
+                });
 
             if (!contactList.Any())
                 return ids;

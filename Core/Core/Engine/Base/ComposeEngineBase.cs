@@ -225,8 +225,6 @@ public class ComposeEngineBase
 
         var message = compose.ToMailMessage();
 
-        //var engine = new EngineFactory(compose.Mailbox.TenantId, compose.Mailbox.UserId);
-
         var addIndex = compose.Id == 0;
 
         var attachmentsToRestore = message.Attachments.Where(att => att.streamId != message.StreamId || att.isTemp).ToList();

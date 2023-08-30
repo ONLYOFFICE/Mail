@@ -23,7 +23,6 @@
  *
 */
 
-using ASC.Mail.Core.Dao.Entities;
 using ContactInfo = ASC.Mail.Core.Entities.ContactInfo;
 using IContactInfoDao = ASC.Mail.Core.Dao.Interfaces.IContactInfoDao;
 using SecurityContext = ASC.Core.SecurityContext;
