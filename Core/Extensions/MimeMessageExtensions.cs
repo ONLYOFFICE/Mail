@@ -196,7 +196,7 @@ public static class MimeMessageExtensions
 
         mail.Subject = message.Subject ?? string.Empty;
 
-        mail.Important = message.GetImportance();
+        mail.Important = message.GetImportance(log);
 
         mail.TextBodyOnly = false;
 
@@ -325,20 +325,15 @@ public static class MimeMessageExtensions
         return mailMessage;
     }
 
-    public static bool GetImportanceFromHeader(this MimeMessage message)
+    public static bool GetImportance(this MimeMessage message, ILogger log)
     {
-        var headerPriority = message.Headers.FirstOrDefault(x => x.Id == HeaderId.XPriority);
+        var headerPriority = message.Headers.FirstOrDefault(x => x.Id == HeaderId.XPriority)?.Value ?? string.Empty;
 
-        if (headerPriority == null) return false;
+        log.LogDebug($"GetImportance headerPriority is {headerPriority}");
 
-        return !string.IsNullOrEmpty(headerPriority.Value);
-    }
-
-    public static bool GetImportance(this MimeMessage message)
-    {
         return message.Importance == MessageImportance.High
             || message.Priority == MessagePriority.Urgent
             || message.XPriority == XMessagePriority.Highest
-            || message.GetImportanceFromHeader();
+            || !string.IsNullOrEmpty(headerPriority);
     }
 }

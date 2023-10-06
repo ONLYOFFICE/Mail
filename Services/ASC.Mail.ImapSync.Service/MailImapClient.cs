@@ -758,14 +758,6 @@ public class MailImapClient : IDisposable
 
         message.FixDateIssues(_log, imap_message?.InternalDate);
 
-        bool unread = false, impotant = false;
-
-        if ((imap_message != null) && imap_message.Flags.HasValue)
-        {
-            unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
-            impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
-        }
-
         message.FixEncodingIssues();
 
         var folder = simpleImapClient.MailWorkFolder;
@@ -781,6 +773,14 @@ public class MailImapClient : IDisposable
 
             if (findedMessages.Count == 0)
             {
+                bool unread = false, impotant = false;
+
+                if ((imap_message != null) && imap_message.Flags.HasValue)
+                {
+                    unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
+                    impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
+                }
+
                 var messageDB = _mailEnginesFactory.MessageEngine
                     .SaveWithoutCheck(simpleImapClient.Account, message, uidl, folder, simpleImapClient.UserFolderID, unread, impotant);
 
@@ -866,14 +866,6 @@ public class MailImapClient : IDisposable
 
         message.FixDateIssues(_log, imap_message?.InternalDate);
 
-        bool unread = false, impotant = false;
-
-        if ((imap_message != null) && imap_message.Flags.HasValue)
-        {
-            unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
-            impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
-        }
-
         message.FixEncodingIssues();
 
         var folder = simpleImapClient.MailWorkFolder;
@@ -888,6 +880,14 @@ public class MailImapClient : IDisposable
             if (findedMessages.Any())
             {
                 _mailEnginesFactory.MessageEngine.SetRemoved(findedMessages.Select(x => x.Id).ToList());
+            }
+
+            bool unread = false, impotant = false;
+
+            if ((imap_message != null) && imap_message.Flags.HasValue)
+            {
+                unread = !imap_message.Flags.Value.HasFlag(MessageFlags.Seen);
+                impotant = imap_message.Flags.Value.HasFlag(MessageFlags.Flagged);
             }
 
             var messageDB = _mailEnginesFactory.MessageEngine
