@@ -46,7 +46,7 @@ public class MailImapClient : IDisposable
     private readonly System.Timers.Timer aliveTimer;
     private readonly System.Timers.Timer processActionFromImapTimer;
 
-    private bool crmAvailable;
+    private readonly bool crmAvailable;
     private bool needUserUpdate;
     private bool needUserMailBoxUpdate;
     private bool userActivityDetected;
@@ -1038,7 +1038,7 @@ public class MailImapClient : IDisposable
                 StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage);
             }
 
-            if (!simpleImapClient.UserFolderID.HasValue) return;
+            if (simpleImapClient.UserFolderID.HasValue) return;
 
             var filters = _mailEnginesFactory.FilterEngine.GetList();
 
@@ -1257,12 +1257,10 @@ public class MailImapClient : IDisposable
     {
         _enginesFactorySemaphore.Wait();
 
-        List<string> result = new List<string>();
+        List<string> result = new();
 
         try
         {
-
-
             _mailEnginesFactory.SetTenantAndUser(Tenant, UserName);
 
             var newFolder = _mailEnginesFactory.UserFolderEngine.Get(userFolderId);
