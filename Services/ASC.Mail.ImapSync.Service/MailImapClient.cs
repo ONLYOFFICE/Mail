@@ -1038,6 +1038,8 @@ public class MailImapClient : IDisposable
                 StoreMailEml(Tenant, UserName, message.StreamId, mimeMessage);
             }
 
+            if (!simpleImapClient.UserFolderID.HasValue) return;
+
             var filters = _mailEnginesFactory.FilterEngine.GetList();
 
             var filtersAppliedSuccessfull = _mailEnginesFactory.FilterEngine.ApplyFilters(message, simpleImapClient.Account, simpleImapClient.MailWorkFolder, filters)
