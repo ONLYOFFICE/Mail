@@ -667,12 +667,7 @@ public class SimpleImapClient : IDisposable
             _log.ErrorSimpleImapCompareImapFlagsNoFlags();
         }
 
-        if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags)
-        {
-            //_log.DebugSimpleImapCompareImapFlagsEqual();
-
-            return;
-        }
+        if (oldMessageDescriptor.Flags == newMessageDescriptor.Flags) return;
 
         _log.DebugSimpleImapCompareImapFlagsNewOld(oldMessageDescriptor.Flags.ToString(), newMessageDescriptor.Flags.ToString());
 

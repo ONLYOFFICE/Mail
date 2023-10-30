@@ -1304,10 +1304,11 @@ public class MessageEngine : BaseEngine
         if (uidl == null)
             throw new ArgumentException(@"uidl is null", "uidl");
 
-        var md5 =
-                string.Format("{0}|{1}|{2}|{3}",
+        var md5 = string.Format("{0}|{1}|{2}|{3}",
                     mimeMessage.From.Mailboxes.Any() ? mimeMessage.From.Mailboxes.First().Address : "",
-                    mimeMessage.Subject, mimeMessage.Date.UtcDateTime, mimeMessage.MessageId).GetMd5();
+                    mimeMessage.Subject,
+                    mimeMessage.Date.UtcDateTime,
+                    mimeMessage.MessageId).GetMd5();
 
         _log.DebugMessageEngineDetectChainId(md5);
 
@@ -1322,7 +1323,9 @@ public class MessageEngine : BaseEngine
             _tenantManager, _coreSettings,
             folder, unread, chainInfo.Id,
             chainInfo.ChainDate, streamId,
-            mailbox.MailBoxId, _log, true);
+            mailbox.MailBoxId, _log);
+
+        message.Important = impotant;
 
         _log.DebugMessageEngineTryStoreMailData(md5);
 
