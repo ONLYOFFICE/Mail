@@ -511,6 +511,13 @@ public class MailImapClient : IDisposable
             }
 
             DeleteSimpleImapClient(simpleImapClient);
+
+            if (simpleImapClients.Count == 0)
+            {
+                _log.DebugMailImapClientDBPipeline($"Deleted last simpleImapClients. Client will destroy.");
+
+                OnCriticalError?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
