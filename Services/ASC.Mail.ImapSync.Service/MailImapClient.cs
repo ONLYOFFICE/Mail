@@ -79,7 +79,15 @@ public class MailImapClient : IDisposable
                     case MailUserAction.Nothing:
                         break;
                     case MailUserAction.SendDraft:
-                        simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Draft).ExecuteUserAction(actionFromCache);
+                        var draftSimpleImapClients = simpleImapClients.FirstOrDefault(x => x.Folder == FolderType.Draft);
+                        if (draftSimpleImapClients == null)
+                        {
+                            _log.DebugMailImapClientFromRedisPipeline($"CheckRedis: {RedisKey}: Didn't find IMAP client for draft folder");
+                        }
+                        else
+                        {
+                            draftSimpleImapClients.ExecuteUserAction(actionFromCache);
+                        }
                         break;
                     case MailUserAction.SetAsRead:
                     case MailUserAction.SetAsUnread:
@@ -98,7 +106,7 @@ public class MailImapClient : IDisposable
                                     && x.UserFolderID.Value == userFolderId);
 
                                 actionFromCache.Data = simpleImapClient != null ?
-                                    actionFromCache.Data = simpleImapClient.ImapWorkFolderFullName :
+                                    simpleImapClient.ImapWorkFolderFullName :
                                     GetFullPathUserFolder(userFolderId);
                             }
                         }
@@ -126,7 +134,7 @@ public class MailImapClient : IDisposable
         }
         catch (Exception ex)
         {
-            _log.ErrorMailImapClientFromRedisPipeline("CheckRedis method", ex.Message);
+            _log.ErrorMailImapClientFromRedisPipeline("CheckRedis method", ex.Message + " " + ex.StackTrace);
         }
 
         _log.DebugMailImapClientFromRedisPipeline($"Read {iterationCount} keys. Total IMAP clients: {simpleImapClients.Count}");
@@ -503,6 +511,13 @@ public class MailImapClient : IDisposable
             }
 
             DeleteSimpleImapClient(simpleImapClient);
+
+            if (simpleImapClients.Count == 0)
+            {
+                _log.DebugMailImapClientDBPipeline($"Deleted last simpleImapClients. Client will destroy.");
+
+                OnCriticalError?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
