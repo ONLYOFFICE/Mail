@@ -16,13 +16,13 @@ switch(JOB_NAME) {
   case "production.onlyoffice.mailaggregator.saas.com.pl":
     region="COM"
     reg_name="com"
-    number_agg="3"
+    number_agg="2"
     name_agg="com"
     break
   case "production.onlyoffice.mailaggregator.saas.centraleu.pl":
     region="EU"
     reg_name="eu"
-    number_agg="4"
+    number_agg="2"
     name_agg="centraleu.com"
     break
   case "production.onlyoffice.mailaggregator.saas.info.pl":
