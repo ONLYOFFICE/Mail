@@ -20,37 +20,38 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Amazon.Extensions.S3.Encryption" Version="2.0.3" />
+		<PackageReference Include="Amazon.Extensions.S3.Encryption" Version="2.2.0" />
 		<PackageReference Include="AppLimit.CloudComputing.SharpBox" Version="1.2.0.542" />
-		<PackageReference Include="AWS.Logger.NLog" Version="3.1.0" />
+		<PackageReference Include="AutoMapper" Version="13.0.1" />
+		<PackageReference Include="AWS.Logger.NLog" Version="3.3.4" />
 		<PackageReference Include="CommandLineParser" Version="2.9.1" />
-		<PackageReference Include="LiteDB" Version="5.0.15" />
-		<PackageReference Include="MailKit" Version="3.4.3" />
-		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="7.0.2" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="7.0.0" />
-		<PackageReference Include="Microsoft.Graph.Core" Version="2.0.14" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-		<PackageReference Include="NLog" Version="5.1.1" />
-		<PackageReference Include="NLog.Web.AspNetCore" Version="5.2.1" />
+		<PackageReference Include="LiteDB" Version="5.0.21" />
+		<PackageReference Include="MailKit" Version="4.9.0" />
+		<PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
+		<PackageReference Include="Microsoft.Graph.Core" Version="3.2.1" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="NLog" Version="5.3.4" />
+		<PackageReference Include="NLog.Web.AspNetCore" Version="5.3.15" />
 		<PackageReference Include="SelectelSharp" Version="0.8.0" />
-		<PackageReference Include="StackExchange.Redis" Version="2.6.96" />
-		<PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="9.1.0" />
-		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="9.1.0" />
-		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="9.1.0" />
-		<PackageReference Include="System.ServiceModel.Primitives" Version="4.10.0" />
-		<PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.0" />
-		<PackageReference Include="Confluent.Kafka" Version="2.0.2" />
-		<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="5.0.1" />
-		<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="6.0.3" />
-		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="6.0.2" />
-		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="6.0.2" />
-		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="6.0.5" />
+		<PackageReference Include="StackExchange.Redis" Version="2.8.24" />
+		<PackageReference Include="StackExchange.Redis.Extensions.AspNetCore" Version="10.2.0" />
+		<PackageReference Include="StackExchange.Redis.Extensions.Core" Version="10.2.0" />
+		<PackageReference Include="StackExchange.Redis.Extensions.Newtonsoft" Version="10.2.0" />
+		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.1" />
+		<PackageReference Include="Confluent.Kafka" Version="2.6.1" />
+		<PackageReference Include="AspNetCore.HealthChecks.Elasticsearch" Version="9.0.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.Kafka" Version="9.0.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="9.0.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.MySql" Version="9.0.0" />
+		<PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="9.0.0" />
 		<PackageReference Include="Microsoft.SharePoint.Client" Version="14.0.4762.1000" />
-		<PackageReference Include="Google.Protobuf" Version="3.21.12" />
-		<PackageReference Include="protobuf-net" Version="3.1.26" />
-		<PackageReference Include="JWT" Version="10.0.1" />
-		<PackageReference Include="SixLabors.ImageSharp" Version="3.0.0" />
+		<PackageReference Include="Google.Protobuf" Version="3.29.2" />
+		<PackageReference Include="protobuf-net" Version="3.2.45" />
+		<PackageReference Include="JWT" Version="11.0.0" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
 	</ItemGroup>
 
 	<ItemGroup>
